@@ -13,7 +13,8 @@ const USDC_ABI = [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'accou
 const publicClient = createPublicClient({ chain: polygon, transport: http() });
 
 function BilleteraApp() {
-  const { login, logout, authenticated, user } = usePrivy();
+  // Integramos fundWallet aquí para el On-Ramp
+  const { login, logout, authenticated, user, fundWallet } = usePrivy();
   const { wallets } = useWallets();
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
@@ -32,11 +33,9 @@ function BilleteraApp() {
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
     try {
-      // Leer POL (Nativo)
       const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
-      // Leer USDC (Contrato)
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
@@ -49,7 +48,6 @@ function BilleteraApp() {
     }
   };
 
-  // Actualizar saldos al entrar
   useEffect(() => {
     if (authenticated && walletEmbebida) {
       actualizarSaldos();
@@ -76,11 +74,10 @@ function BilleteraApp() {
         params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
       });
 
-      // Guardar en historial local y actualizar
       setHistorial([`Envío de ${monto} USDC a ${destino.slice(0,6)}...`, ...historial]);
       alert(`✅ ¡Enviado! Hash: ${txHash}`);
       setDestino(''); setMonto(''); setVista('inicio');
-      setTimeout(actualizarSaldos, 3000); // Esperar 3s y recargar saldo
+      setTimeout(actualizarSaldos, 3000);
     } catch (e: any) {
       alert("❌ Error: " + e.message);
     } finally {
@@ -94,7 +91,7 @@ function BilleteraApp() {
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
           <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Primera Version de InvestUp.</p>
+          <p style={{color: '#666', marginBottom: '30px'}}>Primera Versión de InvestUp.</p>
           <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar con Email</button>
         </div>
       </main>
@@ -104,13 +101,11 @@ function BilleteraApp() {
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
-        {/* CABECERA */}
         <div style={estilos.header}>
             <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
             <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
 
-        {/* CONTENIDO CAMBIANTE */}
         {vista === 'inicio' ? (
           <>
             <div style={estilos.seccionSaldo}>
@@ -119,10 +114,23 @@ function BilleteraApp() {
                 <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
             </div>
 
+            {/* BOTONES PRINCIPALES */}
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={actualizarSaldos} style={estilos.botonAccionSecundario}>🔄 Recargar //No usar todavia//</button>
+                
+                {/* Botón de Compra conectado a Moonpay/Ramp */}
+                <button 
+                  onClick={() => fundWallet(walletEmbebida?.address || '')} 
+                  style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                >
+                  💳 Comprar
+                </button>
             </div>
+
+            {/* Botón de Recargar secundario */}
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>
+               🔄 Actualizar Saldo
+            </button>
 
             <div style={estilos.listaHistorial}>
                 <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
@@ -141,7 +149,6 @@ function BilleteraApp() {
             </div>
           </>
         ) : (
-          /* VISTA DE ENVÍO */
           <div style={estilos.formEnvio}>
             <h2 style={{color: '#333'}}>Enviar Dinero</h2>
             <p style={{fontSize: '12px', color: '#666', marginBottom: '20px'}}>Estás en la red Polygon</p>
@@ -176,13 +183,12 @@ function BilleteraApp() {
   );
 }
 
-// --- ESTILOS (CSS EN JS) ---
 const estilos: any = {
   contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
   cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
   cardApp: { background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', width: '90%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' },
+  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
   botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
   seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
   badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
@@ -192,7 +198,6 @@ const estilos: any = {
   listaHistorial: { marginTop: '25px', flex: 1 },
   itemHistorial: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#444' },
   footerDir: { marginTop: 'auto', textAlign: 'center', background: '#f9f9f9', padding: '10px', borderRadius: '12px' },
-  // Estilos Formulario
   formEnvio: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' },
   input: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
   inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
@@ -210,7 +215,6 @@ export default function Home() {
           accentColor: '#676FFF', 
           showWalletLoginFirst: false 
         },
-        // AQUÍ ESTÁ EL CAMBIO: Agregamos 'ethereum' dentro de embeddedWallets
         embeddedWallets: { 
           ethereum: {
             createOnLogin: 'users-without-wallets' 
