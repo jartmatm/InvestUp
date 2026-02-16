@@ -7,10 +7,15 @@ import { polygon } from 'viem/chains';
 
 // --- CONFIGURACIÓN ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
-const USDC_ABI = [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }, { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }];
+const USDC_ABI = [
+  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
+];
 
-// Cliente para LEER la blockchain (sin necesidad de wallet conectada)
-const publicClient = createPublicClient({ chain: polygon, transport: http() });
+const publicClient = createPublicClient({ 
+  chain: polygon, 
+  transport: http() 
+});
 
 function BilleteraApp() {
   const { login, logout, authenticated, user } = usePrivy();
@@ -18,18 +23,15 @@ function BilleteraApp() {
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
-  // Estados de la App
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
   const [historial, setHistorial] = useState<string[]>([]);
   
-  // Estados del Formulario de Envío
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- 1. LÓGICA PARA LEER SALDOS ---
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
     try {
@@ -54,7 +56,6 @@ function BilleteraApp() {
     }
   }, [authenticated, walletEmbebida]);
 
-  // --- 2. LÓGICA PARA ENVIAR DINERO ---
   const enviarUSDC = async () => {
     if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
     setLoading(true);
@@ -85,7 +86,6 @@ function BilleteraApp() {
     }
   };
 
-  // --- 3. DISEÑO DE LA INTERFAZ ---
   if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
@@ -114,16 +114,20 @@ function BilleteraApp() {
                 <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
             </div>
 
-            {/* BOTONES PRINCIPALES */}
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 
-                {/* Botón de Compra CORREGIDO */}
                 <button 
-                   onClick={() => {
+                   onClick={async () => {
                      if (walletEmbebida?.address) {
-                       // Usamos 'as any' para evitar errores de tipado estricto
-                       fundWallet(walletEmbebida.address as any);
+                       try {
+                         // Forzamos la configuración mínima necesaria
+                         await fundWallet({
+                          address: walletEmbebida.address as `0x${string}`
+                         });
+                       } catch (err) {
+                         console.error("Error onramp:", err);
+                       }
                      }
                    }} 
                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
@@ -187,6 +191,7 @@ function BilleteraApp() {
   );
 }
 
+// --- ESTILOS ---
 const estilos: any = {
   contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
   cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
@@ -219,6 +224,8 @@ export default function Home() {
           accentColor: '#676FFF', 
           showWalletLoginFirst: false 
         },
+        // CAMBIO CLAVE: Declarar explícitamente las redes soportadas
+        supportedChains: [polygon],
         embeddedWallets: { 
           ethereum: {
             createOnLogin: 'users-without-wallets' 
