@@ -85,6 +85,20 @@ function BilleteraApp() {
       setLoading(false);
     }
   };
+  const abrirRetiro = () => {
+  if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
+
+  // Configuramos los parámetros para MoonPay
+  // NOTA: Para producción necesitarás tu API KEY real de MoonPay
+  const apiKey = 'pk_test_123'; // Reemplaza con tu llave de MoonPay cuando la tengas
+  const walletAddress = walletEmbebida.address;
+  const currencyCode = 'usdc_polygon'; // Importante: especificar que es USDC en Polygon
+  
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
+
+  // Abrimos el widget en una ventana emergente o pestaña nueva
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+};
 
   if (!authenticated) {
     return (
@@ -114,25 +128,20 @@ function BilleteraApp() {
                 <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
             </div>
 
-            <div style={estilos.gridBotones}>
+            <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 
                 <button 
-                   onClick={async () => {
-                     if (walletEmbebida?.address) {
-                       try {
-                         // Forzamos la configuración mínima necesaria
-                         await fundWallet({
-                          address: walletEmbebida.address as `0x${string}`
-                         });
-                       } catch (err) {
-                         console.error("Error onramp:", err);
-                       }
-                     }
-                   }} 
-                   style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                   onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
+                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                   💳 Comprar
+                </button>
+                <button 
+                  onClick={abrirRetiro} 
+                  style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
+                >
+                  🏦 Retirar
                 </button>
             </div>
 
