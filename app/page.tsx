@@ -203,10 +203,19 @@ const estilos: any = {
 export default function Home() {
   return (
     <PrivyProvider
-      appId="cmlohriz801350cl7vrwvdb3i" // <--- ⚠️ IMPORTANTE: TU APP ID
+      appId="cmlohriz801350cl7vrwvdb3i" 
       config={{
-        appearance: { theme: 'light', accentColor: '#676FFF', showWalletLoginFirst: false },
-        embeddedWallets: { createOnLogin: 'users-without-wallets' },
+        appearance: { 
+          theme: 'light', 
+          accentColor: '#676FFF', 
+          showWalletLoginFirst: false 
+        },
+        // AQUÍ ESTÁ EL CAMBIO: Agregamos 'ethereum' dentro de embeddedWallets
+        embeddedWallets: { 
+          ethereum: {
+            createOnLogin: 'users-without-wallets' 
+          }
+        },
       }}
     >
       <BilleteraApp />
