@@ -93,8 +93,8 @@ function BilleteraApp() {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>MyWeb3 Bank 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Tu banco descentralizado personal.</p>
+          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
+          <p style={{color: '#666', marginBottom: '30px'}}>Primera Version de InvestUp.</p>
           <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar con Email</button>
         </div>
       </main>
@@ -121,7 +121,7 @@ function BilleteraApp() {
 
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={actualizarSaldos} style={estilos.botonAccionSecundario}>🔄 Recargar</button>
+                <button onClick={actualizarSaldos} style={estilos.botonAccionSecundario}>🔄 Recargar //No usar todavia//</button>
             </div>
 
             <div style={estilos.listaHistorial}>
