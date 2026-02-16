@@ -1,6 +1,6 @@
 'use client';
 
-import { PrivyProvider, usePrivy, useWallets } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
@@ -13,9 +13,9 @@ const USDC_ABI = [{ name: 'balanceOf', type: 'function', inputs: [{ name: 'accou
 const publicClient = createPublicClient({ chain: polygon, transport: http() });
 
 function BilleteraApp() {
-  // Integramos fundWallet aquí para el On-Ramp
-  const { login, logout, authenticated, user, fundWallet } = usePrivy();
+  const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
+  const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
   // Estados de la App
@@ -118,16 +118,20 @@ function BilleteraApp() {
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 
-                {/* Botón de Compra conectado a Moonpay/Ramp */}
+                {/* Botón de Compra CORREGIDO */}
                 <button 
-                  onClick={() => fundWallet(walletEmbebida?.address || '')} 
-                  style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                   onClick={() => {
+                     if (walletEmbebida?.address) {
+                       // Usamos 'as any' para evitar errores de tipado estricto
+                       fundWallet(walletEmbebida.address as any);
+                     }
+                   }} 
+                   style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                   💳 Comprar
                 </button>
             </div>
 
-            {/* Botón de Recargar secundario */}
             <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>
                🔄 Actualizar Saldo
             </button>
