@@ -64,7 +64,7 @@ function BilleteraApp() {
 
   // 4. ACTUALIZAR SALDO (Usando la dirección de la Smart Wallet)
   const actualizarSaldos = async () => {
-    const direccionAUsar = smartWalletClient?.address || walletEmbebida?.address;
+    const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
     if (!direccionAUsar) return;
 
     try {
@@ -162,7 +162,7 @@ function BilleteraApp() {
 
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: smartWalletClient?.address as any })} style={{...estilos.botonAccion, background: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                <button onClick={() => fundWallet({ address: smartWalletClient?.account?.address as any })} style={{...estilos.botonAccion, background: '#676FFF', color: 'white'}}>💳 Comprar</button>
             </div>
 
             <div style={estilos.listaHistorial}>
@@ -172,7 +172,7 @@ function BilleteraApp() {
 
             <div style={estilos.footerDir}>
                 <p style={{fontSize: '9px', color: '#999'}}>ID de cuenta USD:</p>
-                <code style={{fontSize: '9px'}}>{smartWalletClient?.address}</code>
+                <code style={{fontSize: '9px'}}>{smartWalletClient?.account?.address}</code>
             </div>
           </>
         ) : (
