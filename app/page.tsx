@@ -19,6 +19,7 @@ const publicClient = createPublicClient({
 });
 
 function BilleteraApp() {
+  
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
@@ -88,35 +89,43 @@ function BilleteraApp() {
 
   // 5. ENVIAR USD (Lógica de Abstracción de Cuenta)
   const enviarUSD = async () => {
-    if (!smartWalletClient || !destino || !monto) return alert("Preparando billetera inteligente...");
-    setLoading(true);
+    // 1. Verificamos cuál wallet usar
+    const clienteActivo = smartWalletClient;
+    
+    if (!clienteActivo) {
+      console.log("Smart Wallet no lista, intentando reconectar...");
+      return alert("La billetera inteligente se está inicializando. Por favor, espera 5 segundos e intenta de nuevo.");
+    }
 
+    if (!destino || !monto) return alert("Faltan datos de envío");
+    
+    setLoading(true);
     try {
       const montoWei = parseUnits(monto, 6);
-      
       const data = encodeFunctionData({
         abi: USDC_ABI,
         functionName: 'transfer',
         args: [destino as `0x${string}`, montoWei],
       });
 
-      // La Smart Wallet envía la transacción. 
-      // Si configuraste el Paymaster en Privy, esto no pedirá POL.
-      const txHash = await smartWalletClient.sendTransaction({
-        to: USDC_ADDRESS,
+      // 2. Ejecutar transacción
+      const txHash = await clienteActivo.sendTransaction({
+        account: clienteActivo.account,
+        to: USDC_ADDRESS as `0x${string}`,
         data: data,
       });
 
-      setHistorial([`Envío de ${monto} USD a ${destino.slice(0,6)}...`, ...historial]);
-      alert(`✅ Transacción Exitosa`);
-      setDestino(''); setMonto(''); setVista('inicio');
-      setTimeout(actualizarSaldos, 3000);
-    } catch (e: any) {
-      alert("Error: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setHistorial([`Envío de ${monto} USD a ${destino.slice(0,6)}...`, ...historial]);
+    alert(`✅ ¡Enviado con éxito!`);
+    setVista('inicio');
+    setTimeout(actualizarSaldos, 3000);
+  } catch (e: any) {
+    console.error("Error en transferencia:", e);
+    alert("Error: " + (e.shortMessage || e.message || "La transacción fue rechazada"));
+  } finally {
+    setLoading(false);
+  }
+};
   // --- RETIRO CON MOONPAY (USD EN POLYGON) ---
   const abrirRetiro = () => {
   const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
