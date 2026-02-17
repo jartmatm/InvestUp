@@ -1,6 +1,6 @@
 'use client';
 
-import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useWallets, useFundWallet, useUpdateUser } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
@@ -15,17 +15,16 @@ const USDC_ABI = [
 const publicClient = createPublicClient({ chain: polygon, transport: http() });
 
 function BilleteraApp() {
-  const { login, logout, authenticated, user, updateMetadata } = usePrivy();
+  const { login, logout, authenticated, user } = usePrivy();
+  const { updateUser } = useUpdateUser(); // <--- 1. Hook corregido aquí
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
-  // Estados
   const [rol, setRol] = useState<string | null>(null);
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
-  const [loading, setLoading] = useState(false);
 
   // Sincronizar Rol desde Privy
   useEffect(() => {
@@ -53,24 +52,22 @@ function BilleteraApp() {
     if (authenticated && walletEmbebida) actualizarSaldos();
   }, [authenticated, walletEmbebida]);
 
-  // Manejar Login con Rol
-  const iniciarRegistro = async (tipoRol: 'inversionista' | 'emprendedor') => {
-    // Guardamos el rol temporalmente para actualizarlo tras el login
+  const iniciarRegistro = (tipoRol: 'inversionista' | 'emprendedor') => {
     localStorage.setItem('pending_role', tipoRol);
     login();
   };
 
-  // Efecto para asignar el rol después de loguearse por primera vez
+  // 2. Lógica corregida para guardar el rol
   useEffect(() => {
     const pendingRole = localStorage.getItem('pending_role');
     if (authenticated && pendingRole && !user?.customMetadata?.role) {
-      updateMetadata({ role: pendingRole });
+      updateUser({ customMetadata: { role: pendingRole } });
       setRol(pendingRole);
       localStorage.removeItem('pending_role');
     }
-  }, [authenticated, user, updateMetadata]);
+  }, [authenticated, user, updateUser]);
 
-  // --- PANTALLA DE LOGIN (MODERNA) ---
+  // --- PANTALLA DE LOGIN ---
   if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
@@ -81,114 +78,92 @@ function BilleteraApp() {
           
           <div style={estilos.grupoBotonesLogin}>
             <button onClick={() => iniciarRegistro('inversionista')} style={estilos.botonRolInv}>
-              🚀 Registrarme como Inversionista
-              <span style={estilos.subTextoBoton}>Quiero hacer crecer mi capital</span>
+              <span style={{fontSize: '18px'}}>🚀</span>
+              <div style={{textAlign: 'left'}}>
+                <span style={{display: 'block'}}>Registrarme como Inversionista</span>
+                <span style={estilos.subTextoBoton}>Quiero hacer crecer mi capital</span>
+              </div>
             </button>
             
             <button onClick={() => iniciarRegistro('emprendedor')} style={estilos.botonRolEmp}>
-              🏗️ Registrarme como Emprendedor
-              <span style={estilos.subTextoBoton}>Busco financiar mi proyecto</span>
+              <span style={{fontSize: '18px'}}>🏗️</span>
+              <div style={{textAlign: 'left'}}>
+                <span style={{display: 'block'}}>Registrarme como Emprendedor</span>
+                <span style={estilos.subTextoBoton}>Busco financiar mi proyecto</span>
+              </div>
             </button>
           </div>
-          
-          <p style={estilos.footerLogin}>Seguridad Blockchain de grado bancario</p>
         </div>
       </main>
     );
   }
 
-  // --- PANTALLA PRINCIPAL (DASHBOARD) ---
+  // Colores dinámicos según el rol
+  const colorPrincipal = rol === 'inversionista' ? '#676FFF' : '#10b981';
+
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div style={estilos.tagRol}>{rol?.toUpperCase()}</div>
+            <div style={{...estilos.tagRol, color: colorPrincipal}}>{rol?.toUpperCase()}</div>
             <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
 
         <div style={estilos.seccionSaldo}>
             <p style={{fontSize: '14px', color: '#666', margin: 0}}>Balance Disponible</p>
             <h1 style={{fontSize: '42px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-            <div style={estilos.badgePol}>⛽ Red Polygon activa</div>
+            <div style={{...estilos.badgePol, color: colorPrincipal}}>⛽ Red Polygon activa</div>
         </div>
 
         <div style={estilos.gridBotones}>
             <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
             <button 
                 onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
-                style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                style={{...estilos.botonAccion, backgroundColor: colorPrincipal, color: 'white'}}
             >
               💳 Comprar
             </button>
             <button style={{...estilos.botonAccion, backgroundColor: '#111', color: 'white'}}>🏦 Retirar</button>
         </div>
 
-        <div style={estilos.infoCard}>
+        <div style={{...estilos.infoCard, borderLeft: `4px solid ${colorPrincipal}`}}>
           <h4 style={{margin: '0 0 5px 0'}}>Próximamente ⚡</h4>
           <p style={{fontSize: '12px', margin: 0, color: '#666'}}>
             {rol === 'inversionista' 
-              ? 'Verás proyectos reales para invertir tus USDC.' 
-              : 'Podrás publicar tu proyecto y recibir fondeo.'}
+              ? 'Tendrás acceso a una lista de proyectos reales verificados para invertir.' 
+              : 'Podrás crear tu campaña, subir documentos y solicitar financiamiento.'}
           </p>
         </div>
 
         <div style={estilos.footerDir}>
-           <p style={{fontSize: '10px', margin: 0}}>Billetera Protegida:</p> 
-           <code style={{fontSize: '10px', color: '#676FFF'}}>{walletEmbebida?.address?.slice(0,10)}...{walletEmbebida?.address?.slice(-4)}</code>
+           <code>{walletEmbebida?.address?.slice(0,6)}...{walletEmbebida?.address?.slice(-4)}</code>
         </div>
       </div>
     </main>
   );
 }
 
-// --- ESTILOS ACTUALIZADOS ---
+// --- ESTILOS ---
 const estilos: any = {
-  contenedor: { 
-    minHeight: '100vh', 
-    background: 'radial-gradient(circle at top right, #eef2ff, #f5f7fa)', 
-    display: 'flex', 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    fontFamily: "'Inter', sans-serif",
-    padding: '20px'
-  },
-  cardLogin: { 
-    background: 'rgba(255, 255, 255, 0.8)', 
-    backdropFilter: 'blur(10px)',
-    padding: '40px 30px', 
-    borderRadius: '32px', 
-    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)', 
-    textAlign: 'center', 
-    width: '100%', 
-    maxWidth: '400px',
-    border: '1px solid white'
-  },
+  contenedor: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif", padding: '20px' },
+  cardLogin: { background: 'white', padding: '40px 30px', borderRadius: '32px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', textAlign: 'center', width: '100%', maxWidth: '400px' },
   logo: { fontSize: '50px', marginBottom: '10px' },
-  tituloLogo: { fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: '0', letterSpacing: '-1px' },
-  claim: { fontSize: '16px', color: '#4b5563', lineHeight: '1.5', margin: '15px 0 35px 0', fontWeight: '500' },
+  tituloLogo: { fontSize: '28px', fontWeight: '800', color: '#1a1a1a', margin: '0' },
+  claim: { fontSize: '16px', color: '#4b5563', margin: '15px 0 35px 0' },
   grupoBotonesLogin: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  botonRolInv: { 
-    background: '#676FFF', color: 'white', padding: '18px', borderRadius: '16px', border: 'none', 
-    fontWeight: 'bold', cursor: 'pointer', transition: 'transform 0.2s', textAlign: 'left', display: 'flex', flexDirection: 'column' 
-  },
-  botonRolEmp: { 
-    background: 'white', color: '#1a1a1a', padding: '18px', borderRadius: '16px', border: '2px solid #e5e7eb', 
-    fontWeight: 'bold', cursor: 'pointer', transition: 'transform 0.2s', textAlign: 'left', display: 'flex', flexDirection: 'column' 
-  },
-  subTextoBoton: { fontSize: '11px', opacity: 0.8, fontWeight: 'normal', marginTop: '4px' },
-  footerLogin: { fontSize: '12px', color: '#9ca3af', marginTop: '30px' },
-  
-  // Dashboard
-  cardApp: { background: 'white', padding: '25px', borderRadius: '32px', boxShadow: '0 20px 40px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px', minHeight: '550px', display: 'flex', flexDirection: 'column' },
+  botonRolInv: { background: '#676FFF', color: 'white', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'flex', gap: '15px', alignItems: 'center' },
+  botonRolEmp: { background: 'white', color: '#1a1a1a', padding: '16px', borderRadius: '16px', border: '2px solid #e5e7eb', fontWeight: 'bold', cursor: 'pointer', display: 'flex', gap: '15px', alignItems: 'center' },
+  subTextoBoton: { fontSize: '11px', opacity: 0.8, fontWeight: 'normal' },
+  cardApp: { background: 'white', padding: '25px', borderRadius: '32px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
-  tagRol: { background: '#f3f4f6', padding: '6px 12px', borderRadius: '10px', fontSize: '10px', fontWeight: '800', color: '#4b5563', letterSpacing: '1px' },
-  botonSalir: { background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
+  tagRol: { background: '#f3f4f6', padding: '6px 12px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' },
+  botonSalir: { background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' },
   seccionSaldo: { textAlign: 'center', marginBottom: '30px' },
-  badgePol: { display: 'inline-block', color: '#10b981', fontSize: '12px', fontWeight: '600' },
+  badgePol: { fontSize: '12px', fontWeight: '600' },
   gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '25px' },
-  botonAccion: { padding: '12px 5px', borderRadius: '14px', border: 'none', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' },
-  infoCard: { background: '#f8fafc', padding: '20px', borderRadius: '20px', border: '1px dashed #cbd5e1', marginTop: '10px' },
-  footerDir: { marginTop: 'auto', textAlign: 'center', padding: '15px 0' }
+  botonAccion: { padding: '12px 5px', borderRadius: '14px', border: 'none', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', background: '#f1f5f9' },
+  infoCard: { background: '#f8fafc', padding: '20px', borderRadius: '16px', marginTop: '10px' },
+  footerDir: { marginTop: 'auto', textAlign: 'center', opacity: 0.5, fontSize: '10px' }
 };
 
 export default function Home() {
@@ -196,12 +171,7 @@ export default function Home() {
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
       config={{
-        appearance: { 
-          theme: 'light', 
-          accentColor: '#676FFF', 
-          showWalletLoginFirst: false,
-          logo: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png' // Un logo temporal profesional
-        },
+        appearance: { theme: 'light', accentColor: '#676FFF' },
         supportedChains: [polygon],
         embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
       }}
