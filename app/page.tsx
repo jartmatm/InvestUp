@@ -19,16 +19,24 @@ const publicClient = createPublicClient({
 });
 
 function BilleteraApp() {
-  
+  // --- 1. HOOKS (Siempre al principio) ---
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
   
-  // 1. OBTENER AMBAS WALLETS
+  // 1.1 OBTENER WALLETS
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
-  const { client: smartWalletClient } = useSmartWallets(); 
+  
+  // Añadimos la dirección como parámetro para "despertar" el hook
+  const { client: smartWalletClient } = useSmartWallets();
 
-  // 2. ESTADOS
+  // --- 2. LOGS DE DIAGNÓSTICO (Para ver en F12) ---
+  console.log("--- DEBUG WALLETS ---");
+  console.log("Wallet Embebida:", walletEmbebida?.address);
+  console.log("Smart Wallet Cliente Listo:", !!smartWalletClient);
+  console.log("Smart Wallet Dirección:", smartWalletClient?.account?.address);
+
+  // --- 3. ESTADOS ---
   const [rol, setRol] = useState<string | null>(null);
   const [aceptarTerminos, setAceptarTerminos] = useState(false);
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
@@ -41,7 +49,7 @@ function BilleteraApp() {
   const privy = usePrivy() as any; 
   const actualizarUsuario = privy.updateUser || privy.updateMetadata;
 
-  // 3. LÓGICA DE ROL Y REGISTRO
+  // --- 4. LÓGICA DE ROL Y REGISTRO ---
   useEffect(() => {
     if (authenticated && user) {
       const storedRole = user.customMetadata?.role;
@@ -63,7 +71,7 @@ function BilleteraApp() {
     login();
   };
 
-  // 4. ACTUALIZAR SALDO (Usando la dirección de la Smart Wallet)
+  // --- 5. ACTUALIZAR SALDO ---
   const actualizarSaldos = async () => {
     const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
     if (!direccionAUsar) return;
@@ -87,14 +95,13 @@ function BilleteraApp() {
     }
   }, [authenticated, smartWalletClient, walletEmbebida]);
 
-  // 5. ENVIAR USD (Lógica de Abstracción de Cuenta)
+  // --- 6. ENVIAR USD ---
   const enviarUSD = async () => {
-    // 1. Verificamos cuál wallet usar
     const clienteActivo = smartWalletClient;
     
     if (!clienteActivo) {
-      console.log("Smart Wallet no lista, intentando reconectar...");
-      return alert("La billetera inteligente se está inicializando. Por favor, espera 5 segundos e intenta de nuevo.");
+      console.log("Smart Wallet no lista.");
+      return alert("La billetera inteligente se está inicializando. Por favor, cierra sesión y vuelve a entrar.");
     }
 
     if (!destino || !monto) return alert("Faltan datos de envío");
@@ -108,37 +115,36 @@ function BilleteraApp() {
         args: [destino as `0x${string}`, montoWei],
       });
 
-      // 2. Ejecutar transacción
       const txHash = await clienteActivo.sendTransaction({
         account: clienteActivo.account,
         to: USDC_ADDRESS as `0x${string}`,
         data: data,
       });
 
-    setHistorial([`Envío de ${monto} USD a ${destino.slice(0,6)}...`, ...historial]);
-    alert(`✅ ¡Enviado con éxito!`);
-    setVista('inicio');
-    setTimeout(actualizarSaldos, 3000);
-  } catch (e: any) {
-    console.error("Error en transferencia:", e);
-    alert("Error: " + (e.shortMessage || e.message || "La transacción fue rechazada"));
-  } finally {
-    setLoading(false);
-  }
-};
-  // --- RETIRO CON MOONPAY (USD EN POLYGON) ---
-  const abrirRetiro = () => {
-  const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
-  if (!direccionAUsar) return alert("Conecta tu wallet primero");
-
-  const apiKey = 'pk_test_123'; // Tu llave de MoonPay
-  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=usdc_polygon&walletAddress=${direccionAUsar}`;
-
-  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+      setHistorial([`Envío de ${monto} USD a ${destino.slice(0,6)}...`, ...historial]);
+      alert(`✅ ¡Enviado con éxito!`);
+      setVista('inicio');
+      setTimeout(actualizarSaldos, 3000);
+    } catch (e: any) {
+      console.error("Error en transferencia:", e);
+      alert("Error: " + (e.shortMessage || e.message || "La transacción fue rechazada"));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // --- INTERFAZ DE USUARIO ---
+  // --- 7. RETIRO CON MOONPAY ---
+  const abrirRetiro = () => {
+    const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
+    if (!direccionAUsar) return alert("Conecta tu wallet primero");
 
+    const apiKey = 'pk_test_123'; 
+    const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=usdc_polygon&walletAddress=${direccionAUsar}`;
+
+    window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+  };
+
+  // --- 8. INTERFAZ DE USUARIO ---
   if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
@@ -161,7 +167,6 @@ function BilleteraApp() {
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
-        {/* Header con Rol */}
         <div style={estilos.header}>
             <div style={{display: 'flex', flexDirection: 'column'}}>
                 <span style={{fontSize: '14px', fontWeight: 'bold'}}>{user?.email?.address?.split('@')[0]}</span>
@@ -181,18 +186,13 @@ function BilleteraApp() {
 
             <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                
                 <button 
                     onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || walletEmbebida?.address) as any })} 
                     style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                     💳 Comprar
                 </button>
-
-                <button 
-                    onClick={abrirRetiro} 
-                    style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
-                >
+                <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>
                     🏦 Retirar
                 </button>
             </div>
@@ -204,24 +204,17 @@ function BilleteraApp() {
 
             <div style={estilos.footerDir}>
                 <p style={{fontSize: '9px', color: '#999'}}>ID de cuenta USD:</p>
-                <code style={{fontSize: '9px'}}>{smartWalletClient?.account?.address}</code>
+                <code style={{fontSize: '9px'}}>{smartWalletClient?.account?.address || 'Generando cuenta...'}</code>
             </div>
           </>
         ) : (
           <div style={estilos.formEnvio}>
             <h2>Enviar USD</h2>
-            <input placeholder="Dirección del destinatario" value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
+            <input placeholder="0x..." value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
             <input type="number" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} style={estilos.inputMonto} />
-            
-            {/* Desglose de Fee */}
             <div style={estilos.cajaResumen}>
-                <div style={estilos.filaResumen}><span>Envío:</span><span>{monto || '0'} USD</span></div>
-                <div style={estilos.filaResumen}><span>Tarifa (Fee):</span><span>0.05 USD</span></div>
-                <div style={{...estilos.filaResumen, fontWeight: 'bold', borderTop: '1px solid #eee', paddingTop: '8px'}}>
-                    <span>Total:</span><span>{monto ? (parseFloat(monto) + 0.05).toFixed(2) : '0.00'} USD</span>
-                </div>
+                <div style={estilos.filaResumen}><span>Tarifa:</span><span>0.05 USD</span></div>
             </div>
-
             <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Atrás</button>
                 <button onClick={enviarUSD} disabled={loading} style={estilos.botonConfirmar}>{loading ? 'Procesando...' : 'Confirmar'}</button>
