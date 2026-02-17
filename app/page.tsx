@@ -1,11 +1,12 @@
 'use client';
 
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
-import { polygon, ternoa } from 'viem/chains';
+import { polygon } from 'viem/chains';
 
-// --- CONFIGURACIÓN ---
+// --- CONFIGURACIÓN CONSTANTE ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
   { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
@@ -21,52 +22,57 @@ function BilleteraApp() {
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
+  
+  // 1. OBTENER AMBAS WALLETS
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
+  const { client: smartWalletClient } = useSmartWallets(); 
+
+  // 2. ESTADOS
+  const [rol, setRol] = useState<string | null>(null);
+  const [aceptarTerminos, setAceptarTerminos] = useState(false);
+  const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
+  const [balanceUSDC, setBalanceUSDC] = useState('0.00');
+  const [historial, setHistorial] = useState<string[]>([]);
+  const [destino, setDestino] = useState('');
+  const [monto, setMonto] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const privy = usePrivy() as any; 
   const actualizarUsuario = privy.updateUser || privy.updateMetadata;
-  const [rol, setRol] = useState<string | null>(null);
-  const [aceptarTerminos, setAceptarTerminos] = useState(false);
+
+  // 3. LÓGICA DE ROL Y REGISTRO
   useEffect(() => {
     if (authenticated && user) {
-      // Recuperar rol pendiente o el que ya tenga guardado
-      const pendingRole = localStorage.getItem('pending_role');
       const storedRole = user.customMetadata?.role;
+      const pendingRole = localStorage.getItem('pending_role');
 
       if (storedRole) {
         setRol(storedRole as string);
       } else if (pendingRole && actualizarUsuario) {
-        // Si es nuevo, guardamos el rol que eligió
         actualizarUsuario({ customMetadata: { role: pendingRole } });
         setRol(pendingRole);
         localStorage.removeItem('pending_role');
       }
     }
   }, [authenticated, user, actualizarUsuario]);
+
   const iniciarRegistro = (tipoRol: string) => {
     if (!aceptarTerminos) return; 
     localStorage.setItem('pending_role', tipoRol);
     login();
   };
 
-  const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
-  const [balanceUSDC, setBalanceUSDC] = useState('0.00');
-  const [balancePOL, setBalancePOL] = useState('0.00');
-  const [historial, setHistorial] = useState<string[]>([]);
-  const [destino, setDestino] = useState('');
-  const [monto, setMonto] = useState('');
-  const [loading, setLoading] = useState(false);
+  // 4. ACTUALIZAR SALDO (Usando la dirección de la Smart Wallet)
   const actualizarSaldos = async () => {
-    if (!walletEmbebida?.address) return;
-    try {
-      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
-      setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
+    const direccionAUsar = smartWalletClient?.address || walletEmbebida?.address;
+    if (!direccionAUsar) return;
 
+    try {
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: 'balanceOf',
-        args: [walletEmbebida.address],
+        args: [direccionAUsar as `0x${string}`],
       });
       setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
     } catch (e) {
@@ -75,17 +81,17 @@ function BilleteraApp() {
   };
 
   useEffect(() => {
-    if (authenticated && walletEmbebida) {
+    if (authenticated && (smartWalletClient || walletEmbebida)) {
       actualizarSaldos();
     }
-  }, [authenticated, walletEmbebida]);
+  }, [authenticated, smartWalletClient, walletEmbebida]);
 
-  const enviarUSDC = async () => {
-    if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
+  // 5. ENVIAR USD (Lógica de Abstracción de Cuenta)
+  const enviarUSD = async () => {
+    if (!smartWalletClient || !destino || !monto) return alert("Preparando billetera inteligente...");
     setLoading(true);
+
     try {
-      await walletEmbebida.switchChain(polygon.id);
-      const provider = await walletEmbebida.getEthereumProvider();
       const montoWei = parseUnits(monto, 6);
       
       const data = encodeFunctionData({
@@ -94,35 +100,25 @@ function BilleteraApp() {
         args: [destino as `0x${string}`, montoWei],
       });
 
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+      // La Smart Wallet envía la transacción. 
+      // Si configuraste el Paymaster en Privy, esto no pedirá POL.
+      const txHash = await smartWalletClient.sendTransaction({
+        to: USDC_ADDRESS,
+        data: data,
       });
 
-      setHistorial([`Envío de ${monto} USDC a ${destino.slice(0,6)}...`, ...historial]);
-      alert(`✅ ¡Enviado! Hash: ${txHash}`);
+      setHistorial([`Envío de ${monto} USD a ${destino.slice(0,6)}...`, ...historial]);
+      alert(`✅ Transacción Exitosa`);
       setDestino(''); setMonto(''); setVista('inicio');
       setTimeout(actualizarSaldos, 3000);
     } catch (e: any) {
-      alert("❌ Error: " + e.message);
+      alert("Error: " + e.message);
     } finally {
       setLoading(false);
     }
   };
-  const abrirRetiro = () => {
-  if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
 
-  // Configuramos los parámetros para MoonPay
-  // NOTA: Para producción necesitarás tu API KEY real de MoonPay
-  const apiKey = 'pk_test_123'; // Reemplaza con tu llave de MoonPay cuando la tengas
-  const walletAddress = walletEmbebida.address;
-  const currencyCode = 'usdc_polygon'; // Importante: especificar que es USDC en Polygon
-  
-  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
-
-  // Abrimos el widget en una ventana emergente o pestaña nueva
-  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
-};
+  // --- INTERFAZ DE USUARIO ---
 
   if (!authenticated) {
     return (
@@ -130,40 +126,13 @@ function BilleteraApp() {
         <div style={estilos.cardLogin}>
           <div style={{fontSize: '40px', marginBottom: '10px'}}>🏦</div>
           <h1 style={{color: '#333', margin: '0 0 10px 0'}}>InvestUp</h1>
-          <p style={{color: '#666', fontSize: '14px', marginBottom: '25px'}}>
-            Elige tu perfil para comenzar.
-          </p>
-
-          {/* CHECKBOX DE TÉRMINOS */}
           <div style={estilos.contenedorCheck}>
-             <input 
-               type="checkbox" 
-               id="terminos" 
-               checked={aceptarTerminos} 
-               onChange={(e) => setAceptarTerminos(e.target.checked)} 
-               style={{width: '18px', height: '18px', cursor: 'pointer'}}
-             />
-             <label htmlFor="terminos" style={{fontSize: '12px', color: '#555', cursor: 'pointer', textAlign: 'left'}}>
-               Acepto los Términos y Condiciones y la Política de Privacidad.
-             </label>
+             <input type="checkbox" id="terminos" checked={aceptarTerminos} onChange={(e) => setAceptarTerminos(e.target.checked)} />
+             <label htmlFor="terminos" style={{fontSize: '12px', color: '#555'}}>Acepto términos y condiciones</label>
           </div>
-
-          {/* BOTONES DE REGISTRO */}
           <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-            <button 
-              onClick={() => iniciarRegistro('inversionista')} 
-              disabled={!aceptarTerminos}
-              style={{...estilos.botonRol, background: '#676FFF', color: 'white', opacity: aceptarTerminos ? 1 : 0.5}}
-            >
-              🚀 Soy Inversionista
-            </button>
-            <button 
-              onClick={() => iniciarRegistro('emprendedor')} 
-              disabled={!aceptarTerminos}
-              style={{...estilos.botonRol, background: 'white', color: '#333', border: '1px solid #ddd', opacity: aceptarTerminos ? 1 : 0.5}}
-            >
-              🏗️ Soy Emprendedor
-            </button>
+            <button onClick={() => iniciarRegistro('inversionista')} disabled={!aceptarTerminos} style={{...estilos.botonRol, background: '#676FFF', color: 'white'}}>🚀 Soy Inversionista</button>
+            <button onClick={() => iniciarRegistro('emprendedor')} disabled={!aceptarTerminos} style={{...estilos.botonRol, background: 'white', border: '1px solid #ddd'}}>🏗️ Soy Emprendedor</button>
           </div>
         </div>
       </main>
@@ -173,102 +142,57 @@ function BilleteraApp() {
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
+        {/* Header con Rol */}
         <div style={estilos.header}>
-            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
-                    <span style={{fontSize: '14px', fontWeight: 'bold', color: '#333'}}>
-                        {user?.email?.address?.split('@')[0]}
-                    </span>
-                    
-                    {/* Aquí mostramos el ROL dinámicamente */}
-                    <span style={{
-                        fontSize: '10px', 
-                        background: rol === 'inversionista' ? '#eef2ff' : (rol === 'emprendedor' ? '#ecfdf5' : '#f3f4f6'),
-                        color: rol === 'inversionista' ? '#676FFF' : (rol === 'emprendedor' ? '#10b981' : '#666'),
-                        padding: '4px 8px', 
-                        borderRadius: '12px', 
-                        marginTop: '4px',
-                        fontWeight: '800',
-                        letterSpacing: '0.5px'
-                    }}>
-                        {rol ? rol.toUpperCase() : 'USUARIO'}
-                    </span>
-          </div>
-    
-    <button onClick={logout} style={estilos.botonSalir}>Salir</button>
-</div>
+            <div style={{display: 'flex', flexDirection: 'column'}}>
+                <span style={{fontSize: '14px', fontWeight: 'bold'}}>{user?.email?.address?.split('@')[0]}</span>
+                <span style={{fontSize: '10px', background: rol === 'inversionista' ? '#eef2ff' : '#ecfdf5', color: rol === 'inversionista' ? '#676FFF' : '#10b981', padding: '2px 8px', borderRadius: '10px', marginTop: '4px', fontWeight: '800'}}>
+                    {rol ? rol.toUpperCase() : 'USUARIO'}
+                </span>
+            </div>
+            <button onClick={logout} style={estilos.botonSalir}>Salir</button>
+        </div>
 
         {vista === 'inicio' ? (
           <>
             <div style={estilos.seccionSaldo}>
-                <p style={{fontSize: '14px', color: '#666', margin: 0}}>Balance Total</p>
-                <h1 style={{fontSize: '42px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
+                <p style={{fontSize: '14px', color: '#666'}}>Balance Disponible</p>
+                <h1 style={{fontSize: '42px', margin: '5px 0'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USD</span></h1>
             </div>
 
-            <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
+            <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                
-                <button 
-                   onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
-                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
-                >
-                  💳 Comprar
-                </button>
-                <button 
-                  onClick={abrirRetiro} 
-                  style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
-                >
-                  🏦 Retirar
-                </button>
+                <button onClick={() => fundWallet({ address: smartWalletClient?.address as any })} style={{...estilos.botonAccion, background: '#676FFF', color: 'white'}}>💳 Comprar</button>
             </div>
-
-            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>
-               🔄 Actualizar Saldo
-            </button>
 
             <div style={estilos.listaHistorial}>
-                <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
-                {historial.length === 0 ? (
-                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
-                ) : (
-                    historial.map((item, i) => (
-                        <div key={i} style={estilos.itemHistorial}>{item}</div>
-                    ))
-                )}
+                <h4 style={{color: '#555'}}>Actividad</h4>
+                {historial.map((item, i) => <div key={i} style={estilos.itemHistorial}>{item}</div>)}
             </div>
 
             <div style={estilos.footerDir}>
-               <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p> 
-               <code style={{fontSize: '10px', color: '#676FFF'}}>{walletEmbebida?.address}</code>
+                <p style={{fontSize: '9px', color: '#999'}}>ID de cuenta USD:</p>
+                <code style={{fontSize: '9px'}}>{smartWalletClient?.address}</code>
             </div>
           </>
         ) : (
           <div style={estilos.formEnvio}>
-            <h2 style={{color: '#333'}}>Enviar Dinero</h2>
-            <p style={{fontSize: '12px', color: '#666', marginBottom: '20px'}}>Estás en la red Polygon</p>
+            <h2>Enviar USD</h2>
+            <input placeholder="Dirección del destinatario" value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
+            <input type="number" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} style={estilos.inputMonto} />
             
-            <input 
-              placeholder="Dirección 0x del destino..." 
-              value={destino}
-              onChange={(e) => setDestino(e.target.value)}
-              style={estilos.input}
-            />
-            <div style={{position: 'relative', width: '100%'}}>
-                <input 
-                  type="number" 
-                  placeholder="0.00" 
-                  value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                  style={estilos.inputMonto}
-                />
-                <span style={{position: 'absolute', right: '15px', top: '15px', fontWeight: 'bold', color: '#888'}}>USDC</span>
+            {/* Desglose de Fee */}
+            <div style={estilos.cajaResumen}>
+                <div style={estilos.filaResumen}><span>Envío:</span><span>{monto || '0'} USD</span></div>
+                <div style={estilos.filaResumen}><span>Tarifa (Fee):</span><span>0.05 USD</span></div>
+                <div style={{...estilos.filaResumen, fontWeight: 'bold', borderTop: '1px solid #eee', paddingTop: '8px'}}>
+                    <span>Total:</span><span>{monto ? (parseFloat(monto) + 0.05).toFixed(2) : '0.00'} USD</span>
+                </div>
             </div>
 
             <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-                <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
-                <button onClick={enviarUSDC} disabled={loading} style={estilos.botonConfirmar}>
-                    {loading ? 'Enviando...' : 'Confirmar Envío'}
-                </button>
+                <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Atrás</button>
+                <button onClick={enviarUSD} disabled={loading} style={estilos.botonConfirmar}>{loading ? 'Procesando...' : 'Confirmar'}</button>
             </div>
           </div>
         )}
@@ -277,29 +201,26 @@ function BilleteraApp() {
   );
 }
 
-// --- ESTILOS ---
+// --- ESTILOS MEJORADOS ---
 const estilos: any = {
-  contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
-  cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
-  cardApp: { background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', width: '90%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
-  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
-  botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
-  badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
-  gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '25px' },
-  botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
-  botonAccionSecundario: { background: 'white', color: '#111', border: '1px solid #ddd', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  listaHistorial: { marginTop: '25px', flex: 1 },
-  itemHistorial: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#444' },
-  footerDir: { marginTop: 'auto', textAlign: 'center', background: '#f9f9f9', padding: '10px', borderRadius: '12px' },
-  formEnvio: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' },
-  input: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
-  inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
-  botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  botonRol: { padding: '15px', borderRadius: '12px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' },
-  contenedorCheck: { display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px', background: '#f9f9f9', padding: '10px', borderRadius: '8px' },
+  contenedor: { minHeight: '100vh', background: '#f5f7fa', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' },
+  cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', textAlign: 'center', width: '320px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+  cardApp: { background: 'white', padding: '25px', borderRadius: '24px', width: '350px', minHeight: '550px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' },
+  header: { display: 'flex', justifyContent: 'space-between', marginBottom: '30px' },
+  seccionSaldo: { textAlign: 'center', marginBottom: '30px' },
+  gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
+  botonAccion: { padding: '12px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer', background: '#f0f0f0' },
+  botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' },
+  footerDir: { marginTop: 'auto', background: '#f9f9f9', padding: '10px', borderRadius: '12px', textAlign: 'center' },
+  input: { width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #eee', marginBottom: '10px', boxSizing: 'border-box' },
+  inputMonto: { width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid #eee', fontSize: '24px', textAlign: 'center', boxSizing: 'border-box' },
+  cajaResumen: { background: '#f8fafc', padding: '15px', borderRadius: '12px', marginTop: '15px' },
+  filaResumen: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '5px' },
+  botonConfirmar: { flex: 2, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 'bold' },
+  botonCancelar: { flex: 1, padding: '15px', background: '#eee', border: 'none', borderRadius: '12px', fontWeight: 'bold' },
+  botonRol: { padding: '15px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
+  contenedorCheck: { display: 'flex', gap: '8px', marginBottom: '20px', alignItems: 'center', justifyContent: 'center' },
+  itemHistorial: { padding: '10px 0', borderBottom: '1px solid #f9f9f9', fontSize: '12px' }
 };
 
 export default function Home() {
@@ -309,14 +230,13 @@ export default function Home() {
       config={{
         appearance: { 
           theme: 'light', 
-          accentColor: '#676FFF', 
-          showWalletLoginFirst: false 
+          accentColor: '#676FFF' 
         },
-        // CAMBIO CLAVE: Declarar explícitamente las redes soportadas
         supportedChains: [polygon],
+        // CONFIGURACIÓN NIVEL DIOS PARA LA ÚLTIMA VERSIÓN:
         embeddedWallets: { 
           ethereum: {
-            createOnLogin: 'users-without-wallets' 
+            createOnLogin: 'users-without-wallets',
           }
         },
       }}
