@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits } from 'viem';
 import { polygon } from 'viem/chains';
 
-// --- CONFIGURACIÓN DE PAÍSES ---
+// --- CONFIGURACIÓN ---
 const DATOS_PAISES: any = {
   Colombia: { code: '+57', docs: ['Cédula de Ciudadanía', 'Cédula de Extranjería', 'PPT'] },
   México: { code: '+52', docs: ['INE', 'Pasaporte', 'Cédula Profesional'] },
@@ -26,147 +26,169 @@ function BilleteraApp() {
   const { fundWallet } = useFundWallet();
   const walletEmbebida = wallets.find((w: any) => w.walletClientType === 'privy');
 
-  // Estados
+  // Estados Globales
   const [rol, setRol] = useState<string | null>(null);
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
+  const [aceptarTerminos, setAceptarTerminos] = useState(false);
   const [mostrandoForm, setMostrandoForm] = useState(false);
-  const [paso, setPaso] = useState(1); // Manejo de la barra de progreso
-
+  
+  // Estados del Formulario
+  const [paso, setPaso] = useState(1);
   const [formData, setFormData] = useState({
     nombre: '', apellido: '', pais: 'Colombia', telefono: '', tipoDoc: 'Cédula de Ciudadanía', numDoc: ''
   });
 
+  // 1. Lógica de Roles y Formulario al iniciar sesión
   useEffect(() => {
     if (authenticated && user) {
-      if (user.customMetadata?.role) {
-        setRol(user.customMetadata.role);
-        if (!user.customMetadata?.nombre) setMostrandoForm(true);
+      const userRole = user.customMetadata?.role || localStorage.getItem('pending_role');
+      
+      if (userRole) {
+        setRol(userRole);
+        // Si es nuevo y no hemos guardado el rol en metadata, lo hacemos
+        if (!user.customMetadata?.role && actualizarUsuario) {
+          actualizarUsuario({ customMetadata: { ...user.customMetadata, role: userRole } });
+          localStorage.removeItem('pending_role');
+        }
+        // Si no tiene nombre completo, mostrar formulario
+        if (!user.customMetadata?.nombre) {
+          setMostrandoForm(true);
+        }
       }
     }
-  }, [authenticated, user]);
+  }, [authenticated, user, actualizarUsuario]);
 
-  const finalizarRegistro = async () => {
-    if (!actualizarUsuario) return;
+  // 2. Cargar Saldo Real
+  const cargarSaldo = async () => {
+    if (!walletEmbebida?.address) return;
     try {
-      await actualizarUsuario({
-        customMetadata: { ...user?.customMetadata, ...formData, completado: 'true' }
+      const bal = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'balanceOf',
+        args: [walletEmbebida.address],
       });
-      setMostrandoForm(false);
-    } catch (e) { alert("Error guardando datos"); }
+      setBalanceUSDC(Number(formatUnits(bal as bigint, 6)).toFixed(2));
+    } catch (e) { console.error("Error saldo:", e); }
   };
 
-  // --- UI FORMULARIO CON PASOS ---
-  if (authenticated && mostrandoForm) {
-    const progreso = (paso / 3) * 100;
+  useEffect(() => {
+    if (authenticated && walletEmbebida) cargarSaldo();
+  }, [authenticated, walletEmbebida]);
 
+  const iniciarRegistro = (tipo: string) => {
+    if (!aceptarTerminos) return;
+    localStorage.setItem('pending_role', tipo);
+    login();
+  };
+
+  const guardarPerfil = async () => {
+    if (actualizarUsuario) {
+      await actualizarUsuario({
+        customMetadata: { ...user?.customMetadata, ...formData }
+      });
+      setMostrandoForm(false);
+    }
+  };
+
+  // --- VISTA A: LOGIN ---
+  if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
-        <div style={estilos.cardApp}>
-          {/* BARRA DE PROGRESO */}
-          <div style={estilos.contenedorProgreso}>
-            <div style={{ ...estilos.barraProgreso, width: `${progreso}%` }}></div>
-          </div>
-          <p style={estilos.textoPasos}>Paso {paso} de 3</p>
-
-          <h2 style={{ margin: '10px 0 5px 0' }}>
-            {paso === 1 && "Cuéntanos de ti"}
-            {paso === 2 && "¿Dónde te encuentras?"}
-            {paso === 3 && "Verifica tu identidad"}
-          </h2>
-          <p style={{ fontSize: '13px', color: '#666', marginBottom: '25px' }}>
-            {paso === 1 && "Introduce tu nombre legal para InvestUp."}
-            {paso === 2 && "Esto nos ayuda a ajustar las tasas a tu moneda local."}
-            {paso === 3 && "Tus datos están encriptados y seguros."}
-          </p>
-
-          <div style={estilos.formGrid}>
-            {paso === 1 && (
-              <>
-                <input placeholder="Nombre(s)" style={estilos.input} value={formData.nombre} onChange={e => setFormData({ ...formData, nombre: e.target.value })} />
-                <input placeholder="Apellidos" style={estilos.input} value={formData.apellido} onChange={e => setFormData({ ...formData, apellido: e.target.value })} />
-              </>
-            )}
-
-            {paso === 2 && (
-              <>
-                <select style={estilos.input} value={formData.pais} onChange={e => {
-                  const p = e.target.value;
-                  setFormData({ ...formData, pais: p, tipoDoc: DATOS_PAISES[p].docs[0] });
-                }}>
-                  {Object.keys(DATOS_PAISES).map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-                <div style={{ display: 'flex', gap: '5px' }}>
-                  <div style={estilos.inputPrefijo}>{DATOS_PAISES[formData.pais].code}</div>
-                  <input placeholder="Teléfono" style={{ ...estilos.input, flex: 1 }} value={formData.telefono} onChange={e => setFormData({ ...formData, telefono: e.target.value })} />
-                </div>
-              </>
-            )}
-
-            {paso === 3 && (
-              <>
-                <select style={estilos.input} value={formData.tipoDoc} onChange={e => setFormData({ ...formData, tipoDoc: e.target.value })}>
-                  {DATOS_PAISES[formData.pais].docs.map((d: string) => <option key={d} value={d}>{d}</option>)}
-                </select>
-                <input placeholder="Número de Documento" style={estilos.input} value={formData.numDoc} onChange={e => setFormData({ ...formData, numDoc: e.target.value })} />
-              </>
-            )}
+        <div style={estilos.cardLogin}>
+          <div style={{fontSize: '50px'}}>🏦</div>
+          <h1 style={estilos.tituloLogo}>InvestUp</h1>
+          <p style={estilos.claim}>“Invierte mejor que un CDT.<br/>Financia el crecimiento real.”</p>
+          
+          <div style={estilos.contenedorCheck}>
+            <input type="checkbox" id="check" checked={aceptarTerminos} onChange={e => setAceptarTerminos(e.target.checked)} style={estilos.checkbox} />
+            <label htmlFor="check" style={estilos.labelCheck}>Acepto los Términos y Condiciones</label>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-            {paso > 1 && (
-              <button onClick={() => setPaso(paso - 1)} style={estilos.botonVolver}>Atrás</button>
-            )}
-            
-            {paso < 3 ? (
-              <button 
-                onClick={() => setPaso(paso + 1)} 
-                disabled={paso === 1 && !formData.nombre}
-                style={{ ...estilos.botonSiguiente, opacity: (paso === 1 && !formData.nombre) ? 0.5 : 1 }}
-              >
-                Siguiente
-              </button>
-            ) : (
-              <button onClick={finalizarRegistro} style={{ ...estilos.botonSiguiente, backgroundColor: '#111' }}>
-                Finalizar
-              </button>
-            )}
+          <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+            <button onClick={() => iniciarRegistro('inversionista')} disabled={!aceptarTerminos} style={{...estilos.botonRolInv, opacity: aceptarTerminos ? 1 : 0.5}}>🚀 Registrarme como Inversionista</button>
+            <button onClick={() => iniciarRegistro('emprendedor')} disabled={!aceptarTerminos} style={{...estilos.botonRolEmp, opacity: aceptarTerminos ? 1 : 0.5}}>🏗️ Registrarme como Emprendedor</button>
           </div>
         </div>
       </main>
     );
   }
 
-  // --- LOGIN & DASHBOARD (Simplificados para esta vista) ---
-  if (!authenticated) {
+  // --- VISTA B: FORMULARIO PROGRESIVO ---
+  if (mostrandoForm) {
+    const progreso = (paso / 3) * 100;
     return (
-        <main style={estilos.contenedor}>
-          <div style={estilos.cardLogin}>
-            <div style={{fontSize: '50px'}}>🏦</div>
-            <h1 style={estilos.tituloLogo}>InvestUp</h1>
-            <p style={estilos.claim}>“Invierte mejor que un CDT.”</p>
-            <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
-                <button onClick={() => { localStorage.setItem('pending_role', 'inversionista'); login(); }} style={estilos.botonRolInv}>🚀 Inversionista</button>
-                <button onClick={() => { localStorage.setItem('pending_role', 'emprendedor'); login(); }} style={estilos.botonRolEmp}>🏗️ Emprendedor</button>
-            </div>
+      <main style={estilos.contenedor}>
+        <div style={estilos.cardApp}>
+          <div style={estilos.contenedorProgreso}><div style={{...estilos.barraProgreso, width: `${progreso}%`}}></div></div>
+          <p style={estilos.textoPasos}>Paso {paso} de 3</p>
+          
+          <h2 style={{margin: '10px 0'}}>{paso === 1 ? "Tus Datos" : paso === 2 ? "Ubicación" : "Identidad"}</h2>
+          
+          <div style={estilos.formGrid}>
+            {paso === 1 && (
+              <>
+                <input placeholder="Nombre" style={estilos.input} onChange={e => setFormData({...formData, nombre: e.target.value})} />
+                <input placeholder="Apellido" style={estilos.input} onChange={e => setFormData({...formData, apellido: e.target.value})} />
+              </>
+            )}
+            {paso === 2 && (
+              <>
+                <select style={estilos.input} value={formData.pais} onChange={e => setFormData({...formData, pais: e.target.value, tipoDoc: DATOS_PAISES[e.target.value].docs[0]})}>
+                  {Object.keys(DATOS_PAISES).map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <div style={{display: 'flex', gap: '10px'}}>
+                  <div style={estilos.inputPrefijo}>{DATOS_PAISES[formData.pais].code}</div>
+                  <input placeholder="Teléfono" style={{...estilos.input, flex: 1}} onChange={e => setFormData({...formData, telefono: e.target.value})} />
+                </div>
+              </>
+            )}
+            {paso === 3 && (
+              <>
+                <select style={estilos.input} value={formData.tipoDoc} onChange={e => setFormData({...formData, tipoDoc: e.target.value})}>
+                  {DATOS_PAISES[formData.pais].docs.map((d:string) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <input placeholder="Número de Documento" style={estilos.input} onChange={e => setFormData({...formData, numDoc: e.target.value})} />
+              </>
+            )}
           </div>
-        </main>
-      );
+
+          <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+            {paso > 1 && <button onClick={() => setPaso(paso-1)} style={estilos.botonVolver}>Atrás</button>}
+            <button onClick={() => paso < 3 ? setPaso(paso+1) : guardarPerfil()} style={estilos.botonSiguiente}>
+              {paso < 3 ? "Siguiente" : "Finalizar"}
+            </button>
+          </div>
+        </div>
+      </main>
+    );
   }
+
+  // --- VISTA C: DASHBOARD ---
+  const colorPrincipal = rol === 'inversionista' ? '#676FFF' : '#10b981';
 
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div style={estilos.tagRol}>{rol?.toUpperCase()}</div>
+            <div style={{...estilos.tagRol, color: colorPrincipal}}>{rol?.toUpperCase()}</div>
             <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
-        <h3>Hola, {user.customMetadata?.nombre} 👋</h3>
-        <div style={estilos.seccionSaldo}>
-            <h1 style={{fontSize: '42px', margin: '5px 0'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
+        
+        <div style={{marginBottom: '30px'}}>
+          <h2 style={{margin: 0}}>Hola, {user.customMetadata?.nombre || 'Inversionista'} 👋</h2>
+          <p style={{fontSize: '12px', color: '#666'}}>Bienvenido a tu panel de InvestUp</p>
         </div>
+
+        <div style={estilos.seccionSaldo}>
+            <p style={{fontSize: '14px', color: '#666', margin: 0}}>Tu balance</p>
+            <h1 style={{fontSize: '48px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
+            <div style={{color: colorPrincipal, fontSize: '12px', fontWeight: 'bold'}}>● Red Polygon</div>
+        </div>
+
         <div style={estilos.gridBotones}>
-            <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, background: '#676FFF', color: 'white'}}>💳 Comprar</button>
-            <button style={estilos.botonAccion}>🏦 Retirar</button>
+            <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, backgroundColor: colorPrincipal, color: 'white'}}>💳 Comprar</button>
+            <button style={{...estilos.botonAccion, backgroundColor: '#111', color: 'white'}}>🏦 Retirar</button>
         </div>
       </div>
     </main>
@@ -176,31 +198,29 @@ function BilleteraApp() {
 // --- ESTILOS ---
 const estilos: any = {
   contenedor: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', padding: '20px' },
-  cardApp: { background: 'white', padding: '30px', borderRadius: '32px', boxShadow: '0 10px 15px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px', position: 'relative' },
   cardLogin: { background: 'white', padding: '40px', borderRadius: '32px', boxShadow: '0 20px 25px rgba(0,0,0,0.1)', textAlign: 'center', width: '100%', maxWidth: '380px' },
-  
-  // Barra de progreso
-  contenedorProgreso: { width: '100%', height: '6px', background: '#e5e7eb', borderRadius: '10px', overflow: 'hidden', marginBottom: '10px' },
-  barraProgreso: { height: '100%', background: '#676FFF', transition: 'width 0.3s ease' },
-  textoPasos: { fontSize: '12px', fontWeight: 'bold', color: '#9ca3af', textTransform: 'uppercase' },
-
-  formGrid: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  input: { padding: '15px', borderRadius: '16px', border: '1px solid #e5e7eb', fontSize: '15px', outline: 'none', background: '#f9fafb' },
-  inputPrefijo: { padding: '15px', background: '#f3f4f6', borderRadius: '16px', border: '1px solid #e5e7eb', fontSize: '15px', color: '#666' },
-  
-  botonSiguiente: { flex: 2, background: '#676FFF', color: 'white', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
-  botonVolver: { flex: 1, background: '#f3f4f6', color: '#4b5563', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
-  
+  cardApp: { background: 'white', padding: '30px', borderRadius: '32px', boxShadow: '0 10px 15px rgba(0,0,0,0.05)', width: '100%', maxWidth: '400px' },
   tituloLogo: { fontSize: '28px', fontWeight: '800', margin: '10px 0' },
   claim: { fontSize: '16px', color: '#4b5563', marginBottom: '25px' },
-  botonRolInv: { background: '#676FFF', color: 'white', padding: '18px', borderRadius: '16px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
-  botonRolEmp: { background: 'white', color: '#1a1a1a', padding: '18px', borderRadius: '16px', border: '2px solid #e5e7eb', fontWeight: 'bold', cursor: 'pointer' },
+  contenedorCheck: { display: 'flex', gap: '10px', marginBottom: '20px', textAlign: 'left', alignItems: 'center' },
+  checkbox: { width: '18px', height: '18px' },
+  labelCheck: { fontSize: '13px', color: '#666' },
+  botonRolInv: { background: '#676FFF', color: 'white', padding: '16px', borderRadius: '16px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
+  botonRolEmp: { background: 'white', color: '#1a1a1a', padding: '16px', borderRadius: '16px', border: '2px solid #e5e7eb', fontWeight: 'bold', cursor: 'pointer' },
+  contenedorProgreso: { width: '100%', height: '6px', background: '#eee', borderRadius: '10px', overflow: 'hidden' },
+  barraProgreso: { height: '100%', background: '#676FFF', transition: 'width 0.3s' },
+  textoPasos: { fontSize: '11px', color: '#999', marginTop: '5px', fontWeight: 'bold' },
+  formGrid: { display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' },
+  input: { padding: '14px', borderRadius: '12px', border: '1px solid #ddd', outline: 'none' },
+  inputPrefijo: { padding: '14px', background: '#f0f0f0', borderRadius: '12px', border: '1px solid #ddd', fontSize: '14px' },
+  botonSiguiente: { flex: 2, background: '#111', color: 'white', padding: '15px', borderRadius: '12px', border: 'none', fontWeight: 'bold', cursor: 'pointer' },
+  botonVolver: { flex: 1, background: '#eee', padding: '15px', borderRadius: '12px', border: 'none', cursor: 'pointer' },
   header: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
   tagRol: { background: '#f3f4f6', padding: '6px 12px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' },
   botonSalir: { background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' },
-  seccionSaldo: { textAlign: 'center', marginBottom: '30px' },
+  seccionSaldo: { textAlign: 'center', marginBottom: '30px', background: '#fcfcfc', padding: '20px', borderRadius: '20px' },
   gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
-  botonAccion: { padding: '12px 5px', borderRadius: '14px', border: 'none', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', background: '#f1f5f9' },
+  botonAccion: { padding: '15px', borderRadius: '15px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default function Home() {
