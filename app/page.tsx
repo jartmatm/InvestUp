@@ -2,37 +2,42 @@
 
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
-import { createPublicClient, http, formatUnits } from 'viem';
+import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
 
 // --- CONFIGURACIÓN ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
-  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] }
+  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
 ];
 
-const publicClient = createPublicClient({ chain: polygon, transport: http() });
+const publicClient = createPublicClient({ 
+  chain: polygon, 
+  transport: http() 
+});
 
 function BilleteraApp() {
-  const privy = usePrivy() as any;
-  const { login, logout, authenticated, user } = privy;
-  const actualizarUsuario = privy.updateUser || privy.updateMetadata;
-
+  const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
-  const walletEmbebida = wallets.find((w: any) => w.walletClientType === 'privy');
+  const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
-  const [rol, setRol] = useState<string | null>(null);
+  const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
-  const [aceptarTerminos, setAceptarTerminos] = useState(false); // Estado para el checkbox
-
-  useEffect(() => {
-    if (user?.customMetadata?.role) setRol(user.customMetadata.role as string);
-  }, [user]);
+  const [balancePOL, setBalancePOL] = useState('0.00');
+  const [historial, setHistorial] = useState<string[]>([]);
+  
+  const [destino, setDestino] = useState('');
+  const [monto, setMonto] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
     try {
+      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
+      setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
+
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
@@ -40,137 +45,182 @@ function BilleteraApp() {
         args: [walletEmbebida.address],
       });
       setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error("Error leyendo saldos:", e);
+    }
   };
 
   useEffect(() => {
-    if (authenticated && walletEmbebida) actualizarSaldos();
+    if (authenticated && walletEmbebida) {
+      actualizarSaldos();
+    }
   }, [authenticated, walletEmbebida]);
 
-  const iniciarRegistro = (tipoRol: 'inversionista' | 'emprendedor') => {
-    if (!aceptarTerminos) return; // Doble validación por seguridad
-    localStorage.setItem('pending_role', tipoRol);
-    login();
-  };
+  const enviarUSDC = async () => {
+    if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
+    setLoading(true);
+    try {
+      await walletEmbebida.switchChain(polygon.id);
+      const provider = await walletEmbebida.getEthereumProvider();
+      const montoWei = parseUnits(monto, 6);
+      
+      const data = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [destino as `0x${string}`, montoWei],
+      });
 
-  useEffect(() => {
-    const pendingRole = localStorage.getItem('pending_role');
-    if (authenticated && pendingRole && !user?.customMetadata?.role && actualizarUsuario) {
-      actualizarUsuario({ customMetadata: { role: pendingRole } });
-      setRol(pendingRole);
-      localStorage.removeItem('pending_role');
+      const txHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+      });
+
+      setHistorial([`Envío de ${monto} USDC a ${destino.slice(0,6)}...`, ...historial]);
+      alert(`✅ ¡Enviado! Hash: ${txHash}`);
+      setDestino(''); setMonto(''); setVista('inicio');
+      setTimeout(actualizarSaldos, 3000);
+    } catch (e: any) {
+      alert("❌ Error: " + e.message);
+    } finally {
+      setLoading(false);
     }
-  }, [authenticated, user, actualizarUsuario]);
+  };
+  const abrirRetiro = () => {
+  if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
 
-  // --- PANTALLA DE LOGIN CON CHECKBOX ---
+  // Configuramos los parámetros para MoonPay
+  // NOTA: Para producción necesitarás tu API KEY real de MoonPay
+  const apiKey = 'pk_test_123'; // Reemplaza con tu llave de MoonPay cuando la tengas
+  const walletAddress = walletEmbebida.address;
+  const currencyCode = 'usdc_polygon'; // Importante: especificar que es USDC en Polygon
+  
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
+
+  // Abrimos el widget en una ventana emergente o pestaña nueva
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+};
+
   if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <div style={{fontSize: '50px'}}>🏦</div>
-          <h1 style={estilos.tituloLogo}>InvestUp</h1>
-          <p style={estilos.claim}>“Invierte mejor que un CDT.<br/>Financia el crecimiento real.”</p>
-          
-          {/* SECCIÓN TÉRMINOS Y CONDICIONES */}
-          <div style={estilos.contenedorCheck}>
-            <input 
-              type="checkbox" 
-              id="terminos" 
-              checked={aceptarTerminos} 
-              onChange={(e) => setAceptarTerminos(e.target.checked)}
-              style={estilos.checkbox}
-            />
-            <label htmlFor="terminos" style={estilos.labelCheck}>
-              Acepto los <a href="#" style={{color: '#676FFF', textDecoration: 'none'}}>Términos de Servicio</a> y la <a href="#" style={{color: '#676FFF', textDecoration: 'none'}}>Política de Privacidad</a>.
-            </label>
-          </div>
-
-          <div style={{display: 'flex', flexDirection: 'column', gap: '15px'}}>
-            <button 
-              onClick={() => iniciarRegistro('inversionista')} 
-              disabled={!aceptarTerminos}
-              style={{
-                ...estilos.botonRolInv, 
-                opacity: aceptarTerminos ? 1 : 0.5,
-                cursor: aceptarTerminos ? 'pointer' : 'not-allowed'
-              }}
-            >
-               🚀 Registrarme como Inversionista
-            </button>
-            <button 
-              onClick={() => iniciarRegistro('emprendedor')} 
-              disabled={!aceptarTerminos}
-              style={{
-                ...estilos.botonRolEmp, 
-                opacity: aceptarTerminos ? 1 : 0.5,
-                cursor: aceptarTerminos ? 'pointer' : 'not-allowed'
-              }}
-            >
-               🏗️ Registrarme como Emprendedor
-            </button>
-          </div>
+          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
+          <p style={{color: '#666', marginBottom: '30px'}}>Primera Versión de InvestUp.</p>
+          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar con Email</button>
         </div>
       </main>
     );
   }
 
-  const colorPrincipal = rol === 'inversionista' ? '#676FFF' : '#10b981';
-
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div style={{...estilos.tagRol, color: colorPrincipal}}>{rol?.toUpperCase() || 'USUARIO'}</div>
+            <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
             <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
-        <div style={estilos.seccionSaldo}>
-            <p style={{fontSize: '14px', color: '#666', margin: 0}}>Balance Disponible</p>
-            <h1 style={{fontSize: '42px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-            <div style={{color: colorPrincipal, fontSize: '12px', fontWeight: '600'}}>⛽ Red Polygon</div>
-        </div>
-        <div style={estilos.gridBotones}>
-            <button style={estilos.botonAccion}>💸 Enviar</button>
-            <button 
-                onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
-                style={{...estilos.botonAccion, backgroundColor: colorPrincipal, color: 'white'}}
-            >
-              💳 Comprar
+
+        {vista === 'inicio' ? (
+          <>
+            <div style={estilos.seccionSaldo}>
+                <p style={{fontSize: '14px', color: '#666', margin: 0}}>Balance Total</p>
+                <h1 style={{fontSize: '42px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
+                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
+            </div>
+
+            <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
+                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
+                
+                <button 
+                   onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
+                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                >
+                  💳 Comprar
+                </button>
+                <button 
+                  onClick={abrirRetiro} 
+                  style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
+                >
+                  🏦 Retirar
+                </button>
+            </div>
+
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>
+               🔄 Actualizar Saldo
             </button>
-            <button style={{...estilos.botonAccion, backgroundColor: '#111', color: 'white'}}>🏦 Retirar</button>
-        </div>
-        <div style={{...estilos.infoCard, borderLeft: `4px solid ${colorPrincipal}`}}>
-          <h4 style={{margin: '0 0 5px 0'}}>Dashboard de {rol} ⚡</h4>
-          <p style={{fontSize: '12px', color: '#666'}}>
-            {rol === 'inversionista' ? 'Explora oportunidades de inversión.' : 'Gestiona tus solicitudes de crédito.'}
-          </p>
-        </div>
+
+            <div style={estilos.listaHistorial}>
+                <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
+                {historial.length === 0 ? (
+                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
+                ) : (
+                    historial.map((item, i) => (
+                        <div key={i} style={estilos.itemHistorial}>{item}</div>
+                    ))
+                )}
+            </div>
+
+            <div style={estilos.footerDir}>
+               <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p> 
+               <code style={{fontSize: '10px', color: '#676FFF'}}>{walletEmbebida?.address}</code>
+            </div>
+          </>
+        ) : (
+          <div style={estilos.formEnvio}>
+            <h2 style={{color: '#333'}}>Enviar Dinero</h2>
+            <p style={{fontSize: '12px', color: '#666', marginBottom: '20px'}}>Estás en la red Polygon</p>
+            
+            <input 
+              placeholder="Dirección 0x del destino..." 
+              value={destino}
+              onChange={(e) => setDestino(e.target.value)}
+              style={estilos.input}
+            />
+            <div style={{position: 'relative', width: '100%'}}>
+                <input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={monto}
+                  onChange={(e) => setMonto(e.target.value)}
+                  style={estilos.inputMonto}
+                />
+                <span style={{position: 'absolute', right: '15px', top: '15px', fontWeight: 'bold', color: '#888'}}>USDC</span>
+            </div>
+
+            <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+                <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
+                <button onClick={enviarUSDC} disabled={loading} style={estilos.botonConfirmar}>
+                    {loading ? 'Enviando...' : 'Confirmar Envío'}
+                </button>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
 }
 
-// --- ESTILOS ACTUALIZADOS ---
+// --- ESTILOS ---
 const estilos: any = {
-  contenedor: { minHeight: '100vh', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif', padding: '20px' },
-  cardLogin: { background: 'white', padding: '40px', borderRadius: '32px', boxShadow: '0 20px 25px rgba(0,0,0,0.1)', textAlign: 'center', width: '100%', maxWidth: '380px' },
-  tituloLogo: { fontSize: '28px', fontWeight: '800', margin: '10px 0' },
-  claim: { fontSize: '16px', color: '#4b5563', marginBottom: '25px' },
-  
-  // Estilos del Checkbox
-  contenedorCheck: { display: 'flex', alignItems: 'flex-start', gap: '10px', marginBottom: '25px', textAlign: 'left', padding: '0 5px' },
-  checkbox: { marginTop: '4px', cursor: 'pointer', width: '18px', height: '18px', accentColor: '#676FFF' },
-  labelCheck: { fontSize: '13px', color: '#666', lineHeight: '1.4', cursor: 'pointer' },
-
-  botonRolInv: { background: '#676FFF', color: 'white', padding: '18px', borderRadius: '16px', border: 'none', fontWeight: 'bold', width: '100%' },
-  botonRolEmp: { background: 'white', color: '#1a1a1a', padding: '18px', borderRadius: '16px', border: '2px solid #e5e7eb', fontWeight: 'bold', width: '100%' },
-  cardApp: { background: 'white', padding: '25px', borderRadius: '32px', boxShadow: '0 10px 15px rgba(0,0,0,0.05)', width: '100%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
-  tagRol: { background: '#f3f4f6', padding: '6px 12px', borderRadius: '10px', fontSize: '10px', fontWeight: '800' },
-  botonSalir: { background: 'none', border: 'none', color: '#ef4444', fontWeight: 'bold', cursor: 'pointer' },
-  seccionSaldo: { textAlign: 'center', marginBottom: '30px' },
-  gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '25px' },
-  botonAccion: { padding: '12px 5px', borderRadius: '14px', border: 'none', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', background: '#f1f5f9' },
-  infoCard: { background: '#f8fafc', padding: '20px', borderRadius: '16px' }
+  contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
+  cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
+  cardApp: { background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', width: '90%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
+  botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
+  seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
+  badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
+  gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '25px' },
+  botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
+  botonAccionSecundario: { background: 'white', color: '#111', border: '1px solid #ddd', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
+  listaHistorial: { marginTop: '25px', flex: 1 },
+  itemHistorial: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#444' },
+  footerDir: { marginTop: 'auto', textAlign: 'center', background: '#f9f9f9', padding: '10px', borderRadius: '12px' },
+  formEnvio: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' },
+  input: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
+  inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
+  botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
+  botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
 };
 
 export default function Home() {
@@ -178,9 +228,18 @@ export default function Home() {
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
       config={{
-        appearance: { theme: 'light', accentColor: '#676FFF' },
+        appearance: { 
+          theme: 'light', 
+          accentColor: '#676FFF', 
+          showWalletLoginFirst: false 
+        },
+        // CAMBIO CLAVE: Declarar explícitamente las redes soportadas
         supportedChains: [polygon],
-        embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
+        embeddedWallets: { 
+          ethereum: {
+            createOnLogin: 'users-without-wallets' 
+          }
+        },
       }}
     >
       <BilleteraApp />
