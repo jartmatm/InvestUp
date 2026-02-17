@@ -174,14 +174,28 @@ function BilleteraApp() {
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div>
-              <div style={{fontSize: '14px', fontWeight: 'bold'}}>{user?.email?.address?.split('@')[0]}</div>
-              <div style={{fontSize: '10px', color: '#676FFF', background: '#eef2ff', padding: '2px 6px', borderRadius: '4px', display: 'inline-block'}}>
-               {rol ? rol.toUpperCase() : 'USUARIO'}
-              </div>
-            </div>
-            <button onClick={logout} style={estilos.botonSalir}>Salir</button>
-        </div>
+            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
+                    <span style={{fontSize: '14px', fontWeight: 'bold', color: '#333'}}>
+                        {user?.email?.address?.split('@')[0]}
+                    </span>
+                    
+                    {/* Aquí mostramos el ROL dinámicamente */}
+                    <span style={{
+                        fontSize: '10px', 
+                        background: rol === 'inversionista' ? '#eef2ff' : (rol === 'emprendedor' ? '#ecfdf5' : '#f3f4f6'),
+                        color: rol === 'inversionista' ? '#676FFF' : (rol === 'emprendedor' ? '#10b981' : '#666'),
+                        padding: '4px 8px', 
+                        borderRadius: '12px', 
+                        marginTop: '4px',
+                        fontWeight: '800',
+                        letterSpacing: '0.5px'
+                    }}>
+                        {rol ? rol.toUpperCase() : 'USUARIO'}
+                    </span>
+          </div>
+    
+    <button onClick={logout} style={estilos.botonSalir}>Salir</button>
+</div>
 
         {vista === 'inicio' ? (
           <>
