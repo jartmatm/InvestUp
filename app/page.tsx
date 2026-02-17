@@ -3,7 +3,7 @@
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
-import { polygon } from 'viem/chains';
+import { polygon, ternoa } from 'viem/chains';
 
 // --- CONFIGURACIÓN ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
@@ -23,15 +23,39 @@ function BilleteraApp() {
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
+  const privy = usePrivy() as any; 
+  const actualizarUsuario = privy.updateUser || privy.updateMetadata;
+  const [rol, setRol] = useState<string | null>(null);
+  const [aceptarTerminos, setAceptarTerminos] = useState(false);
+  useEffect(() => {
+    if (authenticated && user) {
+      // Recuperar rol pendiente o el que ya tenga guardado
+      const pendingRole = localStorage.getItem('pending_role');
+      const storedRole = user.customMetadata?.role;
+
+      if (storedRole) {
+        setRol(storedRole as string);
+      } else if (pendingRole && actualizarUsuario) {
+        // Si es nuevo, guardamos el rol que eligió
+        actualizarUsuario({ customMetadata: { role: pendingRole } });
+        setRol(pendingRole);
+        localStorage.removeItem('pending_role');
+      }
+    }
+  }, [authenticated, user, actualizarUsuario]);
+  const iniciarRegistro = (tipoRol: string) => {
+    if (!aceptarTerminos) return; 
+    localStorage.setItem('pending_role', tipoRol);
+    login();
+  };
+
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
   const [historial, setHistorial] = useState<string[]>([]);
-  
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
-
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
     try {
@@ -104,9 +128,43 @@ function BilleteraApp() {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Primera Versión de InvestUp.</p>
-          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar con Email</button>
+          <div style={{fontSize: '40px', marginBottom: '10px'}}>🏦</div>
+          <h1 style={{color: '#333', margin: '0 0 10px 0'}}>InvestUp</h1>
+          <p style={{color: '#666', fontSize: '14px', marginBottom: '25px'}}>
+            Elige tu perfil para comenzar.
+          </p>
+
+          {/* CHECKBOX DE TÉRMINOS */}
+          <div style={estilos.contenedorCheck}>
+             <input 
+               type="checkbox" 
+               id="terminos" 
+               checked={aceptarTerminos} 
+               onChange={(e) => setAceptarTerminos(e.target.checked)} 
+               style={{width: '18px', height: '18px', cursor: 'pointer'}}
+             />
+             <label htmlFor="terminos" style={{fontSize: '12px', color: '#555', cursor: 'pointer', textAlign: 'left'}}>
+               Acepto los Términos y Condiciones y la Política de Privacidad.
+             </label>
+          </div>
+
+          {/* BOTONES DE REGISTRO */}
+          <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+            <button 
+              onClick={() => iniciarRegistro('inversionista')} 
+              disabled={!aceptarTerminos}
+              style={{...estilos.botonRol, background: '#676FFF', color: 'white', opacity: aceptarTerminos ? 1 : 0.5}}
+            >
+              🚀 Soy Inversionista
+            </button>
+            <button 
+              onClick={() => iniciarRegistro('emprendedor')} 
+              disabled={!aceptarTerminos}
+              style={{...estilos.botonRol, background: 'white', color: '#333', border: '1px solid #ddd', opacity: aceptarTerminos ? 1 : 0.5}}
+            >
+              🏗️ Soy Emprendedor
+            </button>
+          </div>
         </div>
       </main>
     );
@@ -116,7 +174,12 @@ function BilleteraApp() {
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
+            <div>
+              <div style={{fontSize: '14px', fontWeight: 'bold'}}>{user?.email?.address?.split('@')[0]}</div>
+              <div style={{fontSize: '10px', color: '#676FFF', background: '#eef2ff', padding: '2px 6px', borderRadius: '4px', display: 'inline-block'}}>
+               {rol ? rol.toUpperCase() : 'USUARIO'}
+              </div>
+            </div>
             <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
 
@@ -221,6 +284,8 @@ const estilos: any = {
   inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
   botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
   botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
+  botonRol: { padding: '15px', borderRadius: '12px', border: 'none', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' },
+  contenedorCheck: { display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '20px', background: '#f9f9f9', padding: '10px', borderRadius: '8px' },
 };
 
 export default function Home() {
