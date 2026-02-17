@@ -11,8 +11,10 @@
   "dependencies": {
     "@privy-io/react-auth": "^3.13.1",
     "next": "16.1.6",
+    "permissionless": "^0.2.57",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "viem": "^2.46.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
