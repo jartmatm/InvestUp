@@ -117,6 +117,16 @@ function BilleteraApp() {
       setLoading(false);
     }
   };
+  // --- RETIRO CON MOONPAY (USD EN POLYGON) ---
+  const abrirRetiro = () => {
+  const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
+  if (!direccionAUsar) return alert("Conecta tu wallet primero");
+
+  const apiKey = 'pk_test_123'; // Tu llave de MoonPay
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=usdc_polygon&walletAddress=${direccionAUsar}`;
+
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+  };
 
   // --- INTERFAZ DE USUARIO ---
 
@@ -160,9 +170,22 @@ function BilleteraApp() {
                 <h1 style={{fontSize: '42px', margin: '5px 0'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USD</span></h1>
             </div>
 
-            <div style={estilos.gridBotones}>
+            <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: smartWalletClient?.account?.address as any })} style={{...estilos.botonAccion, background: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                
+                <button 
+                    onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || walletEmbebida?.address) as any })} 
+                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                >
+                    💳 Comprar
+                </button>
+
+                <button 
+                    onClick={abrirRetiro} 
+                    style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
+                >
+                    🏦 Retirar
+                </button>
             </div>
 
             <div style={estilos.listaHistorial}>
@@ -233,12 +256,12 @@ export default function Home() {
           accentColor: '#676FFF' 
         },
         supportedChains: [polygon],
-        // CONFIGURACIÓN NIVEL DIOS PARA LA ÚLTIMA VERSIÓN:
+        // ESTRUCTURA EXACTA SEGÚN TU ERROR:
         embeddedWallets: { 
           ethereum: {
-            createOnLogin: 'users-without-wallets',
+            createOnLogin: 'users-without-wallets'
           }
-        },
+        }
       }}
     >
       <BilleteraApp />
