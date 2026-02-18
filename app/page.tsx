@@ -4,7 +4,7 @@ import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
-import { polygon } from 'viem/chains';
+import { polygonAmoy } from 'viem/chains';
 
 // --- CONFIGURACIÓN CONSTANTE ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
@@ -14,7 +14,7 @@ const USDC_ABI = [
 ];
 
 const publicClient = createPublicClient({ 
-  chain: polygon, 
+  chain: polygonAmoy, 
   transport: http() 
 });
 
@@ -186,7 +186,7 @@ function BilleteraApp() {
             <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 <button 
-                    onClick={() => fundWallet({ address: (smartWallet?.address || walletEmbebida?.address) as any })} 
+                    onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || smartWallet?.address) as any })} 
                     style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                     💳 Comprar
@@ -250,22 +250,26 @@ const estilos: any = {
 export default function Home() {
   return (
     <PrivyProvider
-      appId="cmlohriz801350cl7vrwvdb3i" 
+      appId="cmlohriz801350cl7vrwvdb3i"
       config={{
+        // 1. Red de pruebas Amoy configurada
+        supportedChains: [polygonAmoy], 
         appearance: { 
           theme: 'light', 
           accentColor: '#676FFF' 
         },
-        supportedChains: [polygon],
-        // ESTRUCTURA EXACTA SEGÚN TU ERROR:
-        embeddedWallets: { 
-          ethereum: {
-            createOnLogin: 'users-without-wallets'
-          }
-        }
+        embeddedWallets: {
+          createOnLogin: 'users-without-wallets',
+          // Forzamos la activación de Smart Wallets con el "as any"
+          ...({
+            smartWallets: {
+              createOnLogin: 'all-users',
+            },
+          } as any),
+        },
       }}
     >
       <BilleteraApp />
     </PrivyProvider>
-  );
-}
+  ); // <-- Aquí faltaba el cierre del return
+} // <-- Y aquí el de la función
