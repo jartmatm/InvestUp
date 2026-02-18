@@ -186,7 +186,7 @@ function BilleteraApp() {
             <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 <button 
-                    onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || smartWallet?.address) as any })} 
+                    onClick={() => fundWallet({ address: (smartWallet?.address || walletEmbebida?.address) as any })} 
                     style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                     💳 Comprar
