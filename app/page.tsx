@@ -19,22 +19,21 @@ const publicClient = createPublicClient({
 });
 
 function BilleteraApp() {
-  // --- 1. HOOKS (Siempre al principio) ---
   const { login, logout, authenticated, user } = usePrivy();
-  const { wallets } = useWallets();
+  const { wallets } = useWallets(); // Este nos da todas las wallets conectadas
   const { fundWallet } = useFundWallet(); 
   
-  // 1.1 OBTENER WALLETS
-  const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
+ // 1. Buscamos la wallet de tipo 'smart_wallet' (la de ZeroDev)
+  const smartWallet = wallets.find((w) => w.walletClientType === 'smart_wallet');
   
-  // Añadimos la dirección como parámetro para "despertar" el hook
+  // 2. Obtenemos el cliente para operar
   const { client: smartWalletClient } = useSmartWallets();
 
-  // --- 2. LOGS DE DIAGNÓSTICO (Para ver en F12) ---
-  console.log("--- DEBUG WALLETS ---");
-  console.log("Wallet Embebida:", walletEmbebida?.address);
-  console.log("Smart Wallet Cliente Listo:", !!smartWalletClient);
-  console.log("Smart Wallet Dirección:", smartWalletClient?.account?.address);
+  // --- DEBUG LOGS ACTUALIZADOS ---
+  console.log("--- DIAGNÓSTICO ZERODEV ---");
+  console.log("¿Existe Smart Wallet en la lista?:", !!smartWallet);
+  console.log("Dirección Smart Wallet:", smartWallet?.address);
+  console.log("Cliente Smart Listo:", !!smartWalletClient);
 
   // --- 3. ESTADOS ---
   const [rol, setRol] = useState<string | null>(null);
@@ -73,7 +72,7 @@ function BilleteraApp() {
 
   // --- 5. ACTUALIZAR SALDO ---
   const actualizarSaldos = async () => {
-    const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
+    const direccionAUsar = smartWalletClient?.account?.address || smartWallet?.address;
     if (!direccionAUsar) return;
 
     try {
@@ -90,10 +89,10 @@ function BilleteraApp() {
   };
 
   useEffect(() => {
-    if (authenticated && (smartWalletClient || walletEmbebida)) {
+    if (authenticated && (smartWalletClient || smartWallet)) {
       actualizarSaldos();
     }
-  }, [authenticated, smartWalletClient, walletEmbebida]);
+  }, [authenticated, smartWalletClient, smartWallet]);
 
   // --- 6. ENVIAR USD ---
   const enviarUSD = async () => {
@@ -135,7 +134,7 @@ function BilleteraApp() {
 
   // --- 7. RETIRO CON MOONPAY ---
   const abrirRetiro = () => {
-    const direccionAUsar = smartWalletClient?.account?.address || walletEmbebida?.address;
+    const direccionAUsar = smartWalletClient?.account?.address || smartWallet?.address;
     if (!direccionAUsar) return alert("Conecta tu wallet primero");
 
     const apiKey = 'pk_test_123'; 
@@ -187,7 +186,7 @@ function BilleteraApp() {
             <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
                 <button 
-                    onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || walletEmbebida?.address) as any })} 
+                    onClick={() => fundWallet({ address: (smartWalletClient?.account?.address || smartWallet?.address) as any })} 
                     style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                     💳 Comprar
@@ -204,7 +203,7 @@ function BilleteraApp() {
 
             <div style={estilos.footerDir}>
                 <p style={{fontSize: '9px', color: '#999'}}>ID de cuenta USD:</p>
-                <code style={{fontSize: '9px'}}>{smartWalletClient?.account?.address || 'Generando cuenta...'}</code>
+                <code style={{fontSize: '9px'}}>{smartWallet?.address || 'Generando cuenta...'}</code>
             </div>
           </>
         ) : (
