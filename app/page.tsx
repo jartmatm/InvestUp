@@ -4,7 +4,7 @@ import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
-import { polygonAmoy } from 'viem/chains';
+import { polygon, polygonAmoy } from 'viem/chains';
 
 // --- CONFIGURACIÓN CONSTANTE ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
@@ -253,7 +253,7 @@ export default function Home() {
       appId="cmlohriz801350cl7vrwvdb3i"
       config={{
         // 1. Red de pruebas Amoy configurada
-        supportedChains: [polygonAmoy], 
+        supportedChains: [polygon, polygonAmoy], 
         appearance: { 
           theme: 'light', 
           accentColor: '#676FFF' 
