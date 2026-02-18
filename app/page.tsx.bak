@@ -23,45 +23,15 @@ function BilleteraApp() {
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
-  // --- ESTADOS DE LA APP ---
-  // 'loading': Cargando datos iniciales
-  // 'login': Usuario no autenticado
-  // 'onboarding': Usuario autenticado pero sin Rol definido
-  // 'dashboard': Usuario dentro de la app
-  const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
-  
-  // Datos del Onboarding
-  const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
-  const [aceptaTerminos, setAceptaTerminos] = useState(false);
-
-  // Datos del Dashboard
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
   const [historial, setHistorial] = useState<string[]>([]);
+  
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- EFECTO: CONTROL DE FLUJO DE USUARIO ---
-  useEffect(() => {
-    if (!authenticated) {
-      setFaseApp('login');
-      return;
-    }
-
-    // Si el usuario está autenticado, verificamos si ya eligió rol antes
-    const rolGuardado = localStorage.getItem(`investup_rol_${user?.id}`);
-    
-    if (rolGuardado) {
-      setRolSeleccionado(rolGuardado as any);
-      setFaseApp('dashboard'); // Pase directo
-    } else {
-      setFaseApp('onboarding'); // Necesita elegir rol
-    }
-  }, [authenticated, user]);
-
-  // --- EFECTO: SALDOS ---
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
     try {
@@ -81,18 +51,10 @@ function BilleteraApp() {
   };
 
   useEffect(() => {
-    if (faseApp === 'dashboard' && walletEmbebida) {
+    if (authenticated && walletEmbebida) {
       actualizarSaldos();
     }
-  }, [faseApp, walletEmbebida]);
-
-  // --- FUNCIONES ---
-  const completarOnboarding = () => {
-    if (!rolSeleccionado || !aceptaTerminos) return;
-    // Guardamos la decisión en el navegador del usuario
-    localStorage.setItem(`investup_rol_${user?.id}`, rolSeleccionado);
-    setFaseApp('dashboard');
-  };
+  }, [authenticated, walletEmbebida]);
 
   const enviarUSDC = async () => {
     if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
@@ -123,111 +85,39 @@ function BilleteraApp() {
       setLoading(false);
     }
   };
-
   const abrirRetiro = () => {
-    if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
-    const apiKey = 'pk_test_123'; 
-    const walletAddress = walletEmbebida.address;
-    const currencyCode = 'usdc_polygon';
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
-    window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
-  };
+  if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
 
-  // --- RENDERIZADO: PANTALLA DE LOGIN ---
-  if (faseApp === 'login' || faseApp === 'loading') {
+  // Configuramos los parámetros para MoonPay
+  // NOTA: Para producción necesitarás tu API KEY real de MoonPay
+  const apiKey = 'pk_test_123'; // Reemplaza con tu llave de MoonPay cuando la tengas
+  const walletAddress = walletEmbebida.address;
+  const currencyCode = 'usdc_polygon'; // Importante: especificar que es USDC en Polygon
+  
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
+
+  // Abrimos el widget en una ventana emergente o pestaña nueva
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+};
+
+  if (!authenticated) {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
           <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de Inversión Descentralizada</p>
-          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar / Registrarse</button>
+          <p style={{color: '#666', marginBottom: '30px'}}>Primera Versión de InvestUp.</p>
+          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar con Email</button>
         </div>
       </main>
     );
   }
 
-  // --- RENDERIZADO: PANTALLA DE ONBOARDING (NUEVA) ---
-  if (faseApp === 'onboarding') {
-    return (
-      <main style={estilos.contenedor}>
-        <div style={{...estilos.cardApp, maxWidth: '450px'}}>
-          <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
-          <p style={{color: '#666', textAlign: 'center', marginBottom: '30px'}}>
-            Para comenzar, selecciona cómo quieres usar la plataforma.
-          </p>
-
-          <div style={estilos.gridRoles}>
-            {/* Opción Inversor */}
-            <div 
-              onClick={() => setRolSeleccionado('inversor')}
-              style={{
-                ...estilos.cardRol,
-                border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd',
-                backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'
-              }}
-            >
-              <div style={{fontSize: '30px'}}>📈</div>
-              <h3 style={{margin: '10px 0'}}>Soy Inversor</h3>
-              <p style={{fontSize: '12px', color: '#666'}}>Quiero hacer crecer mi capital apoyando proyectos.</p>
-            </div>
-
-            {/* Opción Emprendedor */}
-            <div 
-              onClick={() => setRolSeleccionado('emprendedor')}
-              style={{
-                ...estilos.cardRol,
-                border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd',
-                backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'
-              }}
-            >
-              <div style={{fontSize: '30px'}}>🚀</div>
-              <h3 style={{margin: '10px 0'}}>Soy Emprendedor</h3>
-              <p style={{fontSize: '12px', color: '#666'}}>Busco financiación para mi startup.</p>
-            </div>
-          </div>
-
-          <div style={{marginTop: '30px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <input 
-              type="checkbox" 
-              checked={aceptaTerminos} 
-              onChange={(e) => setAceptaTerminos(e.target.checked)}
-              id="terminos"
-              style={{width: '20px', height: '20px'}}
-            />
-            <label htmlFor="terminos" style={{fontSize: '14px', color: '#555', cursor: 'pointer'}}>
-              Acepto los <span style={{color: '#676FFF', textDecoration: 'underline'}}>Términos y Condiciones</span> de uso.
-            </label>
-          </div>
-
-          <button 
-            onClick={completarOnboarding}
-            disabled={!rolSeleccionado || !aceptaTerminos}
-            style={{
-              ...estilos.botonPrimario, 
-              marginTop: '20px',
-              opacity: (!rolSeleccionado || !aceptaTerminos) ? 0.5 : 1,
-              cursor: (!rolSeleccionado || !aceptaTerminos) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Continuar ➔
-          </button>
-        </div>
-      </main>
-    )
-  }
-
-  // --- RENDERIZADO: DASHBOARD PRINCIPAL ---
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div>
-              <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
-              <div style={estilos.badgeRol}>
-                {rolSeleccionado === 'inversor' ? '📈 Inversor' : '🚀 Emprendedor'}
-              </div>
-            </div>
-            <button onClick={() => { logout(); localStorage.removeItem(`investup_rol_${user?.id}`); }} style={estilos.botonSalir}>Salir</button>
+            <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
+            <button onClick={logout} style={estilos.botonSalir}>Salir</button>
         </div>
 
         {vista === 'inicio' ? (
@@ -243,7 +133,7 @@ function BilleteraApp() {
                 
                 <button 
                    onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
-                   style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
+                    style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
                 >
                   💳 Comprar
                 </button>
@@ -315,14 +205,13 @@ const estilos: any = {
   contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
   cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
   cardApp: { background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', width: '90%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
+  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
   botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
   seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
   badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
-  badgeRol: { display: 'inline-block', background: '#F3F4F6', color: '#333', padding: '3px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 'bold', marginTop: '4px' },
   gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '25px' },
-  botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 'bold' },
   botonAccionSecundario: { background: 'white', color: '#111', border: '1px solid #ddd', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
   listaHistorial: { marginTop: '25px', flex: 1 },
   itemHistorial: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#444' },
@@ -332,9 +221,6 @@ const estilos: any = {
   inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
   botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
   botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  // Estilos Nuevos para Onboarding
-  gridRoles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' },
-  cardRol: { padding: '20px', borderRadius: '16px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease' },
 };
 
 export default function Home() {
@@ -347,10 +233,11 @@ export default function Home() {
           accentColor: '#676FFF', 
           showWalletLoginFirst: false 
         },
+        // CAMBIO CLAVE: Declarar explícitamente las redes soportadas
         supportedChains: [polygon],
         embeddedWallets: { 
           ethereum: {
-            createOnLogin: 'users-without-wallets'
+            createOnLogin: 'users-without-wallets' 
           }
         },
       }}
