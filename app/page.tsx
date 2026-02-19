@@ -78,16 +78,22 @@ const actualizarSaldos = async () => {
     }
   };
 
-  // Este useEffect es el que fallaba. Ahora depende de la dirección física de la wallet.
-  useEffect(() => {
-    if (faseApp === 'dashboard' && walletEmbebida?.address) {
-      actualizarSaldos();
-      
-      // Opcional: refresco automático cada 15 segundos para asegurar
-      const interval = setInterval(actualizarSaldos, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [faseApp, walletEmbebida?.address]); // <--- CAMBIO CLAVE AQUÍ
+// --- EFECTO: SALDOS (FIX DEFINITIVO) ---
+useEffect(() => {
+  if (!authenticated) return;
+  if (!walletEmbebida?.address) return;
+
+  // Ejecutar inmediatamente
+  actualizarSaldos();
+
+  // Reintentos por si la red tarda o la wallet demora en inicializar
+  const interval = setInterval(() => {
+    actualizarSaldos();
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [authenticated, walletEmbebida?.address]);
+
 
   // --- RESTO DE FUNCIONES (Igual que antes) ---
   const completarOnboarding = () => {
