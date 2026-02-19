@@ -12,9 +12,10 @@ const USDC_ABI = [
   { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
 ];
 
+// Cambiamos el RPC por uno de Ankr o 1RPC (que son más estables ahora)
 const publicClient = createPublicClient({ 
   chain: polygon, 
-  transport: http('https://polygon-rpc.com') // <--- Forzamos un nodo público estable 
+  transport: http('https://rpc.ankr.com/polygon') // Este suele ser muy abierto y rápido
 });
 
 function BilleteraApp() {
@@ -50,13 +51,11 @@ function BilleteraApp() {
     }
   }, [authenticated, user]);
 
-  // --- EFECTO: SALDOS (CORREGIDO) ---
-  const actualizarSaldos = async () => {
-    // Si no hay dirección todavía, no intentamos nada
-    if (!walletEmbebida?.address) return;
-    
-    try {
-      console.log("Consultando saldos para:", walletEmbebida.address);
+// 3. Tu función de saldos (asegurando el casting a 0x${string})
+const actualizarSaldos = async () => {
+  if (!walletEmbebida?.address) return;
+  try {
+    const direccion = walletEmbebida.address as `0x${string}`;
       
       // Consultar POL
       const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
