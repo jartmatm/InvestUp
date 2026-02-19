@@ -79,21 +79,24 @@ const actualizarSaldos = async () => {
     }
   };
 
-// --- EFECTO: SALDOS (FIX DEFINITIVO) ---
+// --- Reemplaza tu useEffect anterior por este ---
 useEffect(() => {
   if (!authenticated) return;
   if (!walletEmbebida?.address) return;
 
-  // Ejecutar inmediatamente
-  actualizarSaldos();
-
-  // Reintentos por si la red tarda o la wallet demora en inicializar
-  const interval = setInterval(() => {
-    actualizarSaldos();
-  }, 5000);
-
-  return () => clearInterval(interval);
+  // Ejecutar una vez al entrar al dashboard
+  refrescarSaldo();
 }, [authenticated, walletEmbebida?.address]);
+
+// --- Función pública para refrescar saldo (llámala desde botón o después de tx) ---
+const refrescarSaldo = async () => {
+  try {
+    // Si ya tienes una función llamada actualizarSaldos, reutilízala
+    await actualizarSaldos();
+  } catch (err) {
+    console.error("Error refrescando saldo:", err);
+  }
+};
 
 
   // --- RESTO DE FUNCIONES (Igual que antes) ---
@@ -103,32 +106,40 @@ useEffect(() => {
     setFaseApp('dashboard');
   };
 
-  const enviarUSDC = async () => {
-    if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
-    setLoading(true);
-    try {
-      await walletEmbebida.switchChain(polygon.id);
-      const provider = await walletEmbebida.getEthereumProvider();
-      const montoWei = parseUnits(monto, 6);
-      const data = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [destino as `0x${string}`, montoWei],
-      });
-      const txHash = await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
-      });
-      setHistorial([`Envío de ${monto} USDC a ${destino.slice(0,6)}...`, ...historial]);
-      alert(`✅ ¡Enviado! Hash: ${txHash}`);
-      setDestino(''); setMonto(''); setVista('inicio');
-      setTimeout(actualizarSaldos, 3000);
-    } catch (e: any) {
-      alert("❌ Error: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// --- Ejemplo de flujo de envío de USDC que actualiza saldo después de la confirmación ---
+// Ajusta nombres/args según tu implementación real de writeContract / publicClient
+const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
+  // Si se llama sin parámetros (desde el botón), usar el estado local
+  const destAddr = destinoAddr || destino;
+  const cantBig = cantidadBigInt || parseUnits(monto, 6);
+
+  if (!walletEmbebida || !destAddr || !monto) return alert("Faltan datos");
+  setLoading(true);
+  try {
+    await walletEmbebida.switchChain(polygon.id);
+    const provider = await walletEmbebida.getEthereumProvider();
+    const data = encodeFunctionData({
+      abi: USDC_ABI,
+      functionName: 'transfer',
+      args: [destAddr as `0x${string}`, cantBig],
+    });
+    const txHash = await provider.request({
+      method: 'eth_sendTransaction',
+      params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+    });
+    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}...`, ...historial]);
+    alert(`✅ ¡Enviado! Hash: ${txHash}`);
+    setDestino(''); setMonto(''); setVista('inicio');
+    
+    // Actualizar saldo solo después de la confirmación
+    await refrescarSaldo();
+  } catch (error: any) {
+    console.error("Error enviando USDC:", error);
+    alert("❌ Error: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const abrirRetiro = () => {
     if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
@@ -197,7 +208,7 @@ useEffect(() => {
                 <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
                 <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
-            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Actualizar Saldo</button>
+            <button onClick={refrescarSaldo} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
             <div style={estilos.footerDir}>
                <code>{walletEmbebida?.address}</code>
             </div>
@@ -209,7 +220,7 @@ useEffect(() => {
             <input type="number" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} style={estilos.inputMonto} />
             <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
-                <button onClick={enviarUSDC} disabled={loading} style={estilos.botonConfirmar}>{loading ? 'Enviando...' : 'Confirmar'}</button>
+                <button onClick={() => enviarUSDC()} disabled={loading} style={estilos.botonConfirmar}>{loading ? 'Enviando...' : 'Confirmar'}</button>
             </div>
           </div>
         )}
