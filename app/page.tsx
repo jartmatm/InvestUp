@@ -14,7 +14,7 @@ const USDC_ABI = [
 
 const publicClient = createPublicClient({ 
   chain: polygon, 
-  transport: http() 
+  transport: http('https://polygon-rpc.com') // <--- Forzamos un nodo público estable 
 });
 
 function BilleteraApp() {
