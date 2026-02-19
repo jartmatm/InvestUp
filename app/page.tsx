@@ -7,34 +7,29 @@ import { polygon } from 'viem/chains';
 
 // --- CONFIGURACIÓN ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+
 const USDC_ABI = [
-  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
-  { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
+  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ type: 'uint256' }] },
+  { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ type: 'bool' }] }
 ];
 
-const publicClient = createPublicClient({ 
-  chain: polygon, 
-  transport: http() 
+const publicClient = createPublicClient({
+  chain: polygon,
+  transport: http(),
 });
 
 function BilleteraApp() {
   const { login, logout, authenticated, user } = usePrivy();
   const { wallets } = useWallets();
-  const { fundWallet } = useFundWallet(); 
+  const { fundWallet } = useFundWallet();
+
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
 
-  // --- ESTADOS DE LA APP ---
-  // 'loading': Cargando datos iniciales
-  // 'login': Usuario no autenticado
-  // 'onboarding': Usuario autenticado pero sin Rol definido
-  // 'dashboard': Usuario dentro de la app
+  // --- ESTADOS ---
   const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
-  
-  // Datos del Onboarding
   const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
-  // Datos del Dashboard
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
@@ -42,66 +37,91 @@ function BilleteraApp() {
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
+  const completarOnboarding = () => {
+  if (!rolSeleccionado) return;
 
-  // --- EFECTO: CONTROL DE FLUJO DE USUARIO ---
+  localStorage.setItem("rol", rolSeleccionado);
+  setFaseApp("dashboard");
+};
+
+
+  // --- CONTROL FLUJO ---
   useEffect(() => {
     if (!authenticated) {
       setFaseApp('login');
       return;
     }
 
-    // Si el usuario está autenticado, verificamos si ya eligió rol antes
     const rolGuardado = localStorage.getItem(`investup_rol_${user?.id}`);
-    
     if (rolGuardado) {
       setRolSeleccionado(rolGuardado as any);
-      setFaseApp('dashboard'); // Pase directo
+      setFaseApp('dashboard');
     } else {
-      setFaseApp('onboarding'); // Necesita elegir rol
+      setFaseApp('onboarding');
     }
   }, [authenticated, user]);
 
-  // --- EFECTO: SALDOS ---
+  // --- ACTUALIZAR SALDOS ---
   const actualizarSaldos = async () => {
     if (!walletEmbebida?.address) return;
+
     try {
-      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
+      const balPol = await publicClient.getBalance({
+        address: walletEmbebida.address as `0x${string}`,
+      });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: 'balanceOf',
-        args: [walletEmbebida.address],
+        args: [walletEmbebida.address as `0x${string}`],
       });
+
       setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
     } catch (e) {
-      console.error("Error leyendo saldos:", e);
+      console.error('Error leyendo saldos:', e);
     }
   };
 
   useEffect(() => {
-    if (faseApp === 'dashboard' && walletEmbebida) {
+    if (faseApp === 'dashboard' && walletEmbebida?.address) {
       actualizarSaldos();
+      const interval = setInterval(actualizarSaldos, 15000);
+      return () => clearInterval(interval);
     }
-  }, [faseApp, walletEmbebida]);
+  }, [faseApp, walletEmbebida?.address]);
 
-  // --- FUNCIONES ---
-  const completarOnboarding = () => {
-    if (!rolSeleccionado || !aceptaTerminos) return;
-    // Guardamos la decisión en el navegador del usuario
-    localStorage.setItem(`investup_rol_${user?.id}`, rolSeleccionado);
-    setFaseApp('dashboard');
-  };
+  // --- VALIDACIÓN SIMPLE DIRECCIÓN ---
+  const esDireccionValida = (dir: string) => /^0x[a-fA-F0-9]{40}$/.test(dir);
 
+  // --- ENVIAR USDC ---
   const enviarUSDC = async () => {
-    if (!walletEmbebida || !destino || !monto) return alert("Faltan datos");
+    if (loading) return;
+
+    if (!walletEmbebida || !destino || !monto) {
+      alert('Faltan datos');
+      return;
+    }
+
+    if (!esDireccionValida(destino)) {
+      alert('Dirección inválida');
+      return;
+    }
+
+    if (Number(monto) <= 0) {
+      alert('Monto inválido');
+      return;
+    }
+
     setLoading(true);
+
     try {
       await walletEmbebida.switchChain(polygon.id);
       const provider = await walletEmbebida.getEthereumProvider();
+
       const montoWei = parseUnits(monto, 6);
-      
+
       const data = encodeFunctionData({
         abi: USDC_ABI,
         functionName: 'transfer',
@@ -110,249 +130,168 @@ function BilleteraApp() {
 
       const txHash = await provider.request({
         method: 'eth_sendTransaction',
-        params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+        params: [
+          {
+            from: walletEmbebida.address,
+            to: USDC_ADDRESS,
+            data,
+          },
+        ],
       });
 
-      setHistorial([`Envío de ${monto} USDC a ${destino.slice(0,6)}...`, ...historial]);
+      setHistorial((prev) => [
+        `Envío de ${monto} USDC a ${destino.slice(0, 6)}...`,
+        ...prev,
+      ]);
+
       alert(`✅ ¡Enviado! Hash: ${txHash}`);
-      setDestino(''); setMonto(''); setVista('inicio');
+      setDestino('');
+      setMonto('');
+      setVista('inicio');
+
       setTimeout(actualizarSaldos, 3000);
     } catch (e: any) {
-      alert("❌ Error: " + e.message);
+      alert('❌ Error: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
 
   const abrirRetiro = () => {
-    if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
-    const apiKey = 'pk_test_123'; 
-    const walletAddress = walletEmbebida.address;
-    const currencyCode = 'usdc_polygon';
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=${apiKey}&baseCurrencyCode=${currencyCode}&walletAddress=${walletAddress}`;
+    if (!walletEmbebida?.address) return alert('Conecta tu wallet primero');
+    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${walletEmbebida.address}`;
     window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
   };
 
-  // --- RENDERIZADO: PANTALLA DE LOGIN ---
+  // --- RENDER ---
   if (faseApp === 'login' || faseApp === 'loading') {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de Inversión Descentralizada</p>
-          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar / Registrarse</button>
+          <h1 style={{ color: '#676FFF' }}>InvestUp 🏦</h1>
+          <button onClick={login} style={estilos.botonPrimario}>
+            🔑 Entrar / Registrarse
+          </button>
         </div>
       </main>
     );
   }
 
-  // --- RENDERIZADO: PANTALLA DE ONBOARDING (NUEVA) ---
   if (faseApp === 'onboarding') {
     return (
       <main style={estilos.contenedor}>
-        <div style={{...estilos.cardApp, maxWidth: '450px'}}>
-          <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
-          <p style={{color: '#666', textAlign: 'center', marginBottom: '30px'}}>
-            Para comenzar, selecciona cómo quieres usar la plataforma.
-          </p>
+        <div style={estilos.cardApp}>
+          <h2>Bienvenido a InvestUp</h2>
 
           <div style={estilos.gridRoles}>
-            {/* Opción Inversor */}
-            <div 
-              onClick={() => setRolSeleccionado('inversor')}
-              style={{
-                ...estilos.cardRol,
-                border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd',
-                backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'
-              }}
-            >
-              <div style={{fontSize: '30px'}}>📈</div>
-              <h3 style={{margin: '10px 0'}}>Soy Inversor</h3>
-              <p style={{fontSize: '12px', color: '#666'}}>Quiero hacer crecer mi capital apoyando proyectos.</p>
+            <div onClick={() => setRolSeleccionado('inversor')} style={estilos.cardRol}>
+              📈 Soy Inversor
             </div>
-
-            {/* Opción Emprendedor */}
-            <div 
-              onClick={() => setRolSeleccionado('emprendedor')}
-              style={{
-                ...estilos.cardRol,
-                border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd',
-                backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'
-              }}
-            >
-              <div style={{fontSize: '30px'}}>🚀</div>
-              <h3 style={{margin: '10px 0'}}>Soy Emprendedor</h3>
-              <p style={{fontSize: '12px', color: '#666'}}>Busco financiación para mi startup.</p>
+            <div onClick={() => setRolSeleccionado('emprendedor')} style={estilos.cardRol}>
+              🚀 Soy Emprendedor
             </div>
           </div>
 
-          <div style={{marginTop: '30px', display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <input 
-              type="checkbox" 
-              checked={aceptaTerminos} 
+          <div style={{ marginTop: 20 }}>
+            <input
+              type="checkbox"
+              checked={aceptaTerminos}
               onChange={(e) => setAceptaTerminos(e.target.checked)}
-              id="terminos"
-              style={{width: '20px', height: '20px'}}
             />
-            <label htmlFor="terminos" style={{fontSize: '14px', color: '#555', cursor: 'pointer'}}>
-              Acepto los <span style={{color: '#676FFF', textDecoration: 'underline'}}>Términos y Condiciones</span> de uso.
-            </label>
+            Acepto términos y condiciones
           </div>
 
-          <button 
-            onClick={completarOnboarding}
+          <button
             disabled={!rolSeleccionado || !aceptaTerminos}
-            style={{
-              ...estilos.botonPrimario, 
-              marginTop: '20px',
-              opacity: (!rolSeleccionado || !aceptaTerminos) ? 0.5 : 1,
-              cursor: (!rolSeleccionado || !aceptaTerminos) ? 'not-allowed' : 'pointer'
-            }}
+            onClick={completarOnboarding}
+            style={estilos.botonPrimario}
           >
-            Continuar ➔
+            Continuar
           </button>
         </div>
       </main>
-    )
+    );
   }
 
-  // --- RENDERIZADO: DASHBOARD PRINCIPAL ---
   return (
     <main style={estilos.contenedor}>
       <div style={estilos.cardApp}>
         <div style={estilos.header}>
-            <div>
-              <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
-              <div style={estilos.badgeRol}>
-                {rolSeleccionado === 'inversor' ? '📈 Inversor' : '🚀 Emprendedor'}
-              </div>
-            </div>
-            <button onClick={() => { logout(); localStorage.removeItem(`investup_rol_${user?.id}`); }} style={estilos.botonSalir}>Salir</button>
+          <div>
+            Hola, {user?.email?.address?.split('@')[0]}
+          </div>
+          <button
+            onClick={() => {
+              logout();
+              localStorage.removeItem(`investup_rol_${user?.id}`);
+            }}
+          >
+            Salir
+          </button>
         </div>
 
         {vista === 'inicio' ? (
           <>
-            <div style={estilos.seccionSaldo}>
-                <p style={{fontSize: '14px', color: '#666', margin: 0}}>Balance Total</p>
-                <h1 style={{fontSize: '42px', margin: '5px 0', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
-            </div>
+            <h1>${balanceUSDC} USDC</h1>
+            <div>Gas: {balancePOL} POL</div>
 
-            <div style={{...estilos.gridBotones, gridTemplateColumns: '1fr 1fr 1fr'}}>
-                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                
-                <button 
-                   onClick={() => fundWallet({ address: walletEmbebida?.address as any })} 
-                   style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}
-                >
-                  💳 Comprar
-                </button>
-                <button 
-                  onClick={abrirRetiro} 
-                  style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}
-                >
-                  🏦 Retirar
-                </button>
-            </div>
-
-            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>
-               🔄 Actualizar Saldo
+            <button onClick={() => setVista('enviar')}>Enviar</button>
+            <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })}>
+              Comprar
             </button>
+            <button onClick={abrirRetiro}>Retirar</button>
 
-            <div style={estilos.listaHistorial}>
-                <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
-                {historial.length === 0 ? (
-                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
-                ) : (
-                    historial.map((item, i) => (
-                        <div key={i} style={estilos.itemHistorial}>{item}</div>
-                    ))
-                )}
-            </div>
+            <button onClick={actualizarSaldos}>Actualizar</button>
 
-            <div style={estilos.footerDir}>
-               <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p> 
-               <code style={{fontSize: '10px', color: '#676FFF'}}>{walletEmbebida?.address}</code>
+            <div>
+              <h4>Actividad Reciente</h4>
+              {historial.length === 0
+                ? 'No hay movimientos'
+                : historial.map((item, i) => <div key={i}>{item}</div>)}
             </div>
           </>
         ) : (
-          <div style={estilos.formEnvio}>
-            <h2 style={{color: '#333'}}>Enviar Dinero</h2>
-            <p style={{fontSize: '12px', color: '#666', marginBottom: '20px'}}>Estás en la red Polygon</p>
-            
-            <input 
-              placeholder="Dirección 0x del destino..." 
+          <>
+            <input
+              placeholder="Dirección 0x..."
               value={destino}
               onChange={(e) => setDestino(e.target.value)}
-              style={estilos.input}
             />
-            <div style={{position: 'relative', width: '100%'}}>
-                <input 
-                  type="number" 
-                  placeholder="0.00" 
-                  value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                  style={estilos.inputMonto}
-                />
-                <span style={{position: 'absolute', right: '15px', top: '15px', fontWeight: 'bold', color: '#888'}}>USDC</span>
-            </div>
-
-            <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
-                <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
-                <button onClick={enviarUSDC} disabled={loading} style={estilos.botonConfirmar}>
-                    {loading ? 'Enviando...' : 'Confirmar Envío'}
-                </button>
-            </div>
-          </div>
+            <input
+              type="number"
+              placeholder="0.00"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+            />
+            <button onClick={() => setVista('inicio')}>Cancelar</button>
+            <button disabled={loading} onClick={enviarUSDC}>
+              {loading ? 'Enviando...' : 'Confirmar'}
+            </button>
+          </>
         )}
       </div>
     </main>
   );
 }
 
-// --- ESTILOS ---
 const estilos: any = {
-  contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
-  cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center', width: '90%', maxWidth: '350px' },
-  cardApp: { background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', width: '90%', maxWidth: '380px', minHeight: '500px', display: 'flex', flexDirection: 'column' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' },
-  botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' },
-  botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
-  badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
-  badgeRol: { display: 'inline-block', background: '#F3F4F6', color: '#333', padding: '3px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 'bold', marginTop: '4px' },
-  gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '25px' },
-  botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
-  botonAccionSecundario: { background: 'white', color: '#111', border: '1px solid #ddd', padding: '12px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  listaHistorial: { marginTop: '25px', flex: 1 },
-  itemHistorial: { padding: '10px', borderBottom: '1px solid #eee', fontSize: '12px', color: '#444' },
-  footerDir: { marginTop: 'auto', textAlign: 'center', background: '#f9f9f9', padding: '10px', borderRadius: '12px' },
-  formEnvio: { display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'center' },
-  input: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', marginBottom: '15px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' },
-  inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px', fontWeight: 'bold', outline: 'none', boxSizing: 'border-box' },
-  botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold' },
-  // Estilos Nuevos para Onboarding
-  gridRoles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' },
-  cardRol: { padding: '20px', borderRadius: '16px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease' },
+  contenedor: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  cardLogin: { background: 'white', padding: '40px', borderRadius: '20px' },
+  cardApp: { background: 'white', padding: '30px', borderRadius: '20px', width: '380px' },
+  header: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px' },
+  botonPrimario: { padding: '15px', background: '#676FFF', color: 'white', borderRadius: '10px', border: 'none', marginTop: '15px' },
+  gridRoles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
+  cardRol: { padding: '20px', background: '#f5f5f5', borderRadius: '15px', cursor: 'pointer', textAlign: 'center' },
 };
 
 export default function Home() {
   return (
     <PrivyProvider
-      appId="cmlohriz801350cl7vrwvdb3i" 
+      appId="cmlohriz801350cl7vrwvdb3i"
       config={{
-        appearance: { 
-          theme: 'light', 
-          accentColor: '#676FFF', 
-          showWalletLoginFirst: false 
-        },
+        appearance: { theme: 'light', accentColor: '#676FFF' },
         supportedChains: [polygon],
-        embeddedWallets: { 
-          ethereum: {
-            createOnLogin: 'users-without-wallets'
-          }
-        },
+        embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
       }}
     >
       <BilleteraApp />
