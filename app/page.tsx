@@ -13,10 +13,11 @@ const USDC_ABI = [
 ];
 
 // Cambiamos el RPC por uno de Ankr o 1RPC (que son más estables ahora)
-const publicClient = createPublicClient({ 
-  chain: polygon, 
-  transport: http('https://rpc.ankr.com/polygon') // Este suele ser muy abierto y rápido
+const publicClient = createPublicClient({
+  chain: polygon,
+  transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
+
 
 function BilleteraApp() {
   const { login, logout, authenticated, user } = usePrivy();
