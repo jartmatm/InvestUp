@@ -209,7 +209,18 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
                 <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
             <button onClick={refrescarSaldo} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
+            <div style={estilos.listaHistorial}>
+                <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
+                {historial.length === 0 ? (
+                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
+                ) : (
+                    historial.map((item, i) => (
+                        <div key={i} style={estilos.itemHistorial}>{item}</div>
+                    ))
+                )}
+            </div>
             <div style={estilos.footerDir}>
+              <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p>
                <code>{walletEmbebida?.address}</code>
             </div>
           </>
