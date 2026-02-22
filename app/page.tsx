@@ -1,7 +1,6 @@
 'use client';
 
-import { PrivyProvider, usePrivy, useFundWallet } from '@privy-io/react-auth';
-import { useSmartWallets } from '@privy-io/react-auth/smart-wallets'; // <-- NUEVO IMPORT MÁGICO
+import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
@@ -28,12 +27,9 @@ const publicClient = createPublicClient({
 // --- APLICACIÓN PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
+  const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
-  
-  // 🦍 AQUÍ ESTÁ EL CEREBRO DE LA SMART WALLET
-  const { client } = useSmartWallets();
-  const smartWalletAddress = client?.account?.address as `0x${string}` | undefined;
-
+  const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
   const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
@@ -46,159 +42,175 @@ function BilleteraApp() {
   const [loading, setLoading] = useState(false);
 
   // 1. Función para guardar en la base de datos
-  const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
-    // 🛑 Esperamos a que la Smart Wallet esté lista
-    if (!user || !smartWalletAddress) {
-      alert("Espera un segundo, estamos creando tu bóveda inteligente...");
-      return;
+const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
+  if (!user || !walletEmbebida?.address) return;
+
+  // Traducimos de tu UI (español) al ENUM de la base de datos (inglés)
+  const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
+
+  try {
+    const { error } = await supabase
+      .from('users') 
+      .upsert({ 
+        id: user.id, 
+        email: user.email?.address, 
+        role: rolParaDB, // 'investor' o 'entrepreneur'
+        wallet_address: walletEmbebida.address 
+      });
+
+    if (error) throw error;
+
+    localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+    setRolSeleccionado(rolFrontend);
+    setFaseApp('dashboard');
+    
+    console.log("✅ ¡Guardado en Supabase correctamente!");
+  } catch (error: any) {
+    console.error("❌ Error real de Supabase:", error.message);
+    alert("Error: " + error.message);
+  }
+};
+
+useEffect(() => {
+  // 🛑 REGLA 1: Si Privy aún está despertando, mostramos carga y esperamos.
+  if (!ready) {
+    setFaseApp('loading');
+    return;
+  }
+
+  // 🛑 REGLA 2: Si Privy ya despertó y no hay usuario, mostramos login.
+  if (!authenticated || !user) {
+    setFaseApp('login');
+    return;
+  }
+
+  // ✅ REGLA 3: El usuario está logueado, vamos a ver quién es.
+  const verificarUsuario = async () => {
+    // 1. Mirar si lo tenemos en el navegador (rápido)
+    const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
+    if (rolLocal) {
+      setRolSeleccionado(rolLocal as any);
+      setFaseApp('dashboard');
+      return; // Salimos de la función, ya terminamos
     }
 
-    const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
+    // 2. Si no, preguntarle a Supabase (seguro)
+    const { data, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-    try {
-      const { error } = await supabase
-        .from('users') 
-        .upsert({ 
-          id: user.id, 
-          email: user.email?.address, 
-          role: rolParaDB,
-          wallet_address: smartWalletAddress // ✅ Ahora guardamos la Smart Wallet
-        });
-
-      if (error) throw error;
-
-      localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
-      setRolSeleccionado(rolFrontend);
+    if (data?.role) {
+      const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
+      localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
+      setRolSeleccionado(rolTraducido as any);
       setFaseApp('dashboard');
-      
-      console.log("✅ ¡Guardado en Supabase correctamente!");
-    } catch (error: any) {
-      console.error("❌ Error real de Supabase:", error.message);
-      alert("Error: " + error.message);
+    } else {
+      setFaseApp('onboarding');
     }
   };
 
-  useEffect(() => {
-    if (!ready) {
-      setFaseApp('loading');
-      return;
-    }
+  verificarUsuario();
+  
+}, [ready, authenticated, user]);
 
-    if (!authenticated || !user) {
-      setFaseApp('login');
-      return;
-    }
-
-    const verificarUsuario = async () => {
-      const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
-      if (rolLocal) {
-        setRolSeleccionado(rolLocal as any);
-        setFaseApp('dashboard');
-        return; 
-      }
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (data?.role) {
-        const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
-        localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
-        setRolSeleccionado(rolTraducido as any);
-        setFaseApp('dashboard');
-      } else {
-        setFaseApp('onboarding');
-      }
-    };
-
-    verificarUsuario();
-  }, [ready, authenticated, user]);
-
-  // 3. Consultar saldos a la nueva Smart Wallet
-  const actualizarSaldos = async () => {
-    if (!smartWalletAddress) return;
-    try {
-      const balPol = await publicClient.getBalance({ address: smartWalletAddress });
+// 3. Tu función de saldos (asegurando el casting a 0x${string})
+const actualizarSaldos = async () => {
+  if (!walletEmbebida?.address) return;
+  try {
+    const direccion = walletEmbebida.address as `0x${string}`;
+      
+      // Consultar POL
+      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
+      // Consultar USDC
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: 'balanceOf',
-        args: [smartWalletAddress],
+        args: [walletEmbebida.address as `0x${string}`],
       });
       
       const saldoFinal = Number(formatUnits(balUsdc as bigint, 6)).toFixed(2);
       setBalanceUSDC(saldoFinal);
       console.log("Saldo USDC recuperado:", saldoFinal);
+      
     } catch (e) {
       console.error("Error leyendo saldos:", e);
     }
   };
 
-  useEffect(() => {
-    if (!authenticated || !smartWalletAddress) return;
-    refrescarSaldo();
-  }, [authenticated, smartWalletAddress]);
+// --- Reemplaza tu useEffect anterior por este ---
+useEffect(() => {
+  if (!authenticated) return;
+  if (!walletEmbebida?.address) return;
 
-  const refrescarSaldo = async () => {
-    try {
-      await actualizarSaldos();
-    } catch (err) {
-      console.error("Error refrescando saldo:", err);
-    }
-  };
+  // Ejecutar una vez al entrar al dashboard
+  refrescarSaldo();
+}, [authenticated, walletEmbebida?.address]);
 
+// --- Función pública para refrescar saldo (llámala desde botón o después de tx) ---
+const refrescarSaldo = async () => {
+  try {
+    // Si ya tienes una función llamada actualizarSaldos, reutilízala
+    await actualizarSaldos();
+  } catch (err) {
+    console.error("Error refrescando saldo:", err);
+  }
+};
+
+
+  // --- RESTO DE FUNCIONES (Igual que antes) ---
   const completarOnboarding = () => {
     if (!rolSeleccionado || !aceptaTerminos) return;
     localStorage.setItem(`investup_rol_${user?.id}`, rolSeleccionado);
     setFaseApp('dashboard');
   };
 
-  // 🚀 LA MAGIA: Enviar USDC SIN GAS POL
-  const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
-    const destAddr = destinoAddr || destino;
-    const cantBig = cantidadBigInt || parseUnits(monto, 6);
+// --- Ejemplo de flujo de envío de USDC que actualiza saldo después de la confirmación ---
+// Ajusta nombres/args según tu implementación real de writeContract / publicClient
+const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
+  // Si se llama sin parámetros (desde el botón), usar el estado local
+  const destAddr = destinoAddr || destino;
+  const cantBig = cantidadBigInt || parseUnits(monto, 6);
 
-    if (!client || !smartWalletAddress || !destAddr || !monto) return alert("Faltan datos o Billetera no lista");
-    setLoading(true);
-
-    try {
-      // 1. Empaquetamos la instrucción para el contrato de USDC
-      const data = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [destAddr as `0x${string}`, cantBig],
-      });
-
-      // 2. Le decimos al cliente de la Smart Wallet que dispare (Privy paga el gas)
-      const txHash = await client.sendTransaction({
-        to: USDC_ADDRESS as `0x${string}`,
-        data: data,
-      });
-
-      setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}...`, ...historial]);
-      alert(`✅ ¡Enviado sin gas! Hash: ${txHash}`);
-      setDestino(''); setMonto(''); setVista('inicio');
-      
-      await refrescarSaldo();
-    } catch (error: any) {
-      console.error("Error enviando USDC:", error);
-      alert("❌ Error: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!walletEmbebida || !destAddr || !monto) return alert("Faltan datos");
+  setLoading(true);
+  try {
+    await walletEmbebida.switchChain(polygon.id);
+    const provider = await walletEmbebida.getEthereumProvider();
+    const data = encodeFunctionData({
+      abi: USDC_ABI,
+      functionName: 'transfer',
+      args: [destAddr as `0x${string}`, cantBig],
+    });
+    const txHash = await provider.request({
+      method: 'eth_sendTransaction',
+      params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+    });
+    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}...`, ...historial]);
+    alert(`✅ ¡Enviado! Hash: ${txHash}`);
+    setDestino(''); setMonto(''); setVista('inicio');
+    
+    // Actualizar saldo solo después de la confirmación
+    await refrescarSaldo();
+  } catch (error: any) {
+    console.error("Error enviando USDC:", error);
+    alert("❌ Error: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const abrirRetiro = () => {
-    if (!smartWalletAddress) return alert("Conecta tu wallet primero");
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
+    if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
+    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${walletEmbebida.address}`;
     window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
   };
 
-  // --- RENDERIZADO (Estilos sin tocar) ---
+  // --- RENDERIZADO (Tus estilos originales) ---
   if (faseApp === 'login' || faseApp === 'loading') {
     return (
       <main style={estilos.contenedor}>
@@ -252,11 +264,11 @@ function BilleteraApp() {
             <div style={estilos.seccionSaldo}>
                 <p style={{fontSize: '14px', color: '#666'}}>Balance Total</p>
                 <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-                <div style={estilos.badgePol}>⛽ Gas Sponsoreado</div>
+                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
             </div>
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
                 <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
             <button onClick={refrescarSaldo} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
@@ -271,8 +283,8 @@ function BilleteraApp() {
                 )}
             </div>
             <div style={estilos.footerDir}>
-              <p style={{fontSize: '10px', margin: 0}}>Tu Smart Wallet (No requiere POL):</p>
-               <code>{smartWalletAddress || 'Cargando...'}</code>
+              <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p>
+               <code>{walletEmbebida?.address}</code>
             </div>
           </>
         ) : (
@@ -291,7 +303,7 @@ function BilleteraApp() {
   );
 }
 
-// --- ESTILOS ---
+// --- ESTILOS (Tus estilos originales) ---
 const estilos: any = {
   contenedor: { minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif" },
   cardLogin: { background: 'white', padding: '40px', borderRadius: '24px', textAlign: 'center', width: '90%', maxWidth: '350px' },
@@ -300,7 +312,7 @@ const estilos: any = {
   botonPrimario: { width: '100%', padding: '15px', background: '#676FFF', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px' },
   botonSalir: { background: '#fff0f0', color: '#ff4d4d', border: 'none', padding: '5px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer' },
   seccionSaldo: { textAlign: 'center', padding: '20px 0', borderBottom: '1px solid #f0f0f0' },
-  badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' },
+  badgePol: { display: 'inline-block', background: '#eef2ff', color: '#676FFF', padding: '5px 10px', borderRadius: '15px', fontSize: '11px' },
   badgeRol: { display: 'inline-block', background: '#F3F4F6', color: '#333', padding: '3px 8px', borderRadius: '5px', fontSize: '10px', marginTop: '4px' },
   gridBotones: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginTop: '25px' },
   botonAccion: { background: '#111', color: 'white', padding: '12px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' },
@@ -309,8 +321,8 @@ const estilos: any = {
   formEnvio: { display: 'flex', flexDirection: 'column' },
   input: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', marginBottom: '15px' },
   inputMonto: { width: '100%', padding: '15px', borderRadius: '12px', border: '1px solid #ddd', fontSize: '24px' },
-  botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', borderRadius: '12px', border: 'none', cursor: 'pointer' },
-  botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', borderRadius: '12px', border: 'none', cursor: 'pointer' },
+  botonCancelar: { flex: 1, padding: '15px', background: '#f0f0f0', borderRadius: '12px', border: 'none' },
+  botonConfirmar: { flex: 1, padding: '15px', background: '#676FFF', color: 'white', borderRadius: '12px', border: 'none' },
   gridRoles: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '20px' },
   cardRol: { padding: '20px', borderRadius: '16px', textAlign: 'center', cursor: 'pointer' },
 };
