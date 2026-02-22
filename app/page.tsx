@@ -28,7 +28,7 @@ const publicClient = createPublicClient({
 
 
 function BilleteraApp() {
-  const { login, logout, authenticated, user } = usePrivy();
+  const { login, logout, authenticated, user, ready } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
@@ -76,18 +76,26 @@ const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') 
 };
 
 useEffect(() => {
-  const verificarUsuario = async () => {
-    if (!authenticated || !user) {
-      setFaseApp('login');
-      return;
-    }
+  // 🛑 REGLA 1: Si Privy aún está despertando, mostramos carga y esperamos.
+  if (!ready) {
+    setFaseApp('loading');
+    return;
+  }
 
+  // 🛑 REGLA 2: Si Privy ya despertó y no hay usuario, mostramos login.
+  if (!authenticated || !user) {
+    setFaseApp('login');
+    return;
+  }
+
+  // ✅ REGLA 3: El usuario está logueado, vamos a ver quién es.
+  const verificarUsuario = async () => {
     // 1. Mirar si lo tenemos en el navegador (rápido)
     const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
     if (rolLocal) {
       setRolSeleccionado(rolLocal as any);
       setFaseApp('dashboard');
-      return;
+      return; // Salimos de la función, ya terminamos
     }
 
     // 2. Si no, preguntarle a Supabase (seguro)
@@ -98,16 +106,21 @@ useEffect(() => {
       .single();
 
     if (data?.role) {
-      // Traducimos de vuelta al español para tu estado de React si quieres
+      // Si Supabase lo conoce, traducimos y lo mandamos al dashboard
       const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
       localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
       setRolSeleccionado(rolTraducido as any);
       setFaseApp('dashboard');
+    } else {
+      // 🚨 LA PIEZA FALTANTE: Si Supabase NO lo conoce, es un usuario nuevo.
+      setFaseApp('onboarding');
     }
   };
 
   verificarUsuario();
-}, [authenticated, user]);
+  
+// 👇 ¡AQUÍ AGREGAMOS 'ready'!
+}, [ready, authenticated, user]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
