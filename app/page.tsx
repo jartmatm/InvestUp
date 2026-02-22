@@ -4,6 +4,14 @@ import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/re
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
+import { createClient } from '@supabase/supabase-js';
+
+// --- CONFIGURACIÓN SUPABASE ---
+// Reemplaza esto con tus datos reales
+const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // --- CONFIGURACIÓN ---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
@@ -37,20 +45,67 @@ function BilleteraApp() {
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- EFECTO: CONTROL DE FLUJO ---
-  useEffect(() => {
-    if (!authenticated) {
+  // 1. Función para guardar en la base de datos
+const guardarRolEnBaseDeDatos = async (nuevoRol: 'inversor' | 'emprendedor') => {
+  if (!user) return;
+
+  try {
+    // Intentamos guardar o actualizar (upsert)
+    const { error } = await supabase
+      .from('perfiles') // Nombre de tu tabla
+      .upsert({ 
+        id: user.id,          // El ID único de Privy
+        email: user.email?.address, 
+        rol: nuevoRol 
+      });
+
+    if (error) throw error;
+
+    // Si salió bien, también lo guardamos en el navegador para que sea rápido
+    localStorage.setItem(`investup_rol_${user.id}`, nuevoRol);
+    setRolSeleccionado(nuevoRol);
+    setFaseApp('dashboard');
+    
+    console.log("✅ Rol guardado en el cuaderno de Supabase");
+  } catch (error) {
+    console.error("❌ Error al guardar en base de datos:", error);
+    alert("Hubo un problema al guardar tu perfil.");
+  }
+};
+
+useEffect(() => {
+  const verificarUsuario = async () => {
+    if (!authenticated || !user) {
       setFaseApp('login');
       return;
     }
-    const rolGuardado = localStorage.getItem(`investup_rol_${user?.id}`);
-    if (rolGuardado) {
-      setRolSeleccionado(rolGuardado as any);
+
+    // 1. Mirar si lo tenemos en el navegador (rápido)
+    const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
+    if (rolLocal) {
+      setRolSeleccionado(rolLocal as any);
+      setFaseApp('dashboard');
+      return;
+    }
+
+    // 2. Si no, preguntarle a Supabase (seguro)
+    const { data, error } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (data?.role) {
+      localStorage.setItem(`investup_rol_${user.id}`, data.role);
+      setRolSeleccionado(data.role);
       setFaseApp('dashboard');
     } else {
       setFaseApp('onboarding');
     }
-  }, [authenticated, user]);
+  };
+
+  verificarUsuario();
+}, [authenticated, user]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
@@ -166,11 +221,11 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
         <div style={{...estilos.cardApp, maxWidth: '450px'}}>
           <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
           <div style={estilos.gridRoles}>
-            <div onClick={() => setRolSeleccionado('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
+            <div onClick={() => guardarRolEnBaseDeDatos('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
               <div style={{fontSize: '30px'}}>📈</div>
               <h3>Soy Inversor</h3>
             </div>
-            <div onClick={() => setRolSeleccionado('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
+            <div onClick={() => guardarRolEnBaseDeDatos('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
               <div style={{fontSize: '30px'}}>🚀</div>
               <h3>Soy Emprendedor</h3>
             </div>
