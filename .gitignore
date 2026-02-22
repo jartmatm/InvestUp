@@ -44,6 +44,7 @@ next-env.d.ts
 *.backup
 *.stable.backup
 page.v*.backup
+page_backup*.tsx
 
 # sensitive files (credentials, secrets)
 clave supabase.txt
