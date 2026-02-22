@@ -46,30 +46,32 @@ function BilleteraApp() {
   const [loading, setLoading] = useState(false);
 
   // 1. Función para guardar en la base de datos
-const guardarRolEnBaseDeDatos = async (nuevoRol: 'inversor' | 'emprendedor') => {
-  if (!user) return;
+const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
+  if (!user || !walletEmbebida?.address) return;
+
+  // Traducimos de tu UI (español) al ENUM de la base de datos (inglés)
+  const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
 
   try {
-    // Intentamos guardar o actualizar (upsert)
     const { error } = await supabase
-      .from('perfiles') // Nombre de tu tabla
+      .from('users') // Nombre correcto de tu tabla
       .upsert({ 
-        id: user.id,          // El ID único de Privy
+        id: user.id, // Ahora sí cabe porque es TEXT
         email: user.email?.address, 
-        rol: nuevoRol 
+        role: rolParaDB, // 'investor' o 'entrepreneur'
+        wallet_address: walletEmbebida.address 
       });
 
     if (error) throw error;
 
-    // Si salió bien, también lo guardamos en el navegador para que sea rápido
-    localStorage.setItem(`investup_rol_${user.id}`, nuevoRol);
-    setRolSeleccionado(nuevoRol);
+    localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+    setRolSeleccionado(rolFrontend);
     setFaseApp('dashboard');
     
-    console.log("✅ Rol guardado en el cuaderno de Supabase");
-  } catch (error) {
-    console.error("❌ Error al guardar en base de datos:", error);
-    alert("Hubo un problema al guardar tu perfil.");
+    console.log("✅ ¡Guardado en Supabase correctamente!");
+  } catch (error: any) {
+    console.error("❌ Error real de Supabase:", error.message);
+    alert("Error: " + error.message);
   }
 };
 
@@ -96,11 +98,11 @@ useEffect(() => {
       .single();
 
     if (data?.role) {
-      localStorage.setItem(`investup_rol_${user.id}`, data.role);
-      setRolSeleccionado(data.role);
+      // Traducimos de vuelta al español para tu estado de React si quieres
+      const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
+      localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
+      setRolSeleccionado(rolTraducido as any);
       setFaseApp('dashboard');
-    } else {
-      setFaseApp('onboarding');
     }
   };
 
