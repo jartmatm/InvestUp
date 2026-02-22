@@ -171,34 +171,53 @@ const refrescarSaldo = async () => {
 
 // --- Ejemplo de flujo de envío de USDC que actualiza saldo después de la confirmación ---
 // Ajusta nombres/args según tu implementación real de writeContract / publicClient
+// --- FUNCIÓN CORREGIDA - Solo esto cambia ---
 const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
-  // Si se llama sin parámetros (desde el botón), usar el estado local
   const destAddr = destinoAddr || destino;
   const cantBig = cantidadBigInt || parseUnits(monto, 6);
 
   if (!walletEmbebida || !destAddr || !monto) return alert("Faltan datos");
+  
   setLoading(true);
   try {
     await walletEmbebida.switchChain(polygon.id);
     const provider = await walletEmbebida.getEthereumProvider();
+    
     const data = encodeFunctionData({
       abi: USDC_ABI,
       functionName: 'transfer',
       args: [destAddr as `0x${string}`, cantBig],
     });
+
+    // 🎯 ÚNICO CAMBIO: Agregar sponsor: true a los parámetros
     const txHash = await provider.request({
       method: 'eth_sendTransaction',
-      params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
+      params: [{ 
+        from: walletEmbebida.address, 
+        to: USDC_ADDRESS, 
+        data,
+        sponsor: true  // 👈 ESTA LÍNEA HABILITA EL GAS SPONSORSHIP
+      }],
     });
-    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}...`, ...historial]);
+
+    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}... (Gas patrocinado por Privy 🎉)`, ...historial]);
     alert(`✅ ¡Enviado! Hash: ${txHash}`);
-    setDestino(''); setMonto(''); setVista('inicio');
     
-    // Actualizar saldo solo después de la confirmación
+    setDestino(''); 
+    setMonto(''); 
+    setVista('inicio');
+    
     await refrescarSaldo();
+    
   } catch (error: any) {
     console.error("Error enviando USDC:", error);
-    alert("❌ Error: " + error.message);
+    
+    // Mensaje más amigable si falla el sponsorship
+    if (error.message?.includes('sponsor') || error.message?.includes('gas')) {
+      alert("❌ El patrocinio de gas no está activado. Verifica en el dashboard de Privy que tengas fondos y la opción activada para Polygon.");
+    } else {
+      alert("❌ Error: " + error.message);
+    }
   } finally {
     setLoading(false);
   }
