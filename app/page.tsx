@@ -7,36 +7,32 @@ import { polygon } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURACIÓN SUPABASE ---
-// Reemplaza esto con tus datos reales
 const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- CONFIGURACIÓN ---
+// --- CONFIGURACIÓN CONTRATO CRYPTO---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
   { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
   { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
 ];
 
-// Cambiamos el RPC por uno de Ankr o 1RPC (que son más estables ahora)
+// --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
   chain: polygon,
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
-
+// --- APLICACIÓN PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
   const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
   const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
-
   const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
@@ -54,9 +50,9 @@ const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') 
 
   try {
     const { error } = await supabase
-      .from('users') // Nombre correcto de tu tabla
+      .from('users') 
       .upsert({ 
-        id: user.id, // Ahora sí cabe porque es TEXT
+        id: user.id, 
         email: user.email?.address, 
         role: rolParaDB, // 'investor' o 'entrepreneur'
         wallet_address: walletEmbebida.address 
@@ -106,20 +102,17 @@ useEffect(() => {
       .single();
 
     if (data?.role) {
-      // Si Supabase lo conoce, traducimos y lo mandamos al dashboard
       const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
       localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
       setRolSeleccionado(rolTraducido as any);
       setFaseApp('dashboard');
     } else {
-      // 🚨 LA PIEZA FALTANTE: Si Supabase NO lo conoce, es un usuario nuevo.
       setFaseApp('onboarding');
     }
   };
 
   verificarUsuario();
   
-// 👇 ¡AQUÍ AGREGAMOS 'ready'!
 }, [ready, authenticated, user]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
