@@ -22,7 +22,7 @@ const USDC_ABI = [
 // --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
   chain: polygon,
-  transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
+  transport: http(`https://api.pimlico.io/v2/137/rpc?apikey=pim_VMd2S4X5ptMrZZoqdb6pma`)
 });
 
 // --- APLICACIÓN PRINCIPAL ---
