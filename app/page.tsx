@@ -43,6 +43,10 @@ function BilleteraApp() {
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
+  const sponsorshipPolicyId =
+    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
+    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
+    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
 
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
@@ -129,6 +133,9 @@ useEffect(() => {
 // --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
   const enviarUSDC = async () => {
     if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
+    if (!sponsorshipPolicyId) {
+      return alert('Falta configurar NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID (o alias) para usar gas sponsorship.');
+    }
     
     setLoading(true);
     try {
@@ -145,7 +152,9 @@ useEffect(() => {
       const txHash = await client.sendTransaction({
         to: USDC_ADDRESS,
         data: data,
-      });
+        // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
+        paymasterContext: { sponsorshipPolicyId },
+      } as any);
 
       setHistorial([`Inversión de ${monto} USDC (Gas Gratis ⛽)`, ...historial]);
       alert(`✅ ¡Enviado! Hash: ${txHash}`);
@@ -287,6 +296,12 @@ const estilos: any = {
 };
 
 export default function Home() {
+  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
+  const sponsorshipPolicyId =
+    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
+    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
+    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
+
   return (
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
@@ -297,14 +312,22 @@ export default function Home() {
           showWalletLoginFirst: false 
         },
         supportedChains: [polygon],
+        // Evita el warning de Solana cuando no usamos conectores Solana en esta app.
+        loginMethods: ['email'],
         embeddedWallets: { 
           ethereum: { createOnLogin: 'users-without-wallets' } 
         },
         
       }}
     >
-      {/* 🚀 2. Envolvemos la App aquí para activar las Smart Wallets */}
-      <SmartWalletsProvider>
+      {/* 🚀 Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
+      <SmartWalletsProvider
+        config={{
+          paymasterContext: sponsorshipPolicyId
+            ? { sponsorshipPolicyId }
+            : undefined,
+        }}
+      >
         <BilleteraApp />
       </SmartWalletsProvider>
     </PrivyProvider>
