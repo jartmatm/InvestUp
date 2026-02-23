@@ -49,19 +49,7 @@ function BilleteraApp() {
   const sponsorshipPolicyId =
     process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
     process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
-    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID ||
-    DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID;
-  const sponsorshipContext = sponsorshipPolicyId
-    ? ({
-        sponsorshipPolicyId,
-        // Compat: algunos SDKs/versions esperan `policyId`.
-        policyId: sponsorshipPolicyId,
-      } as any)
-    : undefined;
-
-  useEffect(() => {
-    console.info('Privy sponsorship policy activa:', sponsorshipPolicyId);
-  }, [sponsorshipPolicyId]);
+    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
 
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
@@ -148,6 +136,10 @@ useEffect(() => {
 // --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
   const enviarUSDC = async () => {
     if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
+    if (!sponsorshipPolicyId) {
+      return alert('Falta configurar NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID (o alias) para usar gas sponsorship.');
+    }
+    
     setLoading(true);
     try {
       const cantBig = parseUnits(monto, 6);
@@ -160,27 +152,12 @@ useEffect(() => {
 
       // 🎯 CON SMART WALLETS: client.sendTransaction usa automáticamente 
       // el sponsorship si está configurado en el Dashboard de Privy.
-      let txHash: string;
-      try {
-        txHash = await client.sendTransaction({
-          to: USDC_ADDRESS,
-          data: data,
-          // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
-          paymasterContext: sponsorshipContext,
-        } as any);
-      } catch (firstError: any) {
-        const msg = String(firstError?.message || firstError || '');
-        // Fallback de compatibilidad para SDKs que sólo leen `policyId`.
-        if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
-          txHash = await client.sendTransaction({
-            to: USDC_ADDRESS,
-            data: data,
-            paymasterContext: { policyId: sponsorshipPolicyId },
-          } as any);
-        } else {
-          throw firstError;
-        }
-      }
+      const txHash = await client.sendTransaction({
+        to: USDC_ADDRESS,
+        data: data,
+        // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
+        paymasterContext: { sponsorshipPolicyId },
+      } as any);
 
       setHistorial([`Inversión de ${monto} USDC (Gas Gratis ⛽)`, ...historial]);
       alert(`✅ ¡Enviado! Hash: ${txHash}`);
@@ -331,18 +308,7 @@ const estilos: any = {
 
 export default function Home() {
   // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
-  const sponsorshipPolicyId =
-    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
-    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
-    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID ||
-    DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID;
-  const sponsorshipContext = sponsorshipPolicyId
-    ? ({
-        sponsorshipPolicyId,
-        // Compat: algunos SDKs/versions esperan `policyId`.
-        policyId: sponsorshipPolicyId,
-      } as any)
-    : undefined;
+  const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
     <PrivyProvider
@@ -365,7 +331,9 @@ export default function Home() {
       {/* 🚀 Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
       <SmartWalletsProvider
         config={{
-          paymasterContext: sponsorshipContext,
+          paymasterContext: sponsorshipPolicyId
+            ? { sponsorshipPolicyId }
+            : undefined,
         }}
       >
         <BilleteraApp />
