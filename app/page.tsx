@@ -25,8 +25,8 @@ const publicClient = createPublicClient({
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
-// Policy oficial de Privy para sponsorship en Polygon (compartida por ti).
-const PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
+// Policy fallback (compartida por ti): usa env en producción y este valor como respaldo local.
+const DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
 
 // --- APLICACIÓN PRINCIPAL ---
 function BilleteraApp() {
@@ -46,9 +46,10 @@ function BilleteraApp() {
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
-  const sponsorshipPolicyId = PRIVY_SPONSORSHIP_POLICY_ID;
-  const sponsorshipContext = { policyId: sponsorshipPolicyId } as any;
-
+  const sponsorshipPolicyId =
+    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
+    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
+    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
 
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
@@ -135,6 +136,10 @@ useEffect(() => {
 // --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
   const enviarUSDC = async () => {
     if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
+    if (!sponsorshipPolicyId) {
+      return alert('Falta configurar NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID (o alias) para usar gas sponsorship.');
+    }
+    
     setLoading(true);
     try {
       const cantBig = parseUnits(monto, 6);
@@ -147,27 +152,12 @@ useEffect(() => {
 
       // 🎯 CON SMART WALLETS: client.sendTransaction usa automáticamente 
       // el sponsorship si está configurado en el Dashboard de Privy.
-      let txHash: string;
-      try {
-        txHash = await client.sendTransaction({
-          to: USDC_ADDRESS,
-          data: data,
-          // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
-          paymasterContext: sponsorshipContext,
-        } as any);
-      } catch (firstError: any) {
-        const msg = String(firstError?.message || firstError || '');
-        // Fallback de compatibilidad para SDKs que sólo leen `policyId`.
-        if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
-          txHash = await client.sendTransaction({
-            to: USDC_ADDRESS,
-            data: data,
-            paymasterContext: { policyId: sponsorshipPolicyId },
-          } as any);
-        } else {
-          throw firstError;
-        }
-      }
+      const txHash = await client.sendTransaction({
+        to: USDC_ADDRESS,
+        data: data,
+        // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
+        paymasterContext: { sponsorshipPolicyId },
+      } as any);
 
       setHistorial([`Inversión de ${monto} USDC (Gas Gratis ⛽)`, ...historial]);
       alert(`✅ ¡Enviado! Hash: ${txHash}`);
@@ -177,7 +167,7 @@ useEffect(() => {
       console.error("Error:", error);
       const msg = String(error?.message || error || '');
       if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
-        alert('Fallo sponsorship (AA21). Verifica que esta policy exista en el mismo appId de Privy y en Polygon: ' + sponsorshipPolicyId);
+        alert(`Fallo sponsorship (AA21). Policy activa: ${sponsorshipPolicyId}`);
       } else {
         alert("Fallo el envío: " + error.message);
       }
@@ -317,9 +307,8 @@ const estilos: any = {
 };
 
 export default function Home() {
-  // Privy sponsorship policy fija (debe pertenecer a este appId en Privy Dashboard)
-  const sponsorshipPolicyId = PRIVY_SPONSORSHIP_POLICY_ID;
-  const sponsorshipContext = { policyId: sponsorshipPolicyId } as any;
+  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
+  const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
     <PrivyProvider
@@ -342,7 +331,9 @@ export default function Home() {
       {/* 🚀 Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
       <SmartWalletsProvider
         config={{
-          paymasterContext: sponsorshipContext,
+          paymasterContext: sponsorshipPolicyId
+            ? { sponsorshipPolicyId }
+            : undefined,
         }}
       >
         <BilleteraApp />
