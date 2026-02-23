@@ -1,5 +1,6 @@
 'use client';
 
+import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
@@ -27,9 +28,11 @@ const publicClient = createPublicClient({
 // --- APLICACIÓN PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
-  const { wallets } = useWallets();
   const { fundWallet } = useFundWallet(); 
-  const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
+  
+  // 2. Obtenemos el cliente de la Smart Wallet
+  const { client } = useSmartWallets();
+  const smartWalletAddress = client?.account?.address;
   const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
@@ -41,125 +44,79 @@ function BilleteraApp() {
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 1. Función para guardar en la base de datos
-const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
-  if (!user || !walletEmbebida?.address) return;
+  const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
+    // Usamos smartWalletAddress en lugar de walletEmbebida
+    if (!user || !smartWalletAddress) return;
 
-  // Traducimos de tu UI (español) al ENUM de la base de datos (inglés)
-  const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
+    const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
 
-  try {
-    const { error } = await supabase
-      .from('users') 
-      .upsert({ 
-        id: user.id, 
-        email: user.email?.address, 
-        role: rolParaDB, // 'investor' o 'entrepreneur'
-        wallet_address: walletEmbebida.address 
-      });
+    try {
+      const { error } = await supabase
+        .from('users') 
+        .upsert({ 
+          id: user.id, 
+          email: user.email?.address, 
+          role: rolParaDB, 
+          wallet_address: smartWalletAddress // Guardamos la dirección inteligente
+        });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
-    setRolSeleccionado(rolFrontend);
-    setFaseApp('dashboard');
-    
-    console.log("✅ ¡Guardado en Supabase correctamente!");
-  } catch (error: any) {
-    console.error("❌ Error real de Supabase:", error.message);
-    alert("Error: " + error.message);
-  }
-};
-
-useEffect(() => {
-  // 🛑 REGLA 1: Si Privy aún está despertando, mostramos carga y esperamos.
-  if (!ready) {
-    setFaseApp('loading');
-    return;
-  }
-
-  // 🛑 REGLA 2: Si Privy ya despertó y no hay usuario, mostramos login.
-  if (!authenticated || !user) {
-    setFaseApp('login');
-    return;
-  }
-
-  // ✅ REGLA 3: El usuario está logueado, vamos a ver quién es.
-  const verificarUsuario = async () => {
-    // 1. Mirar si lo tenemos en el navegador (rápido)
-    const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
-    if (rolLocal) {
-      setRolSeleccionado(rolLocal as any);
+      localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+      setRolSeleccionado(rolFrontend);
       setFaseApp('dashboard');
-      return; // Salimos de la función, ya terminamos
-    }
-
-    // 2. Si no, preguntarle a Supabase (seguro)
-    const { data, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (data?.role) {
-      const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
-      localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
-      setRolSeleccionado(rolTraducido as any);
-      setFaseApp('dashboard');
-    } else {
-      setFaseApp('onboarding');
+    } catch (error: any) {
+      console.error("❌ Error Supabase:", error.message);
     }
   };
 
-  verificarUsuario();
-  
-}, [ready, authenticated, user]);
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated || !user) { setFaseApp('login'); return; }
+
+    const verificarUsuario = async () => {
+      const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
+      if (rolLocal) {
+        setRolSeleccionado(rolLocal as any);
+        setFaseApp('dashboard');
+        return;
+      }
+
+      const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+
+      if (data?.role) {
+        const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
+        localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
+        setRolSeleccionado(rolTraducido as any);
+        setFaseApp('dashboard');
+      } else {
+        setFaseApp('onboarding');
+      }
+    };
+    verificarUsuario();
+  }, [ready, authenticated, user]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
-  if (!walletEmbebida?.address) return;
-  try {
-    const direccion = walletEmbebida.address as `0x${string}`;
-      
-      // Consultar POL
-      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
+    if (!smartWalletAddress) return;
+    try {
+      const balPol = await publicClient.getBalance({ address: smartWalletAddress as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
-      // Consultar USDC
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: 'balanceOf',
-        args: [walletEmbebida.address as `0x${string}`],
+        args: [smartWalletAddress as `0x${string}`],
       });
       
-      const saldoFinal = Number(formatUnits(balUsdc as bigint, 6)).toFixed(2);
-      setBalanceUSDC(saldoFinal);
-      console.log("Saldo USDC recuperado:", saldoFinal);
-      
-    } catch (e) {
-      console.error("Error leyendo saldos:", e);
-    }
+      setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
+    } catch (e) { console.error("Error saldos:", e); }
   };
 
-// --- Reemplaza tu useEffect anterior por este ---
 useEffect(() => {
-  if (!authenticated) return;
-  if (!walletEmbebida?.address) return;
-
-  // Ejecutar una vez al entrar al dashboard
-  refrescarSaldo();
-}, [authenticated, walletEmbebida?.address]);
-
-// --- Función pública para refrescar saldo (llámala desde botón o después de tx) ---
-const refrescarSaldo = async () => {
-  try {
-    // Si ya tienes una función llamada actualizarSaldos, reutilízala
-    await actualizarSaldos();
-  } catch (err) {
-    console.error("Error refrescando saldo:", err);
-  }
-};
+    if (authenticated && smartWalletAddress) actualizarSaldos();
+  }, [authenticated, smartWalletAddress]);
 
 
   // --- RESTO DE FUNCIONES (Igual que antes) ---
@@ -169,65 +126,44 @@ const refrescarSaldo = async () => {
     setFaseApp('dashboard');
   };
 
-// --- Ejemplo de flujo de envío de USDC que actualiza saldo después de la confirmación ---
-// Ajusta nombres/args según tu implementación real de writeContract / publicClient
-// --- FUNCIÓN CORREGIDA - Solo esto cambia ---
-const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
-  const destAddr = destinoAddr || destino;
-  const cantBig = cantidadBigInt || parseUnits(monto, 6);
+// --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
+  const enviarUSDC = async () => {
+    if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
+    
+    setLoading(true);
+    try {
+      const cantBig = parseUnits(monto, 6);
+      
+      const data = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [destino as `0x${string}`, cantBig],
+      });
 
-  if (!walletEmbebida || !destAddr || !monto) return alert("Faltan datos");
-  
-  setLoading(true);
-  try {
-    await walletEmbebida.switchChain(polygon.id);
-    const provider = await walletEmbebida.getEthereumProvider();
-    
-    const data = encodeFunctionData({
-      abi: USDC_ABI,
-      functionName: 'transfer',
-      args: [destAddr as `0x${string}`, cantBig],
-    });
+      // 🎯 CON SMART WALLETS: client.sendTransaction usa automáticamente 
+      // el sponsorship si está configurado en el Dashboard de Privy.
+      const txHash = await client.sendTransaction({
+        to: USDC_ADDRESS,
+        data: data,
+      });
 
-    // 🎯 ÚNICO CAMBIO: Agregar sponsor: true a los parámetros
-    const txHash = await provider.request({
-      method: 'eth_sendTransaction',
-      params: [{ 
-        from: walletEmbebida.address, 
-        to: USDC_ADDRESS, 
-        data,
-        sponsor: true  // 👈 ESTA LÍNEA HABILITA EL GAS SPONSORSHIP
-      }],
-    });
-
-    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}... (Gas patrocinado por Privy 🎉)`, ...historial]);
-    alert(`✅ ¡Enviado! Hash: ${txHash}`);
-    
-    setDestino(''); 
-    setMonto(''); 
-    setVista('inicio');
-    
-    await refrescarSaldo();
-    
-  } catch (error: any) {
-    console.error("Error enviando USDC:", error);
-    
-    // Mensaje más amigable si falla el sponsorship
-    if (error.message?.includes('sponsor') || error.message?.includes('gas')) {
-      alert("❌ El patrocinio de gas no está activado. Verifica en el dashboard de Privy que tengas fondos y la opción activada para Polygon.");
-    } else {
-      alert("❌ Error: " + error.message);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const abrirRetiro = () => {
-    if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${walletEmbebida.address}`;
-    window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+      setHistorial([`Inversión de ${monto} USDC (Gas Gratis ⛽)`, ...historial]);
+      alert(`✅ ¡Enviado! Hash: ${txHash}`);
+      setVista('inicio');
+      actualizarSaldos();
+    } catch (error: any) {
+      console.error("Error:", error);
+      alert("Fallo el envío: " + error.message);
+    } finally { setLoading(false); }
   };
+
+const abrirRetiro = () => {
+  if (!smartWalletAddress) {
+    return alert("Espera un momento a que tu Smart Wallet esté lista...");
+  }
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+};
 
   // --- RENDERIZADO (Tus estilos originales) ---
   if (faseApp === 'login' || faseApp === 'loading') {
@@ -281,16 +217,16 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
         {vista === 'inicio' ? (
           <>
             <div style={estilos.seccionSaldo}>
-                <p style={{fontSize: '14px', color: '#666'}}>Balance Total</p>
-                <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
+                <p style={{fontSize: '14px', color: '#666'}}>Balance Smart Wallet</p>
+                <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC}</h1>
+                <div style={estilos.badgePol}>⛽ Gas Patrocinado por InvestUp</div>
             </div>
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
                 <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
-            <button onClick={refrescarSaldo} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
             <div style={estilos.listaHistorial}>
                 <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
                 {historial.length === 0 ? (
@@ -302,9 +238,13 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
                 )}
             </div>
             <div style={estilos.footerDir}>
-              <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p>
-               <code>{walletEmbebida?.address}</code>
-            </div>
+              <p style={{fontSize: '10px', margin: 0, color: '#676FFF', fontWeight: 'bold'}}>
+                Tu Bóveda Inteligente (Gas Gratis ⛽):
+                </p>
+                <code style={{fontSize: '9px', wordBreak: 'break-all'}}>
+                  {smartWalletAddress || 'Generando dirección...'}
+                  </code>
+                  </div>
           </>
         ) : (
           <div style={estilos.formEnvio}>
