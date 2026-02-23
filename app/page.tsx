@@ -25,6 +25,9 @@ const publicClient = createPublicClient({
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
+// Policy fallback (compartida por ti): usa env en producción y este valor como respaldo local.
+const DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
+
 // --- APLICACIÓN PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
