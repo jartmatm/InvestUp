@@ -1,6 +1,6 @@
 'use client';
 
-import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
+import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
@@ -291,12 +291,22 @@ export default function Home() {
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
       config={{
-        appearance: { theme: 'light', accentColor: '#676FFF', showWalletLoginFirst: false },
+        appearance: { 
+          theme: 'light', 
+          accentColor: '#676FFF', 
+          showWalletLoginFirst: false 
+        },
         supportedChains: [polygon],
-        embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
+        embeddedWallets: { 
+          ethereum: { createOnLogin: 'users-without-wallets' } 
+        },
+        
       }}
     >
-      <BilleteraApp />
+      {/* 🚀 2. Envolvemos la App aquí para activar las Smart Wallets */}
+      <SmartWalletsProvider>
+        <BilleteraApp />
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 }
