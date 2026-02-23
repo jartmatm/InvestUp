@@ -287,6 +287,9 @@ const estilos: any = {
 };
 
 export default function Home() {
+  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
+  const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
+
   return (
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
@@ -303,8 +306,14 @@ export default function Home() {
         
       }}
     >
-      {/* 🚀 2. Envolvemos la App aquí para activar las Smart Wallets */}
-      <SmartWalletsProvider>
+      {/* 🚀 Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
+      <SmartWalletsProvider
+        config={{
+          paymasterContext: sponsorshipPolicyId
+            ? { sponsorshipPolicyId }
+            : undefined,
+        }}
+      >
         <BilleteraApp />
       </SmartWalletsProvider>
     </PrivyProvider>
