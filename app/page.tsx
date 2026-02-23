@@ -297,10 +297,7 @@ const estilos: any = {
 
 export default function Home() {
   // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
-  const sponsorshipPolicyId =
-    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
-    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
-    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
+  const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
     <PrivyProvider
