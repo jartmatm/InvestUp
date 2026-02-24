@@ -78,7 +78,6 @@ function BilleteraApp() {
     };
 
   useEffect(() => {
-     console.log("ENV POLICY:", process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID);
     if (!ready) return;
     if (!authenticated || !user) { setFaseApp('login'); return; }
 
