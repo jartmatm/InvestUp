@@ -49,3 +49,4 @@ page_backup*.tsx
 # sensitive files (credentials, secrets)
 clave supabase.txt
 *.txt
+.env.local
