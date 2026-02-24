@@ -4,7 +4,7 @@ import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smar
 import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
-import { polygon } from 'viem/chains';
+import { mainnet } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
 
 // --- CONFIGURACIÓN SUPABASE ---
@@ -21,8 +21,8 @@ const USDC_ABI = [
 
 // --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
-  chain: polygon,
-  transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
+  chain: mainnet,
+  transport: http(`https://mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
 // Policy fallback (compartida por ti): usa env en producción y este valor como respaldo local.
@@ -321,7 +321,7 @@ export default function Home() {
           accentColor: '#676FFF', 
           showWalletLoginFirst: false 
         },
-        supportedChains: [polygon],
+        supportedChains: [mainnet],
         // Evita el warning de Solana cuando no usamos conectores Solana en esta app.
         loginMethods: ['email'],
         embeddedWallets: { 
