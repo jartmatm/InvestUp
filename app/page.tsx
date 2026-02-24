@@ -75,9 +75,10 @@ function BilleteraApp() {
     } catch (error: any) {
       console.error("❌ Error Supabase:", error.message);
     }
-  };
+    };
 
   useEffect(() => {
+     console.log("ENV POLICY:", process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID);
     if (!ready) return;
     if (!authenticated || !user) { setFaseApp('login'); return; }
 
@@ -171,6 +172,7 @@ useEffect(() => {
       } else {
         alert("Fallo el envío: " + error.message);
       }
+      
     } finally { setLoading(false); }
   };
 
