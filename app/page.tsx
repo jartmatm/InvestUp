@@ -1,23 +1,29 @@
 'use client';
 
 import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
-import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
+import { PrivyProvider, usePrivy, useFundWallet } from '@privy-io/react-auth';
 import { useState, useEffect } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
 
-// --- CONFIGURACIÓN SUPABASE ---
+// --- CONFIGURACIÃ“N SUPABASE ---
 const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- CONFIGURACIÓN CONTRATO CRYPTO---
+// --- CONFIGURACIÃ“N CONTRATO CRYPTO---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
   { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'allowance', type: 'function', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'approve', type: 'function', inputs: [{ name: 'spender', type: 'address' }, { name: 'value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] },
   { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
 ];
+
+const USDC_DECIMALS = 6;
+const MAX_UINT256 = (BigInt(1) << BigInt(256)) - BigInt(1);
+const GAS_BUFFER_BPS = BigInt(10500);
 
 // --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
@@ -25,10 +31,10 @@ const publicClient = createPublicClient({
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
-// Policy fallback (compartida por ti): usa env en producción y este valor como respaldo local.
+// Policy fallback (compartida por ti): usa env en producciÃ³n y este valor como respaldo local.
 const DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
 
-// --- APLICACIÓN PRINCIPAL ---
+// --- APLICACIÃ“N PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
   const { fundWallet } = useFundWallet(); 
@@ -49,7 +55,8 @@ function BilleteraApp() {
   const sponsorshipPolicyId =
     process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
     process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
-    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID;
+    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID ||
+    DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID;
 
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
@@ -64,7 +71,7 @@ function BilleteraApp() {
           id: user.id, 
           email: user.email?.address, 
           role: rolParaDB, 
-          wallet_address: smartWalletAddress // Guardamos la dirección inteligente
+          wallet_address: smartWalletAddress // Guardamos la direcciÃ³n inteligente
         });
 
       if (error) throw error;
@@ -73,7 +80,7 @@ function BilleteraApp() {
       setRolSeleccionado(rolFrontend);
       setFaseApp('dashboard');
     } catch (error: any) {
-      console.error("❌ Error Supabase:", error.message);
+      console.error("âŒ Error Supabase:", error.message);
     }
     };
 
@@ -104,7 +111,7 @@ function BilleteraApp() {
     verificarUsuario();
   }, [ready, authenticated, user]);
 
-// 3. Tu función de saldos (asegurando el casting a 0x${string})
+// 3. Tu funciÃ³n de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
     if (!smartWalletAddress) return;
     try {
@@ -134,51 +141,141 @@ useEffect(() => {
     setFaseApp('dashboard');
   };
 
-// --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
+// --- FUNCIÃ“N DE ENVÃO CON SPONSORSHIP ---
   const enviarUSDC = async () => {
     if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
-    if (!sponsorshipPolicyId) {
-      return alert('Falta configurar NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID (o alias) para usar gas sponsorship.');
-    }
-    
+    if (!destino.startsWith('0x') || destino.length !== 42) return alert('Direccion destino invalida');
+
     setLoading(true);
     try {
-      const cantBig = parseUnits(monto, 6);
-      
-      const data = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [destino as `0x${string}`, cantBig],
+      const montoSolicitado = parseUnits(monto, USDC_DECIMALS);
+      if (montoSolicitado <= BigInt(0)) {
+        throw new Error('El monto debe ser mayor a 0.');
+      }
+
+      const paymasterContext = sponsorshipPolicyId
+        ? { token: USDC_ADDRESS, sponsorshipPolicyId }
+        : { token: USDC_ADDRESS };
+
+      const pimlicoClient = client as any;
+      const quotes = await pimlicoClient.getTokenQuotes({
+        tokens: [USDC_ADDRESS],
+        entryPointAddress: client.account.entryPoint.address,
       });
 
-      // 🎯 CON SMART WALLETS: client.sendTransaction usa automáticamente 
-      // el sponsorship si está configurado en el Dashboard de Privy.
-      const txHash = await client.sendTransaction({
+      if (!quotes?.length) {
+        throw new Error('Pimlico no devolvio quote para USDC en esta red.');
+      }
+
+      const quote = quotes[0];
+
+      const transferData = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [destino as `0x${string}`, montoSolicitado],
+      });
+
+      // Estimamos el costo maximo con una UO que incluye approve + transfer.
+      const estimateUserOp = await (client as any).prepareUserOperation({
+        calls: [
+          {
+            to: USDC_ADDRESS,
+            value: BigInt(0),
+            data: encodeFunctionData({
+              abi: USDC_ABI,
+              functionName: 'approve',
+              args: [quote.paymaster as `0x${string}`, MAX_UINT256],
+            }),
+          },
+          { to: USDC_ADDRESS, value: BigInt(0), data: transferData },
+        ],
+        paymasterContext,
+      });
+
+      const maxFeePerGas = BigInt(estimateUserOp.maxFeePerGas);
+      const maxGas =
+        BigInt(estimateUserOp.preVerificationGas) +
+        BigInt(estimateUserOp.callGasLimit) +
+        BigInt(estimateUserOp.verificationGasLimit) +
+        BigInt(estimateUserOp.paymasterVerificationGasLimit ?? BigInt(0)) +
+        BigInt(estimateUserOp.paymasterPostOpGasLimit ?? BigInt(0));
+
+      const maxCostNative = maxGas * maxFeePerGas;
+      let gasCostUsdc =
+        ((maxCostNative + BigInt(quote.postOpGas) * maxFeePerGas) * BigInt(quote.exchangeRate)) /
+        (BigInt(10) ** BigInt(18));
+
+      // Buffer del 5% para evitar underestimation.
+      gasCostUsdc = (gasCostUsdc * GAS_BUFFER_BPS) / BigInt(10000);
+
+      if (gasCostUsdc >= montoSolicitado) {
+        throw new Error('El monto no alcanza para cubrir gas en USDC.');
+      }
+
+      const montoNeto = montoSolicitado - gasCostUsdc;
+
+      const allowance = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'allowance',
+        args: [smartWalletAddress as `0x${string}`, quote.paymaster as `0x${string}`],
+      });
+
+      const calls: Array<{ to: `0x${string}`; value: bigint; data: `0x${string}` }> = [];
+
+      if ((allowance as bigint) < gasCostUsdc) {
+        calls.push({
+          to: USDC_ADDRESS,
+          value: BigInt(0),
+          data: encodeFunctionData({
+            abi: USDC_ABI,
+            functionName: 'approve',
+            args: [quote.paymaster as `0x${string}`, MAX_UINT256],
+          }),
+        });
+      }
+
+      calls.push({
         to: USDC_ADDRESS,
-        data: data,
-        // Lo pasamos explícitamente en runtime para evitar UOs sin paymaster.
-        paymasterContext: { sponsorshipPolicyId },
+        value: BigInt(0),
+        data: encodeFunctionData({
+          abi: USDC_ABI,
+          functionName: 'transfer',
+          args: [destino as `0x${string}`, montoNeto],
+        }),
+      });
+
+      const txHash = await client.sendTransaction({
+        calls,
+        paymasterContext,
       } as any);
 
-      setHistorial([`Inversión de ${monto} USDC (Gas Gratis ⛽)`, ...historial]);
-      alert(`✅ ¡Enviado! Hash: ${txHash}`);
+      const gasUsdcFmt = Number(formatUnits(gasCostUsdc, USDC_DECIMALS)).toFixed(6);
+      const netoFmt = Number(formatUnits(montoNeto, USDC_DECIMALS)).toFixed(6);
+
+      setHistorial([
+        `Envio neto ${netoFmt} USDC (gas ${gasUsdcFmt} USDC via Pimlico)`,
+        ...historial,
+      ]);
+      alert(`Enviado. Hash: ${txHash}`);
       setVista('inicio');
       actualizarSaldos();
     } catch (error: any) {
       console.error("Error:", error);
       const msg = String(error?.message || error || '');
       if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
-        alert(`Fallo sponsorship (AA21). Policy activa: ${sponsorshipPolicyId}`);
+        alert(`Fallo paymaster/bundler Pimlico (AA21). Policy activa: ${sponsorshipPolicyId || 'sin policy'}`);
       } else {
-        alert("Fallo el envío: " + error.message);
+        alert("Fallo el envio: " + (error?.message || 'Error desconocido'));
       }
-      
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
 const abrirRetiro = () => {
   if (!smartWalletAddress) {
-    return alert("Espera un momento a que tu Smart Wallet esté lista...");
+    return alert("Espera un momento a que tu Smart Wallet estÃ© lista...");
   }
   const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
   window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
@@ -189,9 +286,9 @@ const abrirRetiro = () => {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de Inversión Descentralizada</p>
-          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar / Registrarse</button>
+          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp ðŸ¦</h1>
+          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de InversiÃ³n Descentralizada</p>
+          <button onClick={login} style={estilos.botonPrimario}>ðŸ”‘ Entrar / Registrarse</button>
         </div>
       </main>
     );
@@ -204,17 +301,17 @@ const abrirRetiro = () => {
           <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
           <div style={estilos.gridRoles}>
             <div onClick={() => guardarRolEnBaseDeDatos('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
-              <div style={{fontSize: '30px'}}>📈</div>
+              <div style={{fontSize: '30px'}}>ðŸ“ˆ</div>
               <h3>Soy Inversor</h3>
             </div>
             <div onClick={() => guardarRolEnBaseDeDatos('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
-              <div style={{fontSize: '30px'}}>🚀</div>
+              <div style={{fontSize: '30px'}}>ðŸš€</div>
               <h3>Soy Emprendedor</h3>
             </div>
           </div>
           <div style={{marginTop: '30px'}}>
             <input type="checkbox" checked={aceptaTerminos} onChange={(e) => setAceptaTerminos(e.target.checked)} id="terminos" />
-            <label htmlFor="terminos" style={{marginLeft: '10px'}}>Acepto términos y condiciones</label>
+            <label htmlFor="terminos" style={{marginLeft: '10px'}}>Acepto tÃ©rminos y condiciones</label>
           </div>
           <button onClick={completarOnboarding} disabled={!rolSeleccionado || !aceptaTerminos} style={estilos.botonPrimario}>Continuar</button>
         </div>
@@ -228,7 +325,7 @@ const abrirRetiro = () => {
         <div style={estilos.header}>
             <div>
               <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
-              <div style={estilos.badgeRol}>{rolSeleccionado === 'inversor' ? '📈 Inversor' : '🚀 Emprendedor'}</div>
+              <div style={estilos.badgeRol}>{rolSeleccionado === 'inversor' ? 'ðŸ“ˆ Inversor' : 'ðŸš€ Emprendedor'}</div>
             </div>
             <button onClick={() => { logout(); localStorage.removeItem(`investup_rol_${user?.id}`); }} style={estilos.botonSalir}>Salir</button>
         </div>
@@ -238,18 +335,18 @@ const abrirRetiro = () => {
             <div style={estilos.seccionSaldo}>
                 <p style={{fontSize: '14px', color: '#666'}}>Balance Smart Wallet</p>
                 <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC}</h1>
-                <div style={estilos.badgePol}>⛽ Gas Patrocinado por InvestUp</div>
+                <div style={estilos.badgePol}>â›½ Gas Patrocinado por InvestUp</div>
             </div>
             <div style={estilos.gridBotones}>
-                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
-                <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
+                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>ðŸ’¸ Enviar</button>
+                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>ðŸ’³ Comprar</button>
+                <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>ðŸ¦ Retirar</button>
             </div>
-            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>ðŸ”„ Refrescar saldo</button>
             <div style={estilos.listaHistorial}>
                 <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
                 {historial.length === 0 ? (
-                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
+                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesiÃ³n.</p>
                 ) : (
                     historial.map((item, i) => (
                         <div key={i} style={estilos.itemHistorial}>{item}</div>
@@ -258,10 +355,10 @@ const abrirRetiro = () => {
             </div>
             <div style={estilos.footerDir}>
               <p style={{fontSize: '10px', margin: 0, color: '#676FFF', fontWeight: 'bold'}}>
-                Tu Bóveda Inteligente (Gas Gratis ⛽):
+                Tu BÃ³veda Inteligente (Gas Gratis â›½):
                 </p>
                 <code style={{fontSize: '9px', wordBreak: 'break-all'}}>
-                  {smartWalletAddress || 'Generando dirección...'}
+                  {smartWalletAddress || 'Generando direcciÃ³n...'}
                   </code>
                   <p style={{fontSize: '9px', margin: '6px 0 0 0', color: '#888'}}>
                     Policy sponsorship: {sponsorshipPolicyId}
@@ -271,7 +368,7 @@ const abrirRetiro = () => {
         ) : (
           <div style={estilos.formEnvio}>
             <h2>Enviar Dinero</h2>
-            <input placeholder="Dirección 0x..." value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
+            <input placeholder="DirecciÃ³n 0x..." value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
             <input type="number" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} style={estilos.inputMonto} />
             <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
@@ -309,7 +406,7 @@ const estilos: any = {
 };
 
 export default function Home() {
-  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
+  // Privy sponsorship policy: crÃ©ala en el dashboard (Polygon) y guÃ¡rdala en .env.local
   const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
@@ -330,12 +427,12 @@ export default function Home() {
         
       }}
     >
-      {/* 🚀 Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
+      {/* ðŸš€ Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
       <SmartWalletsProvider
         config={{
           paymasterContext: sponsorshipPolicyId
-            ? { sponsorshipPolicyId }
-            : undefined,
+            ? { token: USDC_ADDRESS, sponsorshipPolicyId }
+            : { token: USDC_ADDRESS },
         }}
       >
         <BilleteraApp />
