@@ -7,12 +7,12 @@ import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData }
 import { polygon } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
 
-// --- CONFIGURACIÃ“N SUPABASE ---
+// --- CONFIGURACION SUPABASE ---
 const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// --- CONFIGURACIÃ“N CONTRATO CRYPTO---
+// --- CONFIGURACION CONTRATO CRYPTO---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
   { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
@@ -31,10 +31,10 @@ const publicClient = createPublicClient({
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
-// Policy fallback (compartida por ti): usa env en producciÃ³n y este valor como respaldo local.
+// Policy fallback (compartida por ti): usa env en produccion y este valor como respaldo local.
 const DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
 
-// --- APLICACIÃ“N PRINCIPAL ---
+// --- APLICACION PRINCIPAL ---
 function BilleteraApp() {
   const { login, logout, authenticated, user, ready } = usePrivy();
   const { fundWallet } = useFundWallet(); 
@@ -71,7 +71,7 @@ function BilleteraApp() {
           id: user.id, 
           email: user.email?.address, 
           role: rolParaDB, 
-          wallet_address: smartWalletAddress // Guardamos la direcciÃ³n inteligente
+          wallet_address: smartWalletAddress // Guardamos la direccion inteligente
         });
 
       if (error) throw error;
@@ -80,7 +80,7 @@ function BilleteraApp() {
       setRolSeleccionado(rolFrontend);
       setFaseApp('dashboard');
     } catch (error: any) {
-      console.error("âŒ Error Supabase:", error.message);
+      console.error("Error Supabase:", error.message);
     }
     };
 
@@ -111,7 +111,7 @@ function BilleteraApp() {
     verificarUsuario();
   }, [ready, authenticated, user]);
 
-// 3. Tu funciÃ³n de saldos (asegurando el casting a 0x${string})
+// 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
     if (!smartWalletAddress) return;
     try {
@@ -141,7 +141,7 @@ useEffect(() => {
     setFaseApp('dashboard');
   };
 
-// --- FUNCIÃ“N DE ENVÃO CON SPONSORSHIP ---
+// --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
   const enviarUSDC = async () => {
     if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
     if (!destino.startsWith('0x') || destino.length !== 42) return alert('Direccion destino invalida');
@@ -275,7 +275,7 @@ useEffect(() => {
 
 const abrirRetiro = () => {
   if (!smartWalletAddress) {
-    return alert("Espera un momento a que tu Smart Wallet estÃ© lista...");
+    return alert("Espera un momento a que tu Smart Wallet esté lista...");
   }
   const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
   window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
@@ -286,9 +286,9 @@ const abrirRetiro = () => {
     return (
       <main style={estilos.contenedor}>
         <div style={estilos.cardLogin}>
-          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp ðŸ¦</h1>
-          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de InversiÃ³n Descentralizada</p>
-          <button onClick={login} style={estilos.botonPrimario}>ðŸ”‘ Entrar / Registrarse</button>
+          <h1 style={{color: '#676FFF', marginBottom: '10px'}}>InvestUp 🏦</h1>
+          <p style={{color: '#666', marginBottom: '30px'}}>Plataforma de Inversión Descentralizada</p>
+          <button onClick={login} style={estilos.botonPrimario}>🔑 Entrar / Registrarse</button>
         </div>
       </main>
     );
@@ -301,17 +301,17 @@ const abrirRetiro = () => {
           <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
           <div style={estilos.gridRoles}>
             <div onClick={() => guardarRolEnBaseDeDatos('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
-              <div style={{fontSize: '30px'}}>ðŸ“ˆ</div>
+              <div style={{fontSize: '30px'}}>📈</div>
               <h3>Soy Inversor</h3>
             </div>
             <div onClick={() => guardarRolEnBaseDeDatos('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
-              <div style={{fontSize: '30px'}}>ðŸš€</div>
+              <div style={{fontSize: '30px'}}>🚀</div>
               <h3>Soy Emprendedor</h3>
             </div>
           </div>
           <div style={{marginTop: '30px'}}>
             <input type="checkbox" checked={aceptaTerminos} onChange={(e) => setAceptaTerminos(e.target.checked)} id="terminos" />
-            <label htmlFor="terminos" style={{marginLeft: '10px'}}>Acepto tÃ©rminos y condiciones</label>
+            <label htmlFor="terminos" style={{marginLeft: '10px'}}>Acepto términos y condiciones</label>
           </div>
           <button onClick={completarOnboarding} disabled={!rolSeleccionado || !aceptaTerminos} style={estilos.botonPrimario}>Continuar</button>
         </div>
@@ -325,7 +325,7 @@ const abrirRetiro = () => {
         <div style={estilos.header}>
             <div>
               <div style={{fontSize: '12px', color: '#888'}}>Hola, {user?.email?.address?.split('@')[0]}</div>
-              <div style={estilos.badgeRol}>{rolSeleccionado === 'inversor' ? 'ðŸ“ˆ Inversor' : 'ðŸš€ Emprendedor'}</div>
+              <div style={estilos.badgeRol}>{rolSeleccionado === 'inversor' ? '📈 Inversor' : '🚀 Emprendedor'}</div>
             </div>
             <button onClick={() => { logout(); localStorage.removeItem(`investup_rol_${user?.id}`); }} style={estilos.botonSalir}>Salir</button>
         </div>
@@ -335,18 +335,18 @@ const abrirRetiro = () => {
             <div style={estilos.seccionSaldo}>
                 <p style={{fontSize: '14px', color: '#666'}}>Balance Smart Wallet</p>
                 <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC}</h1>
-                <div style={estilos.badgePol}>â›½ Gas Patrocinado por InvestUp</div>
+                <div style={estilos.badgePol}>⛽ Gas Patrocinado por InvestUp</div>
             </div>
             <div style={estilos.gridBotones}>
-                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>ðŸ’¸ Enviar</button>
-                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>ðŸ’³ Comprar</button>
-                <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>ðŸ¦ Retirar</button>
+                <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
+                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
-            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>ðŸ”„ Refrescar saldo</button>
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
             <div style={estilos.listaHistorial}>
                 <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
                 {historial.length === 0 ? (
-                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesiÃ³n.</p>
+                    <p style={{fontSize: '12px', color: '#999', fontStyle: 'italic'}}>No hay movimientos en esta sesión.</p>
                 ) : (
                     historial.map((item, i) => (
                         <div key={i} style={estilos.itemHistorial}>{item}</div>
@@ -355,10 +355,10 @@ const abrirRetiro = () => {
             </div>
             <div style={estilos.footerDir}>
               <p style={{fontSize: '10px', margin: 0, color: '#676FFF', fontWeight: 'bold'}}>
-                Tu BÃ³veda Inteligente (Gas Gratis â›½):
+                Tu Bóveda Inteligente (Gas Gratis ⛽):
                 </p>
                 <code style={{fontSize: '9px', wordBreak: 'break-all'}}>
-                  {smartWalletAddress || 'Generando direcciÃ³n...'}
+                  {smartWalletAddress || 'Generando dirección...'}
                   </code>
                   <p style={{fontSize: '9px', margin: '6px 0 0 0', color: '#888'}}>
                     Policy sponsorship: {sponsorshipPolicyId}
@@ -406,7 +406,7 @@ const estilos: any = {
 };
 
 export default function Home() {
-  // Privy sponsorship policy: crÃ©ala en el dashboard (Polygon) y guÃ¡rdala en .env.local
+  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
   const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
@@ -427,7 +427,7 @@ export default function Home() {
         
       }}
     >
-      {/* ðŸš€ Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
+      {/*Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
       <SmartWalletsProvider
         config={{
           paymasterContext: sponsorshipPolicyId
