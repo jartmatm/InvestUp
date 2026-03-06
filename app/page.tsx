@@ -1,11 +1,12 @@
-'use client';
+﻿'use client';
 
 import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useFundWallet } from '@privy-io/react-auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
 
 // --- CONFIGURACION SUPABASE ---
 const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
@@ -24,6 +25,12 @@ const USDC_ABI = [
 const USDC_DECIMALS = 6;
 const MAX_UINT256 = (BigInt(1) << BigInt(256)) - BigInt(1);
 const GAS_BUFFER_BPS = BigInt(10500);
+
+const PIMLICO_API_KEY = process.env.NEXT_PUBLIC_PIMLICO_API_KEY;
+const PIMLICO_CHAIN_ID = 137;
+const PIMLICO_BUNDLER_URL =
+  process.env.NEXT_PUBLIC_PIMLICO_BUNDLER_URL ||
+  (PIMLICO_API_KEY ? `https://api.pimlico.io/v2/${PIMLICO_CHAIN_ID}/rpc?apikey=${PIMLICO_API_KEY}` : '');
 
 // --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
@@ -52,7 +59,16 @@ function BilleteraApp() {
   const [destino, setDestino] = useState('');
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
-  const sponsorshipPolicyId =
+
+  const pimlicoClient = useMemo(() => {
+    if (!PIMLICO_BUNDLER_URL) return null;
+    return createPimlicoClient({
+      chain: polygon,
+      transport: http(PIMLICO_BUNDLER_URL),
+    });
+  }, []);
+
+    const sponsorshipPolicyId =
     process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
     process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
     process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID ||
@@ -156,11 +172,12 @@ useEffect(() => {
       const paymasterContext = sponsorshipPolicyId
         ? { token: USDC_ADDRESS, sponsorshipPolicyId }
         : { token: USDC_ADDRESS };
+      if (!pimlicoClient) {
+        throw new Error('Falta configurar Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).');
+      }
 
-      const pimlicoClient = client as any;
       const quotes = await pimlicoClient.getTokenQuotes({
         tokens: [USDC_ADDRESS],
-        entryPointAddress: client.account.entryPoint.address,
       });
 
       if (!quotes?.length) {
@@ -368,7 +385,7 @@ const abrirRetiro = () => {
         ) : (
           <div style={estilos.formEnvio}>
             <h2>Enviar Dinero</h2>
-            <input placeholder="DirecciÃ³n 0x..." value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
+            <input placeholder="Dirección 0x..." value={destino} onChange={(e) => setDestino(e.target.value)} style={estilos.input} />
             <input type="number" placeholder="0.00" value={monto} onChange={(e) => setMonto(e.target.value)} style={estilos.inputMonto} />
             <div style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
                 <button onClick={() => setVista('inicio')} style={estilos.botonCancelar}>Cancelar</button>
