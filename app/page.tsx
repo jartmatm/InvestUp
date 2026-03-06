@@ -38,8 +38,6 @@ const publicClient = createPublicClient({
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
-// Policy fallback (compartida por ti): usa env en produccion y este valor como respaldo local.
-const DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID = 'tza7scd2d4q8v11ptrhozp5r';
 
 // --- APLICACION PRINCIPAL ---
 function BilleteraApp() {
@@ -68,12 +66,6 @@ function BilleteraApp() {
     });
   }, []);
 
-    const sponsorshipPolicyId =
-    process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID ||
-    process.env.NEXT_PUBLIC_PRIVY_POLICY_ID ||
-    process.env.NEXT_PUBLIC_SPONSORSHIP_POLICY_ID ||
-    DEFAULT_PRIVY_SPONSORSHIP_POLICY_ID;
-
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
     if (!user || !smartWalletAddress) return;
@@ -101,7 +93,6 @@ function BilleteraApp() {
     };
 
   useEffect(() => {
-    console.log("POLICY PROD:", process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID);
     if (!ready) return;
     if (!authenticated || !user) { setFaseApp('login'); return; }
 
@@ -169,9 +160,7 @@ useEffect(() => {
         throw new Error('El monto debe ser mayor a 0.');
       }
 
-      const paymasterContext = sponsorshipPolicyId
-        ? { token: USDC_ADDRESS, sponsorshipPolicyId }
-        : { token: USDC_ADDRESS };
+      const paymasterContext = { token: USDC_ADDRESS };
       if (!pimlicoClient) {
         throw new Error('Falta configurar Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).');
       }
@@ -281,7 +270,7 @@ useEffect(() => {
       console.error("Error:", error);
       const msg = String(error?.message || error || '');
       if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
-        alert(`Fallo paymaster/bundler Pimlico (AA21). Policy activa: ${sponsorshipPolicyId || 'sin policy'}`);
+        alert('Fallo paymaster/bundler Pimlico (AA21). Revisa paymaster/token config.');
       } else {
         alert("Fallo el envio: " + (error?.message || 'Error desconocido'));
       }
@@ -378,7 +367,7 @@ const abrirRetiro = () => {
                   {smartWalletAddress || 'Generando dirección...'}
                   </code>
                   <p style={{fontSize: '9px', margin: '6px 0 0 0', color: '#888'}}>
-                    Policy sponsorship: {sponsorshipPolicyId}
+                    Pimlico ERC20 paymaster activo
                   </p>
                   </div>
           </>
@@ -424,7 +413,6 @@ const estilos: any = {
 
 export default function Home() {
   // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
-  const sponsorshipPolicyId = process.env.NEXT_PUBLIC_PRIVY_SPONSORSHIP_POLICY_ID;
 
   return (
     <PrivyProvider
@@ -447,9 +435,7 @@ export default function Home() {
       {/*Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
       <SmartWalletsProvider
         config={{
-          paymasterContext: sponsorshipPolicyId
-            ? { token: USDC_ADDRESS, sponsorshipPolicyId }
-            : { token: USDC_ADDRESS },
+          paymasterContext: { token: USDC_ADDRESS },
         }}
       >
         <BilleteraApp />
