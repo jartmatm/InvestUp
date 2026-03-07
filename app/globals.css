@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #5b4bff;
+  --secondary: #3ecf8e;
+  --dark: #0f172a;
+  --light: #f8fafc;
+  --gray: #94a3b8;
+  --surface: #ffffff;
+  --surface-soft: #eef3ff;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  color: var(--dark);
+  font-family: var(--font-body), sans-serif;
+  background:
+    radial-gradient(1200px 600px at 5% -10%, rgba(91, 75, 255, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 95% 20%, rgba(62, 207, 142, 0.16), transparent 55%),
+    linear-gradient(180deg, #f4f7ff 0%, #f8fafc 100%);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display), sans-serif;
+}
+
+.investup-gradient {
+  background: linear-gradient(135deg, #5b4bff, #3ecf8e);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(10px);
 }
