@@ -1,34 +1,55 @@
 ﻿'use client';
 
-import { PrivyProvider, usePrivy, useWallets, useFundWallet } from '@privy-io/react-auth';
-import { useState, useEffect } from 'react';
+import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
+import { PrivyProvider, usePrivy, useFundWallet } from '@privy-io/react-auth';
+import { useState, useEffect, useMemo } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
+import { createClient } from '@supabase/supabase-js';
+import { createPimlicoClient } from 'permissionless/clients/pimlico';
 
-// --- CONFIGURACIÓN ---
+// --- CONFIGURACION SUPABASE ---
+const SUPABASE_URL = 'https://pplzpsokyytvkibhfzaa.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- CONFIGURACION CONTRATO CRYPTO---
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 const USDC_ABI = [
   { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'allowance', type: 'function', inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+  { name: 'approve', type: 'function', inputs: [{ name: 'spender', type: 'address' }, { name: 'value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] },
   { name: 'transfer', type: 'function', inputs: [{ name: '_to', type: 'address' }, { name: '_value', type: 'uint256' }], outputs: [{ name: '', type: 'bool' }] }
 ];
 
-// Cambiamos el RPC por uno de Ankr o 1RPC (que son más estables ahora)
+const USDC_DECIMALS = 6;
+const MAX_UINT256 = (BigInt(1) << BigInt(256)) - BigInt(1);
+const GAS_BUFFER_BPS = BigInt(10500);
+
+const PIMLICO_API_KEY = process.env.NEXT_PUBLIC_PIMLICO_API_KEY;
+const PIMLICO_CHAIN_ID = 137;
+const PIMLICO_BUNDLER_URL =
+  process.env.NEXT_PUBLIC_PIMLICO_BUNDLER_URL ||
+  (PIMLICO_API_KEY ? `https://api.pimlico.io/v2/${PIMLICO_CHAIN_ID}/rpc?apikey=${PIMLICO_API_KEY}` : '');
+
+// --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
   chain: polygon,
   transport: http(`https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82`)
 });
 
 
+// --- APLICACION PRINCIPAL ---
 function BilleteraApp() {
-  const { login, logout, authenticated, user } = usePrivy();
-  const { wallets } = useWallets();
+  const { login, logout, authenticated, user, ready } = usePrivy();
   const { fundWallet } = useFundWallet(); 
-  const walletEmbebida = wallets.find((w) => w.walletClientType === 'privy');
-
+  
+  // 2. Obtenemos el cliente de la Smart Wallet
+  const { client } = useSmartWallets();
+  const smartWalletAddress = client?.account?.address;
   const [faseApp, setFaseApp] = useState<'loading' | 'login' | 'onboarding' | 'dashboard'>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<'inversor' | 'emprendedor' | null>(null);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-
   const [vista, setVista] = useState<'inicio' | 'enviar'>('inicio');
   const [balanceUSDC, setBalanceUSDC] = useState('0.00');
   const [balancePOL, setBalancePOL] = useState('0.00');
@@ -37,66 +58,87 @@ function BilleteraApp() {
   const [monto, setMonto] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- EFECTO: CONTROL DE FLUJO ---
-  useEffect(() => {
-    if (!authenticated) {
-      setFaseApp('login');
-      return;
-    }
-    const rolGuardado = localStorage.getItem(`investup_rol_${user?.id}`);
-    if (rolGuardado) {
-      setRolSeleccionado(rolGuardado as any);
+  const pimlicoClient = useMemo(() => {
+    if (!PIMLICO_BUNDLER_URL) return null;
+    return createPimlicoClient({
+      chain: polygon,
+      transport: http(PIMLICO_BUNDLER_URL),
+    });
+  }, []);
+
+  const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
+    // Usamos smartWalletAddress en lugar de walletEmbebida
+    if (!user || !smartWalletAddress) return;
+
+    const rolParaDB = rolFrontend === 'inversor' ? 'investor' : 'entrepreneur';
+
+    try {
+      const { error } = await supabase
+        .from('users') 
+        .upsert({ 
+          id: user.id, 
+          email: user.email?.address, 
+          role: rolParaDB, 
+          wallet_address: smartWalletAddress // Guardamos la direccion inteligente
+        });
+
+      if (error) throw error;
+
+      localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+      setRolSeleccionado(rolFrontend);
       setFaseApp('dashboard');
-    } else {
-      setFaseApp('onboarding');
+    } catch (error: any) {
+      console.error("Error Supabase:", error.message);
     }
-  }, [authenticated, user]);
+    };
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!authenticated || !user) { setFaseApp('login'); return; }
+
+    const verificarUsuario = async () => {
+      const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
+      if (rolLocal) {
+        setRolSeleccionado(rolLocal as any);
+        setFaseApp('dashboard');
+        return;
+      }
+
+      const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
+
+      if (data?.role) {
+        const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
+        localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
+        setRolSeleccionado(rolTraducido as any);
+        setFaseApp('dashboard');
+      } else {
+        setFaseApp('onboarding');
+      }
+    };
+    verificarUsuario();
+  }, [ready, authenticated, user]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
-  if (!walletEmbebida?.address) return;
-  try {
-    const direccion = walletEmbebida.address as `0x${string}`;
-      
-      // Consultar POL
-      const balPol = await publicClient.getBalance({ address: walletEmbebida.address as `0x${string}` });
+    if (!smartWalletAddress) return;
+    try {
+      const balPol = await publicClient.getBalance({ address: smartWalletAddress as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
-      // Consultar USDC
       const balUsdc = await publicClient.readContract({
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: 'balanceOf',
-        args: [walletEmbebida.address as `0x${string}`],
+        args: [smartWalletAddress as `0x${string}`],
       });
       
-      const saldoFinal = Number(formatUnits(balUsdc as bigint, 6)).toFixed(2);
-      setBalanceUSDC(saldoFinal);
-      console.log("Saldo USDC recuperado:", saldoFinal);
-      
-    } catch (e) {
-      console.error("Error leyendo saldos:", e);
-    }
+      setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
+    } catch (e) { console.error("Error saldos:", e); }
   };
 
-// --- Reemplaza tu useEffect anterior por este ---
 useEffect(() => {
-  if (!authenticated) return;
-  if (!walletEmbebida?.address) return;
-
-  // Ejecutar una vez al entrar al dashboard
-  refrescarSaldo();
-}, [authenticated, walletEmbebida?.address]);
-
-// --- Función pública para refrescar saldo (llámala desde botón o después de tx) ---
-const refrescarSaldo = async () => {
-  try {
-    // Si ya tienes una función llamada actualizarSaldos, reutilízala
-    await actualizarSaldos();
-  } catch (err) {
-    console.error("Error refrescando saldo:", err);
-  }
-};
+    if (authenticated && smartWalletAddress) actualizarSaldos();
+  }, [authenticated, smartWalletAddress]);
 
 
   // --- RESTO DE FUNCIONES (Igual que antes) ---
@@ -106,46 +148,144 @@ const refrescarSaldo = async () => {
     setFaseApp('dashboard');
   };
 
-// --- Ejemplo de flujo de envío de USDC que actualiza saldo después de la confirmación ---
-// Ajusta nombres/args según tu implementación real de writeContract / publicClient
-const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
-  // Si se llama sin parámetros (desde el botón), usar el estado local
-  const destAddr = destinoAddr || destino;
-  const cantBig = cantidadBigInt || parseUnits(monto, 6);
+// --- FUNCIÓN DE ENVÍO CON SPONSORSHIP ---
+  const enviarUSDC = async () => {
+    if (!client || !smartWalletAddress || !destino || !monto) return alert("Faltan datos o wallet no lista");
+    if (!destino.startsWith('0x') || destino.length !== 42) return alert('Direccion destino invalida');
 
-  if (!walletEmbebida || !destAddr || !monto) return alert("Faltan datos");
-  setLoading(true);
-  try {
-    await walletEmbebida.switchChain(polygon.id);
-    const provider = await walletEmbebida.getEthereumProvider();
-    const data = encodeFunctionData({
-      abi: USDC_ABI,
-      functionName: 'transfer',
-      args: [destAddr as `0x${string}`, cantBig],
-    });
-    const txHash = await provider.request({
-      method: 'eth_sendTransaction',
-      params: [{ from: walletEmbebida.address, to: USDC_ADDRESS, data }],
-    });
-    setHistorial([`Envío de ${monto} USDC a ${destAddr.slice(0,6)}...`, ...historial]);
-    alert(`✅ ¡Enviado! Hash: ${txHash}`);
-    setDestino(''); setMonto(''); setVista('inicio');
-    
-    // Actualizar saldo solo después de la confirmación
-    await refrescarSaldo();
-  } catch (error: any) {
-    console.error("Error enviando USDC:", error);
-    alert("❌ Error: " + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const montoSolicitado = parseUnits(monto, USDC_DECIMALS);
+      if (montoSolicitado <= BigInt(0)) {
+        throw new Error('El monto debe ser mayor a 0.');
+      }
 
-  const abrirRetiro = () => {
-    if (!walletEmbebida?.address) return alert("Conecta tu wallet primero");
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${walletEmbebida.address}`;
-    window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+      const paymasterContext = { token: USDC_ADDRESS };
+      if (!pimlicoClient) {
+        throw new Error('Falta configurar Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).');
+      }
+
+      const quotes = await pimlicoClient.getTokenQuotes({
+        tokens: [USDC_ADDRESS],
+      });
+
+      if (!quotes?.length) {
+        throw new Error('Pimlico no devolvio quote para USDC en esta red.');
+      }
+
+      const quote = quotes[0];
+
+      const transferData = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: 'transfer',
+        args: [destino as `0x${string}`, montoSolicitado],
+      });
+
+      // Estimamos el costo maximo con una UO que incluye approve + transfer.
+      const estimateUserOp = await (client as any).prepareUserOperation({
+        calls: [
+          {
+            to: USDC_ADDRESS,
+            value: BigInt(0),
+            data: encodeFunctionData({
+              abi: USDC_ABI,
+              functionName: 'approve',
+              args: [quote.paymaster as `0x${string}`, MAX_UINT256],
+            }),
+          },
+          { to: USDC_ADDRESS, value: BigInt(0), data: transferData },
+        ],
+        paymasterContext,
+      });
+
+      const maxFeePerGas = BigInt(estimateUserOp.maxFeePerGas);
+      const maxGas =
+        BigInt(estimateUserOp.preVerificationGas) +
+        BigInt(estimateUserOp.callGasLimit) +
+        BigInt(estimateUserOp.verificationGasLimit) +
+        BigInt(estimateUserOp.paymasterVerificationGasLimit ?? BigInt(0)) +
+        BigInt(estimateUserOp.paymasterPostOpGasLimit ?? BigInt(0));
+
+      const maxCostNative = maxGas * maxFeePerGas;
+      let gasCostUsdc =
+        ((maxCostNative + BigInt(quote.postOpGas) * maxFeePerGas) * BigInt(quote.exchangeRate)) /
+        (BigInt(10) ** BigInt(18));
+
+      // Buffer del 5% para evitar underestimation.
+      gasCostUsdc = (gasCostUsdc * GAS_BUFFER_BPS) / BigInt(10000);
+
+      if (gasCostUsdc >= montoSolicitado) {
+        throw new Error('El monto no alcanza para cubrir gas en USDC.');
+      }
+
+      const montoNeto = montoSolicitado - gasCostUsdc;
+
+      const allowance = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'allowance',
+        args: [smartWalletAddress as `0x${string}`, quote.paymaster as `0x${string}`],
+      });
+
+      const calls: Array<{ to: `0x${string}`; value: bigint; data: `0x${string}` }> = [];
+
+      if ((allowance as bigint) < gasCostUsdc) {
+        calls.push({
+          to: USDC_ADDRESS,
+          value: BigInt(0),
+          data: encodeFunctionData({
+            abi: USDC_ABI,
+            functionName: 'approve',
+            args: [quote.paymaster as `0x${string}`, MAX_UINT256],
+          }),
+        });
+      }
+
+      calls.push({
+        to: USDC_ADDRESS,
+        value: BigInt(0),
+        data: encodeFunctionData({
+          abi: USDC_ABI,
+          functionName: 'transfer',
+          args: [destino as `0x${string}`, montoNeto],
+        }),
+      });
+
+      const txHash = await client.sendTransaction({
+        calls,
+        paymasterContext,
+      } as any);
+
+      const gasUsdcFmt = Number(formatUnits(gasCostUsdc, USDC_DECIMALS)).toFixed(6);
+      const netoFmt = Number(formatUnits(montoNeto, USDC_DECIMALS)).toFixed(6);
+
+      setHistorial([
+        `Envio neto ${netoFmt} USDC (gas ${gasUsdcFmt} USDC via Pimlico)`,
+        ...historial,
+      ]);
+      alert(`Enviado. Hash: ${txHash}`);
+      setVista('inicio');
+      actualizarSaldos();
+    } catch (error: any) {
+      console.error("Error:", error);
+      const msg = String(error?.message || error || '');
+      if (msg.includes('AA21') || msg.includes("didn't pay prefund")) {
+        alert('Fallo paymaster/bundler Pimlico (AA21). Revisa paymaster/token config.');
+      } else {
+        alert("Fallo el envio: " + (error?.message || 'Error desconocido'));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+const abrirRetiro = () => {
+  if (!smartWalletAddress) {
+    return alert("Espera un momento a que tu Smart Wallet esté lista...");
+  }
+  const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
+  window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
+};
 
   // --- RENDERIZADO (Tus estilos originales) ---
   if (faseApp === 'login' || faseApp === 'loading') {
@@ -166,11 +306,11 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
         <div style={{...estilos.cardApp, maxWidth: '450px'}}>
           <h2 style={{color: '#333', textAlign: 'center'}}>Bienvenido a InvestUp</h2>
           <div style={estilos.gridRoles}>
-            <div onClick={() => setRolSeleccionado('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
+            <div onClick={() => guardarRolEnBaseDeDatos('inversor')} style={{...estilos.cardRol, border: rolSeleccionado === 'inversor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'inversor' ? '#f0f4ff' : 'white'}}>
               <div style={{fontSize: '30px'}}>📈</div>
               <h3>Soy Inversor</h3>
             </div>
-            <div onClick={() => setRolSeleccionado('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
+            <div onClick={() => guardarRolEnBaseDeDatos('emprendedor')} style={{...estilos.cardRol, border: rolSeleccionado === 'emprendedor' ? '2px solid #676FFF' : '1px solid #ddd', backgroundColor: rolSeleccionado === 'emprendedor' ? '#f0f4ff' : 'white'}}>
               <div style={{fontSize: '30px'}}>🚀</div>
               <h3>Soy Emprendedor</h3>
             </div>
@@ -199,16 +339,16 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
         {vista === 'inicio' ? (
           <>
             <div style={estilos.seccionSaldo}>
-                <p style={{fontSize: '14px', color: '#666'}}>Balance Total</p>
-                <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC} <span style={{fontSize: '16px'}}>USDC</span></h1>
-                <div style={estilos.badgePol}>⛽ Gas: {balancePOL} POL</div>
+                <p style={{fontSize: '14px', color: '#666'}}>Balance Smart Wallet</p>
+                <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC}</h1>
+                <div style={estilos.badgePol}>⛽ Gas Patrocinado por InvestUp</div>
             </div>
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
-                <button onClick={() => fundWallet({ address: walletEmbebida?.address as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
+                <button onClick={() => fundWallet({ address: smartWalletAddress as any })} style={{...estilos.botonAccion, backgroundColor: '#676FFF', color: 'white'}}>💳 Comprar</button>
                 <button onClick={abrirRetiro} style={{...estilos.botonAccion, backgroundColor: '#FF6767', color: 'white'}}>🏦 Retirar</button>
             </div>
-            <button onClick={refrescarSaldo} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
+            <button onClick={actualizarSaldos} style={{...estilos.botonAccionSecundario, marginTop: '15px', width: '100%'}}>🔄 Refrescar saldo</button>
             <div style={estilos.listaHistorial}>
                 <h4 style={{margin: '0 0 10px 0', color: '#555'}}>Actividad Reciente</h4>
                 {historial.length === 0 ? (
@@ -220,9 +360,16 @@ const enviarUSDC = async (destinoAddr?: string, cantidadBigInt?: bigint) => {
                 )}
             </div>
             <div style={estilos.footerDir}>
-              <p style={{fontSize: '10px', margin: 0}}>Tu dirección:</p>
-               <code>{walletEmbebida?.address}</code>
-            </div>
+              <p style={{fontSize: '10px', margin: 0, color: '#676FFF', fontWeight: 'bold'}}>
+                Tu Bóveda Inteligente (Gas Gratis ⛽):
+                </p>
+                <code style={{fontSize: '9px', wordBreak: 'break-all'}}>
+                  {smartWalletAddress || 'Generando dirección...'}
+                  </code>
+                  <p style={{fontSize: '9px', margin: '6px 0 0 0', color: '#888'}}>
+                    Pimlico ERC20 paymaster activo
+                  </p>
+                  </div>
           </>
         ) : (
           <div style={estilos.formEnvio}>
@@ -265,16 +412,34 @@ const estilos: any = {
 };
 
 export default function Home() {
+  // Privy sponsorship policy: créala en el dashboard (Polygon) y guárdala en .env.local
+
   return (
     <PrivyProvider
       appId="cmlohriz801350cl7vrwvdb3i" 
       config={{
-        appearance: { theme: 'light', accentColor: '#676FFF', showWalletLoginFirst: false },
+        appearance: { 
+          theme: 'light', 
+          accentColor: '#676FFF', 
+          showWalletLoginFirst: false 
+        },
         supportedChains: [polygon],
-        embeddedWallets: { ethereum: { createOnLogin: 'users-without-wallets' } },
+        // Evita el warning de Solana cuando no usamos conectores Solana en esta app.
+        loginMethods: ['email'],
+        embeddedWallets: { 
+          ethereum: { createOnLogin: 'users-without-wallets' } 
+        },
+        
       }}
     >
-      <BilleteraApp />
+      {/*Activamos Smart Wallets + contexto del paymaster para gas sponsorship */}
+      <SmartWalletsProvider
+        config={{
+          paymasterContext: { token: USDC_ADDRESS },
+        }}
+      >
+        <BilleteraApp />
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 }
