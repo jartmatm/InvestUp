@@ -153,31 +153,85 @@ function BilleteraApp() {
     }
     };
 
+  const mapRoleToFrontend = (role: string | null | undefined) => {
+    if (role === 'investor') return 'inversor';
+    if (role === 'entrepreneur') return 'emprendedor';
+    return null;
+  };
+
+  const mapRoleToDB = (role: string | null | undefined) => {
+    if (role === 'inversor') return 'investor';
+    if (role === 'emprendedor') return 'entrepreneur';
+    return null;
+  };
+
   useEffect(() => {
     if (!ready) return;
     if (!authenticated || !user) { setFaseApp('login'); return; }
 
     const verificarUsuario = async () => {
       const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
-      if (rolLocal) {
-        setRolSeleccionado(rolLocal as any);
+      const rolLocalValido = rolLocal === 'inversor' || rolLocal === 'emprendedor' ? rolLocal : null;
+      const rolLocalDB = mapRoleToDB(rolLocalValido);
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('role, wallet_address')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error consultando usuario en Supabase:", error.message);
+        setFaseApp('onboarding');
+        return;
+      }
+
+      const walletNeedsUpdate =
+        !!smartWalletAddress &&
+        (!data?.wallet_address || data.wallet_address.toLowerCase() !== smartWalletAddress.toLowerCase());
+
+      const roleNeedsBackfill = !data?.role && !!rolLocalDB;
+      const userNeedsInsert = !data;
+
+      if (userNeedsInsert || walletNeedsUpdate || roleNeedsBackfill) {
+        const payload: any = {
+          id: user.id,
+          email: user.email?.address ?? null,
+          wallet_address: smartWalletAddress ?? data?.wallet_address ?? null,
+        };
+
+        if (data?.role) payload.role = data.role;
+        if (!data?.role && rolLocalDB) payload.role = rolLocalDB;
+
+        const { error: upsertError } = await supabase
+          .from('users')
+          .upsert(payload, { onConflict: 'id' });
+
+        if (upsertError) {
+          console.error("Error sincronizando usuario en Supabase:", upsertError.message);
+        }
+      }
+
+      if (data?.role) {
+        const rolTraducido = mapRoleToFrontend(data.role);
+        if (rolTraducido) {
+          localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
+          setRolSeleccionado(rolTraducido as any);
+          setFaseApp('dashboard');
+          return;
+        }
+      }
+
+      if (rolLocalValido) {
+        setRolSeleccionado(rolLocalValido as any);
         setFaseApp('dashboard');
         return;
       }
 
-      const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
-
-      if (data?.role) {
-        const rolTraducido = data.role === 'investor' ? 'inversor' : 'emprendedor';
-        localStorage.setItem(`investup_rol_${user.id}`, rolTraducido);
-        setRolSeleccionado(rolTraducido as any);
-        setFaseApp('dashboard');
-      } else {
-        setFaseApp('onboarding');
-      }
+      setFaseApp('onboarding');
     };
     verificarUsuario();
-  }, [ready, authenticated, user]);
+  }, [ready, authenticated, user, smartWalletAddress]);
 
 // 3. Tu función de saldos (asegurando el casting a 0x${string})
 const actualizarSaldos = async () => {
