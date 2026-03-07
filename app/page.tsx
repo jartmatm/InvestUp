@@ -214,11 +214,17 @@ useEffect(() => {
       // Buffer del 5% para evitar underestimation.
       gasCostUsdc = (gasCostUsdc * GAS_BUFFER_BPS) / BigInt(10000);
 
-      if (gasCostUsdc >= montoSolicitado) {
-        throw new Error('El monto no alcanza para cubrir gas en USDC.');
-      }
+      const balanceDisponible = await publicClient.readContract({
+        address: USDC_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'balanceOf',
+        args: [smartWalletAddress as `0x${string}`],
+      });
 
-      const montoNeto = montoSolicitado - gasCostUsdc;
+      const costoTotalEstimado = montoSolicitado + gasCostUsdc;
+      if ((balanceDisponible as bigint) < costoTotalEstimado) {
+        throw new Error('Saldo insuficiente: necesitas cubrir envio + gas en USDC.');
+      }
 
       const allowance = await publicClient.readContract({
         address: USDC_ADDRESS,
@@ -247,7 +253,7 @@ useEffect(() => {
         data: encodeFunctionData({
           abi: USDC_ABI,
           functionName: 'transfer',
-          args: [destino as `0x${string}`, montoNeto],
+          args: [destino as `0x${string}`, montoSolicitado],
         }),
       });
 
@@ -257,10 +263,10 @@ useEffect(() => {
       } as any);
 
       const gasUsdcFmt = Number(formatUnits(gasCostUsdc, USDC_DECIMALS)).toFixed(6);
-      const netoFmt = Number(formatUnits(montoNeto, USDC_DECIMALS)).toFixed(6);
+      const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
 
       setHistorial([
-        `Envio neto ${netoFmt} USDC (gas ${gasUsdcFmt} USDC via Pimlico)`,
+        `Envio exacto ${enviadoFmt} USDC (gas ${gasUsdcFmt} USDC via Pimlico)`,
         ...historial,
       ]);
       alert(`Enviado. Hash: ${txHash}`);
