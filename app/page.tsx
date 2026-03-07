@@ -339,9 +339,9 @@ const abrirRetiro = () => {
         {vista === 'inicio' ? (
           <>
             <div style={estilos.seccionSaldo}>
-                <p style={{fontSize: '14px', color: '#666'}}>Balance Smart Wallet</p>
+                <p style={{fontSize: '14px', color: '#666'}}>Balance:</p>
                 <h1 style={{fontSize: '42px', color: '#333'}}>${balanceUSDC}</h1>
-                <div style={estilos.badgePol}>⛽ Gas Patrocinado por InvestUp</div>
+                <div style={estilos.badgePol}>Dólares disponibles para enviar</div>
             </div>
             <div style={estilos.gridBotones}>
                 <button onClick={() => setVista('enviar')} style={estilos.botonAccion}>💸 Enviar</button>
@@ -361,7 +361,7 @@ const abrirRetiro = () => {
             </div>
             <div style={estilos.footerDir}>
               <p style={{fontSize: '10px', margin: 0, color: '#676FFF', fontWeight: 'bold'}}>
-                Tu Bóveda Inteligente (Gas Gratis ⛽):
+                Tu dirección de Billetera:
                 </p>
                 <code style={{fontSize: '9px', wordBreak: 'break-all'}}>
                   {smartWalletAddress || 'Generando dirección...'}
