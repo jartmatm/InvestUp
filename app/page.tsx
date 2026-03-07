@@ -2,7 +2,7 @@
 
 import { useSmartWallets, SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { PrivyProvider, usePrivy, useFundWallet } from '@privy-io/react-auth';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPublicClient, http, formatUnits, parseUnits, encodeFunctionData } from 'viem';
 import { polygon } from 'viem/chains';
 import { createClient } from '@supabase/supabase-js';
@@ -31,6 +31,10 @@ const PIMLICO_CHAIN_ID = 137;
 const PIMLICO_BUNDLER_URL =
   process.env.NEXT_PUBLIC_PIMLICO_BUNDLER_URL ||
   (PIMLICO_API_KEY ? `https://api.pimlico.io/v2/${PIMLICO_CHAIN_ID}/rpc?apikey=${PIMLICO_API_KEY}` : '');
+
+const PIMLICO_QUOTE_TTL_MS = 30000;
+const ESTIMATED_USER_OP_GAS = BigInt(300000);
+const GAS_PRICE_TTL_MS = 30000;
 
 // --- CONFIGURACION RPC ---
 const publicClient = createPublicClient({
@@ -65,6 +69,63 @@ function BilleteraApp() {
       transport: http(PIMLICO_BUNDLER_URL),
     });
   }, []);
+
+  const quoteCacheRef = useRef<{ expiresAt: number; quote: any | null }>({
+    expiresAt: 0,
+    quote: null,
+  });
+
+  const gasPriceCacheRef = useRef<{ expiresAt: number; maxFeePerGas: bigint | null }>({
+    expiresAt: 0,
+    maxFeePerGas: null,
+  });
+
+  const getCachedUsdcQuote = async () => {
+    if (!pimlicoClient) {
+      throw new Error('Falta configurar Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).');
+    }
+
+    const now = Date.now();
+    if (quoteCacheRef.current.quote && now < quoteCacheRef.current.expiresAt) {
+      return quoteCacheRef.current.quote;
+    }
+
+    const quotes = await pimlicoClient.getTokenQuotes({
+      tokens: [USDC_ADDRESS],
+    });
+
+    if (!quotes?.length) {
+      throw new Error('Pimlico no devolvio quote para USDC en esta red.');
+    }
+
+    const quote = quotes[0];
+    quoteCacheRef.current = {
+      quote,
+      expiresAt: now + PIMLICO_QUOTE_TTL_MS,
+    };
+
+    return quote;
+  };
+
+  const getCachedMaxFeePerGas = async () => {
+    const now = Date.now();
+    if (gasPriceCacheRef.current.maxFeePerGas && now < gasPriceCacheRef.current.expiresAt) {
+      return gasPriceCacheRef.current.maxFeePerGas;
+    }
+
+    const fees = await publicClient.estimateFeesPerGas();
+    const maxFeePerGas = BigInt(fees.maxFeePerGas ?? fees.gasPrice ?? BigInt(0));
+    if (maxFeePerGas <= BigInt(0)) {
+      throw new Error('No se pudo estimar maxFeePerGas.');
+    }
+
+    gasPriceCacheRef.current = {
+      maxFeePerGas,
+      expiresAt: now + GAS_PRICE_TTL_MS,
+    };
+
+    return maxFeePerGas;
+  };
 
   const guardarRolEnBaseDeDatos = async (rolFrontend: 'inversor' | 'emprendedor') => {
     // Usamos smartWalletAddress en lugar de walletEmbebida
@@ -161,54 +222,19 @@ useEffect(() => {
       }
 
       const paymasterContext = { token: USDC_ADDRESS };
-      if (!pimlicoClient) {
-        throw new Error('Falta configurar Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).');
-      }
-
-      const quotes = await pimlicoClient.getTokenQuotes({
-        tokens: [USDC_ADDRESS],
-      });
-
-      if (!quotes?.length) {
-        throw new Error('Pimlico no devolvio quote para USDC en esta red.');
-      }
-
-      const quote = quotes[0];
+      const quote = await getCachedUsdcQuote();
 
       const transferData = encodeFunctionData({
         abi: USDC_ABI,
         functionName: 'transfer',
         args: [destino as `0x${string}`, montoSolicitado],
       });
+      // Estimacion local para reducir llamadas a Pimlico (evita prepareUserOperation extra).
+      const maxFeePerGas = await getCachedMaxFeePerGas();
 
-      // Estimamos el costo maximo con una UO que incluye approve + transfer.
-      const estimateUserOp = await (client as any).prepareUserOperation({
-        calls: [
-          {
-            to: USDC_ADDRESS,
-            value: BigInt(0),
-            data: encodeFunctionData({
-              abi: USDC_ABI,
-              functionName: 'approve',
-              args: [quote.paymaster as `0x${string}`, MAX_UINT256],
-            }),
-          },
-          { to: USDC_ADDRESS, value: BigInt(0), data: transferData },
-        ],
-        paymasterContext,
-      });
-
-      const maxFeePerGas = BigInt(estimateUserOp.maxFeePerGas);
-      const maxGas =
-        BigInt(estimateUserOp.preVerificationGas) +
-        BigInt(estimateUserOp.callGasLimit) +
-        BigInt(estimateUserOp.verificationGasLimit) +
-        BigInt(estimateUserOp.paymasterVerificationGasLimit ?? BigInt(0)) +
-        BigInt(estimateUserOp.paymasterPostOpGasLimit ?? BigInt(0));
-
-      const maxCostNative = maxGas * maxFeePerGas;
+      const estimatedGasUnits = ESTIMATED_USER_OP_GAS + BigInt(quote.postOpGas ?? BigInt(0));
       let gasCostUsdc =
-        ((maxCostNative + BigInt(quote.postOpGas) * maxFeePerGas) * BigInt(quote.exchangeRate)) /
+        (estimatedGasUnits * maxFeePerGas * BigInt(quote.exchangeRate)) /
         (BigInt(10) ** BigInt(18));
 
       // Buffer del 5% para evitar underestimation.
