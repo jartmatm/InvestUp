@@ -42,14 +42,7 @@ export default function LoginPage() {
             onClick={login}
             className="w-full rounded-full bg-white px-6 py-4 text-lg font-semibold text-violet-600 shadow-xl shadow-violet-700/25 transition hover:bg-white/90"
           >
-            Iniciar sesion
-          </button>
-
-          <button
-            onClick={() => router.push('/register')}
-            className="w-full rounded-full border-2 border-white bg-transparent px-6 py-4 text-lg font-semibold text-white transition hover:bg-white/10"
-          >
-            Registrarse
+            Entrar
           </button>
 
           <p className="pt-3 text-center text-sm text-white/90">
