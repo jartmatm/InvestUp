@@ -292,9 +292,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         setFaseApp('dashboard');
       } catch (error: any) {
         console.error('Error guardando rol:', error?.message ?? error);
+        // Fallback local para evitar bucles de onboarding si Supabase/RLS falla.
+        localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+        setRolSeleccionado(rolFrontend);
+        setFaseApp('dashboard');
       }
     },
-    [user, smartWalletAddress]
+    [user, smartWalletAddress, supabase]
   );
 
   const cargarWalletsObjetivo = useCallback(async () => {
@@ -474,6 +478,11 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error consultando usuario:', error.message);
+        if (rolLocalValido) {
+          setRolSeleccionado(rolLocalValido);
+          setFaseApp('dashboard');
+          return;
+        }
         setFaseApp('onboarding');
         return;
       }
@@ -516,7 +525,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     };
 
     verificarUsuario();
-  }, [authenticated, ready, smartWalletAddress, user]);
+  }, [authenticated, ready, smartWalletAddress, user, supabase]);
 
   useEffect(() => {
     if (authenticated && smartWalletAddress) {

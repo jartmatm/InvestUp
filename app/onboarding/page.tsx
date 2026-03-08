@@ -58,7 +58,6 @@ export default function OnboardingPage() {
             onClick={async () => {
               if (!rol) return;
               await guardarRol(rol);
-              router.push('/home');
             }}
           >
             Continuar
