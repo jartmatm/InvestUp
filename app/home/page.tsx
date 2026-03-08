@@ -30,16 +30,16 @@ export default function HomePage() {
 
   return (
     <PageFrame
-      title="Inicio"
-      subtitle={`Hola ${userAlias}`}
-      rightSlot={
+      title="Bienvenido"
+      subtitle={`${userAlias} - ${rolSeleccionado}`}
+     /* rightSlot={
         <button
           onClick={logoutApp}
           className="rounded-full border border-white/45 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/18"
         >
           Salir
         </button>
-      }
+      }*/
     >
       <BalanceCard balanceUSDC={balanceUSDC} balancePOL={balancePOL} />
       <ActionButtons
@@ -49,7 +49,7 @@ export default function HomePage() {
         onWithdraw={() => router.push('/withdraw')}
       />
       <div className="mt-4">
-        <Button onClick={actualizarSaldos}>Refrescar saldo</Button>
+        <Button onClick={actualizarSaldos}>Actualizar saldo</Button>
       </div>
       <section className="mt-6 rounded-3xl border border-white/35 bg-white/88 p-4 text-xs text-slate-600 shadow-xl shadow-violet-800/10">
         <p className="font-semibold text-violet-700">Wallet activa</p>
