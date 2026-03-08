@@ -26,6 +26,8 @@ type UserWalletTarget = {
   wallet_address: string | null;
 };
 
+type MovementType = 'investment' | 'repayment' | 'transfer';
+
 type InvestUpContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -106,7 +108,6 @@ const PIMLICO_QUOTE_TTL_MS = 30000;
 const ESTIMATED_USER_OP_GAS = BigInt(300000);
 const GAS_PRICE_TTL_MS = 30000;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const publicClient = createPublicClient({
   chain: polygon,
   transport: http('https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82'),
@@ -127,7 +128,7 @@ const mapRoleToDB = (role: FrontRole | null | undefined): 'investor' | 'entrepre
 };
 
 export function InvestUpProvider({ children }: { children: React.ReactNode }) {
-  const { login, logout, authenticated, user, ready } = usePrivy();
+  const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
   const { fundWallet } = useFundWallet();
   const { client } = useSmartWallets();
   const smartWalletAddress = client?.account?.address;
@@ -150,6 +151,20 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     maxFeePerGas: null,
   });
 
+  const supabase = useMemo(() => {
+    const authedFetch: typeof fetch = async (input, init = {}) => {
+      const token = await getAccessToken();
+      const headers = new Headers(init.headers ?? {});
+      headers.set('apikey', SUPABASE_ANON_KEY);
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      return fetch(input, { ...init, headers });
+    };
+
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { fetch: authedFetch },
+    });
+  }, [getAccessToken]);
+
   const pimlicoClient = useMemo(() => {
     if (!PIMLICO_BUNDLER_URL) return null;
     return createPimlicoClient({
@@ -162,6 +177,44 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const transferLabel = rolSeleccionado === 'inversor' ? 'Inversiones' : 'Repayments';
   const transferenciaTitulo =
     rolSeleccionado === 'inversor' ? 'Confirmar inversion' : 'Confirmar repayment';
+
+  const registrarTransaccion = useCallback(
+    async ({
+      txHash,
+      toWallet,
+      amountUsdc,
+      movementType,
+      status = 'submitted',
+    }: {
+      txHash: string;
+      toWallet: string;
+      amountUsdc: string;
+      movementType: MovementType;
+      status?: 'submitted' | 'confirmed' | 'failed';
+    }) => {
+      if (!user?.id || !smartWalletAddress) return;
+      try {
+        const { error } = await supabase.from('transactions').insert({
+          user_id: user.id,
+          role: mapRoleToDB(rolSeleccionado),
+          movement_type: movementType,
+          status,
+          chain: 'polygon',
+          tx_hash: txHash,
+          from_wallet: smartWalletAddress,
+          to_wallet: toWallet,
+          amount_usdc: amountUsdc,
+          metadata: {
+            app: 'investup-web',
+          },
+        });
+        if (error) throw error;
+      } catch (error: any) {
+        console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
+      }
+    },
+    [rolSeleccionado, smartWalletAddress, user?.id]
+  );
 
   const getCachedUsdcQuote = useCallback(async () => {
     if (!pimlicoClient) {
@@ -341,7 +394,14 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
         const tipo = rolSeleccionado === 'inversor' ? 'Inversion' : 'Repayment';
+        const movementType: MovementType = rolSeleccionado === 'inversor' ? 'investment' : 'repayment';
         setHistorial((prev) => [`${tipo} ${enviadoFmt} USDC -> ${destino.slice(0, 8)}...`, ...prev]);
+        await registrarTransaccion({
+          txHash,
+          toWallet: destino,
+          amountUsdc: enviadoFmt,
+          movementType,
+        });
 
         alert(`Transaccion enviada: ${txHash}`);
         await actualizarSaldos();
@@ -356,7 +416,15 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         setLoadingTx(false);
       }
     },
-    [client, smartWalletAddress, getCachedUsdcQuote, getCachedMaxFeePerGas, rolSeleccionado, actualizarSaldos]
+    [
+      client,
+      smartWalletAddress,
+      getCachedUsdcQuote,
+      getCachedMaxFeePerGas,
+      rolSeleccionado,
+      actualizarSaldos,
+      registrarTransaccion,
+    ]
   );
 
   const abrirCompra = useCallback(async () => {

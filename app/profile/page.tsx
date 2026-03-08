@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
@@ -13,6 +14,7 @@ type ProfileForm = {
   id: string;
   email: string;
   name: string;
+  surname: string;
   phone_number: string;
   country: string;
   gender: string;
@@ -22,6 +24,7 @@ type ProfileForm = {
 };
 
 type Tab = 'details' | 'help';
+type CountryOption = { code: string; name: string; dialCode: string };
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
@@ -29,12 +32,20 @@ const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const REGION_NAMES = new Intl.DisplayNames(['es', 'en'], { type: 'region' });
+const COUNTRY_OPTIONS: CountryOption[] = getCountries()
+  .map((code) => ({
+    code,
+    name: REGION_NAMES.of(code) ?? code,
+    dialCode: `+${getCountryCallingCode(code)}`,
+  }))
+  .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
 const emptyForm: ProfileForm = {
   id: '',
   email: '',
   name: '',
+  surname: '',
   phone_number: '',
   country: '',
   gender: '',
@@ -51,7 +62,7 @@ const mapDbRoleToFront = (role: string): 'inversor' | 'emprendedor' | null => {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { faseApp, smartWalletAddress, logoutApp, guardarRol } = useInvestUp();
   const [activeTab, setActiveTab] = useState<Tab>('details');
   const [form, setForm] = useState<ProfileForm>(emptyForm);
@@ -59,6 +70,20 @@ export default function ProfilePage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+
+  const supabase = useMemo(() => {
+    const authedFetch: typeof fetch = async (input, init = {}) => {
+      const token = await getAccessToken();
+      const headers = new Headers(init.headers ?? {});
+      headers.set('apikey', SUPABASE_ANON_KEY);
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      return fetch(input, { ...init, headers });
+    };
+
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { fetch: authedFetch },
+    });
+  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -84,13 +109,20 @@ export default function ProfilePage() {
       const profileData = (data?.profile_data ?? data?.metadata ?? null) as
         | Partial<ProfileForm>
         | null;
+      const countryRaw = ((data?.country as string | null) ?? profileData?.country ?? '').trim();
+      const countryByCode = COUNTRY_OPTIONS.find((option) => option.code === countryRaw.toUpperCase());
+      const countryByName = COUNTRY_OPTIONS.find(
+        (option) => option.name.toLowerCase() === countryRaw.toLowerCase()
+      );
+      const normalizedCountryCode = countryByCode?.code ?? countryByName?.code ?? '';
 
       setForm({
         id: user.id,
         email: (data?.email as string | null) ?? user.email?.address ?? '',
         name: (data?.name as string | null) ?? profileData?.name ?? '',
+        surname: (data?.surname as string | null) ?? profileData?.surname ?? '',
         phone_number: (data?.phone_number as string | null) ?? profileData?.phone_number ?? '',
-        country: (data?.country as string | null) ?? profileData?.country ?? '',
+        country: normalizedCountryCode,
         gender: (data?.gender as string | null) ?? profileData?.gender ?? '',
         address: (data?.address as string | null) ?? profileData?.address ?? '',
         role,
@@ -105,9 +137,17 @@ export default function ProfilePage() {
   const canEditEmail = useMemo(() => availableColumns.has('email') || availableColumns.size === 0, [availableColumns]);
   const hasAnyExtendedField = useMemo(
     () =>
-      ['name', 'phone_number', 'country', 'gender', 'address', 'avatar_url', 'profile_data', 'metadata'].some(
-        (field) => availableColumns.has(field)
-      ),
+      [
+        'name',
+        'surname',
+        'phone_number',
+        'country',
+        'gender',
+        'address',
+        'avatar_url',
+        'profile_data',
+        'metadata',
+      ].some((field) => availableColumns.has(field)),
     [availableColumns]
   );
 
@@ -125,6 +165,18 @@ export default function ProfilePage() {
     reader.readAsDataURL(file);
   };
 
+  const onCountryChange = (countryCode: string) => {
+    updateForm('country', countryCode);
+    const option = COUNTRY_OPTIONS.find((item) => item.code === countryCode);
+    if (!option) return;
+    setForm((prev) => {
+      const value = prev.phone_number.trim();
+      if (!value) return { ...prev, phone_number: `${option.dialCode} ` };
+      const sanitized = value.replace(/^\+\d+\s*/, '');
+      return { ...prev, phone_number: `${option.dialCode} ${sanitized}`.trimEnd() };
+    });
+  };
+
   const saveProfile = async () => {
     if (!user?.id) return;
     setSaving(true);
@@ -135,19 +187,24 @@ export default function ProfilePage() {
       email: canEditEmail ? form.email || null : user.email?.address ?? null,
       wallet_address: smartWalletAddress ?? null,
     };
+    const selectedCountry = COUNTRY_OPTIONS.find((item) => item.code === form.country);
 
     if (form.role) payload.role = form.role;
     if (availableColumns.has('name')) payload.name = form.name || null;
+    if (availableColumns.has('surname')) payload.surname = form.surname || null;
     if (availableColumns.has('phone_number')) payload.phone_number = form.phone_number || null;
-    if (availableColumns.has('country')) payload.country = form.country || null;
+    if (availableColumns.has('country')) {
+      payload.country = selectedCountry?.name ?? form.country ?? null;
+    }
     if (availableColumns.has('gender')) payload.gender = form.gender || null;
     if (availableColumns.has('address')) payload.address = form.address || null;
     if (availableColumns.has('avatar_url')) payload.avatar_url = form.avatar_url || null;
 
     const profileData = {
       name: form.name || null,
+      surname: form.surname || null,
       phone_number: form.phone_number || null,
-      country: form.country || null,
+      country: selectedCountry?.name ?? form.country ?? null,
       gender: form.gender || null,
       address: form.address || null,
       avatar_url: form.avatar_url || null,
@@ -170,7 +227,7 @@ export default function ProfilePage() {
 
     if (!hasAnyExtendedField) {
       setStatus(
-        'Guardado basico completado. Para guardar campos extendidos (name/phone/country/gender/address/avatar), agrega columnas en la tabla users o profile_data/metadata.'
+        'Guardado basico completado. Para guardar campos extendidos (name/surname/phone/country/gender/address/avatar), agrega columnas en la tabla users o profile_data/metadata.'
       );
     } else {
       setStatus('Perfil actualizado correctamente.');
@@ -230,15 +287,27 @@ export default function ProfilePage() {
             />
             <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
             <Input
+              value={form.surname}
+              onChange={(value) => updateForm('surname', value)}
+              placeholder="Surname"
+            />
+            <Input
               value={form.phone_number}
               onChange={(value) => updateForm('phone_number', value)}
               placeholder="Phone number"
             />
-            <Input
+            <select
               value={form.country}
-              onChange={(value) => updateForm('country', value)}
-              placeholder="Country"
-            />
+              onChange={(event) => onCountryChange(event.target.value)}
+              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+            >
+              <option value="">Country</option>
+              {COUNTRY_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name} ({option.dialCode})
+                </option>
+              ))}
+            </select>
             <Input value={form.gender} onChange={(value) => updateForm('gender', value)} placeholder="Gender" />
             <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
 
