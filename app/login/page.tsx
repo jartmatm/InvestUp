@@ -34,7 +34,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-5xl font-bold tracking-tight">InvestUp</h1>
-          <p className="mt-3 text-lg text-white/90">Inversion descentralizada</p>
+          <p className="mt-3 text-lg text-white/90">Uniendo emprendedores con Inversionistas</p>
         </div>
 
         <div className="w-full space-y-4">
