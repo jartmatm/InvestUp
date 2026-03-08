@@ -77,7 +77,6 @@ export default function FeedPage() {
         .select(
           'id,business_name,description,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls'
         )
-        .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       if (error) {

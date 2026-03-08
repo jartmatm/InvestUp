@@ -247,7 +247,7 @@ export default function PortfolioPage() {
     const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
     setSavingProject(true);
     setStatus('');
-    const { error } = await supabase.from('projects').insert({
+    const basePayload = {
       owner_user_id: user.id,
       owner_wallet: smartWalletAddress ?? null,
       business_name: form.businessName,
@@ -264,11 +264,30 @@ export default function PortfolioPage() {
       interest_rate_ea: Number(form.interestRateEa),
       photo_urls: projectPhotos,
       video_url: projectVideo || null,
+    };
+
+    let insertError: { message?: string } | null = null;
+    const firstTry = await supabase.from('projects').insert({
+      ...basePayload,
       status: 'published',
     });
+    insertError = firstTry.error;
 
-    if (error) {
-      setStatus(`No se pudo publicar: ${error.message}`);
+    if (insertError?.message?.includes('invalid input value for enum project_status')) {
+      const secondTry = await supabase.from('projects').insert({
+        ...basePayload,
+        status: 'active',
+      });
+      insertError = secondTry.error;
+    }
+
+    if (insertError?.message?.includes('invalid input value for enum project_status')) {
+      const thirdTry = await supabase.from('projects').insert(basePayload);
+      insertError = thirdTry.error;
+    }
+
+    if (insertError) {
+      setStatus(`No se pudo publicar: ${insertError.message}`);
       setSavingProject(false);
       return;
     }
