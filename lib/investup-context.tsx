@@ -200,6 +200,8 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const transferLabel = rolSeleccionado === 'inversor' ? 'Inversiones' : 'Repayments';
   const transferenciaTitulo =
     rolSeleccionado === 'inversor' ? 'Confirmar inversion' : 'Confirmar repayment';
+  const getRolKey = useCallback((id: string) => `investup_rol_${id}`, []);
+  const getOnboardingDoneKey = useCallback((id: string) => `investup_onboarding_done_${id}`, []);
 
   const registrarTransaccion = useCallback(
     async ({
@@ -310,18 +312,20 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         );
         if (error) throw error;
 
-        localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+        localStorage.setItem(getRolKey(user.id), rolFrontend);
+        localStorage.setItem(getOnboardingDoneKey(user.id), '1');
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       } catch (error: any) {
         console.error('Error guardando rol:', error?.message ?? error);
         // Fallback local para evitar bucles de onboarding si Supabase/RLS falla.
-        localStorage.setItem(`investup_rol_${user.id}`, rolFrontend);
+        localStorage.setItem(getRolKey(user.id), rolFrontend);
+        localStorage.setItem(getOnboardingDoneKey(user.id), '1');
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       }
     },
-    [user, smartWalletAddress, supabase]
+    [user, smartWalletAddress, supabase, getOnboardingDoneKey, getRolKey]
   );
 
   const cargarWalletsObjetivo = useCallback(async () => {
@@ -472,13 +476,16 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   }, [smartWalletAddress]);
 
   const logoutApp = useCallback(async () => {
-    if (user?.id) localStorage.removeItem(`investup_rol_${user.id}`);
+    if (user?.id) {
+      localStorage.removeItem(getRolKey(user.id));
+      localStorage.removeItem(getOnboardingDoneKey(user.id));
+    }
     await logout();
     setFaseApp('login');
     setRolSeleccionado(null);
     setWalletTargets([]);
     setHistorial([]);
-  }, [logout, user?.id]);
+  }, [logout, user?.id, getOnboardingDoneKey, getRolKey]);
 
   useEffect(() => {
     if (!ready) return;
@@ -488,10 +495,11 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     }
 
     const verificarUsuario = async () => {
-      const rolLocal = localStorage.getItem(`investup_rol_${user.id}`);
+      const rolLocal = localStorage.getItem(getRolKey(user.id));
       const rolLocalValido =
         rolLocal === 'inversor' || rolLocal === 'emprendedor' ? (rolLocal as FrontRole) : null;
       const rolLocalDB = mapRoleToDB(rolLocalValido);
+      const onboardingDone = localStorage.getItem(getOnboardingDoneKey(user.id)) === '1';
 
       const { data, error } = await supabase
         .from('users')
@@ -501,7 +509,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error consultando usuario:', error.message);
-        if (rolLocalValido) {
+        if (onboardingDone && rolLocalValido) {
           setRolSeleccionado(rolLocalValido);
           setFaseApp('dashboard');
           return;
@@ -531,14 +539,15 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       if (data?.role) {
         const roleFront = mapRoleToFrontend(data.role);
         if (roleFront) {
-          localStorage.setItem(`investup_rol_${user.id}`, roleFront);
+          localStorage.setItem(getRolKey(user.id), roleFront);
+          localStorage.setItem(getOnboardingDoneKey(user.id), '1');
           setRolSeleccionado(roleFront);
           setFaseApp('dashboard');
           return;
         }
       }
 
-      if (rolLocalValido) {
+      if (onboardingDone && rolLocalValido) {
         setRolSeleccionado(rolLocalValido);
         setFaseApp('dashboard');
         return;
@@ -548,7 +557,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     };
 
     verificarUsuario();
-  }, [authenticated, ready, smartWalletAddress, user, supabase]);
+  }, [authenticated, ready, smartWalletAddress, user, supabase, getOnboardingDoneKey, getRolKey]);
 
   useEffect(() => {
     if (authenticated && smartWalletAddress) {
