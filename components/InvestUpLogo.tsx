@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 export default function InvestUpLogo() {
   return (
     <motion.img
-      src="/favicon.ico"
+      src="/logo.png"
       alt="InvestUp"
       initial={{ scale: 0, opacity: 0 }}
       animate={{
