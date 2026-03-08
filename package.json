@@ -12,11 +12,14 @@
     "@privy-io/node": "^0.9.0",
     "@privy-io/react-auth": "^3.13.1",
     "@supabase/supabase-js": "^2.97.0",
+    "framer-motion": "^12.35.1",
     "next": "16.1.6",
     "ox": "^0.8.9",
     "permissionless": "^0.2.57",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-tsparticles": "^2.12.2",
+    "tsparticles": "^3.9.1",
     "viem": "^2.47.0"
   },
   "devDependencies": {
