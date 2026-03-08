@@ -248,6 +248,7 @@ export default function PortfolioPage() {
     setSavingProject(true);
     setStatus('');
     const basePayload = {
+      owner_id: user.id,
       owner_user_id: user.id,
       owner_wallet: smartWalletAddress ?? null,
       business_name: form.businessName,
