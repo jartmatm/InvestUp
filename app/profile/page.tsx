@@ -46,8 +46,8 @@ const emptyForm: ProfileForm = {
   email: '',
   name: '',
   surname: '',
-  phone_number: '',
   country: '',
+  phone_number: '',
   gender: '',
   address: '',
   role: '',
@@ -331,7 +331,16 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
-            <Input value={form.gender} onChange={(value) => updateForm('gender', value)} placeholder="Gender" />
+            <select
+              value={form.gender}
+              onChange={(event) => updateForm('gender', event.target.value)}
+              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+            >
+              <option value="">Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="prefer no say">Prefer no say</option>
+            </select>
             <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
 
             <select

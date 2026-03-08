@@ -20,7 +20,7 @@ export default function OnboardingPage() {
     <main className="min-h-screen bg-gradient-to-br from-violet-700 via-violet-600 to-teal-400 px-5 py-8 text-white">
       <section className="mx-auto w-full max-w-xl rounded-3xl border border-white/35 bg-white/18 p-6 shadow-2xl shadow-violet-800/20 backdrop-blur-xl">
         <h1 className="text-3xl font-bold tracking-tight">Informacion basica</h1>
-        <p className="mt-1 text-sm text-white/85">Selecciona tu perfil para habilitar funciones.</p>
+        <p className="mt-1 text-sm text-white/85">Selecciona tu perfil *Puedes cambiarlo mas adelante</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
@@ -29,7 +29,7 @@ export default function OnboardingPage() {
           >
             <p className="text-sm font-semibold">Inversor</p>
             <p className={`text-xs ${rol === 'inversor' ? 'text-violet-600/80' : 'text-white/75'}`}>
-              Invertir en wallets de emprendedores
+              Invertir en Emprendimientos
             </p>
           </button>
           <button
@@ -38,7 +38,7 @@ export default function OnboardingPage() {
           >
             <p className="text-sm font-semibold">Emprendedor</p>
             <p className={`text-xs ${rol === 'emprendedor' ? 'text-violet-600/80' : 'text-white/75'}`}>
-              Enviar repayments a inversionistas
+              Enviar pagos a Inversionistas
             </p>
           </button>
         </div>
