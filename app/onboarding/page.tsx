@@ -17,29 +17,33 @@ export default function OnboardingPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-5 py-8">
-      <section className="w-full rounded-2xl bg-white p-6 shadow-lg">
-        <h1 className="text-2xl font-bold">Informacion basica</h1>
-        <p className="mt-1 text-sm text-slate-500">Selecciona tu perfil para habilitar funciones.</p>
+    <main className="min-h-screen bg-gradient-to-br from-violet-700 via-violet-600 to-teal-400 px-5 py-8 text-white">
+      <section className="mx-auto w-full max-w-xl rounded-3xl border border-white/35 bg-white/18 p-6 shadow-2xl shadow-violet-800/20 backdrop-blur-xl">
+        <h1 className="text-3xl font-bold tracking-tight">Informacion basica</h1>
+        <p className="mt-1 text-sm text-white/85">Selecciona tu perfil para habilitar funciones.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             onClick={() => setRol('inversor')}
-            className={`rounded-xl border p-4 text-left ${rol === 'inversor' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'}`}
+            className={`rounded-2xl border p-4 text-left transition ${rol === 'inversor' ? 'border-white bg-white text-violet-700 shadow-lg' : 'border-white/45 bg-white/10 text-white hover:bg-white/18'}`}
           >
             <p className="text-sm font-semibold">Inversor</p>
-            <p className="text-xs text-slate-500">Invertir en wallets de emprendedores</p>
+            <p className={`text-xs ${rol === 'inversor' ? 'text-violet-600/80' : 'text-white/75'}`}>
+              Invertir en wallets de emprendedores
+            </p>
           </button>
           <button
             onClick={() => setRol('emprendedor')}
-            className={`rounded-xl border p-4 text-left ${rol === 'emprendedor' ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'}`}
+            className={`rounded-2xl border p-4 text-left transition ${rol === 'emprendedor' ? 'border-white bg-white text-violet-700 shadow-lg' : 'border-white/45 bg-white/10 text-white hover:bg-white/18'}`}
           >
             <p className="text-sm font-semibold">Emprendedor</p>
-            <p className="text-xs text-slate-500">Enviar repayments a inversionistas</p>
+            <p className={`text-xs ${rol === 'emprendedor' ? 'text-violet-600/80' : 'text-white/75'}`}>
+              Enviar repayments a inversionistas
+            </p>
           </button>
         </div>
 
-        <label className="mt-5 flex items-center gap-2 text-sm text-slate-600">
+        <label className="mt-5 flex items-center gap-2 text-sm text-white/90">
           <input
             type="checkbox"
             checked={aceptaTerminos}

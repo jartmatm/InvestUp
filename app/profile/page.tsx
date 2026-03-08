@@ -17,18 +17,18 @@ export default function ProfilePage() {
   return (
     <PageFrame title="Perfil" subtitle="Configuracion de cuenta">
       <div className="space-y-3">
-        <button className="w-full rounded-xl bg-white p-4 text-left text-sm font-medium shadow-sm">
+        <button className="w-full rounded-3xl border border-white/35 bg-white/90 p-4 text-left text-sm font-medium text-slate-800 shadow-xl shadow-violet-800/10">
           Historial de transacciones
         </button>
-        <button className="w-full rounded-xl bg-white p-4 text-left text-sm font-medium shadow-sm">
+        <button className="w-full rounded-3xl border border-white/35 bg-white/90 p-4 text-left text-sm font-medium text-slate-800 shadow-xl shadow-violet-800/10">
           Seguridad
         </button>
-        <button className="w-full rounded-xl bg-white p-4 text-left text-sm font-medium shadow-sm">
+        <button className="w-full rounded-3xl border border-white/35 bg-white/90 p-4 text-left text-sm font-medium text-slate-800 shadow-xl shadow-violet-800/10">
           Soporte
         </button>
       </div>
 
-      <div className="mt-4 rounded-xl bg-white p-4 text-xs text-slate-600 shadow-sm">
+      <div className="mt-4 rounded-3xl border border-white/35 bg-white/90 p-4 text-xs text-slate-600 shadow-xl shadow-violet-800/10">
         <p>
           Rol actual: <span className="font-semibold">{rolSeleccionado ?? 'sin rol'}</span>
         </p>
@@ -39,7 +39,7 @@ export default function ProfilePage() {
 
       <button
         onClick={logoutApp}
-        className="mt-4 w-full rounded-xl border border-rose-100 bg-rose-50 p-3 text-sm font-semibold text-rose-600"
+        className="mt-4 w-full rounded-full border border-white/45 bg-white/10 p-3 text-sm font-semibold text-white transition hover:bg-white/18"
       >
         Cerrar sesion
       </button>

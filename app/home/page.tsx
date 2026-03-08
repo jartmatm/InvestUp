@@ -35,7 +35,7 @@ export default function HomePage() {
       rightSlot={
         <button
           onClick={logoutApp}
-          className="rounded-full border border-rose-100 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600"
+          className="rounded-full border border-white/45 bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/18"
         >
           Salir
         </button>
@@ -51,8 +51,8 @@ export default function HomePage() {
       <div className="mt-4">
         <Button onClick={actualizarSaldos}>Refrescar saldo</Button>
       </div>
-      <section className="mt-6 rounded-xl border border-slate-100 bg-white p-4 text-xs text-slate-600 shadow-sm">
-        <p className="font-semibold text-indigo-600">Wallet activa</p>
+      <section className="mt-6 rounded-3xl border border-white/35 bg-white/88 p-4 text-xs text-slate-600 shadow-xl shadow-violet-800/10">
+        <p className="font-semibold text-violet-700">Wallet activa</p>
         <code className="block break-all text-[11px] text-slate-700">
           {smartWalletAddress ?? 'Generando direccion...'}
         </code>

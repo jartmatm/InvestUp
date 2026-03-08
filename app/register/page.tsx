@@ -16,19 +16,25 @@ export default function RegisterPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-xl px-6 py-10">
-      <h1 className="mb-6 text-2xl font-bold">Crear Cuenta</h1>
-      <div className="space-y-4">
-        <Input placeholder="Correo electronico" />
-        <Input placeholder="Contrasena" type="password" />
-        <Input placeholder="Confirmar contrasena" type="password" />
+    <main className="min-h-screen bg-gradient-to-br from-violet-700 via-violet-600 to-teal-400 px-6 py-10 text-white">
+      <div className="mx-auto w-full max-w-md rounded-3xl border border-white/35 bg-white/18 p-6 shadow-2xl shadow-violet-800/20 backdrop-blur-xl">
+        <h1 className="mb-1 text-3xl font-bold tracking-tight">Crear cuenta</h1>
+        <p className="mb-6 text-sm text-white/85">Empeza a invertir en minutos.</p>
+        <div className="space-y-4">
+          <Input placeholder="Correo electronico" />
+          <Input placeholder="Contrasena" type="password" />
+          <Input placeholder="Confirmar contrasena" type="password" />
+        </div>
+        <div className="mt-6">
+          <Button onClick={login}>Crear cuenta</Button>
+        </div>
+        <button
+          onClick={() => router.push('/login')}
+          className="mt-4 w-full rounded-full border border-white/50 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+        >
+          Ya tengo cuenta
+        </button>
       </div>
-      <div className="mt-6">
-        <Button onClick={login}>Crear cuenta</Button>
-      </div>
-      <button onClick={() => router.push('/login')} className="mt-4 text-sm text-indigo-600">
-        Ya tengo cuenta
-      </button>
     </main>
   );
 }

@@ -22,7 +22,7 @@ export default function Input({
       readOnly={readOnly}
       onChange={(event) => onChange?.(event.target.value)}
       placeholder={placeholder}
-      className={`w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 ${className ?? ''}`}
+      className={`w-full rounded-2xl border border-white/45 bg-white/92 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-white focus:bg-white ${className ?? ''}`}
     />
   );
 }
