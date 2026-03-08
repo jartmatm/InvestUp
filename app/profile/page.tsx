@@ -74,10 +74,33 @@ export default function ProfilePage() {
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
       const token = await getAccessToken();
-      const headers = new Headers(init.headers ?? {});
-      headers.set('apikey', SUPABASE_ANON_KEY);
-      if (token) headers.set('Authorization', `Bearer ${token}`);
-      return fetch(input, { ...init, headers });
+      const baseHeaders = new Headers(init.headers ?? {});
+      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
+
+      const run = (headers: Headers) => fetch(input, { ...init, headers });
+
+      if (!token) {
+        return run(baseHeaders);
+      }
+
+      const headersWithAuth = new Headers(baseHeaders);
+      headersWithAuth.set('Authorization', `Bearer ${token}`);
+      const response = await run(headersWithAuth);
+
+      if (response.ok) return response;
+
+      const raw = await response.clone().text();
+      const lower = raw.toLowerCase();
+      const shouldFallback =
+        response.status === 401 ||
+        response.status === 403 ||
+        lower.includes('no suitable key') ||
+        lower.includes('wrong key type') ||
+        lower.includes('invalid jwt');
+
+      if (!shouldFallback) return response;
+
+      return run(baseHeaders);
     };
 
     return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
