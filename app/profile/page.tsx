@@ -314,11 +314,6 @@ export default function ProfilePage() {
               onChange={(value) => updateForm('surname', value)}
               placeholder="Surname"
             />
-            <Input
-              value={form.phone_number}
-              onChange={(value) => updateForm('phone_number', value)}
-              placeholder="Phone number"
-            />
             <select
               value={form.country}
               onChange={(event) => onCountryChange(event.target.value)}
@@ -331,6 +326,11 @@ export default function ProfilePage() {
                 </option>
               ))}
             </select>
+            <Input
+              value={form.phone_number}
+              onChange={(value) => updateForm('phone_number', value)}
+              placeholder="Phone number"
+            />
             <select
               value={form.gender}
               onChange={(event) => updateForm('gender', event.target.value)}
