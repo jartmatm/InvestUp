@@ -8,7 +8,7 @@ type ProjectCardProps = {
   amountRequested?: number | null;
   currency?: string | null;
   termMonths?: number | null;
-  interesRate?: number | null;
+  interestRate?: number | null;
   targetAmountUsd?: number | null;
   interestRateEa?: number | null;
   publicationEndDate?: string | null;
@@ -25,7 +25,7 @@ export default function ProjectCard({
   amountRequested,
   currency,
   termMonths,
-  interesRate,
+  interestRate,
   targetAmountUsd,
   interestRateEa,
   publicationEndDate,
@@ -48,7 +48,7 @@ export default function ProjectCard({
           </span>
         ) : null}
         {termMonths != null ? <span>Plazo: {termMonths} meses</span> : null}
-        {interesRate != null ? <span>Interes: {interesRate}%</span> : null}
+        {interestRate != null ? <span>Interes: {interestRate}%</span> : null}
         {targetAmountUsd != null ? <span>Meta USD {Number(targetAmountUsd).toLocaleString()}</span> : null}
         {interestRateEa != null ? <span>Interes {interestRateEa}% E.A.</span> : null}
         {publicationEndDate ? <span>Publica hasta {publicationEndDate}</span> : null}

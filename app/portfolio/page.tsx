@@ -20,7 +20,7 @@ type ProjectRow = {
   amount_requested: number | null;
   currency: string | null;
   term_months: number | null;
-  interes_rate: number | null;
+  interest_rate: number | null;
   city: string | null;
   country: string | null;
   target_amount_usd: number | null;
@@ -47,7 +47,7 @@ type PublishForm = {
   termMonths: string;
   targetAmountUsd: string;
   publicationEndDate: string;
-  interesRate: string;
+  interestRate: string;
   interestRateEa: string;
 };
 
@@ -94,7 +94,7 @@ const emptyForm: PublishForm = {
   termMonths: '',
   targetAmountUsd: '',
   publicationEndDate: '',
-  interesRate: '',
+  interestRate: '',
   interestRateEa: '',
 };
 
@@ -180,7 +180,7 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,title,description,sector,amount_requested,currency,term_months,interes_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls,created_at'
+        'id,title,description,sector,amount_requested,currency,term_months,interest_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls,created_at'
       )
       .eq('owner_user_id', user.id)
       .order('created_at', { ascending: false });
@@ -264,7 +264,7 @@ export default function PortfolioPage() {
       ['currency', form.currency],
       ['termMonths', form.termMonths],
       ['targetAmountUsd', form.targetAmountUsd],
-      ['interesRate', form.interesRate],
+      ['interestRate', form.interestRate],
       ['publicationEndDate', form.publicationEndDate],
       ['interestRateEa', form.interestRateEa],
     ];
@@ -304,7 +304,7 @@ export default function PortfolioPage() {
       amount_received: 0,
       currency: form.currency,
       term_months: Number(form.termMonths),
-      interes_rate: Number(form.interesRate),
+      interest_rate: Number(form.interestRate),
       target_amount_usd: Number(form.targetAmountUsd),
       publication_end_date: form.publicationEndDate,
       interest_rate_ea: Number(form.interestRateEa),
@@ -517,8 +517,8 @@ export default function PortfolioPage() {
                 placeholder="Plazo (meses)"
               />
               <Input
-                value={form.interesRate}
-                onChange={(value) => onChangeForm('interesRate', value)}
+                value={form.interestRate}
+                onChange={(value) => onChangeForm('interestRate', value)}
                 type="number"
                 placeholder="Tasa interes %"
               />
@@ -558,7 +558,7 @@ export default function PortfolioPage() {
             amountRequested={project.amount_requested}
             currency={project.currency}
             termMonths={project.term_months}
-            interesRate={project.interes_rate}
+            interestRate={project.interest_rate}
             targetAmountUsd={project.target_amount_usd}
             interestRateEa={project.interest_rate_ea}
             publicationEndDate={project.publication_end_date}

@@ -16,7 +16,7 @@ type FeedProject = {
   amount_requested: number | null;
   currency: string | null;
   term_months: number | null;
-  interes_rate: number | null;
+  interest_rate: number | null;
   city: string | null;
   country: string | null;
   target_amount_usd: number | null;
@@ -80,7 +80,7 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,amount_requested,currency,term_months,interes_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls'
+          'id,title,description,sector,amount_requested,currency,term_months,interest_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls'
         )
         .order('created_at', { ascending: false });
 
@@ -118,7 +118,7 @@ export default function FeedPage() {
             amountRequested={project.amount_requested}
             currency={project.currency}
             termMonths={project.term_months}
-            interesRate={project.interes_rate}
+            interestRate={project.interest_rate}
             targetAmountUsd={project.target_amount_usd}
             interestRateEa={project.interest_rate_ea}
             publicationEndDate={project.publication_end_date}
