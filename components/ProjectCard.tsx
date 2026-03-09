@@ -2,8 +2,13 @@ type ProjectCardProps = {
   title: string;
   description: string;
   progress?: number;
+  sector?: string | null;
   city?: string | null;
   country?: string | null;
+  amountRequested?: number | null;
+  currency?: string | null;
+  termMonths?: number | null;
+  interesRate?: number | null;
   targetAmountUsd?: number | null;
   interestRateEa?: number | null;
   publicationEndDate?: string | null;
@@ -14,8 +19,13 @@ export default function ProjectCard({
   title,
   description,
   progress = 0,
+  sector,
   city,
   country,
+  amountRequested,
+  currency,
+  termMonths,
+  interesRate,
   targetAmountUsd,
   interestRateEa,
   publicationEndDate,
@@ -30,7 +40,15 @@ export default function ProjectCard({
       <h3 className="font-semibold text-slate-900">{title}</h3>
       <p className="mt-1 text-sm text-slate-600">{description}</p>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+        {sector ? <span>Sector: {sector}</span> : null}
         {city || country ? <span>{[city, country].filter(Boolean).join(', ')}</span> : null}
+        {amountRequested != null ? (
+          <span>
+            Solicitado {currency ?? 'USD'} {Number(amountRequested).toLocaleString()}
+          </span>
+        ) : null}
+        {termMonths != null ? <span>Plazo: {termMonths} meses</span> : null}
+        {interesRate != null ? <span>Interes: {interesRate}%</span> : null}
         {targetAmountUsd != null ? <span>Meta USD {Number(targetAmountUsd).toLocaleString()}</span> : null}
         {interestRateEa != null ? <span>Interes {interestRateEa}% E.A.</span> : null}
         {publicationEndDate ? <span>Publica hasta {publicationEndDate}</span> : null}

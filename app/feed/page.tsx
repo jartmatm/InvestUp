@@ -10,8 +10,13 @@ import { useInvestUp } from '@/lib/investup-context';
 
 type FeedProject = {
   id: string;
-  business_name: string;
+  title: string;
   description: string;
+  sector: string | null;
+  amount_requested: number | null;
+  currency: string | null;
+  term_months: number | null;
+  interes_rate: number | null;
   city: string | null;
   country: string | null;
   target_amount_usd: number | null;
@@ -75,7 +80,7 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,business_name,description,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls'
+          'id,title,description,sector,amount_requested,currency,term_months,interes_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls'
         )
         .order('created_at', { ascending: false });
 
@@ -105,10 +110,15 @@ export default function FeedPage() {
         {projects.map((project) => (
           <ProjectCard
             key={project.id}
-            title={project.business_name}
+            title={project.title}
             description={project.description}
+            sector={project.sector}
             city={project.city}
             country={project.country}
+            amountRequested={project.amount_requested}
+            currency={project.currency}
+            termMonths={project.term_months}
+            interesRate={project.interes_rate}
             targetAmountUsd={project.target_amount_usd}
             interestRateEa={project.interest_rate_ea}
             publicationEndDate={project.publication_end_date}

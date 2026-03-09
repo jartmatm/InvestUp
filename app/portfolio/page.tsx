@@ -14,8 +14,13 @@ import { useInvestUp } from '@/lib/investup-context';
 
 type ProjectRow = {
   id: string;
-  business_name: string;
+  title: string;
   description: string;
+  sector: string | null;
+  amount_requested: number | null;
+  currency: string | null;
+  term_months: number | null;
+  interes_rate: number | null;
   city: string | null;
   country: string | null;
   target_amount_usd: number | null;
@@ -26,7 +31,9 @@ type ProjectRow = {
 };
 
 type PublishForm = {
+  title: string;
   businessName: string;
+  sector: string;
   legalRepresentative: string;
   nit: string;
   openingDate: string;
@@ -35,8 +42,12 @@ type PublishForm = {
   city: string;
   country: string;
   description: string;
+  amountRequested: string;
+  currency: string;
+  termMonths: string;
   targetAmountUsd: string;
   publicationEndDate: string;
+  interesRate: string;
   interestRateEa: string;
 };
 
@@ -51,8 +62,25 @@ const COUNTRY_OPTIONS = getCountries()
   .map((code) => ({ code, name: REGION_NAMES.of(code) ?? code }))
   .sort((a, b) => a.name.localeCompare(b.name, 'es'));
 
+const SECTOR_OPTIONS = [
+  'Administracion',
+  'Comercio',
+  'Finanzas',
+  'Tecnologia',
+  'Manufactura',
+  'Agroindustria',
+  'Salud',
+  'Educacion',
+  'Turismo',
+  'Logistica',
+  'Construccion',
+  'Servicios profesionales',
+];
+
 const emptyForm: PublishForm = {
+  title: '',
   businessName: '',
+  sector: '',
   legalRepresentative: '',
   nit: '',
   openingDate: '',
@@ -61,8 +89,12 @@ const emptyForm: PublishForm = {
   city: '',
   country: '',
   description: '',
+  amountRequested: '',
+  currency: 'USD',
+  termMonths: '',
   targetAmountUsd: '',
   publicationEndDate: '',
+  interesRate: '',
   interestRateEa: '',
 };
 
@@ -148,7 +180,7 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,business_name,description,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls,created_at'
+        'id,title,description,sector,amount_requested,currency,term_months,interes_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls,created_at'
       )
       .eq('owner_user_id', user.id)
       .order('created_at', { ascending: false });
@@ -218,7 +250,9 @@ export default function PortfolioPage() {
   const publishProject = async () => {
     if (!user?.id) return;
     const required: Array<[string, string]> = [
+      ['title', form.title],
       ['businessName', form.businessName],
+      ['sector', form.sector],
       ['legalRepresentative', form.legalRepresentative],
       ['openingDate', form.openingDate],
       ['address', form.address],
@@ -226,7 +260,11 @@ export default function PortfolioPage() {
       ['city', form.city],
       ['country', form.country],
       ['description', form.description],
+      ['amountRequested', form.amountRequested],
+      ['currency', form.currency],
+      ['termMonths', form.termMonths],
       ['targetAmountUsd', form.targetAmountUsd],
+      ['interesRate', form.interesRate],
       ['publicationEndDate', form.publicationEndDate],
       ['interestRateEa', form.interestRateEa],
     ];
@@ -251,7 +289,9 @@ export default function PortfolioPage() {
       owner_id: user.id,
       owner_user_id: user.id,
       owner_wallet: smartWalletAddress ?? null,
+      title: form.title,
       business_name: form.businessName,
+      sector: form.sector,
       legal_representative: form.legalRepresentative,
       nit: form.nit || null,
       opening_date: form.openingDate,
@@ -260,11 +300,19 @@ export default function PortfolioPage() {
       city: form.city,
       country: selectedCountry?.name ?? form.country,
       description: form.description,
+      amount_requested: Number(form.amountRequested),
+      amount_received: 0,
+      currency: form.currency,
+      term_months: Number(form.termMonths),
+      interes_rate: Number(form.interesRate),
       target_amount_usd: Number(form.targetAmountUsd),
       publication_end_date: form.publicationEndDate,
       interest_rate_ea: Number(form.interestRateEa),
       photo_urls: projectPhotos,
       video_url: projectVideo || null,
+      metadata: {
+        submitted_from: 'portfolio_page',
+      },
     };
 
     let insertError: { message?: string } | null = null;
@@ -335,10 +383,27 @@ export default function PortfolioPage() {
         {showPublisher ? (
           <div className="mt-4 space-y-3">
             <Input
+              value={form.title}
+              onChange={(value) => onChangeForm('title', value)}
+              placeholder="Titulo de la publicacion"
+            />
+            <Input
               value={form.businessName}
               onChange={(value) => onChangeForm('businessName', value)}
               placeholder="Nombre del negocio"
             />
+            <select
+              value={form.sector}
+              onChange={(event) => onChangeForm('sector', event.target.value)}
+              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+            >
+              <option value="">Sector economico</option>
+              {SECTOR_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
             <Input
               value={form.legalRepresentative}
               onChange={(value) => onChangeForm('legalRepresentative', value)}
@@ -411,7 +476,7 @@ export default function PortfolioPage() {
               <p className="mt-1 text-right text-xs text-slate-500">{form.description.length}/2500</p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <Input
                 value={form.publicationEndDate}
                 onChange={(value) => onChangeForm('publicationEndDate', value)}
@@ -419,10 +484,43 @@ export default function PortfolioPage() {
                 placeholder="Fecha maxima"
               />
               <Input
+                value={form.amountRequested}
+                onChange={(value) => onChangeForm('amountRequested', value)}
+                type="number"
+                placeholder="Monto solicitado"
+              />
+              <select
+                value={form.currency}
+                onChange={(event) => onChangeForm('currency', event.target.value)}
+                className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              >
+                <option value="USD">USD</option>
+                <option value="USDC">USDC</option>
+                <option value="EUR">EUR</option>
+                <option value="COP">COP</option>
+                <option value="ARS">ARS</option>
+                <option value="MXN">MXN</option>
+              </select>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <Input
                 value={form.targetAmountUsd}
                 onChange={(value) => onChangeForm('targetAmountUsd', value)}
                 type="number"
                 placeholder="Valor a recaudar (USD)"
+              />
+              <Input
+                value={form.termMonths}
+                onChange={(value) => onChangeForm('termMonths', value)}
+                type="number"
+                placeholder="Plazo (meses)"
+              />
+              <Input
+                value={form.interesRate}
+                onChange={(value) => onChangeForm('interesRate', value)}
+                type="number"
+                placeholder="Tasa interes %"
               />
               <Input
                 value={form.interestRateEa}
@@ -452,10 +550,15 @@ export default function PortfolioPage() {
         {myProjects.map((project) => (
           <ProjectCard
             key={project.id}
-            title={project.business_name}
+            title={project.title}
             description={project.description}
+            sector={project.sector}
             city={project.city}
             country={project.country}
+            amountRequested={project.amount_requested}
+            currency={project.currency}
+            termMonths={project.term_months}
+            interesRate={project.interes_rate}
             targetAmountUsd={project.target_amount_usd}
             interestRateEa={project.interest_rate_ea}
             publicationEndDate={project.publication_end_date}
@@ -468,3 +571,4 @@ export default function PortfolioPage() {
     </PageFrame>
   );
 }
+
