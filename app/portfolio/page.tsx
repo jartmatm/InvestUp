@@ -14,19 +14,26 @@ import { useInvestUp } from '@/lib/investup-context';
 
 type ProjectRow = {
   id: string;
+  owner_user_id: string | null;
+  owner_id: string | null;
   title: string;
-  description: string;
+  business_name: string | null;
   sector: string | null;
+  legal_representative: string | null;
+  nit: string | null;
+  opening_date: string | null;
+  address: string | null;
+  phone: string | null;
+  city: string | null;
+  country: string | null;
+  description: string;
   amount_requested: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
-  city: string | null;
-  country: string | null;
-  target_amount_usd: number | null;
-  interest_rate_ea: number | null;
   publication_end_date: string | null;
   photo_urls: string[] | null;
+  video_url: string | null;
   created_at: string;
 };
 
@@ -39,15 +46,12 @@ type PublishForm = {
   openingDate: string;
   address: string;
   phone: string;
-  city: string;
   country: string;
+  city: string;
   description: string;
   amountRequested: string;
   currency: string;
-  termMonths: string;
-  targetAmountUsd: string;
   publicationEndDate: string;
-  interestRate: string;
   interestRateEa: string;
 };
 
@@ -77,6 +81,28 @@ const SECTOR_OPTIONS = [
   'Servicios profesionales',
 ];
 
+const CITY_OPTIONS_BY_COUNTRY: Record<string, string[]> = {
+  AR: ['Buenos Aires', 'Cordoba', 'Rosario', 'Mendoza', 'La Plata'],
+  BO: ['La Paz', 'Santa Cruz', 'Cochabamba', 'Sucre', 'Tarija'],
+  BR: ['Sao Paulo', 'Rio de Janeiro', 'Brasilia', 'Belo Horizonte', 'Salvador'],
+  CL: ['Santiago', 'Valparaiso', 'Concepcion', 'La Serena', 'Antofagasta'],
+  CO: ['Bogota', 'Medellin', 'Cali', 'Barranquilla', 'Cartagena'],
+  CR: ['San Jose', 'Alajuela', 'Cartago', 'Heredia', 'Puntarenas'],
+  DO: ['Santo Domingo', 'Santiago', 'La Romana', 'San Pedro', 'Puerto Plata'],
+  EC: ['Quito', 'Guayaquil', 'Cuenca', 'Manta', 'Ambato'],
+  ES: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'],
+  GT: ['Ciudad de Guatemala', 'Quetzaltenango', 'Escuintla', 'Antigua', 'Coban'],
+  HN: ['Tegucigalpa', 'San Pedro Sula', 'La Ceiba', 'Choloma', 'Comayagua'],
+  MX: ['Ciudad de Mexico', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana'],
+  PA: ['Ciudad de Panama', 'Colon', 'David', 'Santiago', 'Chitre'],
+  PE: ['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Piura'],
+  PY: ['Asuncion', 'Ciudad del Este', 'Encarnacion', 'Luque', 'San Lorenzo'],
+  SV: ['San Salvador', 'Santa Ana', 'San Miguel', 'Soyapango', 'Mejicanos'],
+  UY: ['Montevideo', 'Punta del Este', 'Salto', 'Paysandu', 'Maldonado'],
+  US: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami'],
+  VE: ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay'],
+};
+
 const emptyForm: PublishForm = {
   title: '',
   businessName: '',
@@ -86,15 +112,12 @@ const emptyForm: PublishForm = {
   openingDate: '',
   address: '',
   phone: '',
-  city: '',
   country: '',
+  city: '',
   description: '',
   amountRequested: '',
   currency: 'USD',
-  termMonths: '',
-  targetAmountUsd: '',
   publicationEndDate: '',
-  interestRate: '',
   interestRateEa: '',
 };
 
@@ -106,11 +129,30 @@ const fileToDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const normalizeCountryCode = (rawCountry: string) => {
+  const raw = rawCountry.trim();
+  if (!raw) return '';
+  const byCode = COUNTRY_OPTIONS.find((option) => option.code === raw.toUpperCase());
+  if (byCode) return byCode.code;
+  const byName = COUNTRY_OPTIONS.find((option) => option.name.toLowerCase() === raw.toLowerCase());
+  return byName?.code ?? '';
+};
+
+const calculateTermMonths = (endDateIso: string) => {
+  const start = new Date();
+  const end = new Date(endDateIso);
+  if (Number.isNaN(end.getTime())) return 0;
+  const msDiff = end.getTime() - start.getTime();
+  const daysDiff = Math.max(0, msDiff / (1000 * 60 * 60 * 24));
+  return Math.max(1, Math.ceil(daysDiff / 30));
+};
+
 export default function PortfolioPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, historial, rolSeleccionado, smartWalletAddress } = useInvestUp();
   const [showPublisher, setShowPublisher] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [form, setForm] = useState<PublishForm>(emptyForm);
   const [projectPhotos, setProjectPhotos] = useState<string[]>([]);
   const [projectVideo, setProjectVideo] = useState<string>('');
@@ -119,6 +161,11 @@ export default function PortfolioPage() {
   const [savingProject, setSavingProject] = useState(false);
   const [improvingAI, setImprovingAI] = useState(false);
   const [status, setStatus] = useState('');
+
+  const cityOptions = useMemo(() => {
+    if (!form.country) return [];
+    return CITY_OPTIONS_BY_COUNTRY[form.country] ?? ['Otra ciudad'];
+  }, [form.country]);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -158,17 +205,8 @@ export default function PortfolioPage() {
   useEffect(() => {
     const preloadCountry = async () => {
       if (!user?.id || rolSeleccionado !== 'emprendedor') return;
-      const { data } = await supabase
-        .from('users')
-        .select('country')
-        .eq('id', user.id)
-        .maybeSingle();
-      const countryRaw = (data?.country as string | null) ?? '';
-      const byCode = COUNTRY_OPTIONS.find((option) => option.code === countryRaw.toUpperCase());
-      const byName = COUNTRY_OPTIONS.find(
-        (option) => option.name.toLowerCase() === countryRaw.toLowerCase()
-      );
-      const normalized = byCode?.code ?? byName?.code ?? '';
+      const { data } = await supabase.from('users').select('country').eq('id', user.id).maybeSingle();
+      const normalized = normalizeCountryCode((data?.country as string | null) ?? '');
       if (normalized) setForm((prev) => ({ ...prev, country: normalized }));
     };
     preloadCountry();
@@ -180,9 +218,9 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,title,description,sector,amount_requested,currency,term_months,interest_rate,city,country,target_amount_usd,interest_rate_ea,publication_end_date,photo_urls,created_at'
+        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
       )
-      .eq('owner_user_id', user.id)
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -247,6 +285,58 @@ export default function PortfolioPage() {
     }
   };
 
+  const startNewPublication = () => {
+    setEditingProjectId(null);
+    setForm((prev) => ({ ...emptyForm, country: prev.country }));
+    setProjectPhotos([]);
+    setProjectVideo('');
+    setShowPublisher(true);
+  };
+
+  const startEditPublication = (project: ProjectRow) => {
+    setEditingProjectId(project.id);
+    const countryCode = normalizeCountryCode(project.country ?? '');
+    setForm({
+      title: project.title ?? '',
+      businessName: project.business_name ?? '',
+      sector: project.sector ?? '',
+      legalRepresentative: project.legal_representative ?? '',
+      nit: project.nit ?? '',
+      openingDate: project.opening_date ?? '',
+      address: project.address ?? '',
+      phone: project.phone ?? '',
+      country: countryCode,
+      city: project.city ?? '',
+      description: project.description ?? '',
+      amountRequested: String(project.amount_requested ?? ''),
+      currency: project.currency ?? 'USD',
+      publicationEndDate: project.publication_end_date ?? '',
+      interestRateEa: String(project.interest_rate ?? ''),
+    });
+    setProjectPhotos(project.photo_urls ?? []);
+    setProjectVideo(project.video_url ?? '');
+    setShowPublisher(true);
+    setStatus('');
+  };
+
+  const deletePublication = async (projectId: string) => {
+    if (!user?.id) return;
+    const confirmed = window.confirm('Quieres eliminar esta publicacion?');
+    if (!confirmed) return;
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId)
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+    if (error) {
+      setStatus(`No se pudo eliminar: ${error.message}`);
+      return;
+    }
+    setStatus('Publicacion eliminada.');
+    await loadMyProjects();
+  };
+
   const publishProject = async () => {
     if (!user?.id) return;
     const required: Array<[string, string]> = [
@@ -257,14 +347,11 @@ export default function PortfolioPage() {
       ['openingDate', form.openingDate],
       ['address', form.address],
       ['phone', form.phone],
-      ['city', form.city],
       ['country', form.country],
+      ['city', form.city],
       ['description', form.description],
       ['amountRequested', form.amountRequested],
       ['currency', form.currency],
-      ['termMonths', form.termMonths],
-      ['targetAmountUsd', form.targetAmountUsd],
-      ['interestRate', form.interestRate],
       ['publicationEndDate', form.publicationEndDate],
       ['interestRateEa', form.interestRateEa],
     ];
@@ -283,9 +370,16 @@ export default function PortfolioPage() {
     }
 
     const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
+    const termMonths = calculateTermMonths(form.publicationEndDate);
+    if (termMonths <= 0) {
+      setStatus('La fecha maxima de publicacion debe ser mayor a hoy.');
+      return;
+    }
+
     setSavingProject(true);
     setStatus('');
-    const basePayload = {
+
+    const payload = {
       owner_id: user.id,
       owner_user_id: user.id,
       owner_wallet: smartWalletAddress ?? null,
@@ -303,11 +397,9 @@ export default function PortfolioPage() {
       amount_requested: Number(form.amountRequested),
       amount_received: 0,
       currency: form.currency,
-      term_months: Number(form.termMonths),
-      interest_rate: Number(form.interestRate),
-      target_amount_usd: Number(form.targetAmountUsd),
+      term_months: termMonths,
       publication_end_date: form.publicationEndDate,
-      interest_rate_ea: Number(form.interestRateEa),
+      interest_rate: Number(form.interestRateEa),
       photo_urls: projectPhotos,
       video_url: projectVideo || null,
       metadata: {
@@ -315,35 +407,45 @@ export default function PortfolioPage() {
       },
     };
 
-    let insertError: { message?: string } | null = null;
-    const firstTry = await supabase.from('projects').insert({
-      ...basePayload,
-      status: 'published',
-    });
-    insertError = firstTry.error;
-
-    if (insertError?.message?.includes('invalid input value for enum project_status')) {
-      const secondTry = await supabase.from('projects').insert({
-        ...basePayload,
-        status: 'active',
+    let opError: { message?: string } | null = null;
+    if (editingProjectId) {
+      const result = await supabase
+        .from('projects')
+        .update(payload)
+        .eq('id', editingProjectId)
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      opError = result.error;
+    } else {
+      const firstTry = await supabase.from('projects').insert({
+        ...payload,
+        status: 'published',
       });
-      insertError = secondTry.error;
+      opError = firstTry.error;
+
+      if (opError?.message?.includes('invalid input value for enum project_status')) {
+        const secondTry = await supabase.from('projects').insert({
+          ...payload,
+          status: 'active',
+        });
+        opError = secondTry.error;
+      }
+
+      if (opError?.message?.includes('invalid input value for enum project_status')) {
+        const thirdTry = await supabase.from('projects').insert(payload);
+        opError = thirdTry.error;
+      }
     }
 
-    if (insertError?.message?.includes('invalid input value for enum project_status')) {
-      const thirdTry = await supabase.from('projects').insert(basePayload);
-      insertError = thirdTry.error;
-    }
-
-    if (insertError) {
-      setStatus(`No se pudo publicar: ${insertError.message}`);
+    if (opError) {
+      setStatus(`No se pudo publicar: ${opError.message}`);
       setSavingProject(false);
       return;
     }
 
-    setStatus('Proyecto publicado y visible en el feed.');
+    setStatus(editingProjectId ? 'Publicacion actualizada.' : 'Proyecto publicado y visible en el feed.');
     setSavingProject(false);
     setShowPublisher(false);
+    setEditingProjectId(null);
     setForm((prev) => ({ ...emptyForm, country: prev.country }));
     setProjectPhotos([]);
     setProjectVideo('');
@@ -372,7 +474,7 @@ export default function PortfolioPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">Publicar proyecto</h2>
           <button
-            onClick={() => setShowPublisher((prev) => !prev)}
+            onClick={startNewPublication}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 text-xl font-bold text-white"
             aria-label="Abrir formulario de proyecto"
           >
@@ -418,16 +520,32 @@ export default function PortfolioPage() {
             />
             <Input value={form.address} onChange={(value) => onChangeForm('address', value)} placeholder="Direccion" />
             <Input value={form.phone} onChange={(value) => onChangeForm('phone', value)} placeholder="Telefono" />
-            <Input value={form.city} onChange={(value) => onChangeForm('city', value)} placeholder="Ciudad" />
+
             <select
               value={form.country}
-              onChange={(event) => onChangeForm('country', event.target.value)}
+              onChange={(event) => {
+                const code = event.target.value;
+                setForm((prev) => ({ ...prev, country: code, city: '' }));
+              }}
               className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
             >
               <option value="">Pais</option>
               {COUNTRY_OPTIONS.map((option) => (
                 <option key={option.code} value={option.code}>
                   {option.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={form.city}
+              onChange={(event) => onChangeForm('city', event.target.value)}
+              disabled={!form.country}
+              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none disabled:opacity-60"
+            >
+              <option value="">{form.country ? 'Ciudad' : 'Selecciona pais primero'}</option>
+              {cityOptions.map((city) => (
+                <option key={city} value={city}>
+                  {city}
                 </option>
               ))}
             </select>
@@ -476,12 +594,12 @@ export default function PortfolioPage() {
               <p className="mt-1 text-right text-xs text-slate-500">{form.description.length}/2500</p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-3">
               <Input
                 value={form.publicationEndDate}
                 onChange={(value) => onChangeForm('publicationEndDate', value)}
                 type="date"
-                placeholder="Fecha maxima"
+                placeholder="Fecha maxima de publicacion"
               />
               <Input
                 value={form.amountRequested}
@@ -503,36 +621,24 @@ export default function PortfolioPage() {
               </select>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-              <Input
-                value={form.targetAmountUsd}
-                onChange={(value) => onChangeForm('targetAmountUsd', value)}
-                type="number"
-                placeholder="Valor a recaudar (USD)"
-              />
-              <Input
-                value={form.termMonths}
-                onChange={(value) => onChangeForm('termMonths', value)}
-                type="number"
-                placeholder="Plazo (meses)"
-              />
-              <Input
-                value={form.interestRate}
-                onChange={(value) => onChangeForm('interestRate', value)}
-                type="number"
-                placeholder="Tasa interes %"
-              />
+            <div className="grid gap-3 md:grid-cols-1">
               <Input
                 value={form.interestRateEa}
                 onChange={(value) => onChangeForm('interestRateEa', value)}
                 type="number"
-                placeholder="Tasa interes E.A %"
+                placeholder="Tasa de interes E.A %"
               />
             </div>
 
             <div className="pt-2 text-center">
               <Button className="mx-auto max-w-xs" onClick={publishProject} disabled={savingProject}>
-                {savingProject ? 'Publicando...' : 'Publicar'}
+                {savingProject
+                  ? editingProjectId
+                    ? 'Guardando...'
+                    : 'Publicando...'
+                  : editingProjectId
+                    ? 'Guardar cambios'
+                    : 'Publicar'}
               </Button>
             </div>
           </div>
@@ -548,22 +654,35 @@ export default function PortfolioPage() {
           </div>
         ) : null}
         {myProjects.map((project) => (
-          <ProjectCard
-            key={project.id}
-            title={project.title}
-            description={project.description}
-            sector={project.sector}
-            city={project.city}
-            country={project.country}
-            amountRequested={project.amount_requested}
-            currency={project.currency}
-            termMonths={project.term_months}
-            interestRate={project.interest_rate}
-            targetAmountUsd={project.target_amount_usd}
-            interestRateEa={project.interest_rate_ea}
-            publicationEndDate={project.publication_end_date}
-            coverImage={project.photo_urls?.[0] ?? null}
-          />
+          <div key={project.id} className="space-y-2">
+            <ProjectCard
+              title={project.title}
+              description={project.description}
+              sector={project.sector}
+              city={project.city}
+              country={project.country}
+              amountRequested={project.amount_requested}
+              currency={project.currency}
+              termMonths={project.term_months}
+              interestRate={project.interest_rate}
+              publicationEndDate={project.publication_end_date}
+              coverImage={project.photo_urls?.[0] ?? null}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => startEditPublication(project)}
+                className="flex-1 rounded-full border border-white/45 bg-white/80 px-4 py-2 text-sm font-semibold text-violet-700"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => deletePublication(project.id)}
+                className="flex-1 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         ))}
       </section>
 
@@ -571,4 +690,3 @@ export default function PortfolioPage() {
     </PageFrame>
   );
 }
-
