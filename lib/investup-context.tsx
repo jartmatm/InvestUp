@@ -221,16 +221,18 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       try {
         const { error } = await supabase.from('transactions').insert({
           user_id: user.id,
-          role: mapRoleToDB(rolSeleccionado),
-          movement_type: movementType,
+          uuid: txHash,
+          type: movementType,
+          amount: amountUsdc,
+          currency: 'USDC',
           status,
-          chain: 'polygon',
           tx_hash: txHash,
-          from_wallet: smartWalletAddress,
-          to_wallet: toWallet,
-          amount_usdc: amountUsdc,
-          metadata: {
+          meta: {
             app: 'investup-web',
+            role: mapRoleToDB(rolSeleccionado),
+            chain: 'polygon',
+            from_wallet: smartWalletAddress,
+            to_wallet: toWallet,
           },
         });
         if (error) throw error;
