@@ -146,9 +146,14 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     expiresAt: 0,
     quote: null,
   });
-  const gasPriceCacheRef = useRef<{ expiresAt: number; maxFeePerGas: bigint | null }>({
+  const gasPriceCacheRef = useRef<{
+    expiresAt: number;
+    maxFeePerGas: bigint | null;
+    maxPriorityFeePerGas: bigint | null;
+  }>({
     expiresAt: 0,
     maxFeePerGas: null,
+    maxPriorityFeePerGas: null,
   });
 
   const supabase = useMemo(() => {
@@ -279,18 +284,30 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     return quote;
   }, [pimlicoClient]);
 
-  const getCachedMaxFeePerGas = useCallback(async () => {
+  const getCachedFees = useCallback(async () => {
     const now = Date.now();
-    if (gasPriceCacheRef.current.maxFeePerGas && now < gasPriceCacheRef.current.expiresAt) {
-      return gasPriceCacheRef.current.maxFeePerGas;
+    if (
+      gasPriceCacheRef.current.maxFeePerGas &&
+      gasPriceCacheRef.current.maxPriorityFeePerGas &&
+      now < gasPriceCacheRef.current.expiresAt
+    ) {
+      return {
+        maxFeePerGas: gasPriceCacheRef.current.maxFeePerGas,
+        maxPriorityFeePerGas: gasPriceCacheRef.current.maxPriorityFeePerGas,
+      };
     }
 
     const fees = await publicClient.estimateFeesPerGas();
     const maxFeePerGas = BigInt(fees.maxFeePerGas ?? fees.gasPrice ?? BigInt(0));
+    const maxPriorityFeePerGas = BigInt(fees.maxPriorityFeePerGas ?? BigInt(0));
     if (maxFeePerGas <= BigInt(0)) throw new Error('No se pudo estimar maxFeePerGas.');
 
-    gasPriceCacheRef.current = { maxFeePerGas, expiresAt: now + GAS_PRICE_TTL_MS };
-    return maxFeePerGas;
+    gasPriceCacheRef.current = {
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      expiresAt: now + GAS_PRICE_TTL_MS,
+    };
+    return { maxFeePerGas, maxPriorityFeePerGas };
   }, []);
 
   const actualizarSaldos = useCallback(async () => {
@@ -389,7 +406,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         if (montoSolicitado <= BigInt(0)) throw new Error('El monto debe ser mayor a 0.');
 
         const quote = await getCachedUsdcQuote();
-        const maxFeePerGas = await getCachedMaxFeePerGas();
+        const { maxFeePerGas, maxPriorityFeePerGas } = await getCachedFees();
         const estimatedGasUnits = ESTIMATED_USER_OP_GAS + BigInt(quote.postOpGas ?? BigInt(0));
         let gasCostUsdc =
           (estimatedGasUnits * maxFeePerGas * BigInt(quote.exchangeRate)) / (BigInt(10) ** BigInt(18));
@@ -436,10 +453,31 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
-        const txHash = await client.sendTransaction({
-          calls,
-          paymasterContext: { token: USDC_ADDRESS },
-        } as any);
+        let txHash: `0x${string}` | string;
+        const smartClient: any = client;
+        if (smartClient?.prepareUserOperationRequest && smartClient?.sendUserOperation) {
+          const userOp = await smartClient.prepareUserOperationRequest({
+            calls,
+            paymasterContext: { token: USDC_ADDRESS },
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+          });
+
+          const userOpHash = await smartClient.sendUserOperation({ userOperation: userOp });
+          let receipt = await smartClient.getUserOperationReceipt?.({ hash: userOpHash });
+          if (!receipt) {
+            await new Promise((resolve) => setTimeout(resolve, 3500));
+            receipt = await smartClient.getUserOperationReceipt?.({ hash: userOpHash });
+          }
+          txHash = receipt?.receipt?.transactionHash ?? userOpHash;
+        } else {
+          txHash = await client.sendTransaction({
+            calls,
+            paymasterContext: { token: USDC_ADDRESS },
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+          } as any);
+        }
 
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
         const tipo = rolSeleccionado === 'inversor' ? 'Inversion' : 'Repayment';
@@ -469,7 +507,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       client,
       smartWalletAddress,
       getCachedUsdcQuote,
-      getCachedMaxFeePerGas,
+      getCachedFees,
       rolSeleccionado,
       actualizarSaldos,
       registrarTransaccion,
