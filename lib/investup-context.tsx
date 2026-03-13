@@ -28,6 +28,20 @@ type UserWalletTarget = {
 
 type MovementType = 'investment' | 'repayment' | 'transfer';
 
+type ReceiptData = {
+  uuid: string;
+  type: MovementType;
+  amount: string;
+  currency: string;
+  status: string;
+  txHash: string;
+  createdAt: string;
+  senderName: string;
+  senderWallet: string;
+  receiverName: string;
+  receiverWallet: string;
+};
+
 type InvestUpContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -51,6 +65,8 @@ type InvestUpContextType = {
   enviarUSDC: (destino: string, monto: string) => Promise<void>;
   abrirCompra: () => Promise<void>;
   abrirRetiro: () => void;
+  lastReceipt: ReceiptData | null;
+  clearReceipt: () => void;
 };
 
 const SUPABASE_URL =
@@ -141,6 +157,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const [loadingTx, setLoadingTx] = useState(false);
   const [loadingWallets, setLoadingWallets] = useState(false);
   const [walletTargets, setWalletTargets] = useState<UserWalletTarget[]>([]);
+  const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
 
   const quoteCacheRef = useRef<{ expiresAt: number; quote: any | null }>({
     expiresAt: 0,
@@ -238,25 +255,52 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         };
         if (txUuid) payload.uuid = txUuid;
 
-        let insertError = (await supabase.from('transactions').insert(payload)).error;
+        const attemptInsert = async (data: Record<string, unknown>) =>
+          supabase
+            .from('transactions')
+            .insert(data)
+            .select('uuid,type,amount,currency,status,tx_hash,created_at')
+            .maybeSingle();
+
+        let { data, error: insertError } = await attemptInsert(payload);
 
         if (insertError?.message?.includes('invalid input value for enum transaction_status')) {
           const { status: _status, ...payloadWithoutStatus } = payload;
-          insertError = (await supabase.from('transactions').insert(payloadWithoutStatus)).error;
+          ({ data, error: insertError } = await attemptInsert(payloadWithoutStatus));
         }
 
         if (insertError?.message?.includes('null value in column \"status\"')) {
-          insertError = (
-            await supabase.from('transactions').insert({ ...payload, status: 'pending' })
-          ).error;
+          ({ data, error: insertError } = await attemptInsert({ ...payload, status: 'pending' }));
         }
 
         if (insertError) throw insertError;
+
+        const receiver = walletTargets.find(
+          (target) =>
+            target.wallet_address &&
+            target.wallet_address.toLowerCase() === toWallet.toLowerCase()
+        );
+        const senderName = userAlias || user.email?.address || 'Remitente';
+        const receiverName = receiver?.email ?? 'Destinatario';
+
+        setLastReceipt({
+          uuid: String(data?.uuid ?? txUuid ?? ''),
+          type: (data?.type as MovementType) ?? movementType,
+          amount: String(data?.amount ?? amountUsdc),
+          currency: String(data?.currency ?? 'USDC'),
+          status: String(data?.status ?? status),
+          txHash: String(data?.tx_hash ?? txHash),
+          createdAt: String(data?.created_at ?? new Date().toISOString()),
+          senderName,
+          senderWallet: smartWalletAddress,
+          receiverName,
+          receiverWallet: toWallet,
+        });
       } catch (error: any) {
         console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
       }
     },
-    [rolSeleccionado, smartWalletAddress, user?.id]
+    [rolSeleccionado, smartWalletAddress, user?.id, supabase, walletTargets, userAlias, user?.email]
   );
 
   const getCachedUsdcQuote = useCallback(async () => {
@@ -452,7 +496,6 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           movementType,
         });
 
-        alert(`Transaccion enviada: ${txHash}`);
         await actualizarSaldos();
       } catch (error: any) {
         const message = String(error?.message || error || '');
@@ -612,6 +655,8 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     enviarUSDC,
     abrirCompra,
     abrirRetiro,
+    lastReceipt,
+    clearReceipt: () => setLastReceipt(null),
   };
 
   return <InvestUpContext.Provider value={value}>{children}</InvestUpContext.Provider>;
