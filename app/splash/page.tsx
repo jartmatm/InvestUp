@@ -53,7 +53,7 @@ export default function SplashPage() {
           transition={{ delay: 1.5 }}
           className="text-sm text-white/85"
         >
-          Invirtiendo en el futuro
+          Democratizando la Inversión
         </motion.p>
       </div>
     </main>

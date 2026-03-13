@@ -219,9 +219,10 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     }) => {
       if (!user?.id || !smartWalletAddress) return;
       try {
-        const { error } = await supabase.from('transactions').insert({
+        const txUuid =
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : null;
+        const payload: Record<string, unknown> = {
           user_id: user.id,
-          uuid: txHash,
           type: movementType,
           amount: amountUsdc,
           currency: 'USDC',
@@ -234,7 +235,10 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
             from_wallet: smartWalletAddress,
             to_wallet: toWallet,
           },
-        });
+        };
+        if (txUuid) payload.uuid = txUuid;
+
+        const { error } = await supabase.from('transactions').insert(payload);
         if (error) throw error;
       } catch (error: any) {
         console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
