@@ -238,8 +238,20 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         };
         if (txUuid) payload.uuid = txUuid;
 
-        const { error } = await supabase.from('transactions').insert(payload);
-        if (error) throw error;
+        let insertError = (await supabase.from('transactions').insert(payload)).error;
+
+        if (insertError?.message?.includes('invalid input value for enum transaction_status')) {
+          const { status: _status, ...payloadWithoutStatus } = payload;
+          insertError = (await supabase.from('transactions').insert(payloadWithoutStatus)).error;
+        }
+
+        if (insertError?.message?.includes('null value in column \"status\"')) {
+          insertError = (
+            await supabase.from('transactions').insert({ ...payload, status: 'pending' })
+          ).error;
+        }
+
+        if (insertError) throw insertError;
       } catch (error: any) {
         console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
       }
