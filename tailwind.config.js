@@ -29,6 +29,16 @@ module.exports = {
         lg: "0.75rem",
         md: "0.5rem",
       },
+      keyframes: {
+        logoReveal: {
+          "0%": { opacity: "0", transform: "scale(0.85)" },
+          "50%": { opacity: "1", transform: "scale(1.05)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      },
+      animation: {
+        logoReveal: "logoReveal 2s ease-out",
+      },
     },
   },
   plugins: [],

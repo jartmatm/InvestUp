@@ -165,3 +165,21 @@ h4 {
     transform: translateY(0);
   }
 }
+
+.animated-gradient {
+  background: linear-gradient(130deg, #6c4cf1, #7a5af8, #4f2edb, #6c4cf1);
+  background-size: 400% 400%;
+  animation: gradientMove 10s ease infinite;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
