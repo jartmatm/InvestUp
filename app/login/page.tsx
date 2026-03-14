@@ -2,12 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import { useInvestUp } from '@/lib/investup-context';
-import Button from '@/components/Button';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, faseApp } = useInvestUp();
+  const { login } = usePrivy();
+  const { faseApp } = useInvestUp();
 
   useEffect(() => {
     if (faseApp === 'dashboard') router.replace('/home');
@@ -15,39 +16,36 @@ export default function LoginPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-10 text-gray-900">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col items-center justify-between">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="mb-8 rounded-2xl bg-primary/10 p-8 shadow-sm">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-16 w-16 text-primary"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="3 17 9 11 13 15 21 7" />
-              <polyline points="14 7 21 7 21 14" />
-            </svg>
-          </div>
-
-          <h1 className="text-4xl font-semibold tracking-tight text-gray-900">InvestUp</h1>
-          <p className="mt-3 text-sm text-gray-600">Uniendo emprendedores con Inversionistas</p>
-        </div>
-
-        <div className="w-full space-y-4">
-          <Button onClick={login} className="w-full py-3 text-base">
-            Entrar
-          </Button>
-
-          <p className="pt-3 text-center text-sm text-gray-500">
-            Powered by <span className="font-semibold">Privy</span>
-          </p>
+    <div className="flex h-screen w-screen flex-col justify-center bg-gradient-to-br from-[#EEF2FF] to-[#E9D5FF] px-8">
+      <div className="mb-8">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-gray-300">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="text-gray-700"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M3 7l9 6 9-6" />
+          </svg>
         </div>
       </div>
-    </main>
+
+      <h1 className="mb-3 text-3xl font-bold leading-tight text-gray-800">
+        Register with your <br /> email!
+      </h1>
+
+      <p className="mb-10 text-gray-500">Sign up effortlessly with just one step!</p>
+
+      <button
+        onClick={login}
+        className="w-full rounded-xl bg-gradient-to-r from-[#6C4CF1] to-[#7A5AF8] py-4 font-semibold text-white shadow-lg transition hover:opacity-90"
+      >
+        Continue
+      </button>
+    </div>
   );
 }
