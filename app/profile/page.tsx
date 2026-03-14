@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
@@ -25,6 +25,19 @@ type ProfileForm = {
 
 type Tab = 'details' | 'help';
 type CountryOption = { code: string; name: string; dialCode: string };
+
+type SectionProps = {
+  title: string;
+  children: ReactNode;
+};
+
+type SettingItemProps = {
+  label: string;
+  value?: string;
+  danger?: boolean;
+  active?: boolean;
+  onClick?: () => void;
+};
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
@@ -59,6 +72,55 @@ const mapDbRoleToFront = (role: string): 'inversor' | 'emprendedor' | null => {
   if (role === 'entrepreneur') return 'emprendedor';
   return null;
 };
+
+function IconChevronRight({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function Section({ title, children }: SectionProps) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+      <div className="divide-y divide-gray-200 overflow-hidden rounded-xl bg-white shadow-sm">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SettingItem({ label, value, danger, active, onClick }: SettingItemProps) {
+  const baseClasses = `flex w-full items-center justify-between px-4 py-4 text-left ${
+    danger ? 'text-red-500 font-semibold' : 'text-gray-800'
+  } ${active ? 'bg-gray-50' : ''}`;
+
+  const content = (
+    <>
+      <div>
+        <p className="text-sm">{label}</p>
+        {value ? <p className="text-xs text-gray-500">{value}</p> : null}
+      </div>
+      <IconChevronRight className="h-4 w-4 text-gray-400" />
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${baseClasses} transition hover:bg-gray-50`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={baseClasses}>{content}</div>;
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -174,6 +236,23 @@ export default function ProfilePage() {
     [availableColumns]
   );
 
+  const displayName = useMemo(() => {
+    const fullName = `${form.name} ${form.surname}`.trim();
+    if (fullName) return fullName;
+    const fromEmail = (form.email || user?.email?.address || '').split('@')[0];
+    return fromEmail || 'Usuario';
+  }, [form.name, form.surname, form.email, user?.email?.address]);
+
+  const displayEmail = useMemo(() => {
+    return form.email || user?.email?.address || 'Sin email';
+  }, [form.email, user?.email?.address]);
+
+  const roleBadge = useMemo(() => {
+    if (form.role === 'investor') return 'Inversionista';
+    if (form.role === 'entrepreneur') return 'Emprendedor';
+    return 'Perfil';
+  }, [form.role]);
+
   const updateForm = (key: keyof ProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -261,105 +340,134 @@ export default function ProfilePage() {
 
   return (
     <PageFrame title="Perfil" subtitle="Configuracion de cuenta">
-      <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-800 shadow-sm">
-        <div className="mb-5 flex items-center gap-4">
-          <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-primary/30 bg-slate-100">
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 overflow-hidden rounded-full bg-gray-200">
             {form.avatar_url ? (
               <img src={form.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-primary">
-                Sin foto
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-600">
+                {displayName.slice(0, 1).toUpperCase()}
               </div>
             )}
           </div>
-          <label className="cursor-pointer rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
-            Subir foto
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{displayName}</h2>
+            <p className="text-sm text-gray-500">{displayEmail}</p>
+            <span className="mt-1 inline-block rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-600">
+              {roleBadge}
+            </span>
+          </div>
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          <button
+        <Section title="Account">
+          <SettingItem
+            label="Personal Data"
             onClick={() => setActiveTab('details')}
-            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'details' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
-          >
-            My details
-          </button>
-          <button
-            onClick={() => setActiveTab('help')}
-            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'help' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
-          >
-            Help
-          </button>
-        </div>
+            active={activeTab === 'details'}
+          />
+          <SettingItem label="Social Media" />
+          <SettingItem label="Referral Code" />
+        </Section>
 
         {activeTab === 'details' ? (
-          <div className="space-y-3">
-            {loadingProfile ? <p className="text-sm text-slate-500">Cargando perfil...</p> : null}
-            <Input value={form.id} readOnly placeholder="ID" />
-            <Input
-              value={form.email}
-              onChange={(value) => updateForm('email', value)}
-              readOnly={!canEditEmail}
-              placeholder="Email"
-            />
-            <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
-            <Input
-              value={form.surname}
-              onChange={(value) => updateForm('surname', value)}
-              placeholder="Surname"
-            />
-            <select
-              value={form.country}
-              onChange={(event) => onCountryChange(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Country</option>
-              {COUNTRY_OPTIONS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.name} ({option.dialCode})
-                </option>
-              ))}
-            </select>
-            <Input
-              value={form.phone_number}
-              onChange={(value) => updateForm('phone_number', value)}
-              placeholder="Phone number"
-            />
-            <select
-              value={form.gender}
-              onChange={(event) => updateForm('gender', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="prefer no say">Prefer no say</option>
-            </select>
-            <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
-
-            <select
-              value={form.role}
-              onChange={(event) => updateForm('role', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="">Perfil</option>
-              <option value="investor">Perfil de inversionista</option>
-              <option value="entrepreneur">Perfil de emprendedor</option>
-            </select>
-
-            <div className="pt-1">
-              <Button onClick={saveProfile} disabled={saving || loadingProfile}>
-                {saving ? 'Guardando...' : 'Guardar cambios'}
-              </Button>
+          <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-800 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm font-semibold text-gray-900">Datos personales</p>
+              <label className="cursor-pointer rounded-full border border-purple-200 px-3 py-1 text-xs font-semibold text-purple-700 hover:bg-purple-50">
+                Subir foto
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
             </div>
-          </div>
-        ) : (
+
+            {loadingProfile ? <p className="text-sm text-slate-500">Cargando perfil...</p> : null}
+
+            <div className="space-y-3">
+              <Input value={form.id} readOnly placeholder="ID" />
+              <Input
+                value={form.email}
+                onChange={(value) => updateForm('email', value)}
+                readOnly={!canEditEmail}
+                placeholder="Email"
+              />
+              <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
+              <Input
+                value={form.surname}
+                onChange={(value) => updateForm('surname', value)}
+                placeholder="Surname"
+              />
+              <select
+                value={form.country}
+                onChange={(event) => onCountryChange(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Country</option>
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.name} ({option.dialCode})
+                  </option>
+                ))}
+              </select>
+              <Input
+                value={form.phone_number}
+                onChange={(value) => updateForm('phone_number', value)}
+                placeholder="Phone number"
+              />
+              <select
+                value={form.gender}
+                onChange={(event) => updateForm('gender', event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="prefer no say">Prefer no say</option>
+              </select>
+              <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
+
+              <select
+                value={form.role}
+                onChange={(event) => updateForm('role', event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="">Perfil</option>
+                <option value="investor">Perfil de inversionista</option>
+                <option value="entrepreneur">Perfil de emprendedor</option>
+              </select>
+
+              <div className="pt-1">
+                <Button onClick={saveProfile} disabled={saving || loadingProfile}>
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
+                </Button>
+              </div>
+            </div>
+
+            {status ? <p className="mt-3 text-xs text-slate-500">{status}</p> : null}
+          </section>
+        ) : null}
+
+        <Section title="Transaction">
+          <SettingItem label="Payment Method" />
+          <SettingItem label="Bank Account" />
+        </Section>
+
+        <Section title="Preference">
+          <SettingItem label="Setting" />
+          <SettingItem label="Language" value="English (USA)" />
+          <SettingItem label="Help Center" onClick={() => setActiveTab('help')} active={activeTab === 'help'} />
+          <SettingItem label="FAQ" />
+          <SettingItem label="Privacy Policy" />
+          <SettingItem label="Term & Condition" />
+          <SettingItem label="About App" />
+          <SettingItem label="Logout" danger onClick={logoutApp} />
+        </Section>
+
+        {activeTab === 'help' ? (
           <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
             <p className="font-semibold text-slate-800">Centro de ayuda</p>
             <p className="mt-2">
@@ -367,19 +475,8 @@ export default function ProfilePage() {
               del problema.
             </p>
           </div>
-        )}
-
-        {status ? <p className="mt-4 text-xs text-slate-500">{status}</p> : null}
-      </section>
-
-      <button
-        onClick={logoutApp}
-        className="mt-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-      >
-        Cerrar sesion
-      </button>
+        ) : null}
+      </div>
     </PageFrame>
   );
 }
-
-

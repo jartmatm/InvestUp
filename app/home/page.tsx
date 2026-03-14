@@ -132,7 +132,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-100 px-5 pb-28 pt-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">Halo! Good Morning</p>
+          <p className="text-sm text-gray-500">Hola! Bienvenido</p>
           <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
         </div>
         <div className="flex items-center gap-2">
@@ -161,9 +161,9 @@ export default function HomePage() {
       <div className="mb-6 rounded-2xl bg-purple-600 p-6 text-white shadow-lg">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm opacity-80">Total Balance</p>
+            <p className="text-sm opacity-80">Disponible</p>
             <h2 className="mt-1 text-3xl font-bold">
-              {showBalance ? `$${balanceUSDC}` : '••••••'}
+              {showBalance ? `$${balanceUSDC}` : 'XXXX.XX'}
             </h2>
           </div>
           <button
@@ -179,7 +179,7 @@ export default function HomePage() {
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
           <span>Recaudado: --</span>
           <span className="opacity-60">•</span>
-          <span>Tasa vigente: --</span>
+          <span>Tasa Interés: --</span>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ export default function HomePage() {
           historial.length > 0 ? (
             historial.slice(0, 3).map((item, index) => (
               <div key={`${item}-${index}`} className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="text-sm text-gray-500">Inversion</p>
+                <p className="text-sm text-gray-500">Inversión</p>
                 <p className="mt-1 text-base font-semibold text-gray-900">{item}</p>
               </div>
             ))
