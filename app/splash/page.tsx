@@ -72,11 +72,6 @@ export default function SplashPage() {
             d="M114 801.5C114 800.119 115.119 799 116.5 799H259.5C260.881 799 262 800.119 262 801.5C262 802.881 260.881 804 259.5 804H116.5C115.119 804 114 802.881 114 801.5Z"
             fill="white"
           />
-          <path d="M170.998 371H213.162L182.163 416.946H140L170.998 371Z" fill="white" />
-          <path
-            d="M172.845 421.204L160.838 439H205.002L236 393.054H203.405L184.413 421.204H172.845Z"
-            fill="white"
-          />
         </g>
         <defs>
           <clipPath id="clip0_216_3949">
@@ -86,7 +81,7 @@ export default function SplashPage() {
       </svg>
 
       <div className="relative z-10 flex h-full items-center justify-center">
-        <img src="/logo.png" alt="InvestUp" className="h-[78px] w-[100px] object-contain" />
+        <img src="/logo.png" alt="InvestUp" className="h-[156px] w-[200px] object-contain" />
       </div>
     </main>
   );
