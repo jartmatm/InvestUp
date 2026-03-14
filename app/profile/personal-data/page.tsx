@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -399,3 +399,4 @@ export default function PersonalDataPage() {
     </PageFrame>
   );
 }
+

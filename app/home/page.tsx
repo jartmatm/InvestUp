@@ -1,4 +1,4 @@
-'use client';
+ï»¿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -111,7 +111,7 @@ export default function HomePage() {
   const sectionTitle = rolSeleccionado === 'emprendedor' ? 'Mis publicaciones' : 'Inversiones';
   const addLabel =
     rolSeleccionado === 'emprendedor'
-      ? 'Agregar nueva publicación'
+      ? 'Agregar nueva publicaciÃ³n'
       : 'Invertir en nuevo emprendimiento';
 
   const actions: ActionItem[] = [
@@ -186,8 +186,8 @@ export default function HomePage() {
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
           <span>Recaudado: --</span>
-          <span className="opacity-60">•</span>
-          <span>Tasa Interés: --</span>
+          <span className="opacity-60">â€¢</span>
+          <span>Tasa InterÃ©s: --</span>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export default function HomePage() {
           historial.length > 0 ? (
             historial.slice(0, 3).map((item, index) => (
               <div key={`${item}-${index}`} className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="text-sm text-gray-500">Inversión</p>
+                <p className="text-sm text-gray-500">InversiÃ³n</p>
                 <p className="mt-1 text-base font-semibold text-gray-900">{item}</p>
               </div>
             ))
@@ -261,3 +261,4 @@ export default function HomePage() {
     </div>
   );
 }
+

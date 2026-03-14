@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
@@ -96,3 +96,4 @@ export function useUserProfileSummary(): ProfileSummary {
 
   return { avatarUrl, displayName, email, loading };
 }
+
