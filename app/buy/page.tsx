@@ -17,7 +17,7 @@ export default function BuyPage() {
 
   return (
     <PageFrame title="Comprar USDC" subtitle="Conecta rampa fiat">
-      <div className="rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Integra aqui tu widget (Moonpay o proveedor equivalente). Por ahora usamos el flujo de fund wallet de Privy.
         </p>
@@ -28,3 +28,4 @@ export default function BuyPage() {
     </PageFrame>
   );
 }
+

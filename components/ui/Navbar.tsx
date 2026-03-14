@@ -1,4 +1,4 @@
-'use client';
+import React from "react";
 
 type NavbarProps = {
   title: string;
@@ -6,7 +6,7 @@ type NavbarProps = {
   rightSlot?: React.ReactNode;
 };
 
-export default function Navbar({ title, subtitle, rightSlot }: NavbarProps) {
+export function Navbar({ title, subtitle, rightSlot }: NavbarProps) {
   return (
     <header className="mb-5 flex items-start justify-between">
       <div>

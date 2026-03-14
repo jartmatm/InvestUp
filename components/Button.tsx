@@ -3,7 +3,8 @@ type ButtonProps = {
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
-  type?: 'button' | 'submit';
+  type?: "button" | "submit";
+  variant?: "primary" | "secondary" | "ghost";
 };
 
 export default function Button({
@@ -11,14 +12,23 @@ export default function Button({
   onClick,
   disabled,
   className,
-  type = 'button',
+  type = "button",
+  variant = "primary",
 }: ButtonProps) {
+  const base =
+    "w-full px-4 py-2 rounded-lg font-medium transition active:scale-[0.98] text-sm disabled:cursor-not-allowed disabled:opacity-50";
+  const variants = {
+    primary: "bg-primary text-white hover:bg-primary-light",
+    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300",
+    ghost: "bg-transparent text-gray-700 hover:bg-gray-100",
+  };
+
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full rounded-full bg-white px-6 py-3 text-sm font-semibold text-violet-700 shadow-xl shadow-violet-800/20 transition hover:bg-white/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 ${className ?? ''}`}
+      className={`${base} ${variants[variant]} ${className ?? ""}`}
     >
       {children}
     </button>

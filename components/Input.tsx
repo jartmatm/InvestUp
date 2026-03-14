@@ -9,7 +9,7 @@ type InputProps = {
 
 export default function Input({
   placeholder,
-  type = 'text',
+  type = "text",
   value,
   onChange,
   className,
@@ -22,7 +22,7 @@ export default function Input({
       readOnly={readOnly}
       onChange={(event) => onChange?.(event.target.value)}
       placeholder={placeholder}
-      className={`w-full rounded-2xl border border-white/45 bg-white/92 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-white focus:bg-white ${className ?? ''}`}
+      className={`w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-primary/30 ${className ?? ""}`}
     />
   );
 }

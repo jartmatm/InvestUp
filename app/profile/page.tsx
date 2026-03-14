@@ -261,18 +261,18 @@ export default function ProfilePage() {
 
   return (
     <PageFrame title="Perfil" subtitle="Configuracion de cuenta">
-      <section className="rounded-3xl border border-white/35 bg-white/90 p-5 text-slate-800 shadow-xl shadow-violet-800/10">
+      <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-800 shadow-sm">
         <div className="mb-5 flex items-center gap-4">
-          <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-violet-300 bg-slate-100">
+          <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-primary/30 bg-slate-100">
             {form.avatar_url ? (
               <img src={form.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-violet-500">
+              <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-primary">
                 Sin foto
               </div>
             )}
           </div>
-          <label className="cursor-pointer rounded-full border border-violet-200 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50">
+          <label className="cursor-pointer rounded-full border border-primary/30 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
             Subir foto
             <input
               type="file"
@@ -286,13 +286,13 @@ export default function ProfilePage() {
         <div className="mb-4 grid grid-cols-2 gap-2">
           <button
             onClick={() => setActiveTab('details')}
-            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'details' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'details' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
           >
             My details
           </button>
           <button
             onClick={() => setActiveTab('help')}
-            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'help' ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+            className={`rounded-full px-3 py-2 text-sm font-semibold ${activeTab === 'help' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'}`}
           >
             Help
           </button>
@@ -317,7 +317,7 @@ export default function ProfilePage() {
             <select
               value={form.country}
               onChange={(event) => onCountryChange(event.target.value)}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Country</option>
               {COUNTRY_OPTIONS.map((option) => (
@@ -334,7 +334,7 @@ export default function ProfilePage() {
             <select
               value={form.gender}
               onChange={(event) => updateForm('gender', event.target.value)}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Gender</option>
               <option value="male">Male</option>
@@ -346,7 +346,7 @@ export default function ProfilePage() {
             <select
               value={form.role}
               onChange={(event) => updateForm('role', event.target.value)}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Perfil</option>
               <option value="investor">Perfil de inversionista</option>
@@ -374,10 +374,12 @@ export default function ProfilePage() {
 
       <button
         onClick={logoutApp}
-        className="mt-4 w-full rounded-full border border-white/45 bg-white/10 p-3 text-sm font-semibold text-white transition hover:bg-white/18"
+        className="mt-4 w-full rounded-lg border border-gray-300 bg-white p-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
       >
         Cerrar sesion
       </button>
     </PageFrame>
   );
 }
+
+

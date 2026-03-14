@@ -127,7 +127,7 @@ export default function TransactionReceipt() {
         <div className="mt-6 grid grid-cols-3 gap-2">
           <button
             onClick={onDownload}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-violet-700"
+            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"
           >
             Descargar
           </button>

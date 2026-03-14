@@ -16,10 +16,10 @@ export default function RegisterPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-violet-700 via-violet-600 to-teal-400 px-6 py-10 text-white">
-      <div className="mx-auto w-full max-w-md rounded-3xl border border-white/35 bg-white/18 p-6 shadow-2xl shadow-violet-800/20 backdrop-blur-xl">
-        <h1 className="mb-1 text-3xl font-bold tracking-tight">Crear cuenta</h1>
-        <p className="mb-6 text-sm text-white/85">Empeza a invertir en minutos.</p>
+    <main className="min-h-screen bg-gray-100 px-6 py-10 text-gray-900">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Crear cuenta</h1>
+        <p className="mb-6 text-sm text-gray-500">Empeza a invertir en minutos.</p>
         <div className="space-y-4">
           <Input placeholder="Correo electronico" />
           <Input placeholder="Contrasena" type="password" />
@@ -30,7 +30,7 @@ export default function RegisterPage() {
         </div>
         <button
           onClick={() => router.push('/login')}
-          className="mt-4 w-full rounded-full border border-white/50 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+          className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
         >
           Ya tengo cuenta
         </button>

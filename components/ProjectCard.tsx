@@ -33,13 +33,13 @@ export default function ProjectCard({
 }: ProjectCardProps) {
   const width = `${Math.max(0, Math.min(100, progress))}%`;
   return (
-    <article className="rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/12">
+    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       {coverImage ? (
-        <img src={coverImage} alt={title} className="mb-3 h-40 w-full rounded-2xl object-cover" />
+        <img src={coverImage} alt={title} className="mb-3 h-40 w-full rounded-lg object-cover" />
       ) : null}
-      <h3 className="font-semibold text-slate-900">{title}</h3>
-      <p className="mt-1 text-sm text-slate-600">{description}</p>
-      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+      <h3 className="font-semibold text-gray-900">{title}</h3>
+      <p className="mt-1 text-sm text-gray-500">{description}</p>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
         {sector ? <span>Sector: {sector}</span> : null}
         {city || country ? <span>{[city, country].filter(Boolean).join(', ')}</span> : null}
         {amountRequested != null ? (
@@ -53,8 +53,8 @@ export default function ProjectCard({
         {interestRateEa != null ? <span>Interes {interestRateEa}% E.A.</span> : null}
         {publicationEndDate ? <span>Publica hasta {publicationEndDate}</span> : null}
       </div>
-      <div className="mt-4 h-2 rounded-full bg-slate-200">
-        <div className="h-2 rounded-full bg-gradient-to-r from-violet-600 to-teal-400" style={{ width }} />
+      <div className="mt-4 h-2 rounded-full bg-gray-200">
+        <div className="h-2 rounded-full bg-primary" style={{ width }} />
       </div>
     </article>
   );

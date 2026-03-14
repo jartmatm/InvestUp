@@ -17,33 +17,35 @@ export default function OnboardingPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-violet-700 via-violet-600 to-teal-400 px-5 py-8 text-white">
-      <section className="mx-auto w-full max-w-xl rounded-3xl border border-white/35 bg-white/18 p-6 shadow-2xl shadow-violet-800/20 backdrop-blur-xl">
-        <h1 className="text-3xl font-bold tracking-tight">Informacion basica</h1>
-        <p className="mt-1 text-sm text-white/85">Selecciona tu perfil *Puedes cambiarlo mas adelante</p>
+    <main className="min-h-screen bg-gray-100 px-5 py-8 text-gray-900">
+      <section className="mx-auto w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold tracking-tight">Informacion basica</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Selecciona tu perfil *Puedes cambiarlo mas adelante
+        </p>
 
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             onClick={() => setRol('inversor')}
-            className={`rounded-2xl border p-4 text-left transition ${rol === 'inversor' ? 'border-white bg-white text-violet-700 shadow-lg' : 'border-white/45 bg-white/10 text-white hover:bg-white/18'}`}
+            className={`rounded-lg border p-4 text-left transition ${rol === 'inversor' ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
           >
             <p className="text-sm font-semibold">Inversor</p>
-            <p className={`text-xs ${rol === 'inversor' ? 'text-violet-600/80' : 'text-white/75'}`}>
+            <p className={`text-xs ${rol === 'inversor' ? 'text-primary/80' : 'text-gray-500'}`}>
               Invertir en Emprendimientos
             </p>
           </button>
           <button
             onClick={() => setRol('emprendedor')}
-            className={`rounded-2xl border p-4 text-left transition ${rol === 'emprendedor' ? 'border-white bg-white text-violet-700 shadow-lg' : 'border-white/45 bg-white/10 text-white hover:bg-white/18'}`}
+            className={`rounded-lg border p-4 text-left transition ${rol === 'emprendedor' ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
           >
             <p className="text-sm font-semibold">Emprendedor</p>
-            <p className={`text-xs ${rol === 'emprendedor' ? 'text-violet-600/80' : 'text-white/75'}`}>
+            <p className={`text-xs ${rol === 'emprendedor' ? 'text-primary/80' : 'text-gray-500'}`}>
               Enviar pagos a Inversionistas
             </p>
           </button>
         </div>
 
-        <label className="mt-5 flex items-center gap-2 text-sm text-white/90">
+        <label className="mt-5 flex items-center gap-2 text-sm text-gray-600">
           <input
             type="checkbox"
             checked={aceptaTerminos}

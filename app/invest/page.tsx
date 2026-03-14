@@ -40,12 +40,12 @@ export default function InvestPage() {
 
   return (
     <PageFrame title={title} subtitle={helper}>
-      <section className="rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold text-slate-900">Wallets objetivo ({transferLabel})</h2>
           <button
             onClick={cargarWalletsObjetivo}
-            className="rounded-full border border-violet-200 px-3 py-1 text-xs font-semibold text-violet-700"
+            className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary"
           >
             Refrescar
           </button>
@@ -61,7 +61,7 @@ export default function InvestPage() {
             <button
               key={target.id}
               onClick={() => setWalletDestino(target.wallet_address ?? '')}
-              className={`w-full rounded-2xl border p-3 text-left transition ${walletDestino === target.wallet_address ? 'border-violet-500 bg-violet-50' : 'border-slate-200 bg-white hover:border-violet-300'}`}
+              className={`w-full rounded-2xl border p-3 text-left transition ${walletDestino === target.wallet_address ? 'border-primary bg-primary/10' : 'border-gray-200 bg-white hover:border-primary/40'}`}
             >
               <p className="text-sm font-semibold text-slate-800">{target.email ?? target.id}</p>
               <p className="break-all text-xs text-slate-500">{target.wallet_address}</p>
@@ -70,7 +70,7 @@ export default function InvestPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="mb-3 font-semibold text-slate-900">{transferenciaTitulo}</h2>
         <Input placeholder="Wallet destino 0x..." value={walletDestino} onChange={setWalletDestino} />
         <Input
@@ -93,7 +93,7 @@ export default function InvestPage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="mb-2 font-semibold text-slate-900">Actividad reciente</h2>
         {historial.length === 0 ? (
           <p className="text-sm text-slate-500">No hay operaciones en esta sesion.</p>
@@ -110,3 +110,4 @@ export default function InvestPage() {
     </PageFrame>
   );
 }
+

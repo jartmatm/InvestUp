@@ -17,7 +17,7 @@ export default function WithdrawPage() {
 
   return (
     <PageFrame title="Retirar fondos" subtitle="Salida fiat desde USDC">
-      <div className="rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <p className="text-sm text-slate-600">Acceso rapido a widget de retiro para tu wallet actual.</p>
         <div className="mt-4">
           <Button onClick={abrirRetiro}>Abrir retiro</Button>
@@ -26,3 +26,4 @@ export default function WithdrawPage() {
     </PageFrame>
   );
 }
+

@@ -470,12 +470,12 @@ export default function PortfolioPage() {
 
   return (
     <PageFrame title="Portafolio emprendedor" subtitle="Publica tu emprendimiento o solicitud de credito">
-      <section className="rounded-3xl border border-white/35 bg-white/90 p-4 shadow-xl shadow-violet-800/10">
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-900">Publicar proyecto</h2>
           <button
             onClick={startNewPublication}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-600 text-xl font-bold text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-sm transition hover:bg-primary-light"
             aria-label="Abrir formulario de proyecto"
           >
             +
@@ -497,7 +497,7 @@ export default function PortfolioPage() {
             <select
               value={form.sector}
               onChange={(event) => onChangeForm('sector', event.target.value)}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Sector economico</option>
               {SECTOR_OPTIONS.map((option) => (
@@ -527,7 +527,7 @@ export default function PortfolioPage() {
                 const code = event.target.value;
                 setForm((prev) => ({ ...prev, country: code, city: '' }));
               }}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
             >
               <option value="">Pais</option>
               {COUNTRY_OPTIONS.map((option) => (
@@ -540,7 +540,7 @@ export default function PortfolioPage() {
               value={form.city}
               onChange={(event) => onChangeForm('city', event.target.value)}
               disabled={!form.country}
-              className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none disabled:opacity-60"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
             >
               <option value="">{form.country ? 'Ciudad' : 'Selecciona pais primero'}</option>
               {cityOptions.map((city) => (
@@ -581,7 +581,7 @@ export default function PortfolioPage() {
                 <button
                   onClick={improveWithAI}
                   disabled={improvingAI}
-                  className="rounded-full border border-violet-200 px-3 py-1 text-xs font-semibold text-violet-700 disabled:opacity-60"
+                  className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-60"
                 >
                   {improvingAI ? 'Mejorando...' : 'Mejorar con IA'}
                 </button>
@@ -610,7 +610,7 @@ export default function PortfolioPage() {
               <select
                 value={form.currency}
                 onChange={(event) => onChangeForm('currency', event.target.value)}
-                className="w-full rounded-2xl border border-white/45 bg-white p-3 text-sm text-slate-900 outline-none"
+                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <option value="USD">USD</option>
                 <option value="USDC">USDC</option>
@@ -646,10 +646,10 @@ export default function PortfolioPage() {
       </section>
 
       <section className="mt-4 space-y-3">
-        <h2 className="px-1 text-sm font-semibold text-white">Mis proyectos publicados</h2>
-        {loadingProjects ? <p className="px-1 text-sm text-white/85">Cargando proyectos...</p> : null}
+        <h2 className="px-1 text-sm font-semibold text-gray-900">Mis proyectos publicados</h2>
+        {loadingProjects ? <p className="px-1 text-sm text-gray-500">Cargando proyectos...</p> : null}
         {!loadingProjects && myProjects.length === 0 ? (
-          <div className="rounded-3xl border border-white/35 bg-white/90 p-4 text-sm text-slate-600 shadow-xl shadow-violet-800/10">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 shadow-sm">
             Aun no has publicado proyectos.
           </div>
         ) : null}
@@ -671,7 +671,7 @@ export default function PortfolioPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => startEditPublication(project)}
-                className="flex-1 rounded-full border border-white/45 bg-white/80 px-4 py-2 text-sm font-semibold text-violet-700"
+                className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-primary hover:bg-gray-100"
               >
                 Editar
               </button>
@@ -686,7 +686,9 @@ export default function PortfolioPage() {
         ))}
       </section>
 
-      {status ? <p className="mt-4 text-center text-xs text-white/85">{status}</p> : null}
+      {status ? <p className="mt-4 text-center text-xs text-gray-500">{status}</p> : null}
     </PageFrame>
   );
 }
+
+

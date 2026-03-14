@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInvestUp } from '@/lib/investup-context';
+import Button from '@/components/Button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,13 +15,13 @@ export default function LoginPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-violet-600 via-violet-500 to-teal-400 px-6 py-10 text-white">
+    <main className="min-h-screen bg-gray-100 px-6 py-10 text-gray-900">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md flex-col items-center justify-between">
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="mb-8 rounded-3xl bg-white p-8 shadow-2xl shadow-violet-700/30">
+          <div className="mb-8 rounded-2xl bg-primary/10 p-8 shadow-sm">
             <svg
               viewBox="0 0 24 24"
-              className="h-16 w-16 text-violet-600"
+              className="h-16 w-16 text-primary"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
@@ -33,19 +34,16 @@ export default function LoginPage() {
             </svg>
           </div>
 
-          <h1 className="text-5xl font-bold tracking-tight">InvestUp</h1>
-          <p className="mt-3 text-lg text-white/90">Uniendo emprendedores con Inversionistas</p>
+          <h1 className="text-4xl font-semibold tracking-tight text-gray-900">InvestUp</h1>
+          <p className="mt-3 text-sm text-gray-600">Uniendo emprendedores con Inversionistas</p>
         </div>
 
         <div className="w-full space-y-4">
-          <button
-            onClick={login}
-            className="w-full rounded-full bg-white px-6 py-4 text-lg font-semibold text-violet-600 shadow-xl shadow-violet-700/25 transition hover:bg-white/90"
-          >
+          <Button onClick={login} className="w-full py-3 text-base">
             Entrar
-          </button>
+          </Button>
 
-          <p className="pt-3 text-center text-sm text-white/90">
+          <p className="pt-3 text-center text-sm text-gray-500">
             Powered by <span className="font-semibold">Privy</span>
           </p>
         </div>

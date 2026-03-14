@@ -96,12 +96,12 @@ export default function FeedPage() {
 
   return (
     <PageFrame title="Emprendimientos" subtitle="Proyectos publicados por emprendedores">
-      {loading ? <p className="text-sm text-white/85">Cargando oportunidades...</p> : null}
-      {status ? <p className="text-sm text-white/85">{status}</p> : null}
+      {loading ? <p className="text-sm text-gray-500">Cargando oportunidades...</p> : null}
+      {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
       <div className="space-y-4">
         {!loading && projects.length === 0 ? (
-          <div className="rounded-3xl border border-white/35 bg-white/90 p-4 text-sm text-slate-600 shadow-xl shadow-violet-800/10">
+          <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 shadow-sm">
             Aun no hay proyectos publicados.
           </div>
         ) : null}
