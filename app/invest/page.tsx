@@ -62,11 +62,26 @@ export default function InvestPage() {
   } = useInvestUp();
 
   const [walletDestino, setWalletDestino] = useState('');
-  const [monto, setMonto] = useState('');
+  const [monto, setMonto] = useState('200.00');
   const [nota, setNota] = useState('');
 
   const suggestions = [100, 200, 250, 300, 350, 400];
   const amountNumber = Number(monto);
+  const formatAmount = (value: string) => {
+    if (!value) return '';
+    const sanitized = value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    const normalized = parts.length > 1 ? `${parts[0]}.${parts.slice(1).join('')}` : sanitized;
+    const numberValue = Number(normalized);
+    if (Number.isNaN(numberValue)) return '';
+    return numberValue.toFixed(2);
+  };
+  const handleAmountChange = (value: string) => {
+    const sanitized = value.replace(/[^0-9.]/g, '');
+    const parts = sanitized.split('.');
+    const normalized = parts.length > 1 ? `${parts[0]}.${parts.slice(1).join('')}` : sanitized;
+    setMonto(normalized);
+  };
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -101,6 +116,15 @@ export default function InvestPage() {
               No hay wallets disponibles en Supabase para este perfil.
             </p>
           ) : null}
+          <div className="px-4 pb-4 pt-4">
+            <input
+              type="text"
+              value={walletDestino}
+              onChange={(event) => setWalletDestino(event.target.value)}
+              placeholder="Nueva direccion 0x..."
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-200"
+            />
+          </div>
           <div className="divide-y divide-gray-200">
             {walletTargets.map((target) => {
               const isActive = walletDestino === target.wallet_address;
@@ -142,17 +166,20 @@ export default function InvestPage() {
           />
         </Section>
 
-        <Section title="Amount">
-          <div className="px-4 pb-4">
-            <input
-              type="number"
-              value={monto}
-              onChange={(event) => setMonto(event.target.value)}
-              className="w-full bg-transparent text-3xl font-bold outline-none"
-              placeholder="0"
-            />
-          </div>
-        </Section>
+      <Section title="Amount">
+        <div className="flex items-center gap-2 px-4 pb-4">
+          <span className="text-sm font-semibold text-gray-500">USD</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={monto}
+            onChange={(event) => handleAmountChange(event.target.value)}
+            onBlur={() => setMonto(formatAmount(monto))}
+            className="w-full bg-transparent text-3xl font-bold outline-none"
+            placeholder="0.00"
+          />
+        </div>
+      </Section>
 
         <div>
           <h3 className="mb-2 mt-2 text-sm font-medium text-gray-500">Suggestion Amount</h3>
@@ -161,7 +188,7 @@ export default function InvestPage() {
               <button
                 key={s}
                 type="button"
-                onClick={() => setMonto(String(s))}
+                onClick={() => setMonto(s.toFixed(2))}
                 className={`rounded-xl border py-3 text-center font-semibold ${
                   amountNumber === s
                     ? 'border-purple-600 bg-purple-600 text-white'

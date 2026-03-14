@@ -213,6 +213,9 @@ export default function PersonalDataPage() {
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
       updateForm('avatar_url', result);
+      if (typeof window !== 'undefined' && result) {
+        window.localStorage.setItem('investup_avatar_url', result);
+      }
     };
     reader.readAsDataURL(file);
   };

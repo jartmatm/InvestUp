@@ -98,6 +98,7 @@ export default function HomePage() {
     balanceUSDC,
     historial,
     abrirCompra,
+    abrirRetiro,
   } = useInvestUp();
   const { avatarUrl, displayName: profileName } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
@@ -115,9 +116,9 @@ export default function HomePage() {
       : 'Invertir en nuevo emprendimiento';
 
   const actions: ActionItem[] = [
-    { label: 'Comprar', icon: <IconPlus />, onClick: abrirCompra },
+    { label: 'Recargar', icon: <IconPlus />, onClick: abrirCompra },
     { label: 'Enviar', icon: <IconSend />, onClick: () => router.push('/invest') },
-    { label: 'Invertir', icon: <IconDownload />, onClick: () => router.push('/feed') },
+    { label: 'Retirar', icon: <IconDownload />, onClick: abrirRetiro },
     { label: 'Historial', icon: <IconClock />, onClick: () => router.push('/portfolio') },
   ];
 

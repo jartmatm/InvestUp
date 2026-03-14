@@ -18,7 +18,7 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 export function useUserProfileSummary(): ProfileSummary {
-  const { user, getAccessToken } = usePrivy();
+  const { user, getAccessToken, ready, authenticated } = usePrivy();
   const [avatarUrl, setAvatarUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(user?.email?.address ?? '');
@@ -62,8 +62,19 @@ export function useUserProfileSummary(): ProfileSummary {
   }, [getAccessToken]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const cachedAvatar = window.localStorage.getItem('investup_avatar_url') ?? '';
+    const cachedName = window.localStorage.getItem('investup_display_name') ?? '';
+    const cachedEmail = window.localStorage.getItem('investup_email') ?? '';
+
+    if (cachedAvatar) setAvatarUrl(cachedAvatar);
+    if (cachedName) setDisplayName(cachedName);
+    if (cachedEmail) setEmail(cachedEmail);
+  }, []);
+
+  useEffect(() => {
     const loadProfile = async () => {
-      if (!user?.id) {
+      if (!ready || !authenticated || !user?.id) {
         setLoading(false);
         return;
       }
@@ -85,14 +96,29 @@ export function useUserProfileSummary(): ProfileSummary {
       const fullName = `${nameValue} ${surnameValue}`.trim();
       const fallbackName = emailValue ? emailValue.split('@')[0] : 'Usuario';
 
+      const resolvedName = fullName || fallbackName;
+      const resolvedAvatar = (data?.avatar_url as string | null) ?? profileData?.avatar_url ?? '';
+
       setEmail(emailValue);
-      setDisplayName(fullName || fallbackName);
-      setAvatarUrl((data?.avatar_url as string | null) ?? profileData?.avatar_url ?? '');
+      setDisplayName(resolvedName);
+      setAvatarUrl(resolvedAvatar);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('investup_display_name', resolvedName);
+        window.localStorage.setItem('investup_email', emailValue);
+        if (resolvedAvatar) {
+          window.localStorage.setItem('investup_avatar_url', resolvedAvatar);
+        }
+      }
       setLoading(false);
     };
 
     loadProfile();
-  }, [user?.id, user?.email?.address]);
+    if (typeof window === 'undefined') return;
+    const handleFocus = () => loadProfile();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [authenticated, ready, user?.id, user?.email?.address, supabase]);
 
   return { avatarUrl, displayName, email, loading };
 }

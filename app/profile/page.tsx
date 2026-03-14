@@ -72,6 +72,17 @@ export default function ProfilePage() {
   const { faseApp, logoutApp } = useInvestUp();
   const { avatarUrl, displayName } = useUserProfileSummary();
   const safeName = displayName || 'Usuario';
+  const avatarNode = (
+    <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-200">
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-base font-semibold text-gray-600">
+          {safeName.slice(0, 1).toUpperCase()}
+        </div>
+      )}
+    </div>
+  );
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -79,20 +90,8 @@ export default function ProfilePage() {
   }, [faseApp, router]);
 
   return (
-    <PageFrame title="Perfil" subtitle="Configuracion de cuenta">
+    <PageFrame title="Perfil" subtitle="Configuracion de cuenta" topSlot={avatarNode}>
       <div className="space-y-6">
-        <div className="flex flex-col items-center">
-          <div className="h-20 w-20 overflow-hidden rounded-full bg-gray-200">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-base font-semibold text-gray-600">
-                {safeName.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-          </div>
-        </div>
-
         <Section title="Account">
           <SettingItem label="Personal Data" onClick={() => router.push('/profile/personal-data')} />
           <SettingItem label="Social Media" />
