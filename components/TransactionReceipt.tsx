@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState } from 'react';
 import { useInvestUp } from '@/lib/investup-context';
@@ -18,6 +18,12 @@ const mapType = (type: string) => {
   return type;
 };
 
+const splitValue = (value: string) => {
+  if (!value) return ['-'];
+  if (value.length <= 32) return [value];
+  return value.match(/.{1,32}/g) ?? [value];
+};
+
 export default function TransactionReceipt() {
   const { lastReceipt, clearReceipt } = useInvestUp();
   const [shareMessage, setShareMessage] = useState('');
@@ -31,37 +37,114 @@ export default function TransactionReceipt() {
 
   if (!lastReceipt) return null;
 
-  const receiptText = [
-    'Comprobante de pago - InvestUp',
-    `UUID: ${lastReceipt.uuid}`,
-    `Remitente: ${lastReceipt.senderName} (${lastReceipt.senderWallet})`,
-    `Destinatario: ${lastReceipt.receiverName} (${lastReceipt.receiverWallet})`,
-    `Tipo de transaccion: ${mapType(lastReceipt.type)}`,
-    `Monto: ${lastReceipt.amount} ${lastReceipt.currency}`,
-    `Estado: ${mapStatus(lastReceipt.status)}`,
-    `Tx Hash: ${lastReceipt.txHash}`,
-    `Fecha y Hora: ${formattedDate}`,
-  ].join('\n');
+  const createReceiptBlob = async (): Promise<Blob | null> => {
+    const width = 1080;
+    const height = 1600;
+    const padding = 80;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
 
-  const onDownload = () => {
-    const blob = new Blob([receiptText], { type: 'text/plain;charset=utf-8' });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.fillStyle = '#4f46e5';
+    ctx.fillRect(0, 0, width, 140);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 44px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.fillText('InvestUp', padding, 92);
+
+    let y = 210;
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 42px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.fillText('Comprobante de pago', padding, y);
+    y += 44;
+
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '24px system-ui, -apple-system, Segoe UI, sans-serif';
+    ctx.fillText(`Fecha: ${formattedDate}`, padding, y);
+    y += 46;
+
+    const sections = [
+      { label: 'UUID', values: [lastReceipt.uuid || 'Pendiente'] },
+      {
+        label: 'Remitente',
+        values: [lastReceipt.senderName, lastReceipt.senderWallet],
+      },
+      {
+        label: 'Destinatario',
+        values: [lastReceipt.receiverName, lastReceipt.receiverWallet],
+      },
+      { label: 'Tipo de transaccion', values: [mapType(lastReceipt.type)] },
+      {
+        label: 'Monto',
+        values: [`${lastReceipt.amount} ${lastReceipt.currency}`],
+      },
+      { label: 'Estado', values: [mapStatus(lastReceipt.status)] },
+      { label: 'Tx Hash', values: [lastReceipt.txHash] },
+    ];
+
+    const drawSection = (label: string, values: string[]) => {
+      y += 18;
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '20px system-ui, -apple-system, Segoe UI, sans-serif';
+      ctx.fillText(label.toUpperCase(), padding, y);
+      y += 28;
+
+      ctx.fillStyle = '#111827';
+      ctx.font = '28px system-ui, -apple-system, Segoe UI, sans-serif';
+      values.forEach((value) => {
+        splitValue(value || '').forEach((line) => {
+          ctx.fillText(line, padding, y);
+          y += 34;
+        });
+      });
+      y += 12;
+    };
+
+    sections.forEach((section) => drawSection(section.label, section.values));
+
+    return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  };
+
+  const onDownload = async () => {
+    const blob = await createReceiptBlob();
+    if (!blob) {
+      setShareMessage('No se pudo generar la imagen');
+      setTimeout(() => setShareMessage(''), 2000);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `investup-receipt-${lastReceipt.uuid || 'tx'}.txt`;
+    anchor.download = `investup-receipt-${lastReceipt.uuid || 'tx'}.png`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
 
   const onShare = async () => {
     try {
-      if (navigator.share) {
-        await navigator.share({ title: 'Comprobante InvestUp', text: receiptText });
-      } else {
-        await navigator.clipboard.writeText(receiptText);
-        setShareMessage('Copiado al portapapeles');
-        setTimeout(() => setShareMessage(''), 2000);
+      const blob = await createReceiptBlob();
+      if (!blob) throw new Error('blob');
+      const file = new File([blob], `investup-receipt-${lastReceipt.uuid || 'tx'}.png`, {
+        type: 'image/png',
+      });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: 'Comprobante InvestUp', files: [file] });
+        return;
       }
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `investup-receipt-${lastReceipt.uuid || 'tx'}.png`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setShareMessage('Imagen descargada');
+      setTimeout(() => setShareMessage(''), 2000);
     } catch {
       setShareMessage('No se pudo compartir');
       setTimeout(() => setShareMessage(''), 2000);
