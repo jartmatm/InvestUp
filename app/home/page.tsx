@@ -1,8 +1,9 @@
-ï»¿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useInvestUp } from '@/lib/investup-context';
+import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
 function IconEye({ hidden }: { hidden: boolean }) {
   return hidden ? (
@@ -98,6 +99,7 @@ export default function HomePage() {
     historial,
     abrirCompra,
   } = useInvestUp();
+  const { avatarUrl, displayName: profileName } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
 
   useEffect(() => {
@@ -105,11 +107,11 @@ export default function HomePage() {
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
 
-  const displayName = useMemo(() => userAlias || 'Usuario', [userAlias]);
+  const displayName = useMemo(() => profileName || userAlias || 'Usuario', [profileName, userAlias]);
   const sectionTitle = rolSeleccionado === 'emprendedor' ? 'Mis publicaciones' : 'Inversiones';
   const addLabel =
     rolSeleccionado === 'emprendedor'
-      ? 'Agregar nueva publicaciÃ³n'
+      ? 'Agregar nueva publicación'
       : 'Invertir en nuevo emprendimiento';
 
   const actions: ActionItem[] = [
@@ -131,9 +133,20 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-100 px-5 pb-28 pt-6">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-500">Hola! Bienvenido</p>
-          <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-600">
+                {displayName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Hola! Bienvenido</p>
+            <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -150,11 +163,6 @@ export default function HomePage() {
           >
             <IconBell />
           </button>
-          <div className="h-11 w-11 overflow-hidden rounded-full bg-gray-200">
-            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-600">
-              {displayName.slice(0, 1).toUpperCase()}
-            </div>
-          </div>
         </div>
       </div>
 
@@ -178,8 +186,8 @@ export default function HomePage() {
 
         <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
           <span>Recaudado: --</span>
-          <span className="opacity-60">â€¢</span>
-          <span>Tasa InterÃ©s: --</span>
+          <span className="opacity-60">•</span>
+          <span>Tasa Interés: --</span>
         </div>
       </div>
 
@@ -210,7 +218,7 @@ export default function HomePage() {
           historial.length > 0 ? (
             historial.slice(0, 3).map((item, index) => (
               <div key={`${item}-${index}`} className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="text-sm text-gray-500">InversiÃ³n</p>
+                <p className="text-sm text-gray-500">Inversión</p>
                 <p className="mt-1 text-base font-semibold text-gray-900">{item}</p>
               </div>
             ))
@@ -253,4 +261,3 @@ export default function HomePage() {
     </div>
   );
 }
-
