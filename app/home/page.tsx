@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
+import { createClient } from '@supabase/supabase-js';
 import { useInvestUp } from '@/lib/investup-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -88,9 +90,25 @@ type NavItem = {
   active?: boolean;
 };
 
+type LastProject = {
+  id: string;
+  title: string;
+  amount_requested: number | null;
+  currency: string | null;
+  photo_urls: string[] | null;
+  created_at: string;
+};
+
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+
 export default function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user, getAccessToken } = usePrivy();
   const {
     faseApp,
     rolSeleccionado,
@@ -102,13 +120,72 @@ export default function HomePage() {
   } = useInvestUp();
   const { avatarUrl, displayName: profileName } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
+  const [lastProject, setLastProject] = useState<LastProject | null>(null);
+  const [loadingProject, setLoadingProject] = useState(false);
+
+  const supabase = useMemo(() => {
+    const authedFetch: typeof fetch = async (input, init = {}) => {
+      const token = await getAccessToken();
+      const baseHeaders = new Headers(init.headers ?? {});
+      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
+
+      const run = (headers: Headers) => fetch(input, { ...init, headers });
+      if (!token) return run(baseHeaders);
+
+      const headersWithAuth = new Headers(baseHeaders);
+      headersWithAuth.set('Authorization', `Bearer ${token}`);
+      const response = await run(headersWithAuth);
+      if (response.ok) return response;
+
+      const raw = (await response.clone().text()).toLowerCase();
+      const shouldFallback =
+        response.status === 401 ||
+        response.status === 403 ||
+        raw.includes('no suitable key') ||
+        raw.includes('wrong key type') ||
+        raw.includes('invalid jwt');
+      if (!shouldFallback) return response;
+      return run(baseHeaders);
+    };
+
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { fetch: authedFetch },
+    });
+  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
 
+  useEffect(() => {
+    const loadLastProject = async () => {
+      if (!user?.id || rolSeleccionado !== 'emprendedor') {
+        setLastProject(null);
+        return;
+      }
+      setLoadingProject(true);
+      const { data } = await supabase
+        .from('projects')
+        .select('id,title,amount_requested,currency,photo_urls,created_at')
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      setLastProject((data ?? [])[0] ?? null);
+      setLoadingProject(false);
+    };
+
+    loadLastProject();
+  }, [rolSeleccionado, supabase, user?.id]);
+
   const displayName = useMemo(() => profileName || userAlias || 'Usuario', [profileName, userAlias]);
+  const roleLabel =
+    rolSeleccionado === 'emprendedor'
+      ? 'Emprendedor'
+      : rolSeleccionado === 'inversor'
+        ? 'Inversionista'
+        : 'Usuario';
   const sectionTitle = rolSeleccionado === 'emprendedor' ? 'Mis publicaciones' : 'Inversiones';
   const addLabel =
     rolSeleccionado === 'emprendedor'
@@ -126,7 +203,7 @@ export default function HomePage() {
     { label: 'Home', href: '/home' },
     { label: 'Activity', href: '/portfolio' },
     { label: 'Enviar', href: '/invest' },
-    { label: 'Invertir', href: '/feed' },
+    { label: 'Pagos', href: '/feed' },
     { label: 'Wallet', href: '/buy' },
     { label: 'Profile', href: '/profile' },
   ];
@@ -145,7 +222,7 @@ export default function HomePage() {
             )}
           </div>
           <div>
-            <p className="text-sm text-gray-500">Hola! Bienvenido</p>
+            <p className="text-sm text-gray-500">Hola! {roleLabel}</p>
             <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
           </div>
         </div>
@@ -229,9 +306,39 @@ export default function HomePage() {
             </div>
           )
         ) : (
-          <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
-            Aqui veras tus publicaciones cuando esten activas.
-          </div>
+          <>
+            {loadingProject ? (
+              <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
+                Cargando tu ultima publicacion...
+              </div>
+            ) : lastProject ? (
+              <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                {lastProject.photo_urls?.[0] ? (
+                  <img
+                    src={lastProject.photo_urls[0]}
+                    alt={lastProject.title}
+                    className="h-32 w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-32 w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
+                    Sin imagen
+                  </div>
+                )}
+                <div className="p-4">
+                  <p className="text-sm font-semibold text-gray-900">{lastProject.title}</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {lastProject.amount_requested
+                      ? `${lastProject.amount_requested} ${lastProject.currency ?? 'USD'}`
+                      : 'Monto pendiente'}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
+                Aqui veras tus publicaciones cuando esten activas.
+              </div>
+            )}
+          </>
         )}
 
         <button

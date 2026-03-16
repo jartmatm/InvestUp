@@ -126,7 +126,7 @@ export default function InvestPage() {
             />
           </div>
           <div className="divide-y divide-gray-200">
-            {walletTargets.map((target) => {
+            {walletTargets.slice(0, 3).map((target) => {
               const isActive = walletDestino === target.wallet_address;
               const name = target.email ?? target.id;
               const subtitle = target.wallet_address

@@ -57,6 +57,20 @@ function IconPercent() {
   );
 }
 
+function IconHeart({ filled }: { filled?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M12 21s-6.7-4.3-9.2-7.6C1 11.5 1.2 8.4 3.4 6.7c2-1.6 4.9-1.2 6.6.8l2 2.3 2-2.3c1.7-2 4.6-2.4 6.6-.8 2.2 1.7 2.4 4.8.6 6.7C18.7 16.7 12 21 12 21z" />
+    </svg>
+  );
+}
+
 function formatAmount(amount: number | null, currency: string | null) {
   if (amount === null || amount === undefined) return 'Sin monto';
   const code = currency ?? 'USD';
@@ -78,7 +92,8 @@ export default function FeedPage() {
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+  const [flippedId, setFlippedId] = useState<string | null>(null);
+  const [wishlist, setWishlist] = useState<string[]>([]);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -137,8 +152,30 @@ export default function FeedPage() {
     loadFeed();
   }, [supabase]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('investup_wishlist');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as string[];
+      if (Array.isArray(parsed)) setWishlist(parsed);
+    } catch {
+      setWishlist([]);
+    }
+  }, []);
+
   const toggleFlip = (id: string) => {
-    setFlipped((prev) => ({ ...prev, [id]: !prev[id] }));
+    setFlippedId((prev) => (prev === id ? null : id));
+  };
+
+  const toggleWishlist = (id: string) => {
+    setWishlist((prev) => {
+      const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('investup_wishlist', JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   return (
@@ -159,17 +196,22 @@ export default function FeedPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {projects.map((project) => {
-          const isFlipped = !!flipped[project.id];
+          const isFlipped = flippedId === project.id;
+          const isWishlisted = wishlist.includes(project.id);
           const coverImage = project.photo_urls?.[0] ?? '';
           const amountLabel = formatAmount(project.amount_requested, project.currency);
           const termLabel = project.term_months ? `${project.term_months} meses` : '--';
           const rateLabel = project.interest_rate ? `${project.interest_rate}%` : '--';
 
           return (
-            <button
+            <div
               key={project.id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => toggleFlip(project.id)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') toggleFlip(project.id);
+              }}
               className="text-left [perspective:1000px]"
             >
               <div
@@ -178,27 +220,52 @@ export default function FeedPage() {
                 }`}
               >
                 <div className="absolute inset-0 overflow-hidden rounded-2xl bg-white shadow-sm [backface-visibility:hidden]">
-                  {coverImage ? (
-                    <img src={coverImage} alt={project.title} className="h-32 w-full object-cover" />
-                  ) : (
-                    <div className="flex h-32 w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
-                      Sin imagen
-                    </div>
-                  )}
+                  <div className="relative">
+                    {coverImage ? (
+                      <img src={coverImage} alt={project.title} className="h-32 w-full object-cover" />
+                    ) : (
+                      <div className="flex h-32 w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
+                        Sin imagen
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleWishlist(project.id);
+                      }}
+                      className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-primary shadow"
+                      aria-label="Agregar a favoritos"
+                    >
+                      <IconHeart filled={isWishlisted} />
+                    </button>
+                  </div>
                   <div className="p-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-gray-900">{project.title}</p>
                       <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
                         Ver detalle
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-gray-500">
-                      {project.city || project.country ? `${project.city ?? ''} ${project.country ?? ''}`.trim() : 'Ubicacion pendiente'}
+                      {project.city || project.country
+                        ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
+                        : 'Ubicacion pendiente'}
                     </p>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        router.push(`/feed/${project.id}`);
+                      }}
+                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 px-3 py-1 text-xs font-semibold text-primary"
+                    >
+                      Detalles
+                    </button>
                   </div>
                 </div>
 
-                <div className="absolute inset-0 rounded-2xl bg-primary p-4 text-white shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 p-4 text-white shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
                   <p className="text-sm font-semibold">{project.title}</p>
                   <p className="mt-1 text-xs text-white/70">Detalles de financiamiento</p>
 
@@ -232,10 +299,22 @@ export default function FeedPage() {
                     </div>
                   </div>
 
-                  <p className="mt-4 text-xs text-white/60">Toca para volver</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        router.push(`/feed/${project.id}`);
+                      }}
+                      className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-blue-600"
+                    >
+                      Detalles
+                    </button>
+                    <p className="text-xs text-white/70">Toca para volver</p>
+                  </div>
                 </div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

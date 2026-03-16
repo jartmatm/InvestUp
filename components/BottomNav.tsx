@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const items = [
-  { href: '/home', label: 'Inicio' },
-  { href: '/feed', label: 'Feed' },
-  { href: '/invest', label: 'Invertir' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/profile', label: 'Perfil' },
+  { href: '/home', label: 'Home' },
+  { href: '/portfolio', label: 'Activity' },
+  { href: '/invest', label: 'Enviar' },
+  { href: '/feed', label: 'Pagos' },
+  { href: '/buy', label: 'Wallet' },
+  { href: '/profile', label: 'Profile' },
 ];
 
 export default function BottomNav() {

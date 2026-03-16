@@ -631,7 +631,7 @@ export default function PortfolioPage() {
             </div>
 
             <div className="pt-2 text-center">
-              <Button className="mx-auto max-w-xs" onClick={publishProject} disabled={savingProject}>
+              <Button className="mx-auto max-w-xs bg-primary text-white" onClick={publishProject} disabled={savingProject}>
                 {savingProject
                   ? editingProjectId
                     ? 'Guardando...'
