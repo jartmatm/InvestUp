@@ -138,7 +138,7 @@ type ActionItem = {
 type NavItem = {
   label: string;
   href: string;
-  active?: boolean;
+  icon: React.ReactNode;
 };
 
 type LastProject = {

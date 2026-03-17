@@ -86,9 +86,17 @@ export function useUserProfileSummary(): ProfileSummary {
         .eq('id', user.id)
         .maybeSingle();
 
-      const profileData = (data?.profile_data ?? data?.metadata ?? null) as
-        | { name?: string; surname?: string; avatar_url?: string }
-        | null;
+      const rawProfileData = data?.profile_data ?? data?.metadata ?? null;
+      let profileData: { name?: string; surname?: string; avatar_url?: string } | null = null;
+      if (rawProfileData && typeof rawProfileData === 'string') {
+        try {
+          profileData = JSON.parse(rawProfileData) as { name?: string; surname?: string; avatar_url?: string };
+        } catch {
+          profileData = null;
+        }
+      } else if (rawProfileData && typeof rawProfileData === 'object') {
+        profileData = rawProfileData as { name?: string; surname?: string; avatar_url?: string };
+      }
 
       const emailValue = (data?.email as string | null) ?? user.email?.address ?? '';
       const nameValue = (data?.name as string | null) ?? profileData?.name ?? '';
@@ -101,7 +109,7 @@ export function useUserProfileSummary(): ProfileSummary {
 
       setEmail(emailValue);
       setDisplayName(resolvedName);
-      setAvatarUrl(resolvedAvatar);
+      setAvatarUrl((prev) => resolvedAvatar || prev);
 
       if (typeof window !== 'undefined') {
         window.localStorage.setItem('investup_display_name', resolvedName);
