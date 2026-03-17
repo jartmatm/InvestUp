@@ -141,9 +141,18 @@ export default function PersonalDataPage() {
       setAvailableColumns(cols);
 
       const role = (data?.role as 'investor' | 'entrepreneur' | null) ?? '';
-      const profileData = (data?.profile_data ?? data?.metadata ?? null) as
-        | Partial<ProfileForm>
-        | null;
+      const rawProfileData = data?.profile_data ?? data?.metadata ?? null;
+      let profileData: Partial<ProfileForm> | null = null;
+
+      if (rawProfileData && typeof rawProfileData === 'string') {
+        try {
+          profileData = JSON.parse(rawProfileData) as Partial<ProfileForm>;
+        } catch {
+          profileData = null;
+        }
+      } else if (rawProfileData && typeof rawProfileData === 'object') {
+        profileData = rawProfileData as Partial<ProfileForm>;
+      }
       const countryRaw = ((data?.country as string | null) ?? profileData?.country ?? '').trim();
       const countryByCode = COUNTRY_OPTIONS.find((option) => option.code === countryRaw.toUpperCase());
       const countryByName = COUNTRY_OPTIONS.find(
@@ -167,7 +176,7 @@ export default function PersonalDataPage() {
     };
 
     loadProfile();
-  }, [user?.id, user?.email?.address]);
+  }, [supabase, user?.id, user?.email?.address]);
 
   const canEditEmail = useMemo(() => availableColumns.has('email') || availableColumns.size === 0, [availableColumns]);
   const hasAnyExtendedField = useMemo(
@@ -281,6 +290,19 @@ export default function PersonalDataPage() {
       await guardarRol(mappedRole);
     }
 
+    if (typeof window !== 'undefined') {
+      const nextEmail = form.email || user.email?.address || '';
+      const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'Usuario');
+      window.localStorage.setItem('investup_display_name', nextDisplayName);
+      window.localStorage.setItem('investup_email', nextEmail);
+      if (form.avatar_url) {
+        window.localStorage.setItem('investup_avatar_url', form.avatar_url);
+      } else {
+        window.localStorage.removeItem('investup_avatar_url');
+      }
+      window.dispatchEvent(new Event('investup-profile-updated'));
+    }
+
     if (!hasAnyExtendedField) {
       setStatus(
         'Guardado basico completado. Para guardar campos extendidos (name/surname/phone/country/gender/address/avatar), agrega columnas en la tabla users o profile_data/metadata.'
@@ -296,7 +318,7 @@ export default function PersonalDataPage() {
     <PageFrame title="Personal Data" subtitle="Modifica tu informacion personal">
       <div className="space-y-6">
         <div className="flex flex-col items-center">
-          <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-200 shadow-sm">
+          <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             {form.avatar_url ? (
               <img src={form.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
@@ -316,14 +338,14 @@ export default function PersonalDataPage() {
           </label>
           <h2 className="mt-3 text-lg font-semibold text-gray-900">{displayName}</h2>
           <p className="text-sm text-gray-500">{displayEmail}</p>
-          <span className="mt-2 inline-block rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-600">
+          <span className="mt-2 inline-block rounded-full border border-white/25 bg-white/20 px-2 py-1 text-xs text-purple-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             {roleBadge}
           </span>
         </div>
 
         {loadingProfile ? <p className="text-sm text-slate-500">Cargando perfil...</p> : null}
 
-        <div className="divide-y divide-gray-200 overflow-hidden rounded-xl bg-white shadow-sm">
+        <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Field label="ID">
             <Input value={form.id} readOnly placeholder="ID" />
           </Field>
@@ -352,7 +374,7 @@ export default function PersonalDataPage() {
             <select
               value={form.gender}
               onChange={(event) => updateForm('gender', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Gender</option>
               <option value="male">Male</option>
@@ -367,7 +389,7 @@ export default function PersonalDataPage() {
             <select
               value={form.country}
               onChange={(event) => onCountryChange(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Country</option>
               {COUNTRY_OPTIONS.map((option) => (
@@ -381,7 +403,7 @@ export default function PersonalDataPage() {
             <select
               value={form.role}
               onChange={(event) => updateForm('role', event.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Perfil</option>
               <option value="investor">Perfil de inversionista</option>

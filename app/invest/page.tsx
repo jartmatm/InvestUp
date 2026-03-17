@@ -25,7 +25,7 @@ function Section({ title, rightSlot, children }: SectionProps) {
         <h3 className="text-sm font-medium text-gray-500">{title}</h3>
         {rightSlot}
       </div>
-      <div className="rounded-xl bg-white shadow-sm">{children}</div>
+      <div className="rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">{children}</div>
     </div>
   );
 }
@@ -122,7 +122,7 @@ export default function InvestPage() {
               value={walletDestino}
               onChange={(event) => setWalletDestino(event.target.value)}
               placeholder="Nueva direccion 0x..."
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-purple-200"
+              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-purple-200/40"
             />
           </div>
           <div className="divide-y divide-gray-200">
@@ -139,7 +139,7 @@ export default function InvestPage() {
                   type="button"
                   onClick={() => setWalletDestino(target.wallet_address ?? '')}
                   className={`flex w-full items-center justify-between px-4 py-4 text-left transition ${
-                    isActive ? 'bg-purple-50' : 'hover:bg-gray-50'
+                    isActive ? 'bg-white/20 ring-1 ring-purple-300' : 'hover:bg-white/10'
                   }`}
                 >
                   <div>
@@ -192,7 +192,7 @@ export default function InvestPage() {
                 className={`rounded-xl border py-3 text-center font-semibold ${
                   amountNumber === s
                     ? 'border-purple-600 bg-purple-600 text-white'
-                    : 'border-gray-300 bg-white text-gray-700'
+                    : 'border-white/25 bg-white/20 text-gray-700 backdrop-blur-md'
                 }`}
               >
                 ${s}

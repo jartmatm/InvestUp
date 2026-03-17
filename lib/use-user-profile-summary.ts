@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
@@ -11,14 +11,44 @@ type ProfileSummary = {
   loading: boolean;
 };
 
+type ProfileBlob = {
+  name?: string;
+  surname?: string;
+  avatar_url?: string;
+} | null;
+
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
+const parseProfileBlob = (value: unknown): ProfileBlob => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as ProfileBlob;
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === 'object') {
+    return value as ProfileBlob;
+  }
+  return null;
+};
+
+const pickFirstFilledString = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
 export function useUserProfileSummary(): ProfileSummary {
-  const { user, getAccessToken, ready, authenticated } = usePrivy();
+  const { user, getAccessToken, ready } = usePrivy();
   const [avatarUrl, setAvatarUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(user?.email?.address ?? '');
@@ -73,68 +103,71 @@ export function useUserProfileSummary(): ProfileSummary {
   }, []);
 
   const loadProfile = useCallback(async () => {
-    if (!ready || !authenticated || !user?.id) {
-      setLoading(false);
+    if (!user?.id) {
+      if (ready) {
+        setLoading(false);
+      }
       return;
     }
 
     setLoading(true);
-    const { data } = await supabase
-      .from('users')
-      .select('email,name,surname,avatar_url,profile_data,metadata')
-      .eq('id', user.id)
-      .maybeSingle();
 
-    const rawProfileData = data?.profile_data ?? data?.metadata ?? null;
-    let profileData: { name?: string; surname?: string; avatar_url?: string } | null = null;
-    if (rawProfileData && typeof rawProfileData === 'string') {
-      try {
-        profileData = JSON.parse(rawProfileData) as { name?: string; surname?: string; avatar_url?: string };
-      } catch {
-        profileData = null;
+    try {
+      const { data } = await supabase
+        .from('users')
+        .select('email,name,surname,avatar_url,profile_data,metadata')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const profileData = parseProfileBlob(data?.profile_data ?? data?.metadata ?? null);
+      const emailValue = pickFirstFilledString(data?.email, user.email?.address);
+      const nameValue = pickFirstFilledString(data?.name, profileData?.name);
+      const surnameValue = pickFirstFilledString(data?.surname, profileData?.surname);
+      const fullName = `${nameValue} ${surnameValue}`.trim();
+      const fallbackName = emailValue ? emailValue.split('@')[0] : 'Usuario';
+      const resolvedName = fullName || fallbackName;
+      const cachedAvatar =
+        typeof window !== 'undefined' ? window.localStorage.getItem('investup_avatar_url') ?? '' : '';
+      const resolvedAvatar = pickFirstFilledString(data?.avatar_url, profileData?.avatar_url, cachedAvatar);
+
+      setEmail(emailValue);
+      setDisplayName(resolvedName);
+      setAvatarUrl(resolvedAvatar);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('investup_display_name', resolvedName);
+        window.localStorage.setItem('investup_email', emailValue);
+
+        if (resolvedAvatar) {
+          window.localStorage.setItem('investup_avatar_url', resolvedAvatar);
+        } else {
+          window.localStorage.removeItem('investup_avatar_url');
+        }
       }
-    } else if (rawProfileData && typeof rawProfileData === 'object') {
-      profileData = rawProfileData as { name?: string; surname?: string; avatar_url?: string };
+    } finally {
+      setLoading(false);
     }
-
-    const emailValue = (data?.email as string | null) ?? user.email?.address ?? '';
-    const nameValue = (data?.name as string | null) ?? profileData?.name ?? '';
-    const surnameValue = (data?.surname as string | null) ?? profileData?.surname ?? '';
-    const fullName = `${nameValue} ${surnameValue}`.trim();
-    const fallbackName = emailValue ? emailValue.split('@')[0] : 'Usuario';
-
-    const resolvedName = fullName || fallbackName;
-    const resolvedAvatar = (data?.avatar_url as string | null) ?? profileData?.avatar_url ?? '';
-    const cachedAvatar =
-      typeof window !== 'undefined' ? window.localStorage.getItem('investup_avatar_url') ?? '' : '';
-    const nextAvatar = cachedAvatar || resolvedAvatar;
-
-    setEmail(emailValue);
-    setDisplayName(resolvedName);
-    setAvatarUrl(nextAvatar);
-
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('investup_display_name', resolvedName);
-      window.localStorage.setItem('investup_email', emailValue);
-      if (resolvedAvatar) {
-        window.localStorage.setItem('investup_avatar_url', resolvedAvatar);
-      }
-    }
-    setLoading(false);
-  }, [authenticated, ready, user?.id, user?.email?.address, supabase]);
+  }, [ready, supabase, user?.email?.address, user?.id]);
 
   useEffect(() => {
-    loadProfile();
+    void loadProfile();
     if (typeof window === 'undefined') return;
-    const handleFocus = () => loadProfile();
+
+    const handleFocus = () => {
+      void loadProfile();
+    };
+
     const handleProfileUpdate = () => {
       const cachedAvatar = window.localStorage.getItem('investup_avatar_url') ?? '';
       const cachedName = window.localStorage.getItem('investup_display_name') ?? '';
       const cachedEmail = window.localStorage.getItem('investup_email') ?? '';
-      if (cachedAvatar) setAvatarUrl(cachedAvatar);
+
+      setAvatarUrl(cachedAvatar);
       if (cachedName) setDisplayName(cachedName);
       if (cachedEmail) setEmail(cachedEmail);
+      void loadProfile();
     };
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('investup-profile-updated', handleProfileUpdate);
     window.addEventListener('storage', handleProfileUpdate);
@@ -147,4 +180,3 @@ export function useUserProfileSummary(): ProfileSummary {
 
   return { avatarUrl, displayName, email, loading };
 }
-

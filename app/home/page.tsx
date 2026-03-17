@@ -115,7 +115,7 @@ function IconClock() {
 
 function IconNavHome() {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 21H7C5.34315 21 4 19.7389 4 18.1833V10.9C4 10.153 4.31607 9.43656 4.87868 8.90834L10.5858 3.54999C11.3668 2.81667 12.6332 2.81667 13.4142 3.54999L19.1213 8.90834C19.6839 9.43656 20 10.153 20 10.9V18.1833C20 19.7389 18.6569 21 17 21H15M9 21V16C9 14.8954 9.89543 14 11 14H13C14.1046 14 15 14.8954 15 16V21M9 21H15" />
     </svg>
   );
@@ -123,7 +123,7 @@ function IconNavHome() {
 
 function IconNavActivity() {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M15 21V13H9V21M15 21H9M15 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3H17C15.89543 3 15 3.89543 15 5V21ZM9 21V10C9 8.89543 8.10457 8 7 8H5C3.89543 8 3 8.89543 3 10V19C3 20.1046 3.89543 21 5 21H9Z" />
     </svg>
   );
@@ -131,7 +131,7 @@ function IconNavActivity() {
 
 function IconNavPayments() {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
+    <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none">
       <path
         fillRule="evenodd"
         clipRule="evenodd"
@@ -144,7 +144,7 @@ function IconNavPayments() {
 
 function IconNavProfile() {
   return (
-    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M14 14H10C7.23858 14 5 16.2386 5 19V20C5 20.5523 5.44772 21 6 21H18C18.5523 21 19 20.5523 19 20V19C19 16.2386 16.7614 14 14 14Z" />
       <path d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z" />
     </svg>
@@ -231,7 +231,7 @@ export default function HomePage() {
     abrirCompra,
     abrirRetiro,
   } = useInvestUp();
-  const { avatarUrl, displayName: profileName } = useUserProfileSummary();
+  const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
   const [lastProject, setLastProject] = useState<LastProject | null>(null);
   const [loadingProject, setLoadingProject] = useState(false);
@@ -356,9 +356,11 @@ export default function HomePage() {
       <div className="mx-auto w-full max-w-[375px] rounded-[30px] border border-white/25 bg-white/20 px-6 pb-32 pt-8 backdrop-blur-md shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
+            <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20 backdrop-blur-md">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : loadingProfileSummary ? (
+                <div className="h-full w-full animate-pulse bg-white/30" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
                   {displayName.slice(0, 1).toUpperCase()}
@@ -374,14 +376,14 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="Buscar"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F6F8FA] text-[#0F172A] shadow-sm"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#0F172A] shadow-sm"
             >
               <IconSearch />
             </button>
             <button
               type="button"
               aria-label="Notificaciones"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F6F8FA] text-[#0F172A] shadow-sm"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#0F172A] shadow-sm"
             >
               <IconBell />
             </button>
@@ -424,7 +426,7 @@ export default function HomePage() {
             onClick={action.onClick}
             className="flex flex-col items-center gap-2"
           >
-            <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#F6F8FA] text-[#6B39F4] shadow-sm">
+            <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#6B39F4] shadow-sm">
               {action.icon}
             </div>
             <p className="text-[11px] font-semibold text-[#666D80]">{action.label}</p>
@@ -456,14 +458,14 @@ export default function HomePage() {
               </div>
             ))
           ) : (
-            <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
+            <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
               Aun no tienes inversiones registradas.
             </div>
           )
         ) : (
           <>
             {loadingProject ? (
-              <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
+              <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
                 Cargando tu ultima publicacion...
               </div>
             ) : lastProject ? (
@@ -475,7 +477,7 @@ export default function HomePage() {
                     className="h-32 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-32 w-full items-center justify-center bg-[#F6F8FA] text-xs text-[#818898]">
+                  <div className="flex h-32 w-full items-center justify-center border border-white/25 bg-white/20 backdrop-blur-md text-xs text-[#818898]">
                     Sin imagen
                   </div>
                 )}
@@ -489,7 +491,7 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
+              <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
                 Aqui veras tus publicaciones cuando esten activas.
               </div>
             )}
@@ -519,13 +521,13 @@ export default function HomePage() {
 
         <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
           {loadingTransactions ? (
-            <div className="rounded-[18px] bg-[#F6F8FA] px-4 py-5 text-sm text-[#818898]">
+            <div className="rounded-[18px] border border-white/25 bg-white/20 backdrop-blur-md px-4 py-5 text-sm text-[#818898]">
               Cargando transacciones...
             </div>
           ) : null}
 
           {!loadingTransactions && transactions.length === 0 ? (
-            <div className="rounded-[18px] bg-[#F6F8FA] px-4 py-5 text-sm text-[#818898]">
+            <div className="rounded-[18px] border border-white/25 bg-white/20 backdrop-blur-md px-4 py-5 text-sm text-[#818898]">
               Tus movimientos apareceran aqui.
             </div>
           ) : null}
@@ -542,9 +544,11 @@ export default function HomePage() {
                     className="flex items-center justify-between rounded-[18px] border border-white/25 bg-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
+                      <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20 backdrop-blur-md">
                         {avatarUrl ? (
                           <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                        ) : loadingProfileSummary ? (
+                          <div className="h-full w-full animate-pulse bg-white/30" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
                             {displayName.slice(0, 1).toUpperCase()}
@@ -577,21 +581,23 @@ export default function HomePage() {
 
       <div className="fixed bottom-0 left-0 right-0 z-20">
         <div className="mx-auto w-full max-w-[375px] px-6 pb-6">
-          <div className="relative rounded-[24px] border border-white/25 bg-white/20 px-4 pb-4 pt-6 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div className="relative rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <button
               type="button"
               onClick={() => router.push('/invest')}
               aria-label="Enviar"
-              className={`absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
+              className={`absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
                 pathname?.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
               }`}
             >
-              <IconSend />
+              <span className="translate-y-px">
+                <IconSend />
+              </span>
             </button>
-            <div className="grid grid-cols-5 items-center justify-items-center">
+            <div className="grid grid-cols-5 items-center justify-items-center gap-1">
               {navSlots.map((item, index) => {
                 if (!item) {
-                  return <div key={`nav-spacer-${index}`} className="h-6 w-6" aria-hidden="true" />;
+                  return <div key={`nav-spacer-${index}`} className="h-12 w-12" aria-hidden="true" />;
                 }
 
                 const active = pathname?.startsWith(item.href);
@@ -601,7 +607,7 @@ export default function HomePage() {
                     type="button"
                     onClick={() => router.push(item.href)}
                     aria-label={item.label}
-                    className={`flex items-center justify-center ${
+                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
                       active ? 'text-[#6B39F4]' : 'text-[#818898]'
                     }`}
                   >
@@ -617,4 +623,5 @@ export default function HomePage() {
     </div>
   );
 }
+
 

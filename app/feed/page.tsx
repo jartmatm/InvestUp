@@ -189,12 +189,12 @@ export default function FeedPage() {
       </div>
 
       {!loading && projects.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 shadow-sm">
+        <div className="rounded-xl border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           Aun no hay proyectos publicados.
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-4">
         {projects.map((project) => {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
@@ -219,12 +219,12 @@ export default function FeedPage() {
                   isFlipped ? '[transform:rotateY(180deg)]' : ''
                 }`}
               >
-                <div className="absolute inset-0 overflow-hidden rounded-2xl bg-white shadow-sm [backface-visibility:hidden]">
+                <div className="absolute inset-0 overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md [backface-visibility:hidden]">
                   <div className="relative">
                     {coverImage ? (
                       <img src={coverImage} alt={project.title} className="h-32 w-full object-cover" />
                     ) : (
-                      <div className="flex h-32 w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
+                      <div className="flex h-32 w-full items-center justify-center bg-white/20 backdrop-blur-md text-xs text-slate-500">
                         Sin imagen
                       </div>
                     )}
@@ -234,7 +234,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         toggleWishlist(project.id);
                       }}
-                      className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-primary shadow"
+                      className="absolute right-3 top-3 rounded-full border border-white/25 bg-white/20 p-2 text-primary shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
                       aria-label="Agregar a favoritos"
                     >
                       <IconHeart filled={isWishlisted} />
@@ -306,7 +306,7 @@ export default function FeedPage() {
                         event.stopPropagation();
                         router.push(`/feed/${project.id}`);
                       }}
-                      className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-blue-600"
+                      className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
                     >
                       Detalles
                     </button>

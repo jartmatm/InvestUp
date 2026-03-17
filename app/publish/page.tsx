@@ -18,7 +18,7 @@ export default function PublishPage() {
 
   return (
     <PageFrame title="Publicar emprendimiento" subtitle="Crea una nueva oportunidad">
-      <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="space-y-4 rounded-xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
         <Input placeholder="Nombre del proyecto" />
         <Input placeholder="Descripcion" />
         <Input placeholder="Meta de inversion" />

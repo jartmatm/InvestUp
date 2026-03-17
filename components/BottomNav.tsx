@@ -71,20 +71,22 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 bg-transparent">
       <div className="mx-auto w-full max-w-xl px-4 pb-3">
-        <div className="relative rounded-[20px] border border-white/25 bg-white/20 px-4 pb-3 pt-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+        <div className="relative rounded-[20px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Link
             href="/invest"
             aria-label="Enviar"
-            className={`absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
+            className={`absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
               pathname.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
             }`}
           >
-            <IconSend />
+            <span className="translate-y-px">
+              <IconSend />
+            </span>
           </Link>
-          <div className="grid grid-cols-5 items-center justify-items-center">
+          <div className="grid grid-cols-5 items-center justify-items-center gap-1">
             {navSlots.map((item, index) => {
               if (!item) {
-                return <div key={`nav-spacer-${index}`} className="h-6 w-6" aria-hidden="true" />;
+                return <div key={`nav-spacer-${index}`} className="h-12 w-12" aria-hidden="true" />;
               }
 
               const active = pathname.startsWith(item.href);
@@ -93,7 +95,7 @@ export default function BottomNav() {
                   key={item.href}
                   href={item.href}
                   aria-label={item.label}
-                  className={`flex items-center justify-center transition ${
+                  className={`flex h-12 w-12 items-center justify-center rounded-full transition ${
                     active ? 'text-[#6B39F4]' : 'text-gray-500 hover:text-[#5A27E0]'
                   }`}
                 >
