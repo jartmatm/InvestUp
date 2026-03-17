@@ -316,7 +316,10 @@ export default function HomePage() {
           </div>
         </div>
 
-      <div className="mb-6 rounded-[18px] bg-[#6B39F4] p-6 text-white shadow-[0_20px_40px_rgba(107,57,244,0.25)]">
+      <div
+        className="mb-6 rounded-[18px] bg-[#6B39F4] bg-cover bg-center p-6 text-white shadow-[0_20px_40px_rgba(107,57,244,0.25)]"
+        style={{ backgroundImage: "url('/assets/slide1.jpg')" }}
+      >
         <div className="flex items-start justify-between">
           <div>
             <p className="text-sm text-white/70">Disponible</p>
