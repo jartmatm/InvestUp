@@ -18,7 +18,7 @@ export default function OnboardingPage() {
 
   return (
     <main className="min-h-screen bg-transparent px-5 py-8 text-gray-900">
-      <section className="mx-auto w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <section className="mx-auto w-full max-w-xl rounded-2xl border border-white/25 bg-white/20 p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
         <h1 className="text-2xl font-semibold tracking-tight">Informacion basica</h1>
         <p className="mt-1 text-sm text-gray-500">
           Selecciona tu perfil *Puedes cambiarlo mas adelante

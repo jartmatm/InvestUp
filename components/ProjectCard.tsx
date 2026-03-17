@@ -33,7 +33,7 @@ export default function ProjectCard({
 }: ProjectCardProps) {
   const width = `${Math.max(0, Math.min(100, progress))}%`;
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+    <article className="glass-card rounded-xl p-4">
       {coverImage ? (
         <img src={coverImage} alt={title} className="mb-3 h-40 w-full rounded-lg object-cover" />
       ) : null}

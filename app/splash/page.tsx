@@ -27,11 +27,7 @@ export default function SplashScreen() {
 
   return (
     <div className="relative flex h-screen w-screen items-center justify-center overflow-hidden">
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/fondo_home.jpg')" }}
-      />
-      <div className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]" />
+      <div className="absolute inset-0 animated-gradient" />
 
       <Particles
         className="absolute inset-0"

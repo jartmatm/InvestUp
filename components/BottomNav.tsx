@@ -69,9 +69,9 @@ export default function BottomNav() {
   const navSlots: Array<(typeof items)[number] | null> = [items[0], items[1], null, items[2], items[3]];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-20 bg-white">
+    <nav className="fixed bottom-0 left-0 right-0 z-20 bg-transparent">
       <div className="mx-auto w-full max-w-xl px-4 pb-3">
-        <div className="relative rounded-[20px] border border-gray-200 bg-white px-4 pb-3 pt-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
+        <div className="relative rounded-[20px] border border-white/25 bg-white/20 px-4 pb-3 pt-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Link
             href="/invest"
             aria-label="Enviar"

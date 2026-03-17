@@ -353,7 +353,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <div className="mx-auto w-full max-w-[375px] px-6 pb-32 pt-8">
+      <div className="mx-auto w-full max-w-[375px] rounded-[30px] border border-white/25 bg-white/20 px-6 pb-32 pt-8 backdrop-blur-md shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
@@ -449,7 +449,7 @@ export default function HomePage() {
             historial.slice(0, 3).map((item, index) => (
               <div
                 key={`${item}-${index}`}
-                className="rounded-[16px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+                className="rounded-[16px] border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
               >
                 <p className="text-sm text-[#818898]">Inversión</p>
                 <p className="mt-1 text-base font-semibold text-[#0F172A]">{item}</p>
@@ -467,7 +467,7 @@ export default function HomePage() {
                 Cargando tu ultima publicacion...
               </div>
             ) : lastProject ? (
-              <div className="overflow-hidden rounded-[16px] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+              <div className="overflow-hidden rounded-[16px] border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
                 {lastProject.photo_urls?.[0] ? (
                   <img
                     src={lastProject.photo_urls[0]}
@@ -539,7 +539,7 @@ export default function HomePage() {
                 return (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between rounded-[18px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+                    className="flex items-center justify-between rounded-[18px] border border-white/25 bg-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
                   >
                     <div className="flex items-center gap-3">
                       <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
@@ -577,7 +577,7 @@ export default function HomePage() {
 
       <div className="fixed bottom-0 left-0 right-0 z-20">
         <div className="mx-auto w-full max-w-[375px] px-6 pb-6">
-          <div className="relative rounded-[24px] border border-[#F6F8FA] bg-white px-4 pb-4 pt-6 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
+          <div className="relative rounded-[24px] border border-white/25 bg-white/20 px-4 pb-4 pt-6 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <button
               type="button"
               onClick={() => router.push('/invest')}
