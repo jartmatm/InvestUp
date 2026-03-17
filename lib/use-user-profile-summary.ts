@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
@@ -48,7 +48,7 @@ const pickFirstFilledString = (...values: unknown[]) => {
 };
 
 export function useUserProfileSummary(): ProfileSummary {
-  const { user, getAccessToken, ready } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const [avatarUrl, setAvatarUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(user?.email?.address ?? '');
@@ -104,28 +104,19 @@ export function useUserProfileSummary(): ProfileSummary {
 
   const loadProfile = useCallback(async () => {
     if (!user?.id) {
-      if (ready) {
-        setLoading(false);
-      }
-      return;
+      setLoading(false);
+      return false;
     }
 
     setLoading(true);
 
     try {
-      const { data } = await supabase
-        .from('users')
-        .select('email,name,surname,avatar_url,profile_data,metadata')
-        .eq('id', user.id)
-        .maybeSingle();
-
+      const { data } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
       const profileData = parseProfileBlob(data?.profile_data ?? data?.metadata ?? null);
       const emailValue = pickFirstFilledString(data?.email, user.email?.address);
       const nameValue = pickFirstFilledString(data?.name, profileData?.name);
       const surnameValue = pickFirstFilledString(data?.surname, profileData?.surname);
-      const fullName = `${nameValue} ${surnameValue}`.trim();
-      const fallbackName = emailValue ? emailValue.split('@')[0] : 'Usuario';
-      const resolvedName = fullName || fallbackName;
+      const resolvedName = `${nameValue} ${surnameValue}`.trim() || (emailValue ? emailValue.split('@')[0] : 'Usuario');
       const cachedAvatar =
         typeof window !== 'undefined' ? window.localStorage.getItem('investup_avatar_url') ?? '' : '';
       const resolvedAvatar = pickFirstFilledString(data?.avatar_url, profileData?.avatar_url, cachedAvatar);
@@ -144,14 +135,33 @@ export function useUserProfileSummary(): ProfileSummary {
           window.localStorage.removeItem('investup_avatar_url');
         }
       }
+
+      return Boolean(resolvedAvatar);
     } finally {
       setLoading(false);
     }
-  }, [ready, supabase, user?.email?.address, user?.id]);
+  }, [supabase, user?.email?.address, user?.id]);
 
   useEffect(() => {
-    void loadProfile();
-    if (typeof window === 'undefined') return;
+    let retryShort: number | undefined;
+    let retryLong: number | undefined;
+
+    const start = async () => {
+      const hasAvatar = await loadProfile();
+      if (typeof window === 'undefined' || !user?.id || hasAvatar) return;
+
+      retryShort = window.setTimeout(() => {
+        void loadProfile();
+      }, 800);
+
+      retryLong = window.setTimeout(() => {
+        void loadProfile();
+      }, 2200);
+    };
+
+    void start();
+
+    if (typeof window === 'undefined') return undefined;
 
     const handleFocus = () => {
       void loadProfile();
@@ -162,7 +172,7 @@ export function useUserProfileSummary(): ProfileSummary {
       const cachedName = window.localStorage.getItem('investup_display_name') ?? '';
       const cachedEmail = window.localStorage.getItem('investup_email') ?? '';
 
-      setAvatarUrl(cachedAvatar);
+      if (cachedAvatar) setAvatarUrl(cachedAvatar);
       if (cachedName) setDisplayName(cachedName);
       if (cachedEmail) setEmail(cachedEmail);
       void loadProfile();
@@ -171,12 +181,15 @@ export function useUserProfileSummary(): ProfileSummary {
     window.addEventListener('focus', handleFocus);
     window.addEventListener('investup-profile-updated', handleProfileUpdate);
     window.addEventListener('storage', handleProfileUpdate);
+
     return () => {
+      if (retryShort) window.clearTimeout(retryShort);
+      if (retryLong) window.clearTimeout(retryLong);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('investup-profile-updated', handleProfileUpdate);
       window.removeEventListener('storage', handleProfileUpdate);
     };
-  }, [loadProfile]);
+  }, [loadProfile, user?.id]);
 
   return { avatarUrl, displayName, email, loading };
 }

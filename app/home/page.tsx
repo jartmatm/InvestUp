@@ -1,9 +1,10 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
+import BottomNav from '@/components/BottomNav';
 import { useInvestUp } from '@/lib/investup-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -219,7 +220,6 @@ const formatTransactionDate = (value: string) => {
 
 export default function HomePage() {
   const router = useRouter();
-  const pathname = usePathname();
   const { user, getAccessToken } = usePrivy();
   const {
     faseApp,
@@ -342,14 +342,6 @@ export default function HomePage() {
     { label: 'Retirar', icon: <IconDownload />, onClick: abrirRetiro },
     { label: 'Historial', icon: <IconClock />, onClick: () => router.push('/portfolio') },
   ];
-
-  const navItems: NavItem[] = [
-    { label: 'Home', href: '/home', icon: <IconNavHome /> },
-    { label: 'Activity', href: '/portfolio', icon: <IconNavActivity /> },
-    { label: 'Pagos', href: '/feed', icon: <IconNavPayments /> },
-    { label: 'Profile', href: '/profile', icon: <IconNavProfile /> },
-  ];
-  const navSlots: Array<NavItem | null> = [navItems[0], navItems[1], null, navItems[2], navItems[3]];
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -579,47 +571,7 @@ export default function HomePage() {
 
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-20">
-        <div className="mx-auto w-full max-w-[375px] px-6 pb-6">
-          <div className="relative rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => router.push('/invest')}
-              aria-label="Enviar"
-              className={`absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
-                pathname?.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
-              }`}
-            >
-              <span className="translate-y-px">
-                <IconSend />
-              </span>
-            </button>
-            <div className="grid grid-cols-5 items-center justify-items-center gap-1">
-              {navSlots.map((item, index) => {
-                if (!item) {
-                  return <div key={`nav-spacer-${index}`} className="h-12 w-12" aria-hidden="true" />;
-                }
-
-                const active = pathname?.startsWith(item.href);
-                return (
-                  <button
-                    key={item.href}
-                    type="button"
-                    onClick={() => router.push(item.href)}
-                    aria-label={item.label}
-                    className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                      active ? 'text-[#6B39F4]' : 'text-[#818898]'
-                    }`}
-                  >
-                    {item.icon}
-                    <span className="sr-only">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
+      <BottomNav />
     </div>
   );
 }
