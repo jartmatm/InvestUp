@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
 
 type FeedProject = {
@@ -85,6 +86,11 @@ function formatAmount(amount: number | null, currency: string | null) {
   }
 }
 
+const normalizePhotos = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+};
+
 export default function FeedPage() {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
@@ -145,7 +151,12 @@ export default function FeedPage() {
         setLoading(false);
         return;
       }
-      setProjects((data ?? []) as FeedProject[]);
+
+      const normalizedProjects = ((data ?? []) as FeedProject[]).map((project) => ({
+        ...project,
+        photo_urls: normalizePhotos(project.photo_urls),
+      }));
+      setProjects(normalizedProjects);
       setLoading(false);
     };
 
@@ -198,10 +209,9 @@ export default function FeedPage() {
         {projects.map((project) => {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
-          const coverImage = project.photo_urls?.[0] ?? '';
           const amountLabel = formatAmount(project.amount_requested, project.currency);
           const termLabel = project.term_months ? `${project.term_months} meses` : '--';
-          const rateLabel = project.interest_rate ? `${project.interest_rate}%` : '--';
+          const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
 
           return (
             <div
@@ -215,19 +225,20 @@ export default function FeedPage() {
               className="text-left [perspective:1000px]"
             >
               <div
-                className={`relative h-56 w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                className={`relative h-60 w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                   isFlipped ? '[transform:rotateY(180deg)]' : ''
                 }`}
               >
                 <div className="absolute inset-0 overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md [backface-visibility:hidden]">
                   <div className="relative">
-                    {coverImage ? (
-                      <img src={coverImage} alt={project.title} className="h-32 w-full object-cover" />
-                    ) : (
-                      <div className="flex h-32 w-full items-center justify-center bg-white/20 backdrop-blur-md text-xs text-slate-500">
-                        Sin imagen
-                      </div>
-                    )}
+                    <ProjectPhotoCarousel
+                      images={project.photo_urls}
+                      alt={project.title}
+                      className="h-32 w-full"
+                      imageClassName="h-32 w-full object-cover"
+                      emptyClassName="flex h-32 w-full items-center justify-center bg-white/20 text-xs text-slate-500 backdrop-blur-md"
+                      stopPropagation
+                    />
                     <button
                       type="button"
                       onClick={(event) => {
@@ -240,6 +251,7 @@ export default function FeedPage() {
                       <IconHeart filled={isWishlisted} />
                     </button>
                   </div>
+
                   <div className="p-3">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-gray-900">{project.title}</p>

@@ -15,6 +15,12 @@ import { createClient } from '@supabase/supabase-js';
 import { createPublicClient, encodeFunctionData, formatUnits, http, parseUnits } from 'viem';
 import { polygon } from 'viem/chains';
 import { createPimlicoClient } from 'permissionless/clients/pimlico';
+import { calculateInvestmentProjection } from '@/lib/investment-math';
+import {
+  clearPendingInvestment,
+  getPendingInvestment,
+  type PendingInvestment,
+} from '@/lib/pending-investment';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -42,6 +48,35 @@ type ReceiptData = {
   receiverWallet: string;
 };
 
+type StoredTransaction = {
+  id: string;
+  created_at: string;
+  movement_type: MovementType;
+  status: string;
+  tx_hash: string | null;
+  from_wallet: string | null;
+  to_wallet: string | null;
+  amount_usdc: number | null;
+};
+
+type RegisterTransactionArgs = {
+  txHash: string;
+  toWallet: string;
+  amountUsdc: string;
+  movementType: MovementType;
+  status?: 'submitted' | 'confirmed' | 'failed';
+  metadata?: Record<string, unknown>;
+  receiverName?: string;
+};
+
+type RegisterInvestmentArgs = {
+  pendingInvestment: PendingInvestment;
+  txHash: string;
+  transactionId?: string | null;
+  amountUsdc: string;
+  toWallet: string;
+};
+
 type InvestUpContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -62,7 +97,7 @@ type InvestUpContextType = {
   guardarRol: (rol: FrontRole) => Promise<void>;
   actualizarSaldos: () => Promise<void>;
   cargarWalletsObjetivo: () => Promise<void>;
-  enviarUSDC: (destino: string, monto: string) => Promise<void>;
+  enviarUSDC: (destino: string, monto: string) => Promise<boolean>;
   abrirCompra: () => Promise<void>;
   abrirRetiro: () => void;
   lastReceipt: ReceiptData | null;
@@ -141,6 +176,17 @@ const mapRoleToDB = (role: FrontRole | null | undefined): 'investor' | 'entrepre
   if (role === 'inversor') return 'investor';
   if (role === 'emprendedor') return 'entrepreneur';
   return null;
+};
+
+const normalizePendingInvestment = (
+  pendingInvestment: PendingInvestment | null,
+  destinationWallet: string
+) => {
+  if (!pendingInvestment) return null;
+  const pendingWallet = pendingInvestment.entrepreneurWallet?.toLowerCase();
+  const currentDestination = destinationWallet.toLowerCase();
+  if (!pendingWallet || pendingWallet !== currentDestination) return null;
+  return pendingInvestment;
 };
 
 export function InvestUpProvider({ children }: { children: React.ReactNode }) {
@@ -227,53 +273,52 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       amountUsdc,
       movementType,
       status = 'submitted',
-    }: {
-      txHash: string;
-      toWallet: string;
-      amountUsdc: string;
-      movementType: MovementType;
-      status?: 'submitted' | 'confirmed' | 'failed';
-    }) => {
-      if (!user?.id || !smartWalletAddress) return;
+      metadata,
+      receiverName,
+    }: RegisterTransactionArgs): Promise<StoredTransaction | null> => {
+      if (!user?.id || !smartWalletAddress) return null;
+
       try {
-        const txUuid =
-          typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : null;
-        const payload: Record<string, unknown> = {
+        const amountValue = Number(amountUsdc);
+        const payload = {
           user_id: user.id,
-          type: movementType,
-          amount: amountUsdc,
-          currency: 'USDC',
+          role: mapRoleToDB(rolSeleccionado),
+          movement_type: movementType,
           status,
+          chain: 'polygon',
           tx_hash: txHash,
-          meta: {
+          from_wallet: smartWalletAddress,
+          to_wallet: toWallet,
+          amount_usdc: Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null,
+          metadata: {
             app: 'investup-web',
-            role: mapRoleToDB(rolSeleccionado),
-            chain: 'polygon',
-            from_wallet: smartWalletAddress,
-            to_wallet: toWallet,
+            currency: 'USDC',
+            ...metadata,
           },
         };
-        if (txUuid) payload.uuid = txUuid;
 
-        const attemptInsert = async (data: Record<string, unknown>) =>
-          supabase
+        let storedTransaction: StoredTransaction | null = null;
+        const { data, error } = await supabase
+          .from('transactions')
+          .insert(payload)
+          .select('id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,amount_usdc')
+          .maybeSingle();
+
+        if (error) {
+          const duplicate = error.message?.toLowerCase().includes('duplicate');
+          if (!duplicate) throw error;
+
+          const { data: existingData, error: existingError } = await supabase
             .from('transactions')
-            .insert(data)
-            .select('uuid,type,amount,currency,status,tx_hash,created_at')
+            .select('id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,amount_usdc')
+            .eq('tx_hash', txHash)
             .maybeSingle();
 
-        let { data, error: insertError } = await attemptInsert(payload);
-
-        if (insertError?.message?.includes('invalid input value for enum transaction_status')) {
-          const { status: _status, ...payloadWithoutStatus } = payload;
-          ({ data, error: insertError } = await attemptInsert(payloadWithoutStatus));
+          if (existingError) throw existingError;
+          storedTransaction = (existingData ?? null) as StoredTransaction | null;
+        } else {
+          storedTransaction = (data ?? null) as StoredTransaction | null;
         }
-
-        if (insertError?.message?.includes('null value in column \"status\"')) {
-          ({ data, error: insertError } = await attemptInsert({ ...payload, status: 'pending' }));
-        }
-
-        if (insertError) throw insertError;
 
         const receiver = walletTargets.find(
           (target) =>
@@ -281,26 +326,83 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
             target.wallet_address.toLowerCase() === toWallet.toLowerCase()
         );
         const senderName = userAlias || user.email?.address || 'Remitente';
-        const receiverName = receiver?.email ?? 'Destinatario';
+        const resolvedReceiverName =
+          receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Destinatario';
+        const normalizedAmount = Number(storedTransaction?.amount_usdc ?? amountUsdc);
 
         setLastReceipt({
-          uuid: String(data?.uuid ?? txUuid ?? ''),
-          type: (data?.type as MovementType) ?? movementType,
-          amount: String(data?.amount ?? amountUsdc),
-          currency: String(data?.currency ?? 'USDC'),
-          status: String(data?.status ?? status),
-          txHash: String(data?.tx_hash ?? txHash),
-          createdAt: String(data?.created_at ?? new Date().toISOString()),
+          uuid: String(storedTransaction?.id ?? txHash ?? ''),
+          type: (storedTransaction?.movement_type ?? movementType) as MovementType,
+          amount: Number.isFinite(normalizedAmount) ? normalizedAmount.toFixed(2) : amountUsdc,
+          currency: 'USDC',
+          status: String(storedTransaction?.status ?? status),
+          txHash: String(storedTransaction?.tx_hash ?? txHash),
+          createdAt: String(storedTransaction?.created_at ?? new Date().toISOString()),
           senderName,
           senderWallet: smartWalletAddress,
-          receiverName,
+          receiverName: resolvedReceiverName,
           receiverWallet: toWallet,
         });
+
+        return storedTransaction;
       } catch (error: any) {
         console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
+        return null;
       }
     },
-    [rolSeleccionado, smartWalletAddress, user?.id, supabase, walletTargets, userAlias, user?.email]
+    [rolSeleccionado, smartWalletAddress, supabase, user?.email, user?.id, userAlias, walletTargets]
+  );
+
+  const registrarInversion = useCallback(
+    async ({
+      pendingInvestment,
+      txHash,
+      transactionId,
+      amountUsdc,
+      toWallet,
+    }: RegisterInvestmentArgs) => {
+      if (!user?.id || !smartWalletAddress) return;
+
+      try {
+        const amountValue = Number(amountUsdc);
+        const projection = calculateInvestmentProjection({
+          amountUsdc: amountValue,
+          interestRateEa: Number(pendingInvestment.interestRateEa ?? 0),
+          termMonths: Number(pendingInvestment.termMonths ?? 0),
+        });
+
+        const payload = {
+          transaction_id: transactionId ?? null,
+          investor_user_id: user.id,
+          entrepreneur_user_id: pendingInvestment.entrepreneurUserId || null,
+          project_id: pendingInvestment.projectId,
+          project_title: pendingInvestment.projectTitle,
+          tx_hash: txHash,
+          from_wallet: smartWalletAddress,
+          to_wallet: toWallet,
+          amount_usdc: Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0,
+          interest_rate_ea: Number(pendingInvestment.interestRateEa ?? 0),
+          term_months: Number(pendingInvestment.termMonths ?? 0),
+          projected_return_usdc: projection.projectedReturnUsdc,
+          projected_total_usdc: projection.projectedTotalUsdc,
+          status: 'submitted',
+          metadata: {
+            app: 'investup-web',
+            currency: pendingInvestment.currency,
+            entrepreneur_name: pendingInvestment.entrepreneurName,
+            created_from: 'project-investment-flow',
+          },
+        };
+
+        const { error } = await supabase.from('investments').insert(payload);
+        if (error && !error.message?.toLowerCase().includes('duplicate')) {
+          throw error;
+        }
+      } catch (error: any) {
+        console.error('Error guardando inversion en Supabase:', error?.message ?? error);
+      }
+    },
+    [smartWalletAddress, supabase, user?.id]
   );
 
   const getCachedUsdcQuote = useCallback(async () => {
@@ -380,14 +482,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         setFaseApp('dashboard');
       } catch (error: any) {
         console.error('Error guardando rol:', error?.message ?? error);
-        // Fallback local para evitar bucles de onboarding si Supabase/RLS falla.
         localStorage.setItem(getRolKey(user.id), rolFrontend);
         localStorage.setItem(getOnboardingDoneKey(user.id), '1');
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       }
     },
-    [user, smartWalletAddress, supabase, getOnboardingDoneKey, getRolKey]
+    [getOnboardingDoneKey, getRolKey, smartWalletAddress, supabase, user]
   );
 
   const cargarWalletsObjetivo = useCallback(async () => {
@@ -414,17 +515,17 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoadingWallets(false);
     }
-  }, [authenticated, rolSeleccionado, user?.id]);
+  }, [authenticated, rolSeleccionado, supabase, user?.id]);
 
   const enviarUSDC = useCallback(
     async (destino: string, monto: string) => {
       if (!client || !smartWalletAddress || !destino || !monto) {
         alert('Faltan datos o la wallet no esta lista');
-        return;
+        return false;
       }
       if (!destino.startsWith('0x') || destino.length !== 42) {
         alert('Direccion destino invalida');
-        return;
+        return false;
       }
 
       setLoadingTx(true);
@@ -485,18 +586,53 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           paymasterContext: { token: USDC_ADDRESS },
         } as any);
 
+        const pendingInvestment =
+          rolSeleccionado === 'inversor'
+            ? normalizePendingInvestment(getPendingInvestment(), destino)
+            : null;
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
-        const tipo = rolSeleccionado === 'inversor' ? 'Inversion' : 'Repayment';
-        const movementType: MovementType = rolSeleccionado === 'inversor' ? 'investment' : 'repayment';
+        const movementType: MovementType =
+          rolSeleccionado === 'emprendedor'
+            ? 'repayment'
+            : rolSeleccionado === 'inversor'
+              ? 'investment'
+              : 'transfer';
+        const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Inversion' : 'Transferencia';
+
         setHistorial((prev) => [`${tipo} ${enviadoFmt} USDC -> ${destino.slice(0, 8)}...`, ...prev]);
-        await registrarTransaccion({
+
+        const transactionRow = await registrarTransaccion({
           txHash,
           toWallet: destino,
           amountUsdc: enviadoFmt,
           movementType,
+          receiverName: pendingInvestment?.entrepreneurName,
+          metadata: pendingInvestment
+            ? {
+                project_id: pendingInvestment.projectId,
+                project_title: pendingInvestment.projectTitle,
+                entrepreneur_user_id: pendingInvestment.entrepreneurUserId,
+                entrepreneur_name: pendingInvestment.entrepreneurName,
+                projected_return_usdc: pendingInvestment.projectedReturnUsdc,
+                projected_total_usdc: pendingInvestment.projectedTotalUsdc,
+                receiver_name: pendingInvestment.entrepreneurName,
+              }
+            : undefined,
         });
 
+        if (pendingInvestment) {
+          await registrarInversion({
+            pendingInvestment,
+            txHash,
+            transactionId: transactionRow?.id ?? null,
+            amountUsdc: enviadoFmt,
+            toWallet: destino,
+          });
+          clearPendingInvestment();
+        }
+
         await actualizarSaldos();
+        return true;
       } catch (error: any) {
         const message = String(error?.message || error || '');
         if (message.includes('AA21') || message.includes("didn't pay prefund")) {
@@ -504,18 +640,20 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         } else {
           alert(`Fallo la operacion: ${message || 'error desconocido'}`);
         }
+        return false;
       } finally {
         setLoadingTx(false);
       }
     },
     [
-      client,
-      smartWalletAddress,
-      getCachedUsdcQuote,
-      getCachedMaxFeePerGas,
-      rolSeleccionado,
       actualizarSaldos,
+      client,
+      getCachedMaxFeePerGas,
+      getCachedUsdcQuote,
+      registrarInversion,
       registrarTransaccion,
+      rolSeleccionado,
+      smartWalletAddress,
     ]
   );
 
@@ -541,12 +679,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(getRolKey(user.id));
       localStorage.removeItem(getOnboardingDoneKey(user.id));
     }
+    clearPendingInvestment();
     await logout();
     setFaseApp('login');
     setRolSeleccionado(null);
     setWalletTargets([]);
     setHistorial([]);
-  }, [logout, user?.id, getOnboardingDoneKey, getRolKey]);
+  }, [getOnboardingDoneKey, getRolKey, logout, user?.id]);
 
   useEffect(() => {
     if (!ready) return;
@@ -618,7 +757,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     };
 
     verificarUsuario();
-  }, [authenticated, ready, smartWalletAddress, user, supabase, getOnboardingDoneKey, getRolKey]);
+  }, [authenticated, getOnboardingDoneKey, getRolKey, ready, smartWalletAddress, supabase, user]);
 
   useEffect(() => {
     if (authenticated && smartWalletAddress) {
@@ -630,7 +769,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     if (faseApp === 'dashboard') {
       cargarWalletsObjetivo();
     }
-  }, [faseApp, cargarWalletsObjetivo]);
+  }, [cargarWalletsObjetivo, faseApp]);
 
   const value: InvestUpContextType = {
     ready,
