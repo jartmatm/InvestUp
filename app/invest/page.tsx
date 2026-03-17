@@ -124,7 +124,7 @@ export default function InvestPage() {
       title={pendingInvestment ? 'Transferencia de inversion' : 'Enviar'}
       subtitle={helper}
     >
-      <div className="space-y-6 pb-28">
+      <div className="space-y-6 pb-40">
         {pendingInvestment ? (
           <div className="rounded-2xl border border-primary/15 bg-primary/10 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-3">
@@ -317,7 +317,7 @@ export default function InvestPage() {
           setWalletDestino('');
         }}
         disabled={!canSubmit || loadingTx}
-        className={`fixed left-5 right-5 bottom-24 rounded-xl py-4 font-semibold text-white shadow-lg transition ${
+        className={`fixed bottom-[5.5rem] left-5 right-5 z-10 rounded-xl py-4 font-semibold text-white shadow-lg transition ${
           !canSubmit || loadingTx ? 'bg-purple-300' : 'bg-purple-600'
         }`}
       >

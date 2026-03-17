@@ -152,7 +152,7 @@ export default function FeedDetailPage() {
               onClick={() => router.push(`/feed/${project.id}/invest`)}
               disabled={!project.owner_wallet}
               className={`rounded-full px-5 py-2 text-sm font-semibold text-white shadow-lg transition ${
-                project.owner_wallet ? 'bg-primary' : 'bg-primary/40'
+                project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
               }`}
             >
               Invertir
@@ -230,7 +230,7 @@ export default function FeedDetailPage() {
             onClick={() => router.push(`/feed/${project.id}/invest`)}
             disabled={!project.owner_wallet}
             className={`w-full rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
-              project.owner_wallet ? 'bg-primary' : 'bg-primary/40'
+              project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
             Invertir en este emprendimiento

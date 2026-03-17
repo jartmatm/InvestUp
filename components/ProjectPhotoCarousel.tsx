@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
 
@@ -36,22 +36,22 @@ export default function ProjectPhotoCarousel({
   };
 
   const showPrevious = (event?: React.SyntheticEvent) => {
-    if (stopPropagation) event?.stopPropagation();
+    event?.stopPropagation();
     goToIndex(currentIndex - 1);
   };
 
   const showNext = (event?: React.SyntheticEvent) => {
-    if (stopPropagation) event?.stopPropagation();
+    event?.stopPropagation();
     goToIndex(currentIndex + 1);
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (stopPropagation) event.stopPropagation();
+    event.stopPropagation();
     setTouchStartX(event.touches[0]?.clientX ?? null);
   };
 
   const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (stopPropagation) event.stopPropagation();
+    event.stopPropagation();
     if (touchStartX === null) return;
 
     const touchEndX = event.changedTouches[0]?.clientX ?? touchStartX;
@@ -99,7 +99,7 @@ export default function ProjectPhotoCarousel({
             aria-label="Foto anterior"
             className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
-            <span className="text-lg leading-none">‹</span>
+            <span className="text-lg leading-none">?</span>
           </button>
           <button
             type="button"
@@ -107,7 +107,7 @@ export default function ProjectPhotoCarousel({
             aria-label="Foto siguiente"
             className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
-            <span className="text-lg leading-none">›</span>
+            <span className="text-lg leading-none">?</span>
           </button>
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 backdrop-blur-md">
             {slides.map((_, index) => (
@@ -115,7 +115,7 @@ export default function ProjectPhotoCarousel({
                 key={`slide-dot-${index}`}
                 type="button"
                 onClick={(event) => {
-                  if (stopPropagation) event.stopPropagation();
+                  event.stopPropagation();
                   goToIndex(index);
                 }}
                 aria-label={`Ir a foto ${index + 1}`}

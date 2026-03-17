@@ -290,19 +290,11 @@ export default function ProjectInvestPage() {
 
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <p className="text-sm font-semibold text-gray-900">Valor a invertir</p>
-            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
-              <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                USDC
-              </span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={amount}
-                onChange={(event) => handleAmountChange(event.target.value)}
-                onBlur={() => setAmount(formatAmountInput(amount))}
-                placeholder="0.00"
-                className="w-full bg-transparent text-3xl font-semibold text-gray-900 outline-none"
-              />
+            <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Monto seleccionado</p>
+              <p className="mt-2 text-3xl font-semibold text-gray-900">
+                {(formatAmountInput(amount) || '0.00')} USDC
+              </p>
             </div>
 
             <div className="mt-4 grid grid-cols-4 gap-2">
@@ -313,13 +305,31 @@ export default function ProjectInvestPage() {
                   onClick={() => setAmount(quickAmount.toFixed(2))}
                   className={`rounded-2xl border px-2 py-3 text-sm font-semibold transition ${
                     Number(amount) === quickAmount
-                      ? 'border-primary bg-primary text-white'
+                      ? 'border-[#6B39F4] bg-[#6B39F4] text-white'
                       : 'border-white/25 bg-white/15 text-gray-700'
                   }`}
                 >
                   ${quickAmount}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Valor personalizado</p>
+              <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/25 bg-white/20 px-4 py-4">
+                <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  USDC
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(event) => handleAmountChange(event.target.value)}
+                  onBlur={() => setAmount(formatAmountInput(amount))}
+                  placeholder="Escribe el monto que quieras invertir"
+                  className="w-full bg-transparent text-lg font-semibold text-gray-900 outline-none"
+                />
+              </div>
             </div>
           </div>
 
@@ -359,7 +369,7 @@ export default function ProjectInvestPage() {
             onClick={handleContinue}
             disabled={!canContinue}
             className={`w-full rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
-              canContinue ? 'bg-primary' : 'bg-primary/40'
+              canContinue ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
             Confirmar inversion

@@ -100,6 +100,8 @@ export default function FeedPage() {
   const [status, setStatus] = useState('');
   const [flippedId, setFlippedId] = useState<string | null>(null);
   const [wishlist, setWishlist] = useState<string[]>([]);
+  const [showCategories, setShowCategories] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('Todas');
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -175,6 +177,26 @@ export default function FeedPage() {
     }
   }, []);
 
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(
+      new Set(
+        projects.map((project) => {
+          const sector = project.sector?.trim();
+          return sector && sector.length > 0 ? sector : 'Sin categoria';
+        })
+      )
+    );
+    return ['Todas', ...uniqueCategories];
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    if (selectedCategory === 'Todas') return projects;
+    return projects.filter((project) => {
+      const sector = project.sector?.trim() || 'Sin categoria';
+      return sector === selectedCategory;
+    });
+  }, [projects, selectedCategory]);
+
   const toggleFlip = (id: string) => {
     setFlippedId((prev) => (prev === id ? null : id));
   };
@@ -194,24 +216,56 @@ export default function FeedPage() {
       {loading ? <p className="text-sm text-gray-500">Cargando oportunidades...</p> : null}
       {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Sugerencias de hoy</h2>
-        <p className="text-xs text-gray-500">{projects.length} proyectos</p>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Sugerencias de hoy</h2>
+          <p className="text-xs text-gray-500">{filteredProjects.length} proyectos</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCategories((prev) => !prev)}
+          className="rounded-full border border-[#D3C4FC] bg-white/25 px-4 py-2 text-sm font-semibold text-[#6B39F4] backdrop-blur-md"
+        >
+          Categorias
+        </button>
       </div>
 
-      {!loading && projects.length === 0 ? (
+      {showCategories ? (
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          {categories.map((category) => {
+            const active = category === selectedCategory;
+            return (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSelectedCategory(category)}
+                className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                  active
+                    ? 'border-[#6B39F4] bg-[#6B39F4] text-white'
+                    : 'border-white/25 bg-white/20 text-gray-700 backdrop-blur-md'
+                }`}
+              >
+                {category}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {!loading && filteredProjects.length === 0 ? (
         <div className="rounded-xl border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          Aun no hay proyectos publicados.
+          No hay publicaciones para esta categoria.
         </div>
       ) : null}
 
       <div className="grid grid-cols-2 gap-4">
-        {projects.map((project) => {
+        {filteredProjects.map((project) => {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
           const amountLabel = formatAmount(project.amount_requested, project.currency);
           const termLabel = project.term_months ? `${project.term_months} meses` : '--';
           const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
+          const categoryLabel = project.sector?.trim() || 'Sin categoria';
 
           return (
             <div
@@ -225,7 +279,7 @@ export default function FeedPage() {
               className="text-left [perspective:1000px]"
             >
               <div
-                className={`relative h-60 w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                className={`relative h-72 w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                   isFlipped ? '[transform:rotateY(180deg)]' : ''
                 }`}
               >
@@ -234,10 +288,9 @@ export default function FeedPage() {
                     <ProjectPhotoCarousel
                       images={project.photo_urls}
                       alt={project.title}
-                      className="h-32 w-full"
-                      imageClassName="h-32 w-full object-cover"
-                      emptyClassName="flex h-32 w-full items-center justify-center bg-white/20 text-xs text-slate-500 backdrop-blur-md"
-                      stopPropagation
+                      className="h-40 w-full"
+                      imageClassName="h-40 w-full object-cover"
+                      emptyClassName="flex h-40 w-full items-center justify-center bg-white/20 text-xs text-slate-500 backdrop-blur-md"
                     />
                     <button
                       type="button"
@@ -252,28 +305,24 @@ export default function FeedPage() {
                     </button>
                   </div>
 
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
+                  <div className="flex h-[calc(100%-10rem)] flex-col justify-between p-4">
+                    <div>
                       <p className="text-sm font-semibold text-gray-900">{project.title}</p>
-                      <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary">
-                        Ver detalle
-                      </span>
+                      <div className="mt-2 inline-flex rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary">
+                        {categoryLabel}
+                      </div>
+                      <p className="mt-3 line-clamp-3 text-xs leading-5 text-gray-600">
+                        {project.description}
+                      </p>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      {project.city || project.country
-                        ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                        : 'Ubicacion pendiente'}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        router.push(`/feed/${project.id}`);
-                      }}
-                      className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 px-3 py-1 text-xs font-semibold text-primary"
-                    >
-                      Detalles
-                    </button>
+
+                    <div className="pt-3">
+                      <p className="text-xs text-gray-500">
+                        {project.city || project.country
+                          ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
+                          : 'Ubicacion pendiente'}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -311,7 +360,7 @@ export default function FeedPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-between">
+                  <div className="mt-5 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={(event) => {
@@ -320,7 +369,7 @@ export default function FeedPage() {
                       }}
                       className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
                     >
-                      Detalles
+                      Ver detalle
                     </button>
                     <p className="text-xs text-white/70">Toca para volver</p>
                   </div>
