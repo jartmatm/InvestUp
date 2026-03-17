@@ -60,14 +60,30 @@ function IconBell() {
 
 function IconPlus() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
       <path
         d="M6 9.8835H4.5C3.67157 9.8835 3 9.20482 3 8.36762V8.16524C3 7.36649 3.46547 6.64266 4.18772 6.31826L11.1877 3.1742C11.7049 2.94193 12.2951 2.94193 12.8123 3.1742L19.8123 6.31826C20.5345 6.64266 21 7.36649 21 8.16524V8.36762C21 9.20482 20.3284 9.8835 19.5 9.8835H18M6 9.8835V16.9576M6 9.8835H10M6 16.9576H4.5C3.67157 16.9576 3 17.6363 3 18.4735V19.4841C3 20.3213 3.67157 21 4.5 21H19.5C20.3284 21 21 20.3213 21 19.4841V18.4735C21 17.6363 20.3284 16.9576 19.5 16.9576H18M6 16.9576H10M18 9.8835V16.9576M18 9.8835H14M18 16.9576H14M14 9.8835V16.9576M14 9.8835H10M14 16.9576H10M10 9.8835V16.9576"
-        stroke="#121A26"
+        stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function IconAdd() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 6V18M6 12H18" />
     </svg>
   );
 }
@@ -239,50 +255,50 @@ export default function HomePage() {
     { label: 'Activity', href: '/portfolio' },
     { label: 'Enviar', href: '/invest' },
     { label: 'Pagos', href: '/feed' },
-    { label: 'Wallet', href: '/buy' },
     { label: 'Profile', href: '/profile' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 px-5 pb-28 pt-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-white">
+      <div className="mx-auto w-full max-w-[375px] px-6 pb-32 pt-8">
+        <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 overflow-hidden rounded-full bg-gray-200">
+          <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-600">
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
                 {displayName.slice(0, 1).toUpperCase()}
               </div>
             )}
           </div>
           <div>
-            <p className="text-sm text-gray-500">Hola! {roleLabel}</p>
-            <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
+            <p className="text-sm text-[#818898]">Hola! {roleLabel}</p>
+            <h1 className="text-xl font-semibold text-[#0F172A]">{displayName}</h1>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             aria-label="Buscar"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F6F8FA] text-[#0F172A] shadow-sm"
           >
             <IconSearch />
           </button>
           <button
             type="button"
             aria-label="Notificaciones"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F6F8FA] text-[#0F172A] shadow-sm"
           >
             <IconBell />
           </button>
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl bg-purple-600 p-6 text-white shadow-lg">
+      <div className="mb-6 rounded-[18px] bg-[#6B39F4] p-6 text-white shadow-[0_20px_40px_rgba(107,57,244,0.25)]">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm opacity-80">Disponible</p>
+            <p className="text-sm text-white/70">Disponible</p>
             <h2 className="mt-1 text-3xl font-bold">
               {showBalance ? `$${balanceUSDC}` : 'XXXX.XX'}
             </h2>
@@ -297,30 +313,35 @@ export default function HomePage() {
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/80">
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
           <span>Recaudado: --</span>
-          <span className="opacity-60">•</span>
+          <span className="text-[#40C4AA]/60">•</span>
           <span>Tasa Interés: --</span>
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-4 gap-3 text-center">
+      <div className="mb-8 grid grid-cols-4 gap-4 text-center">
         {actions.map((action) => (
-          <button key={action.label} type="button" onClick={action.onClick} className="flex flex-col items-center">
-            <div className="mb-2 rounded-full bg-white p-3 text-purple-600 shadow-md">
+          <button
+            key={action.label}
+            type="button"
+            onClick={action.onClick}
+            className="flex flex-col items-center gap-2"
+          >
+            <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full bg-[#F6F8FA] text-[#6B39F4] shadow-sm">
               {action.icon}
             </div>
-            <p className="text-sm text-gray-700">{action.label}</p>
+            <p className="text-[11px] font-semibold text-[#666D80]">{action.label}</p>
           </button>
         ))}
       </div>
 
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">{sectionTitle}</h2>
+        <h2 className="text-base font-semibold text-[#0F172A]">{sectionTitle}</h2>
         <button
           type="button"
           onClick={() => router.push('/portfolio')}
-          className="text-sm font-medium text-purple-600"
+          className="text-sm font-semibold text-[#6B39F4]"
         >
           Ver todo
         </button>
@@ -330,24 +351,27 @@ export default function HomePage() {
         {rolSeleccionado === 'inversor' ? (
           historial.length > 0 ? (
             historial.slice(0, 3).map((item, index) => (
-              <div key={`${item}-${index}`} className="rounded-2xl bg-white p-5 shadow-sm">
-                <p className="text-sm text-gray-500">Inversión</p>
-                <p className="mt-1 text-base font-semibold text-gray-900">{item}</p>
+              <div
+                key={`${item}-${index}`}
+                className="rounded-[16px] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              >
+                <p className="text-sm text-[#818898]">Inversión</p>
+                <p className="mt-1 text-base font-semibold text-[#0F172A]">{item}</p>
               </div>
             ))
           ) : (
-            <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
+            <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
               Aun no tienes inversiones registradas.
             </div>
           )
         ) : (
           <>
             {loadingProject ? (
-              <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
+              <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
                 Cargando tu ultima publicacion...
               </div>
             ) : lastProject ? (
-              <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+              <div className="overflow-hidden rounded-[16px] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
                 {lastProject.photo_urls?.[0] ? (
                   <img
                     src={lastProject.photo_urls[0]}
@@ -355,13 +379,13 @@ export default function HomePage() {
                     className="h-32 w-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-32 w-full items-center justify-center bg-slate-100 text-xs text-slate-500">
+                  <div className="flex h-32 w-full items-center justify-center bg-[#F6F8FA] text-xs text-[#818898]">
                     Sin imagen
                   </div>
                 )}
                 <div className="p-4">
-                  <p className="text-sm font-semibold text-gray-900">{lastProject.title}</p>
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="text-sm font-semibold text-[#0F172A]">{lastProject.title}</p>
+                  <p className="mt-1 text-xs text-[#818898]">
                     {lastProject.amount_requested
                       ? `${lastProject.amount_requested} ${lastProject.currency ?? 'USD'}`
                       : 'Monto pendiente'}
@@ -369,7 +393,7 @@ export default function HomePage() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl bg-white p-5 text-sm text-gray-500 shadow-sm">
+              <div className="rounded-[16px] bg-[#F6F8FA] p-5 text-sm text-[#818898]">
                 Aqui veras tus publicaciones cuando esten activas.
               </div>
             )}
@@ -379,26 +403,40 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => router.push(rolSeleccionado === 'emprendedor' ? '/portfolio' : '/feed')}
-          className="w-full rounded-xl border-2 border-dashed border-gray-400 py-4 text-gray-500"
+          className="w-full rounded-[16px] border-2 border-dashed border-[#D3C4FC] py-4 text-sm font-semibold text-[#6B39F4]"
         >
           + {addLabel}
         </button>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white">
-        <div className="mx-auto flex w-full max-w-xl items-center justify-around px-4 py-3">
-          {navItems.map((item) => (
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-20">
+        <div className="mx-auto w-full max-w-[375px] px-6 pb-6">
+          <div className="relative rounded-[24px] border border-[#F6F8FA] bg-white px-4 pb-4 pt-6 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
             <button
-              key={item.href}
               type="button"
-              onClick={() => router.push(item.href)}
-              className={`text-center text-xs font-semibold ${
-                pathname?.startsWith(item.href) ? 'text-purple-600' : 'text-gray-500'
-              }`}
+              onClick={() => router.push('/buy')}
+              aria-label="Wallet"
+              className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#6B39F4] text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)]"
             >
-              {item.label}
+              <IconAdd />
             </button>
-          ))}
+            <div className="grid grid-cols-5 text-center text-[11px] font-semibold">
+              {navItems.map((item) => (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => router.push(item.href)}
+                  className={`${
+                    pathname?.startsWith(item.href) ? 'text-[#6B39F4]' : 'text-[#818898]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
