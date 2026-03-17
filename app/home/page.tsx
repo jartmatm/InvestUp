@@ -172,11 +172,50 @@ type LastProject = {
   created_at: string;
 };
 
+type TransactionRow = {
+  id: string;
+  created_at: string;
+  movement_type: 'investment' | 'repayment' | 'transfer' | 'buy' | 'withdrawal';
+  status: 'submitted' | 'confirmed' | 'failed';
+  from_wallet: string | null;
+  to_wallet: string | null;
+  amount_usdc: number | null;
+};
+
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+
+const isIncomingTransaction = (transaction: TransactionRow, walletAddress?: string) => {
+  const currentWallet = walletAddress?.toLowerCase();
+  const toWallet = transaction.to_wallet?.toLowerCase();
+  const fromWallet = transaction.from_wallet?.toLowerCase();
+  if (transaction.movement_type === 'buy') return true;
+  if (!currentWallet || !toWallet) return false;
+  return toWallet === currentWallet && fromWallet !== currentWallet;
+};
+
+const getTransactionTypeLabel = (transaction: TransactionRow, walletAddress?: string) => {
+  if (isIncomingTransaction(transaction, walletAddress)) return 'Received';
+  if (transaction.movement_type === 'repayment') return 'Repayment';
+  return 'Send';
+};
+
+const formatTransactionAmount = (amount: number | null) => {
+  if (amount == null) return '0.00 USDC';
+  return `${Number(amount).toFixed(2)} USDC`;
+};
+
+const formatTransactionDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Ahora';
+  return date.toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+  });
+};
 
 export default function HomePage() {
   const router = useRouter();
@@ -186,6 +225,7 @@ export default function HomePage() {
     faseApp,
     rolSeleccionado,
     userAlias,
+    smartWalletAddress,
     balanceUSDC,
     historial,
     abrirCompra,
@@ -195,6 +235,8 @@ export default function HomePage() {
   const [showBalance, setShowBalance] = useState(true);
   const [lastProject, setLastProject] = useState<LastProject | null>(null);
   const [loadingProject, setLoadingProject] = useState(false);
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -252,6 +294,35 @@ export default function HomePage() {
     loadLastProject();
   }, [rolSeleccionado, supabase, user?.id]);
 
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (!user?.id) {
+        setTransactions([]);
+        return;
+      }
+
+      setLoadingTransactions(true);
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id,created_at,movement_type,status,from_wallet,to_wallet,amount_usdc')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      if (error) {
+        console.error('Error cargando transacciones:', error.message);
+        setTransactions([]);
+        setLoadingTransactions(false);
+        return;
+      }
+
+      setTransactions(((data ?? []) as TransactionRow[]).filter((item) => item.id));
+      setLoadingTransactions(false);
+    };
+
+    loadTransactions();
+  }, [supabase, user?.id, historial.length]);
+
   const displayName = useMemo(() => profileName || userAlias || 'Usuario', [profileName, userAlias]);
   const roleLabel =
     rolSeleccionado === 'emprendedor'
@@ -278,9 +349,10 @@ export default function HomePage() {
     { label: 'Pagos', href: '/feed', icon: <IconNavPayments /> },
     { label: 'Profile', href: '/profile', icon: <IconNavProfile /> },
   ];
+  const navSlots: Array<NavItem | null> = [navItems[0], navItems[1], null, navItems[2], navItems[3]];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-transparent">
       <div className="mx-auto w-full max-w-[375px] px-6 pb-32 pt-8">
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -433,6 +505,74 @@ export default function HomePage() {
         </button>
       </div>
 
+      <div className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-[#0F172A]">Transacciones</h2>
+          <button
+            type="button"
+            onClick={() => router.push('/portfolio')}
+            className="text-sm font-semibold text-[#6B39F4]"
+          >
+            Ver todo
+          </button>
+        </div>
+
+        <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
+          {loadingTransactions ? (
+            <div className="rounded-[18px] bg-[#F6F8FA] px-4 py-5 text-sm text-[#818898]">
+              Cargando transacciones...
+            </div>
+          ) : null}
+
+          {!loadingTransactions && transactions.length === 0 ? (
+            <div className="rounded-[18px] bg-[#F6F8FA] px-4 py-5 text-sm text-[#818898]">
+              Tus movimientos apareceran aqui.
+            </div>
+          ) : null}
+
+          {!loadingTransactions
+            ? transactions.map((transaction) => {
+                const incoming = isIncomingTransaction(transaction, smartWalletAddress);
+                const amountColor = incoming ? 'text-[#40C4AA]' : 'text-[#E33A24]';
+                const amountPrefix = incoming ? '+' : '-';
+
+                return (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-[18px] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-full bg-[#E1D7FD]">
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
+                            {displayName.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#0F172A]">{displayName}</p>
+                        <p className="text-xs capitalize text-[#818898]">
+                          {getTransactionTypeLabel(transaction, smartWalletAddress)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <p className={`text-sm font-semibold ${amountColor}`}>
+                        {amountPrefix}
+                        {formatTransactionAmount(transaction.amount_usdc)}
+                      </p>
+                      <p className="text-xs text-[#818898]">{formatTransactionDate(transaction.created_at)}</p>
+                    </div>
+                  </div>
+                );
+              })
+            : null}
+        </div>
+      </div>
+
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-20">
@@ -442,12 +582,18 @@ export default function HomePage() {
               type="button"
               onClick={() => router.push('/invest')}
               aria-label="Enviar"
-              className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#6B39F4] text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)]"
+              className={`absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
+                pathname?.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
+              }`}
             >
               <IconSend />
             </button>
-            <div className="grid grid-cols-4 items-center justify-items-center">
-              {navItems.map((item) => {
+            <div className="grid grid-cols-5 items-center justify-items-center">
+              {navSlots.map((item, index) => {
+                if (!item) {
+                  return <div key={`nav-spacer-${index}`} className="h-6 w-6" aria-hidden="true" />;
+                }
+
                 const active = pathname?.startsWith(item.href);
                 return (
                   <button

@@ -38,7 +38,12 @@ body {
   color: var(--gray-900);
   font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "SF Pro Display", sans-serif;
-  background: var(--gray-100);
+  background-color: #f3f0fb;
+  background-image: url('/assets/fondo_home.jpg');
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
 }
 
 h1,

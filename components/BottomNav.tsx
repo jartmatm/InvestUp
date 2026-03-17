@@ -60,13 +60,13 @@ function IconNavProfile() {
 const items = [
   { href: '/home', label: 'Home', icon: <IconNavHome /> },
   { href: '/portfolio', label: 'Activity', icon: <IconNavActivity /> },
-  // Enviar vive en el botón flotante central
   { href: '/feed', label: 'Pagos', icon: <IconNavPayments /> },
   { href: '/profile', label: 'Profile', icon: <IconNavProfile /> },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const navSlots: Array<(typeof items)[number] | null> = [items[0], items[1], null, items[2], items[3]];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-20 bg-white">
@@ -75,12 +75,18 @@ export default function BottomNav() {
           <Link
             href="/invest"
             aria-label="Enviar"
-            className="absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#6B39F4] text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)]"
+            className={`absolute left-1/2 top-0 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
+              pathname.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
+            }`}
           >
             <IconSend />
           </Link>
-          <div className="grid grid-cols-4 items-center justify-items-center">
-            {items.map((item) => {
+          <div className="grid grid-cols-5 items-center justify-items-center">
+            {navSlots.map((item, index) => {
+              if (!item) {
+                return <div key={`nav-spacer-${index}`} className="h-6 w-6" aria-hidden="true" />;
+              }
+
               const active = pathname.startsWith(item.href);
               return (
                 <Link
@@ -88,7 +94,7 @@ export default function BottomNav() {
                   href={item.href}
                   aria-label={item.label}
                   className={`flex items-center justify-center transition ${
-                    active ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
+                    active ? 'text-[#6B39F4]' : 'text-gray-500 hover:text-[#5A27E0]'
                   }`}
                 >
                   {item.icon}

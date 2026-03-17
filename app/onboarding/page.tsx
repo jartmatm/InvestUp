@@ -17,7 +17,7 @@ export default function OnboardingPage() {
   }, [faseApp, router]);
 
   return (
-    <main className="min-h-screen bg-gray-100 px-5 py-8 text-gray-900">
+    <main className="min-h-screen bg-transparent px-5 py-8 text-gray-900">
       <section className="mx-auto w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h1 className="text-2xl font-semibold tracking-tight">Informacion basica</h1>
         <p className="mt-1 text-sm text-gray-500">

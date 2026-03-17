@@ -16,9 +16,15 @@ export default function LoginPage() {
   }, [faseApp, router]);
 
   return (
-    <div className="flex h-screen w-screen flex-col justify-center bg-gradient-to-br from-[#EEF2FF] to-[#E9D5FF] px-8">
-      <div className="mb-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-gray-300">
+    <div className="relative flex h-screen w-screen flex-col justify-center overflow-hidden px-8">
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/assets/fondo_home.jpg')" }}
+      />
+      <div className="absolute inset-0 bg-white/68 backdrop-blur-[2px]" />
+
+      <div className="relative mb-8">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-gray-300 bg-white/70">
           <svg
             width="28"
             height="28"
@@ -34,15 +40,15 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <h1 className="mb-3 text-3xl font-bold leading-tight text-gray-800">
+      <h1 className="relative mb-3 text-3xl font-bold leading-tight text-gray-800">
         Register with your <br /> email!
       </h1>
 
-      <p className="mb-10 text-gray-500">Sign up effortlessly with just one step!</p>
+      <p className="relative mb-10 text-gray-600">Sign up effortlessly with just one step!</p>
 
       <button
         onClick={login}
-        className="w-full rounded-xl bg-gradient-to-r from-[#6C4CF1] to-[#7A5AF8] py-4 font-semibold text-white shadow-lg transition hover:opacity-90"
+        className="relative w-full rounded-xl bg-gradient-to-r from-[#6C4CF1] to-[#7A5AF8] py-4 font-semibold text-white shadow-lg transition hover:opacity-90"
       >
         Continue
       </button>
