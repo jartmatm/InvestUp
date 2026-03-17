@@ -215,6 +215,7 @@ export default function PersonalDataPage() {
       updateForm('avatar_url', result);
       if (typeof window !== 'undefined' && result) {
         window.localStorage.setItem('investup_avatar_url', result);
+        window.dispatchEvent(new Event('investup-profile-updated'));
       }
     };
     reader.readAsDataURL(file);
