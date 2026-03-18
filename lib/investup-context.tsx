@@ -398,11 +398,41 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         if (error && !error.message?.toLowerCase().includes('duplicate')) {
           throw error;
         }
+        return !error;
       } catch (error: any) {
         console.error('Error guardando inversion en Supabase:', error?.message ?? error);
+        return false;
       }
     },
     [smartWalletAddress, supabase, user?.id]
+  );
+
+  const actualizarMontoRecaudadoProyecto = useCallback(
+    async (projectId: string, amountUsdc: number) => {
+      if (!projectId || !Number.isFinite(amountUsdc) || amountUsdc <= 0) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('amount_raised')
+          .eq('id', projectId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        const currentRaised = Number((data as { amount_raised?: number | null } | null)?.amount_raised ?? 0);
+        const nextRaised = Number((currentRaised + amountUsdc).toFixed(2));
+        const { error: updateError } = await supabase
+          .from('projects')
+          .update({ amount_raised: nextRaised })
+          .eq('id', projectId);
+
+        if (updateError) throw updateError;
+      } catch (error: any) {
+        console.error('Error actualizando monto recaudado del proyecto:', error?.message ?? error);
+      }
+    },
+    [supabase]
   );
 
   const getCachedUsdcQuote = useCallback(async () => {
@@ -598,6 +628,29 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
               ? 'investment'
               : 'transfer';
         const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Inversion' : 'Transferencia';
+        const provisionalReceiverName =
+          pendingInvestment?.entrepreneurName ||
+          walletTargets.find(
+            (target) =>
+              target.wallet_address &&
+              target.wallet_address.toLowerCase() === destino.toLowerCase()
+          )?.email ||
+          'Destinatario';
+
+        // Show the receipt as soon as we have an on-chain hash, even if the Supabase write fails later.
+        setLastReceipt({
+          uuid: txHash,
+          type: movementType,
+          amount: Number(enviadoFmt).toFixed(2),
+          currency: 'USDC',
+          status: 'submitted',
+          txHash,
+          createdAt: new Date().toISOString(),
+          senderName: userAlias || user?.email?.address || 'Remitente',
+          senderWallet: smartWalletAddress,
+          receiverName: provisionalReceiverName,
+          receiverWallet: destino,
+        });
 
         setHistorial((prev) => [`${tipo} ${enviadoFmt} USDC -> ${destino.slice(0, 8)}...`, ...prev]);
 
@@ -621,13 +674,19 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (pendingInvestment) {
-          await registrarInversion({
+          const investmentSaved = await registrarInversion({
             pendingInvestment,
             txHash,
             transactionId: transactionRow?.id ?? null,
             amountUsdc: enviadoFmt,
             toWallet: destino,
           });
+          if (investmentSaved) {
+            await actualizarMontoRecaudadoProyecto(
+              pendingInvestment.projectId,
+              Number(enviadoFmt)
+            );
+          }
           clearPendingInvestment();
         }
 
@@ -647,6 +706,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     },
     [
       actualizarSaldos,
+      actualizarMontoRecaudadoProyecto,
       client,
       getCachedMaxFeePerGas,
       getCachedUsdcQuote,
@@ -654,6 +714,9 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       registrarTransaccion,
       rolSeleccionado,
       smartWalletAddress,
+      user?.email?.address,
+      userAlias,
+      walletTargets,
     ]
   );
 

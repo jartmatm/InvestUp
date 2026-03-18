@@ -151,6 +151,49 @@ export default function TransactionReceipt() {
     }
   };
 
+  const onPrint = async () => {
+    const blob = await createReceiptBlob();
+    if (!blob) {
+      setShareMessage('No se pudo preparar la impresión');
+      setTimeout(() => setShareMessage(''), 2000);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow) {
+      URL.revokeObjectURL(url);
+      setShareMessage('Activa las ventanas emergentes para imprimir');
+      setTimeout(() => setShareMessage(''), 2000);
+      return;
+    }
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Comprobante InvestUp</title>
+          <style>
+            body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #ffffff; }
+            img { max-width: 100%; height: auto; }
+          </style>
+        </head>
+        <body>
+          <img src="${url}" alt="Comprobante InvestUp" />
+          <script>
+            window.onload = function () {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.onafterprint = () => {
+      URL.revokeObjectURL(url);
+      printWindow.close();
+    };
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl">
@@ -207,12 +250,18 @@ export default function TransactionReceipt() {
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-2">
+        <div className="mt-6 grid grid-cols-4 gap-2">
           <button
             onClick={onDownload}
             className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"
           >
             Descargar
+          </button>
+          <button
+            onClick={onPrint}
+            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"
+          >
+            Imprimir
           </button>
           <button
             onClick={onShare}

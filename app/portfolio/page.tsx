@@ -28,6 +28,7 @@ type ProjectRow = {
   country: string | null;
   description: string;
   amount_requested: number | null;
+  amount_raised: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -218,7 +219,7 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
+        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_raised,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
       )
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
@@ -395,6 +396,9 @@ export default function PortfolioPage() {
       country: selectedCountry?.name ?? form.country,
       description: form.description,
       amount_requested: Number(form.amountRequested),
+      amount_raised: editingProjectId
+        ? myProjects.find((project) => project.id === editingProjectId)?.amount_raised ?? 0
+        : 0,
       amount_received: 0,
       currency: form.currency,
       term_months: termMonths,
@@ -669,6 +673,7 @@ export default function PortfolioPage() {
               city={project.city}
               country={project.country}
               amountRequested={project.amount_requested}
+              amountRaised={project.amount_raised}
               currency={project.currency}
               termMonths={project.term_months}
               interestRate={project.interest_rate}

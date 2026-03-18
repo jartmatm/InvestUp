@@ -2,6 +2,7 @@ type ProjectCardProps = {
   title: string;
   description: string;
   progress?: number;
+  amountRaised?: number | null;
   sector?: string | null;
   city?: string | null;
   country?: string | null;
@@ -19,6 +20,7 @@ export default function ProjectCard({
   title,
   description,
   progress = 0,
+  amountRaised,
   sector,
   city,
   country,
@@ -31,7 +33,11 @@ export default function ProjectCard({
   publicationEndDate,
   coverImage,
 }: ProjectCardProps) {
-  const width = `${Math.max(0, Math.min(100, progress))}%`;
+  const computedProgress =
+    amountRequested && amountRequested > 0 && amountRaised != null
+      ? (Number(amountRaised) / Number(amountRequested)) * 100
+      : progress;
+  const width = `${Math.max(0, Math.min(100, computedProgress))}%`;
   return (
     <article className="glass-card rounded-xl p-4">
       {coverImage ? (
@@ -47,6 +53,7 @@ export default function ProjectCard({
             Solicitado {currency ?? 'USD'} {Number(amountRequested).toLocaleString()}
           </span>
         ) : null}
+        {amountRaised != null ? <span>Recaudado {currency ?? 'USD'} {Number(amountRaised).toLocaleString()}</span> : null}
         {termMonths != null ? <span>Plazo: {termMonths} meses</span> : null}
         {interestRate != null ? <span>Interes: {interestRate}%</span> : null}
         {targetAmountUsd != null ? <span>Meta USD {Number(targetAmountUsd).toLocaleString()}</span> : null}

@@ -15,6 +15,7 @@ type ProjectDetail = {
   sector: string | null;
   business_name: string | null;
   amount_requested: number | null;
+  amount_raised: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -50,6 +51,12 @@ const formatAmount = (amount: number | null, currency: string | null) => {
 const normalizePhotos = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+};
+
+const calculateProgress = (raised: number | null, requested: number | null) => {
+  if (!requested || requested <= 0) return 0;
+  const progress = ((raised ?? 0) / requested) * 100;
+  return Math.max(0, Math.min(100, progress));
 };
 
 export default function FeedDetailPage() {
@@ -108,7 +115,7 @@ export default function FeedDetailPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,business_name,amount_requested,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
+          'id,title,description,sector,business_name,amount_requested,amount_raised,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
         )
         .eq('id', projectId)
         .maybeSingle();
@@ -183,16 +190,22 @@ export default function FeedDetailPage() {
             <p className="mt-3 text-sm text-gray-700">{project.description}</p>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Monto a recaudar</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">
-                {formatAmount(project.amount_requested, project.currency)}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Plazo</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+                  <p className="text-xs text-gray-500">Monto a recaudar</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-900">
+                    {formatAmount(project.amount_requested, project.currency)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+                  <p className="text-xs text-gray-500">Monto recaudado</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-900">
+                    {formatAmount(project.amount_raised, project.currency)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+                  <p className="text-xs text-gray-500">Plazo</p>
+                  <p className="mt-1 text-sm font-semibold text-gray-900">
                 {project.term_months ? `${project.term_months} meses` : '--'}
               </p>
             </div>
@@ -209,8 +222,21 @@ export default function FeedDetailPage() {
                   ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
                   : 'Pendiente'}
               </p>
-            </div>
-          </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Progreso de recaudación</span>
+                  <span>{calculateProgress(project.amount_raised, project.amount_requested).toFixed(0)}%</span>
+                </div>
+                <div className="mt-3 h-2 rounded-full bg-slate-200/80">
+                  <div
+                    className="h-2 rounded-full bg-[#6B39F4]"
+                    style={{ width: `${calculateProgress(project.amount_raised, project.amount_requested)}%` }}
+                  />
+                </div>
+              </div>
 
           {project.publication_end_date ? (
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 text-sm text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

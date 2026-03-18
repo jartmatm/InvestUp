@@ -168,9 +168,11 @@ type LastProject = {
   id: string;
   title: string;
   amount_requested: number | null;
+  amount_raised: number | null;
   currency: string | null;
   photo_urls: string[] | null;
   created_at: string;
+  interest_rate: number | null;
 };
 
 type TransactionRow = {
@@ -181,6 +183,32 @@ type TransactionRow = {
   from_wallet: string | null;
   to_wallet: string | null;
   amount_usdc: number | null;
+};
+
+type ActiveInvestmentRow = {
+  id: string;
+  created_at: string;
+  project_id: string;
+  project_title: string | null;
+  amount_usdc: number | null;
+  interest_rate_ea: number | null;
+  projected_return_usdc: number | null;
+  projected_total_usdc: number | null;
+  status: 'submitted' | 'confirmed' | 'failed';
+};
+
+type ProjectFundingSummary = {
+  id: string;
+  title: string;
+  amount_requested: number | null;
+  amount_raised: number | null;
+  currency: string | null;
+  photo_urls: string[] | null;
+  interest_rate: number | null;
+};
+
+type HomeActiveInvestment = ActiveInvestmentRow & {
+  project: ProjectFundingSummary | null;
 };
 
 const SUPABASE_URL =
@@ -209,6 +237,26 @@ const formatTransactionAmount = (amount: number | null) => {
   return `${Number(amount).toFixed(2)} USDC`;
 };
 
+const formatMoney = (amount: number | null, currency: string | null = 'USD') => {
+  if (amount == null) return '--';
+  const code = currency ?? 'USD';
+  try {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: code,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${Number(amount).toFixed(2)} ${code}`;
+  }
+};
+
+const calculateFundingProgress = (raised: number | null, requested: number | null) => {
+  if (!requested || requested <= 0) return 0;
+  const progress = ((raised ?? 0) / requested) * 100;
+  return Math.max(0, Math.min(100, progress));
+};
+
 const formatTransactionDate = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Ahora';
@@ -227,7 +275,7 @@ export default function HomePage() {
     userAlias,
     smartWalletAddress,
     balanceUSDC,
-    historial,
+    lastReceipt,
     abrirCompra,
     abrirRetiro,
   } = useInvestUp();
@@ -235,6 +283,8 @@ export default function HomePage() {
   const [showBalance, setShowBalance] = useState(true);
   const [lastProject, setLastProject] = useState<LastProject | null>(null);
   const [loadingProject, setLoadingProject] = useState(false);
+  const [activeInvestments, setActiveInvestments] = useState<HomeActiveInvestment[]>([]);
+  const [loadingActiveInvestments, setLoadingActiveInvestments] = useState(false);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
 
@@ -282,7 +332,7 @@ export default function HomePage() {
       setLoadingProject(true);
       const { data } = await supabase
         .from('projects')
-        .select('id,title,amount_requested,currency,photo_urls,created_at')
+        .select('id,title,amount_requested,amount_raised,currency,photo_urls,created_at,interest_rate')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
         .limit(1);
@@ -292,20 +342,88 @@ export default function HomePage() {
     };
 
     loadLastProject();
-  }, [rolSeleccionado, supabase, user?.id]);
+    const interval = window.setInterval(loadLastProject, 20000);
+    return () => window.clearInterval(interval);
+  }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
+
+  useEffect(() => {
+    const loadActiveInvestments = async () => {
+      if (!user?.id || rolSeleccionado !== 'inversor') {
+        setActiveInvestments([]);
+        return;
+      }
+
+      setLoadingActiveInvestments(true);
+      const { data, error } = await supabase
+        .from('investments')
+        .select(
+          'id,created_at,project_id,project_title,amount_usdc,interest_rate_ea,projected_return_usdc,projected_total_usdc,status'
+        )
+        .eq('investor_user_id', user.id)
+        .in('status', ['submitted', 'confirmed'])
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (error) {
+        console.error('Error cargando inversiones activas:', error.message);
+        setActiveInvestments([]);
+        setLoadingActiveInvestments(false);
+        return;
+      }
+
+      const investments = ((data ?? []) as ActiveInvestmentRow[]).filter((item) => item.id);
+      const projectIds = Array.from(
+        new Set(investments.map((investment) => investment.project_id).filter(Boolean))
+      );
+
+      const projectMap = new Map<string, ProjectFundingSummary>();
+      if (projectIds.length > 0) {
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id,title,amount_requested,amount_raised,currency,photo_urls,interest_rate')
+          .in('id', projectIds);
+
+        if (projectsError) {
+          console.error('Error cargando proyectos invertidos:', projectsError.message);
+        } else {
+          ((projectsData ?? []) as ProjectFundingSummary[]).forEach((project) => {
+            projectMap.set(project.id, project);
+          });
+        }
+      }
+
+      setActiveInvestments(
+        investments.map((investment) => ({
+          ...investment,
+          project: projectMap.get(investment.project_id) ?? null,
+        }))
+      );
+      setLoadingActiveInvestments(false);
+    };
+
+    loadActiveInvestments();
+    const interval = window.setInterval(loadActiveInvestments, 20000);
+    return () => window.clearInterval(interval);
+  }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
 
   useEffect(() => {
     const loadTransactions = async () => {
-      if (!user?.id) {
+      if (!user?.id && !smartWalletAddress) {
         setTransactions([]);
         return;
       }
 
       setLoadingTransactions(true);
+      const filters = [user?.id ? `user_id.eq.${user.id}` : null];
+      if (smartWalletAddress) {
+        filters.push(`from_wallet.eq.${smartWalletAddress}`);
+        filters.push(`to_wallet.eq.${smartWalletAddress}`);
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .select('id,created_at,movement_type,status,from_wallet,to_wallet,amount_usdc')
-        .eq('user_id', user.id)
+        .or(filters.filter(Boolean).join(','))
         .order('created_at', { ascending: false })
         .limit(12);
 
@@ -321,7 +439,9 @@ export default function HomePage() {
     };
 
     loadTransactions();
-  }, [supabase, user?.id, historial.length]);
+    const interval = window.setInterval(loadTransactions, 20000);
+    return () => window.clearInterval(interval);
+  }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
   const displayName = useMemo(() => profileName || userAlias || 'Usuario', [profileName, userAlias]);
   const roleLabel =
@@ -330,11 +450,29 @@ export default function HomePage() {
       : rolSeleccionado === 'inversor'
         ? 'Inversionista'
         : 'Usuario';
-  const sectionTitle = rolSeleccionado === 'emprendedor' ? 'Mis publicaciones' : 'Inversiones';
+  const sectionTitle = rolSeleccionado === 'emprendedor' ? 'Mis publicaciones' : 'Inversiones activas';
   const addLabel =
     rolSeleccionado === 'emprendedor'
       ? 'Agregar nueva publicación'
       : 'Invertir en nuevo emprendimiento';
+  const investorProjectedReturn = activeInvestments.reduce(
+    (sum, investment) => sum + Number(investment.projected_return_usdc ?? 0),
+    0
+  );
+  const investorAverageRate =
+    activeInvestments.length > 0
+      ? activeInvestments.reduce(
+          (sum, investment) => sum + Number(investment.interest_rate_ea ?? 0),
+          0
+        ) / activeInvestments.length
+      : 0;
+  const fundingProgress = calculateFundingProgress(lastProject?.amount_raised ?? 0, lastProject?.amount_requested ?? 0);
+  const investmentThemes = [
+    'bg-gradient-to-br from-[#6B39F4] via-[#5C6CFF] to-[#3290FF]',
+    'bg-gradient-to-br from-[#1F8BFF] via-[#00B8D9] to-[#34D399]',
+    'bg-gradient-to-br from-[#FF7A18] via-[#FF5E62] to-[#FF3D71]',
+    'bg-gradient-to-br from-[#0EA5A4] via-[#22C55E] to-[#84CC16]',
+  ];
 
   const actions: ActionItem[] = [
     { label: 'Recargar', icon: <IconPlus />, onClick: abrirCompra },
@@ -404,9 +542,19 @@ export default function HomePage() {
         </div>
 
         <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
-          <span>Recaudado: --</span>
+          <span>
+            {rolSeleccionado === 'emprendedor'
+              ? `Recaudado: ${formatMoney(lastProject?.amount_raised ?? 0, lastProject?.currency ?? 'USD')}`
+              : `Activas: ${activeInvestments.length}`}
+          </span>
           <span className="text-[#40C4AA]/60">•</span>
-          <span>Tasa Interés: --</span>
+          <span>
+            {rolSeleccionado === 'emprendedor'
+              ? `Tasa Interés: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`
+              : investorProjectedReturn > 0
+                ? `Rend. estimado: ${formatMoney(investorProjectedReturn, 'USD')}`
+                : `Tasa prom.: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}
+          </span>
         </div>
       </div>
 
@@ -439,19 +587,63 @@ export default function HomePage() {
 
       <div className="space-y-4">
         {rolSeleccionado === 'inversor' ? (
-          historial.length > 0 ? (
-            historial.slice(0, 3).map((item, index) => (
-              <div
-                key={`${item}-${index}`}
-                className="rounded-[16px] border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
-              >
-                <p className="text-sm text-[#818898]">Inversión</p>
-                <p className="mt-1 text-base font-semibold text-[#0F172A]">{item}</p>
-              </div>
-            ))
+          loadingActiveInvestments ? (
+            <div className="rounded-[16px] border border-white/25 bg-white/20 p-5 text-sm text-[#818898] backdrop-blur-md">
+              Cargando tus inversiones activas...
+            </div>
+          ) : activeInvestments.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {activeInvestments.map((investment, index) => {
+                const project = investment.project;
+                const progress = calculateFundingProgress(
+                  project?.amount_raised ?? 0,
+                  project?.amount_requested ?? 0
+                );
+                const projectTitle = project?.title || investment.project_title || 'Proyecto';
+
+                return (
+                  <button
+                    key={investment.id}
+                    type="button"
+                    onClick={() => router.push(`/feed/${investment.project_id}`)}
+                    className={`aspect-[0.95] rounded-[20px] p-4 text-left text-white shadow-[0_12px_30px_rgba(15,23,42,0.16)] ${investmentThemes[index % investmentThemes.length]}`}
+                  >
+                    <div className="flex h-full flex-col justify-between">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">
+                          Inversión activa
+                        </p>
+                        <h3 className="mt-2 text-base font-semibold leading-tight">{projectTitle}</h3>
+                        <p className="mt-2 text-xs text-white/80">
+                          {formatMoney(investment.amount_usdc ?? 0, 'USD')} invertidos
+                        </p>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between text-[11px] text-white/80">
+                          <span>Recaudado</span>
+                          <span>{formatMoney(project?.amount_raised ?? 0, project?.currency ?? 'USD')}</span>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-white/20">
+                          <div className="h-2 rounded-full bg-white" style={{ width: `${progress}%` }} />
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-[11px] text-white/80">
+                          <span>Tasa</span>
+                          <span>{investment.interest_rate_ea ? `${investment.interest_rate_ea}% EA` : '--'}</span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between text-[11px] text-white/80">
+                          <span>Rendimiento</span>
+                          <span>{formatMoney(investment.projected_return_usdc ?? 0, 'USD')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           ) : (
             <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
-              Aun no tienes inversiones registradas.
+              Aun no tienes inversiones activas registradas.
             </div>
           )
         ) : (
@@ -476,9 +668,13 @@ export default function HomePage() {
                 <div className="p-4">
                   <p className="text-sm font-semibold text-[#0F172A]">{lastProject.title}</p>
                   <p className="mt-1 text-xs text-[#818898]">
-                    {lastProject.amount_requested
-                      ? `${lastProject.amount_requested} ${lastProject.currency ?? 'USD'}`
-                      : 'Monto pendiente'}
+                    {`Recaudado ${formatMoney(lastProject.amount_raised ?? 0, lastProject.currency ?? 'USD')} de ${formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD')}`}
+                  </p>
+                  <div className="mt-3 h-2 rounded-full bg-slate-200/80">
+                    <div className="h-2 rounded-full bg-[#6B39F4]" style={{ width: `${fundingProgress}%` }} />
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold text-[#6B39F4]">
+                    {lastProject.interest_rate ? `${lastProject.interest_rate}% de interés` : 'Interés pendiente'}
                   </p>
                 </div>
               </div>

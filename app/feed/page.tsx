@@ -14,6 +14,7 @@ type FeedProject = {
   description: string;
   sector: string | null;
   amount_requested: number | null;
+  amount_raised: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -86,6 +87,12 @@ function formatAmount(amount: number | null, currency: string | null) {
   }
 }
 
+const calculateProgress = (raised: number | null, requested: number | null) => {
+  if (!requested || requested <= 0) return 0;
+  const progress = ((raised ?? 0) / requested) * 100;
+  return Math.max(0, Math.min(100, progress));
+};
+
 const normalizePhotos = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
@@ -144,7 +151,7 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,amount_requested,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
+          'id,title,description,sector,amount_requested,amount_raised,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
         )
         .order('created_at', { ascending: false });
 
@@ -262,10 +269,12 @@ export default function FeedPage() {
         {filteredProjects.map((project) => {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
-          const amountLabel = formatAmount(project.amount_requested, project.currency);
-          const termLabel = project.term_months ? `${project.term_months} meses` : '--';
-          const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
-          const categoryLabel = project.sector?.trim() || 'Sin categoria';
+              const amountLabel = formatAmount(project.amount_requested, project.currency);
+              const raisedLabel = formatAmount(project.amount_raised, project.currency);
+              const termLabel = project.term_months ? `${project.term_months} meses` : '--';
+              const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
+              const categoryLabel = project.sector?.trim() || 'Sin categoria';
+              const progress = calculateProgress(project.amount_raised, project.amount_requested);
 
           return (
             <div
@@ -330,7 +339,7 @@ export default function FeedPage() {
                   <p className="text-sm font-semibold">{project.title}</p>
                   <p className="mt-1 text-xs text-white/70">Detalles de financiamiento</p>
 
-                  <div className="mt-4 space-y-3 text-sm">
+                        <div className="mt-4 space-y-3 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-white/15 p-1.5 text-white">
                         <IconTarget />
@@ -340,27 +349,42 @@ export default function FeedPage() {
                         <p className="font-semibold">{amountLabel}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-white/15 p-1.5 text-white">
-                        <IconClock />
-                      </span>
-                      <div>
-                        <p className="text-xs text-white/70">Plazo</p>
-                        <p className="font-semibold">{termLabel}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-white/15 p-1.5 text-white">
-                        <IconPercent />
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-white/15 p-1.5 text-white">
+                              <IconClock />
+                            </span>
+                            <div>
+                              <p className="text-xs text-white/70">Plazo</p>
+                              <p className="font-semibold">{termLabel}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-white/15 p-1.5 text-white">
+                              <IconTarget />
+                            </span>
+                            <div>
+                              <p className="text-xs text-white/70">Recaudado</p>
+                              <p className="font-semibold">{raisedLabel}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-white/15 p-1.5 text-white">
+                              <IconPercent />
                       </span>
                       <div>
                         <p className="text-xs text-white/70">Tasa de interes</p>
                         <p className="font-semibold">{rateLabel}</p>
                       </div>
                     </div>
-                  </div>
+                        </div>
 
-                  <div className="mt-5 flex items-center justify-between">
+                        <div className="mt-4">
+                          <div className="h-2 rounded-full bg-white/20">
+                            <div className="h-2 rounded-full bg-white" style={{ width: `${progress}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between">
                     <button
                       type="button"
                       onClick={(event) => {
