@@ -18,6 +18,35 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Android Studio with Capacitor
+
+Use this flow when you want Android Studio to reflect your changes while you edit the app in VS Code.
+
+```bash
+npm run android:dev
+```
+
+This command:
+
+- starts Next.js on `0.0.0.0:3000`
+- syncs Capacitor Android with `http://10.0.2.2:3000`
+- opens the Android project in Android Studio
+
+Then run the app from Android Studio on an emulator. Keep the terminal open while you work and the app will refresh with your code changes.
+
+If you only need to resync native Capacitor changes, run:
+
+```bash
+npm run android:sync
+```
+
+For a physical Android device, start the same command with your machine IP:
+
+```powershell
+$env:CAP_SERVER_URL="http://192.168.1.10:3000"
+npm run android:dev
+```
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

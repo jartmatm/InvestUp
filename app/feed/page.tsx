@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
+import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 
 type FeedProject = {
@@ -154,6 +155,7 @@ export default function FeedPage() {
         .select(
           'id,title,description,sector,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
         )
+        .in('status', ACTIVE_PROJECT_STATUSES)
         .order('created_at', { ascending: false });
 
       if (error) {

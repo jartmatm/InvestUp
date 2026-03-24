@@ -4,6 +4,7 @@ import { PrivyProvider } from '@privy-io/react-auth';
 import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
 import { polygon } from 'viem/chains';
 import { InvestUpProvider } from '@/lib/investup-context';
+import { AppLanguageProvider } from '@/lib/app-language';
 import TransactionOverlay from '@/components/TransactionOverlay';
 import TransactionReceipt from '@/components/TransactionReceipt';
 
@@ -27,11 +28,13 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       }}
     >
       <SmartWalletsProvider config={{ paymasterContext: { token: USDC_ADDRESS } }}>
-        <InvestUpProvider>
-          {children}
-          <TransactionOverlay />
-          <TransactionReceipt />
-        </InvestUpProvider>
+        <AppLanguageProvider>
+          <InvestUpProvider>
+            {children}
+            <TransactionOverlay />
+            <TransactionReceipt />
+          </InvestUpProvider>
+        </AppLanguageProvider>
       </SmartWalletsProvider>
     </PrivyProvider>
   );

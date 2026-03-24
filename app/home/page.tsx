@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import { useInvestUp } from '@/lib/investup-context';
+import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -353,7 +354,7 @@ export default function HomePage() {
     };
 
     loadLastProject();
-    const interval = window.setInterval(loadLastProject, 20000);
+    const interval = window.setInterval(loadLastProject, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
 
@@ -420,7 +421,7 @@ export default function HomePage() {
     };
 
     loadActiveInvestments();
-    const interval = window.setInterval(loadActiveInvestments, 20000);
+    const interval = window.setInterval(loadActiveInvestments, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
 
@@ -466,7 +467,7 @@ export default function HomePage() {
     };
 
     loadTransactions();
-    const interval = window.setInterval(loadTransactions, 20000);
+    const interval = window.setInterval(loadTransactions, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
   }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 

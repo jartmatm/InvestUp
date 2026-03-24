@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "android:dev": "node scripts/android-dev.mjs",
+    "android:sync": "node scripts/android-sync.mjs",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

@@ -9,6 +9,7 @@ import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
+import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 
 type ProjectInvestmentDetail = {
@@ -121,6 +122,7 @@ export default function ProjectInvestPage() {
           'id,title,description,business_name,sector,amount_requested,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
         )
         .eq('id', projectId)
+        .in('status', ACTIVE_PROJECT_STATUSES)
         .maybeSingle();
 
       if (error) {

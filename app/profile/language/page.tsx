@@ -1,16 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import PageFrame from '@/components/PageFrame';
-
-const LANGUAGE_OPTIONS = [
-  'English (US)',
-  'Spanish',
-  'Portuguese',
-  'French',
-  'German',
-  'Italian',
-];
+import { LANGUAGE_OPTIONS, useAppLanguage } from '@/lib/app-language';
 
 function CheckIcon() {
   return (
@@ -21,26 +12,17 @@ function CheckIcon() {
 }
 
 export default function LanguagePage() {
-  const [selectedLanguage, setSelectedLanguage] = useState('English (US)');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedLanguage = window.localStorage.getItem('investup_language') || 'English (US)';
-    setSelectedLanguage(storedLanguage);
-  }, []);
+  const { languageLabel, setLanguageLabel, t } = useAppLanguage();
 
   const handleSelectLanguage = (language: string) => {
-    setSelectedLanguage(language);
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem('investup_language', language);
-    window.dispatchEvent(new Event('investup-language-updated'));
+    setLanguageLabel(language as (typeof LANGUAGE_OPTIONS)[number]);
   };
 
   return (
     <PageFrame title="Language" subtitle="Choose the language for your account">
       <div className="space-y-3">
         {LANGUAGE_OPTIONS.map((language) => {
-          const active = language === selectedLanguage;
+          const active = language === languageLabel;
           return (
             <button
               key={language}
@@ -55,7 +37,7 @@ export default function LanguagePage() {
               <div>
                 <p className="text-sm font-semibold">{language}</p>
                 <p className="text-xs text-gray-500">
-                  {active ? 'Currently selected' : 'Tap to use this language'}
+                  {active ? t('Currently selected') : t('Tap to use this language')}
                 </p>
               </div>
               {active ? <CheckIcon /> : null}

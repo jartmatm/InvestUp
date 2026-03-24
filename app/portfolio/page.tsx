@@ -11,12 +11,21 @@ import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import ProjectCard from '@/components/ProjectCard';
 import { useInvestUp } from '@/lib/investup-context';
+import {
+  canDeleteProject,
+  canPauseProject,
+  getNextProjectStatusAfterFunding,
+  getProjectStatusLabel,
+  getProjectStatusTone,
+  type ProjectStatus,
+} from '@/lib/project-status';
 import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
 
 type ProjectRow = {
   id: string;
   owner_user_id: string | null;
   owner_id: string | null;
+  status: ProjectStatus | string | null;
   title: string;
   business_name: string | null;
   sector: string | null;
@@ -207,7 +216,7 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
+        'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
       )
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
@@ -308,14 +317,18 @@ export default function PortfolioPage() {
     setStatus('');
   };
 
-  const deletePublication = async (projectId: string) => {
+  const deletePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
+    if (!canDeleteProject(project)) {
+      setStatus('A listing with financing in progress cannot be deleted.');
+      return;
+    }
     const confirmed = window.confirm('Do you want to delete this listing?');
     if (!confirmed) return;
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', projectId)
+      .eq('id', project.id)
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
 
     if (error) {
@@ -323,6 +336,30 @@ export default function PortfolioPage() {
       return;
     }
     setStatus('Listing deleted.');
+    await loadMyProjects();
+  };
+
+  const togglePausePublication = async (project: ProjectRow) => {
+    if (!user?.id) return;
+
+    if (!canPauseProject(project)) {
+      setStatus('Listings with financing in progress cannot be paused.');
+      return;
+    }
+
+    const nextStatus: ProjectStatus = project.status === 'paused' ? 'published' : 'paused';
+    const { error } = await supabase
+      .from('projects')
+      .update({ status: nextStatus })
+      .eq('id', project.id)
+      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+    if (error) {
+      setStatus(`Could not update the listing: ${error.message}`);
+      return;
+    }
+
+    setStatus(nextStatus === 'paused' ? 'Listing paused.' : 'Listing resumed.');
     await loadMyProjects();
   };
 
@@ -368,6 +405,12 @@ export default function PortfolioPage() {
     setSavingProject(true);
     setStatus('');
 
+    const existingProject = editingProjectId
+      ? myProjects.find((project) => project.id === editingProjectId) ?? null
+      : null;
+    const nextAmountReceived = existingProject?.amount_received ?? 0;
+    const nextStatus = getNextProjectStatusAfterFunding(existingProject?.status, nextAmountReceived);
+
     const payload = {
       owner_id: user.id,
       owner_user_id: user.id,
@@ -384,13 +427,12 @@ export default function PortfolioPage() {
       country: selectedCountry?.name ?? form.country,
       description: form.description,
       amount_requested: Number(form.amountRequested),
-      amount_received: editingProjectId
-        ? myProjects.find((project) => project.id === editingProjectId)?.amount_received ?? 0
-        : 0,
+      amount_received: nextAmountReceived,
       currency: form.currency,
       term_months: termMonths,
       publication_end_date: form.publicationEndDate,
       interest_rate: Number(form.interestRateEa),
+      status: nextStatus,
       photo_urls: projectPhotos,
       video_url: projectVideo || null,
       metadata: {
@@ -667,6 +709,18 @@ export default function PortfolioPage() {
               publicationEndDate={project.publication_end_date}
               coverImage={project.photo_urls?.[0] ?? null}
             />
+            <div className="flex items-center justify-between gap-3 px-1">
+              <span
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${getProjectStatusTone(project)}`}
+              >
+                {getProjectStatusLabel(project)}
+              </span>
+              {!canDeleteProject(project) ? (
+                <span className="text-[11px] text-gray-500">
+                  Deletion disabled because the listing has already received financing.
+                </span>
+              ) : null}
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => startEditPublication(project)}
@@ -675,8 +729,24 @@ export default function PortfolioPage() {
                 Edit
               </button>
               <button
-                onClick={() => deletePublication(project.id)}
-                className="flex-1 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
+                onClick={() => togglePausePublication(project)}
+                disabled={!canPauseProject(project) && project.status !== 'paused'}
+                className={`flex-1 rounded-full border px-4 py-2 text-sm font-semibold ${
+                  !canPauseProject(project) && project.status !== 'paused'
+                    ? 'border-slate-200 bg-slate-100 text-slate-400'
+                    : 'border-amber-200 bg-amber-50 text-amber-700'
+                }`}
+              >
+                {project.status === 'paused' ? 'Resume' : 'Pause'}
+              </button>
+              <button
+                onClick={() => deletePublication(project)}
+                disabled={!canDeleteProject(project)}
+                className={`flex-1 rounded-full border px-4 py-2 text-sm font-semibold ${
+                  canDeleteProject(project)
+                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                    : 'border-slate-200 bg-slate-100 text-slate-400'
+                }`}
               >
                 Delete
               </button>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>InvestApp Android Shell</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(circle at top, #dbeafe 0%, transparent 40%),
+          linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+        color: #0f172a;
+      }
+
+      main {
+        width: min(90vw, 34rem);
+        padding: 2rem;
+        border-radius: 1.5rem;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1.75rem;
+      }
+
+      p {
+        line-height: 1.6;
+      }
+
+      code {
+        padding: 0.1rem 0.4rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>InvestApp Android shell</h1>
+      <p>Run <code>npm run android:dev</code> to connect this Android project to the live Next.js app.</p>
+      <p>On the Android emulator, Capacitor expects the dev server at <code>http://10.0.2.2:3000</code>.</p>
+    </main>
+  </body>
+</html>

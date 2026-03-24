@@ -21,6 +21,7 @@ import {
   getPendingInvestment,
   type PendingInvestment,
 } from '@/lib/pending-investment';
+import { getNextProjectStatusAfterFunding } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 
 type FrontRole = 'inversor' | 'emprendedor';
@@ -73,6 +74,13 @@ type RegisterTransactionArgs = {
 
 type RegisterInvestmentArgs = {
   pendingInvestment: PendingInvestment;
+  txHash: string;
+  transactionId?: string | null;
+  amountUsdc: string;
+  toWallet: string;
+};
+
+type RegisterRepaymentArgs = {
   txHash: string;
   transactionId?: string | null;
   amountUsdc: string;
@@ -262,9 +270,9 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
-  const transferLabel = rolSeleccionado === 'inversor' ? 'Investments' : 'Repayments';
+  const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
   const transferenciaTitulo =
-    rolSeleccionado === 'inversor' ? 'Confirm investment' : 'Confirm repayment';
+    rolSeleccionado === 'emprendedor' ? 'Confirm repayment' : 'Confirm transfer';
   const getRolKey = useCallback((id: string) => `investup_rol_${id}`, []);
   const getOnboardingDoneKey = useCallback((id: string) => `investup_onboarding_done_${id}`, []);
 
@@ -421,6 +429,55 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     [smartWalletAddress, supabase, user?.id]
   );
 
+  const registrarRepayment = useCallback(
+    async ({ txHash, transactionId, amountUsdc, toWallet }: RegisterRepaymentArgs) => {
+      if (!user?.id || !smartWalletAddress) return false;
+
+      try {
+        const amountValue = Number(amountUsdc);
+        const receiver = walletTargets.find(
+          (target) =>
+            target.wallet_address &&
+            target.wallet_address.toLowerCase() === toWallet.toLowerCase()
+        );
+
+        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
+        const { error } = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('repayments')
+            .insert({
+              transaction_id: transactionId ?? null,
+              entrepreneur_user_id: user.id,
+              investor_user_id: receiver?.id ?? null,
+              tx_hash: txHash,
+              from_wallet: smartWalletAddress,
+              to_wallet: toWallet,
+              [amountColumn]: normalizedAmountValue,
+              status: 'submitted',
+              metadata: {
+                app: 'investup-web',
+                currency: 'USDC',
+                receiver_email: receiver?.email ?? null,
+                created_from: 'direct-repayment-flow',
+              },
+            })
+            .select('id')
+            .maybeSingle()
+        );
+
+        if (error && !error.message?.toLowerCase().includes('duplicate')) {
+          throw error;
+        }
+
+        return !error;
+      } catch (error: any) {
+        console.error('Error saving repayment to Supabase:', error?.message ?? error);
+        return false;
+      }
+    },
+    [smartWalletAddress, supabase, user?.id, walletTargets]
+  );
+
   const actualizarMontoRecaudadoProyecto = useCallback(
     async (projectId: string, amountUsdc: number) => {
       if (!projectId || !Number.isFinite(amountUsdc) || amountUsdc <= 0) return;
@@ -428,7 +485,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from('projects')
-          .select('amount_received')
+          .select('amount_received,status')
           .eq('id', projectId)
           .maybeSingle();
 
@@ -436,9 +493,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
         const currentRaised = Number((data as { amount_received?: number | null } | null)?.amount_received ?? 0);
         const nextRaised = Number((currentRaised + amountUsdc).toFixed(2));
+        const nextStatus = getNextProjectStatusAfterFunding(
+          (data as { status?: string | null } | null)?.status,
+          nextRaised
+        );
         const { error: updateError } = await supabase
           .from('projects')
-          .update({ amount_received: nextRaised })
+          .update({ amount_received: nextRaised, status: nextStatus })
           .eq('id', projectId);
 
         if (updateError) throw updateError;
@@ -634,21 +695,22 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           rolSeleccionado === 'inversor'
             ? normalizePendingInvestment(getPendingInvestment(), destino)
             : null;
+        const receiverTarget = walletTargets.find(
+          (target) =>
+            target.wallet_address &&
+            target.wallet_address.toLowerCase() === destino.toLowerCase()
+        );
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
         const movementType: MovementType =
-          rolSeleccionado === 'emprendedor'
-            ? 'repayment'
-            : rolSeleccionado === 'inversor'
-              ? 'investment'
+          pendingInvestment
+            ? 'investment'
+            : rolSeleccionado === 'emprendedor'
+              ? 'repayment'
               : 'transfer';
         const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Investment' : 'Transfer';
         const provisionalReceiverName =
           pendingInvestment?.entrepreneurName ||
-          walletTargets.find(
-            (target) =>
-              target.wallet_address &&
-              target.wallet_address.toLowerCase() === destino.toLowerCase()
-          )?.email ||
+          receiverTarget?.email ||
           'Recipient';
 
         // Show the receipt as soon as we have an on-chain hash, even if the Supabase write fails later.
@@ -684,7 +746,17 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
                 projected_total_usdc: pendingInvestment.projectedTotalUsdc,
                 receiver_name: pendingInvestment.entrepreneurName,
               }
-            : undefined,
+            : movementType === 'repayment'
+              ? {
+                  investor_user_id: receiverTarget?.id ?? null,
+                  receiver_name: receiverTarget?.email ?? 'Investor',
+                  created_from: 'direct-repayment-flow',
+                }
+              : {
+                  receiver_user_id: receiverTarget?.id ?? null,
+                  receiver_name: receiverTarget?.email ?? 'Recipient',
+                  created_from: 'direct-transfer-flow',
+                },
         });
 
         if (pendingInvestment) {
@@ -702,6 +774,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
             );
           }
           clearPendingInvestment();
+        } else if (movementType === 'repayment') {
+          await registrarRepayment({
+            txHash,
+            transactionId: transactionRow?.id ?? null,
+            amountUsdc: enviadoFmt,
+            toWallet: destino,
+          });
         }
 
         await actualizarSaldos();
@@ -725,6 +804,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       getCachedMaxFeePerGas,
       getCachedUsdcQuote,
       registrarInversion,
+      registrarRepayment,
       registrarTransaccion,
       rolSeleccionado,
       smartWalletAddress,

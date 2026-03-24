@@ -109,7 +109,7 @@ export default function InvestPage() {
     ? 'Review the simulation and confirm the transfer to the entrepreneur.'
     : rolSeleccionado === 'emprendedor'
       ? 'Choose an investor to send a repayment.'
-      : 'Choose an entrepreneur to invest in.';
+      : 'Choose a recipient to send a direct transfer.';
 
   const canSubmit = useMemo(
     () => Boolean(walletDestino && Number(monto) > 0),
@@ -121,7 +121,7 @@ export default function InvestPage() {
 
   return (
     <PageFrame
-      title={pendingInvestment ? 'Investment transfer' : 'Send'}
+      title={pendingInvestment ? 'Investment transfer' : rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Send'}
       subtitle={helper}
     >
       <div className="space-y-6 pb-40">
