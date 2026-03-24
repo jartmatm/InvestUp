@@ -224,8 +224,8 @@ export default function ProfilePage() {
       <div className="space-y-6">
         <Section title="Account">
           <SettingItem icon={<IconPersonalData />} label="Personal Data" onClick={() => router.push('/profile/personal-data')} />
-          <SettingItem icon={<IconSocialMedia />} label="Social Media" />
-          <SettingItem icon={<IconReferralCode />} label="Referral Code" />
+          <SettingItem icon={<IconSocialMedia />} label="Social Media" onClick={() => router.push('/profile/social-media')} />
+          <SettingItem icon={<IconReferralCode />} label="Referral Code" onClick={() => router.push('/profile/referral-code')} />
         </Section>
 
         <Section title="Transactions">
@@ -236,11 +236,11 @@ export default function ProfilePage() {
         <Section title="Preferences">
           <SettingItem icon={<IconSettings />} label="Settings" />
           <SettingItem icon={<IconLanguage />} label="Language" value={languageLabel} onClick={() => router.push('/profile/language')} />
-          <SettingItem icon={<IconHelpCenter />} label="Help Center" />
-          <SettingItem icon={<IconFaq />} label="FAQ" />
-          <SettingItem icon={<IconPrivacyPolicy />} label="Privacy Policy" />
-          <SettingItem icon={<IconTerms />} label="Terms & Conditions" />
-          <SettingItem icon={<IconAboutApp />} label="About App" />
+          <SettingItem icon={<IconHelpCenter />} label="Help Center" onClick={() => router.push('/profile/help-center')} />
+          <SettingItem icon={<IconFaq />} label="FAQ" onClick={() => router.push('/profile/faq')} />
+          <SettingItem icon={<IconPrivacyPolicy />} label="Privacy Policy" onClick={() => router.push('/profile/privacy-policy')} />
+          <SettingItem icon={<IconTerms />} label="Terms & Conditions" onClick={() => router.push('/profile/terms-conditions')} />
+          <SettingItem icon={<IconAboutApp />} label="About App" onClick={() => router.push('/profile/about')} />
           <SettingItem icon={<IconLogout />} label="Log out" danger onClick={logoutApp} />
         </Section>
       </div>
