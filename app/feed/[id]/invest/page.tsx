@@ -9,6 +9,7 @@ import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
+import { toEnglishSector } from '@/lib/sector-labels';
 
 type ProjectInvestmentDetail = {
   id: string;
@@ -47,7 +48,7 @@ const normalizePhotos = (value: unknown): string[] => {
 
 const formatCurrency = (value: number, currency: string) => {
   try {
-    return new Intl.NumberFormat('es-CO', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
@@ -106,7 +107,7 @@ export default function ProjectInvestPage() {
   useEffect(() => {
     const loadProject = async () => {
       if (!projectId) {
-        setStatus('No encontramos este emprendimiento.');
+        setStatus('We could not find this venture.');
         setLoading(false);
         return;
       }
@@ -123,7 +124,7 @@ export default function ProjectInvestPage() {
         .maybeSingle();
 
       if (error) {
-        setStatus(`No se pudo cargar el proyecto: ${error.message}`);
+        setStatus(`Could not load the project: ${error.message}`);
         setLoading(false);
         return;
       }
@@ -190,7 +191,7 @@ export default function ProjectInvestPage() {
     if (ownerName) return ownerName;
     if (owner?.email) return owner.email.split('@')[0];
     if (project?.business_name) return project.business_name;
-    return 'Emprendedor';
+    return 'Entrepreneur';
   }, [owner?.email, owner?.name, owner?.surname, project?.business_name]);
 
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
@@ -199,15 +200,15 @@ export default function ProjectInvestPage() {
 
   const handleContinue = () => {
     if (!project) {
-      setStatus('Primero necesitamos cargar el proyecto.');
+      setStatus('The project needs to load first.');
       return;
     }
     if (!entrepreneurWallet) {
-      setStatus('Este emprendimiento aun no tiene wallet disponible para recibir la inversion.');
+      setStatus('This venture does not have a wallet ready to receive the investment yet.');
       return;
     }
     if (!amountNumber || amountNumber <= 0) {
-      setStatus('Ingresa un valor de inversion valido.');
+      setStatus('Enter a valid investment amount.');
       return;
     }
 
@@ -230,8 +231,8 @@ export default function ProjectInvestPage() {
   };
 
   return (
-    <PageFrame title="Invertir" subtitle="Simula tu retorno antes de transferir">
-      {loading ? <p className="text-sm text-gray-500">Cargando simulador...</p> : null}
+    <PageFrame title="Invest" subtitle="Simulate your return before transferring">
+      {loading ? <p className="text-sm text-gray-500">Loading simulator...</p> : null}
       {status ? <p className="mb-4 text-sm text-rose-600">{status}</p> : null}
 
       {!loading && project ? (
@@ -242,11 +243,11 @@ export default function ProjectInvestPage() {
               onClick={() => router.back()}
               className="rounded-full border border-white/25 bg-white/20 px-4 py-2 text-sm font-semibold text-gray-700 backdrop-blur-md"
             >
-              Volver
+              Back
             </button>
             {project.sector ? (
               <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                {project.sector}
+                {toEnglishSector(project.sector)}
               </span>
             ) : null}
           </div>
@@ -261,17 +262,17 @@ export default function ProjectInvestPage() {
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Proyecto</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Project</p>
                 <h2 className="mt-1 text-xl font-semibold text-gray-900">{project.title}</h2>
                 <p className="mt-2 text-sm text-gray-600">{entrepreneurName}</p>
                 <p className="mt-1 text-xs text-gray-500">
                   {project.city || project.country
                     ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                    : 'Ubicacion pendiente'}
+                    : 'Location pending'}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-200/50 bg-emerald-50/40 px-4 py-3 text-right backdrop-blur-md">
-                <p className="text-xs text-emerald-700">Meta publicada</p>
+                <p className="text-xs text-emerald-700">Published target</p>
                 <p className="mt-1 text-sm font-semibold text-emerald-900">
                   {formatCurrency(Number(project.amount_requested ?? 0), currencyCode)}
                 </p>
@@ -281,17 +282,17 @@ export default function ProjectInvestPage() {
             <p className="mt-4 text-sm text-gray-700">{project.description}</p>
 
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
-              <p className="text-xs text-gray-500">Wallet del emprendedor</p>
+              <p className="text-xs text-gray-500">Entrepreneur wallet</p>
               <p className="mt-1 break-all text-sm font-medium text-gray-800">
-                {entrepreneurWallet || 'Pendiente de configuracion'}
+                {entrepreneurWallet || 'Configuration pending'}
               </p>
             </div>
           </div>
 
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <p className="text-sm font-semibold text-gray-900">Valor a invertir</p>
+            <p className="text-sm font-semibold text-gray-900">Amount to invest</p>
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Monto seleccionado</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Selected amount</p>
               <p className="mt-2 text-3xl font-semibold text-gray-900">
                 {(formatAmountInput(amount) || '0.00')} USDC
               </p>
@@ -315,7 +316,7 @@ export default function ProjectInvestPage() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Valor personalizado</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Custom amount</p>
               <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/25 bg-white/20 px-4 py-4">
                 <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   USDC
@@ -326,7 +327,7 @@ export default function ProjectInvestPage() {
                   value={amount}
                   onChange={(event) => handleAmountChange(event.target.value)}
                   onBlur={() => setAmount(formatAmountInput(amount))}
-                  placeholder="Escribe el monto que quieras invertir"
+                  placeholder="Enter the amount you want to invest"
                   className="w-full bg-transparent text-lg font-semibold text-gray-900 outline-none"
                 />
               </div>
@@ -335,19 +336,19 @@ export default function ProjectInvestPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Tasa EA</p>
+              <p className="text-xs text-gray-500">EA rate</p>
               <p className="mt-2 text-lg font-semibold text-gray-900">{safeInterestRate}%</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Plazo</p>
-              <p className="mt-2 text-lg font-semibold text-gray-900">{safeTermMonths || 0} meses</p>
+              <p className="text-xs text-gray-500">Term</p>
+              <p className="mt-2 text-lg font-semibold text-gray-900">{safeTermMonths || 0} months</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Rendimiento efectivo</p>
+              <p className="text-xs text-gray-500">Effective yield</p>
               <p className="mt-2 text-lg font-semibold text-emerald-700">{projection.effectiveRate}%</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Retorno estimado</p>
+              <p className="text-xs text-gray-500">Estimated return</p>
               <p className="mt-2 text-lg font-semibold text-emerald-700">
                 {formatCurrency(projection.projectedReturnUsdc, 'USD')}
               </p>
@@ -355,12 +356,12 @@ export default function ProjectInvestPage() {
           </div>
 
           <div className="rounded-3xl border border-primary/15 bg-primary/10 p-5 backdrop-blur-md">
-            <p className="text-xs uppercase tracking-[0.2em] text-primary/70">Resultado proyectado</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary/70">Projected result</p>
             <p className="mt-3 text-3xl font-semibold text-primary">
               {formatCurrency(projection.projectedTotalUsdc, 'USD')}
             </p>
             <p className="mt-2 text-sm text-primary/80">
-              Este calculo usa la tasa efectiva anual de la publicacion y la convierte al plazo del proyecto.
+              This estimate uses the listing&apos;s effective annual rate and converts it to the project term.
             </p>
           </div>
 
@@ -372,7 +373,7 @@ export default function ProjectInvestPage() {
               canContinue ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
-            Confirmar inversion
+            Confirm investment
           </button>
         </div>
       ) : null}

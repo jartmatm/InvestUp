@@ -11,6 +11,7 @@ import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import ProjectCard from '@/components/ProjectCard';
 import { useInvestUp } from '@/lib/investup-context';
+import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
 
 type ProjectRow = {
   id: string;
@@ -28,7 +29,7 @@ type ProjectRow = {
   country: string | null;
   description: string;
   amount_requested: number | null;
-  amount_raised: number | null;
+  amount_received: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -62,25 +63,12 @@ const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
-const REGION_NAMES = new Intl.DisplayNames(['es', 'en'], { type: 'region' });
+const REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 const COUNTRY_OPTIONS = getCountries()
   .map((code) => ({ code, name: REGION_NAMES.of(code) ?? code }))
-  .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  .sort((a, b) => a.name.localeCompare(b.name, 'en'));
 
-const SECTOR_OPTIONS = [
-  'Administracion',
-  'Comercio',
-  'Finanzas',
-  'Tecnologia',
-  'Manufactura',
-  'Agroindustria',
-  'Salud',
-  'Educacion',
-  'Turismo',
-  'Logistica',
-  'Construccion',
-  'Servicios profesionales',
-];
+const SECTOR_OPTIONS = [...SECTOR_OPTIONS_ENGLISH];
 
 const CITY_OPTIONS_BY_COUNTRY: Record<string, string[]> = {
   AR: ['Buenos Aires', 'Cordoba', 'Rosario', 'Mendoza', 'La Plata'],
@@ -126,7 +114,7 @@ const fileToDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(new Error('No se pudo leer archivo.'));
+    reader.onerror = () => reject(new Error('Could not read the file.'));
     reader.readAsDataURL(file);
   });
 
@@ -165,7 +153,7 @@ export default function PortfolioPage() {
 
   const cityOptions = useMemo(() => {
     if (!form.country) return [];
-    return CITY_OPTIONS_BY_COUNTRY[form.country] ?? ['Otra ciudad'];
+    return CITY_OPTIONS_BY_COUNTRY[form.country] ?? ['Other city'];
   }, [form.country]);
 
   const supabase = useMemo(() => {
@@ -219,13 +207,13 @@ export default function PortfolioPage() {
     const { data, error } = await supabase
       .from('projects')
       .select(
-        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_raised,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
+        'id,owner_user_id,owner_id,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
       )
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
       .order('created_at', { ascending: false });
 
     if (error) {
-      setStatus(`No se pudieron cargar tus proyectos: ${error.message}`);
+      setStatus(`Could not load your projects: ${error.message}`);
       setLoadingProjects(false);
       return;
     }
@@ -245,12 +233,12 @@ export default function PortfolioPage() {
 
   const onPickPhotos = async (files: FileList | null) => {
     if (!files) return;
-    const selected = Array.from(files).slice(0, 10);
+    const selected = Array.from(files);
     if (selected.length > 10) {
-      setStatus('Maximo 10 fotos.');
+      setStatus('Maximum 10 photos.');
       return;
     }
-    const urls = await Promise.all(selected.map(fileToDataUrl));
+    const urls = await Promise.all(selected.slice(0, 10).map(fileToDataUrl));
     setProjectPhotos(urls);
   };
 
@@ -263,7 +251,7 @@ export default function PortfolioPage() {
 
   const improveWithAI = async () => {
     if (!form.description.trim()) {
-      setStatus('Primero escribe una descripcion.');
+      setStatus('Write a description first.');
       return;
     }
     setImprovingAI(true);
@@ -276,11 +264,11 @@ export default function PortfolioPage() {
       });
       const payload = (await response.json()) as { improvedText?: string; error?: string };
       if (!response.ok || !payload.improvedText) {
-        throw new Error(payload.error ?? 'No se pudo mejorar la descripcion.');
+        throw new Error(payload.error ?? 'Could not improve the description.');
       }
       onChangeForm('description', payload.improvedText.slice(0, 2500));
     } catch (error: any) {
-      setStatus(`IA no disponible: ${error?.message ?? error}`);
+      setStatus(`AI unavailable: ${error?.message ?? error}`);
     } finally {
       setImprovingAI(false);
     }
@@ -300,7 +288,7 @@ export default function PortfolioPage() {
     setForm({
       title: project.title ?? '',
       businessName: project.business_name ?? '',
-      sector: project.sector ?? '',
+      sector: toEnglishSector(project.sector),
       legalRepresentative: project.legal_representative ?? '',
       nit: project.nit ?? '',
       openingDate: project.opening_date ?? '',
@@ -322,7 +310,7 @@ export default function PortfolioPage() {
 
   const deletePublication = async (projectId: string) => {
     if (!user?.id) return;
-    const confirmed = window.confirm('Quieres eliminar esta publicacion?');
+    const confirmed = window.confirm('Do you want to delete this listing?');
     if (!confirmed) return;
     const { error } = await supabase
       .from('projects')
@@ -331,10 +319,10 @@ export default function PortfolioPage() {
       .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
 
     if (error) {
-      setStatus(`No se pudo eliminar: ${error.message}`);
+      setStatus(`Could not delete the listing: ${error.message}`);
       return;
     }
-    setStatus('Publicacion eliminada.');
+    setStatus('Listing deleted.');
     await loadMyProjects();
   };
 
@@ -358,22 +346,22 @@ export default function PortfolioPage() {
     ];
     const missing = required.find((entry) => !entry[1].trim());
     if (missing) {
-      setStatus('Completa todos los campos obligatorios.');
+      setStatus('Complete all required fields.');
       return;
     }
     if (form.description.length > 2500) {
-      setStatus('Descripcion maxima: 2500 caracteres.');
+      setStatus('Maximum description length: 2500 characters.');
       return;
     }
     if (projectPhotos.length > 10) {
-      setStatus('Solo puedes subir hasta 10 fotos.');
+      setStatus('You can upload up to 10 photos only.');
       return;
     }
 
     const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
     const termMonths = calculateTermMonths(form.publicationEndDate);
     if (termMonths <= 0) {
-      setStatus('La fecha maxima de publicacion debe ser mayor a hoy.');
+      setStatus('The publication end date must be later than today.');
       return;
     }
 
@@ -396,10 +384,9 @@ export default function PortfolioPage() {
       country: selectedCountry?.name ?? form.country,
       description: form.description,
       amount_requested: Number(form.amountRequested),
-      amount_raised: editingProjectId
-        ? myProjects.find((project) => project.id === editingProjectId)?.amount_raised ?? 0
+      amount_received: editingProjectId
+        ? myProjects.find((project) => project.id === editingProjectId)?.amount_received ?? 0
         : 0,
-      amount_received: 0,
       currency: form.currency,
       term_months: termMonths,
       publication_end_date: form.publicationEndDate,
@@ -441,12 +428,12 @@ export default function PortfolioPage() {
     }
 
     if (opError) {
-      setStatus(`No se pudo publicar: ${opError.message}`);
+      setStatus(`Could not publish the project: ${opError.message}`);
       setSavingProject(false);
       return;
     }
 
-    setStatus(editingProjectId ? 'Publicacion actualizada.' : 'Proyecto publicado y visible en el feed.');
+    setStatus(editingProjectId ? 'Listing updated.' : 'Project published and now visible in the feed.');
     setSavingProject(false);
     setShowPublisher(false);
     setEditingProjectId(null);
@@ -458,13 +445,13 @@ export default function PortfolioPage() {
 
   if (rolSeleccionado !== 'emprendedor') {
     return (
-      <PageFrame title="Mis inversiones" subtitle="Resumen de tus operaciones">
+      <PageFrame title="My investments" subtitle="Summary of your activity">
         <div className="space-y-3">
           {historial.length === 0 ? (
-            <InvestmentCard title="Sin movimientos" detail="Las operaciones apareceran aqui." />
+            <InvestmentCard title="No activity yet" detail="Your activity will appear here." />
           ) : (
             historial.map((item, index) => (
-              <InvestmentCard key={`${item}-${index}`} title={`Operacion ${index + 1}`} detail={item} />
+              <InvestmentCard key={`${item}-${index}`} title={`Activity ${index + 1}`} detail={item} />
             ))
           )}
         </div>
@@ -473,14 +460,14 @@ export default function PortfolioPage() {
   }
 
   return (
-    <PageFrame title="Portafolio emprendedor" subtitle="Publica tu emprendimiento o solicitud de credito">
+    <PageFrame title="Entrepreneur portfolio" subtitle="Publish your venture or credit request">
       <section className="rounded-xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-900">Publicar proyecto</h2>
+          <h2 className="text-sm font-semibold text-slate-900">Publish project</h2>
           <button
             onClick={startNewPublication}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-sm transition hover:bg-primary-light"
-            aria-label="Abrir formulario de proyecto"
+            aria-label="Open project form"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -498,19 +485,19 @@ export default function PortfolioPage() {
             <Input
               value={form.title}
               onChange={(value) => onChangeForm('title', value)}
-              placeholder="Titulo de la publicacion"
+              placeholder="Listing title"
             />
             <Input
               value={form.businessName}
               onChange={(value) => onChangeForm('businessName', value)}
-              placeholder="Nombre del negocio"
+              placeholder="Business name"
             />
             <select
               value={form.sector}
               onChange={(event) => onChangeForm('sector', event.target.value)}
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">Sector economico</option>
+              <option value="">Economic sector</option>
               {SECTOR_OPTIONS.map((option) => (
                 <option key={option} value={option}>
                   {option}
@@ -520,17 +507,17 @@ export default function PortfolioPage() {
             <Input
               value={form.legalRepresentative}
               onChange={(value) => onChangeForm('legalRepresentative', value)}
-              placeholder="Representante legal"
+              placeholder="Legal representative"
             />
-            <Input value={form.nit} onChange={(value) => onChangeForm('nit', value)} placeholder="NIT (opcional)" />
+            <Input value={form.nit} onChange={(value) => onChangeForm('nit', value)} placeholder="Tax ID (optional)" />
             <Input
               value={form.openingDate}
               onChange={(value) => onChangeForm('openingDate', value)}
               type="date"
-              placeholder="Fecha de apertura"
+              placeholder="Opening date"
             />
-            <Input value={form.address} onChange={(value) => onChangeForm('address', value)} placeholder="Direccion" />
-            <Input value={form.phone} onChange={(value) => onChangeForm('phone', value)} placeholder="Telefono" />
+            <Input value={form.address} onChange={(value) => onChangeForm('address', value)} placeholder="Address" />
+            <Input value={form.phone} onChange={(value) => onChangeForm('phone', value)} placeholder="Phone" />
 
             <select
               value={form.country}
@@ -540,7 +527,7 @@ export default function PortfolioPage() {
               }}
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">Pais</option>
+              <option value="">Country</option>
               {COUNTRY_OPTIONS.map((option) => (
                 <option key={option.code} value={option.code}>
                   {option.name}
@@ -553,7 +540,7 @@ export default function PortfolioPage() {
               disabled={!form.country}
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
             >
-              <option value="">{form.country ? 'Ciudad' : 'Selecciona pais primero'}</option>
+              <option value="">{form.country ? 'City' : 'Select a country first'}</option>
               {cityOptions.map((city) => (
                 <option key={city} value={city}>
                   {city}
@@ -562,7 +549,7 @@ export default function PortfolioPage() {
             </select>
 
             <div className="rounded-2xl border border-slate-200 p-3">
-              <p className="text-xs font-semibold text-slate-700">Fotos del negocio (maximo 10)</p>
+              <p className="text-xs font-semibold text-slate-700">Business photos (up to 10)</p>
               <input
                 type="file"
                 accept="image/*"
@@ -571,30 +558,30 @@ export default function PortfolioPage() {
                 className="mt-2 w-full text-xs"
               />
               {projectPhotos.length ? (
-                <p className="mt-2 text-xs text-slate-500">{projectPhotos.length} foto(s) cargadas.</p>
+                <p className="mt-2 text-xs text-slate-500">{projectPhotos.length} photo(s) uploaded.</p>
               ) : null}
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-3">
-              <p className="text-xs font-semibold text-slate-700">Video del negocio (1 archivo)</p>
+              <p className="text-xs font-semibold text-slate-700">Business video (1 file)</p>
               <input
                 type="file"
                 accept="video/*"
                 onChange={(event) => onPickVideo(event.target.files)}
                 className="mt-2 w-full text-xs"
               />
-              {projectVideo ? <p className="mt-2 text-xs text-slate-500">Video cargado.</p> : null}
+              {projectVideo ? <p className="mt-2 text-xs text-slate-500">Video uploaded.</p> : null}
             </div>
 
             <div className="rounded-2xl border border-slate-200 p-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-semibold text-slate-700">Descripcion (max 2500)</p>
+                <p className="text-xs font-semibold text-slate-700">Description (max 2500)</p>
                 <button
                   onClick={improveWithAI}
                   disabled={improvingAI}
                   className="rounded-full border border-primary/30 px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-60"
                 >
-                  {improvingAI ? 'Mejorando...' : 'Mejorar con IA'}
+                  {improvingAI ? 'Improving...' : 'Improve with AI'}
                 </button>
               </div>
               <textarea
@@ -610,13 +597,13 @@ export default function PortfolioPage() {
                 value={form.publicationEndDate}
                 onChange={(value) => onChangeForm('publicationEndDate', value)}
                 type="date"
-                placeholder="Fecha maxima de publicacion"
+                placeholder="Publication end date"
               />
               <Input
                 value={form.amountRequested}
                 onChange={(value) => onChangeForm('amountRequested', value)}
                 type="number"
-                placeholder="Monto solicitado"
+                placeholder="Requested amount"
               />
               <select
                 value={form.currency}
@@ -637,7 +624,7 @@ export default function PortfolioPage() {
                 value={form.interestRateEa}
                 onChange={(value) => onChangeForm('interestRateEa', value)}
                 type="number"
-                placeholder="Tasa de interes E.A %"
+                placeholder="Effective annual interest rate %"
               />
             </div>
 
@@ -645,11 +632,11 @@ export default function PortfolioPage() {
               <Button className="mx-auto max-w-xs bg-primary text-white" onClick={publishProject} disabled={savingProject}>
                 {savingProject
                   ? editingProjectId
-                    ? 'Guardando...'
-                    : 'Publicando...'
+                    ? 'Saving...'
+                    : 'Publishing...'
                   : editingProjectId
-                    ? 'Guardar cambios'
-                    : 'Publicar'}
+                    ? 'Save changes'
+                    : 'Publish'}
               </Button>
             </div>
           </div>
@@ -657,11 +644,11 @@ export default function PortfolioPage() {
       </section>
 
       <section className="mt-4 space-y-3">
-        <h2 className="px-1 text-sm font-semibold text-gray-900">Mis proyectos publicados</h2>
-        {loadingProjects ? <p className="px-1 text-sm text-gray-500">Cargando proyectos...</p> : null}
+        <h2 className="px-1 text-sm font-semibold text-gray-900">My published projects</h2>
+        {loadingProjects ? <p className="px-1 text-sm text-gray-500">Loading projects...</p> : null}
         {!loadingProjects && myProjects.length === 0 ? (
           <div className="rounded-xl border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            Aun no has publicado proyectos.
+            You have not published any projects yet.
           </div>
         ) : null}
         {myProjects.map((project) => (
@@ -673,7 +660,7 @@ export default function PortfolioPage() {
               city={project.city}
               country={project.country}
               amountRequested={project.amount_requested}
-              amountRaised={project.amount_raised}
+              amountRaised={project.amount_received}
               currency={project.currency}
               termMonths={project.term_months}
               interestRate={project.interest_rate}
@@ -685,13 +672,13 @@ export default function PortfolioPage() {
                 onClick={() => startEditPublication(project)}
                 className="flex-1 rounded-full border border-white/25 bg-white/20 px-4 py-2 text-sm font-semibold text-primary shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md hover:bg-white/30"
               >
-                Editar
+                Edit
               </button>
               <button
                 onClick={() => deletePublication(project.id)}
                 className="flex-1 rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700"
               >
-                Eliminar
+                Delete
               </button>
             </div>
           </div>

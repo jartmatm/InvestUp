@@ -21,6 +21,7 @@ import {
   getPendingInvestment,
   type PendingInvestment,
 } from '@/lib/pending-investment';
+import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -56,7 +57,8 @@ type StoredTransaction = {
   tx_hash: string | null;
   from_wallet: string | null;
   to_wallet: string | null;
-  amount_usdc: number | null;
+  amount?: number | null;
+  amount_usdc?: number | null;
 };
 
 type RegisterTransactionArgs = {
@@ -259,10 +261,10 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const userAlias = user?.email?.address?.split('@')[0] ?? 'usuario';
-  const transferLabel = rolSeleccionado === 'inversor' ? 'Inversiones' : 'Repayments';
+  const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
+  const transferLabel = rolSeleccionado === 'inversor' ? 'Investments' : 'Repayments';
   const transferenciaTitulo =
-    rolSeleccionado === 'inversor' ? 'Confirmar inversion' : 'Confirmar repayment';
+    rolSeleccionado === 'inversor' ? 'Confirm investment' : 'Confirm repayment';
   const getRolKey = useCallback((id: string) => `investup_rol_${id}`, []);
   const getOnboardingDoneKey = useCallback((id: string) => `investup_onboarding_done_${id}`, []);
 
@@ -289,7 +291,6 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           tx_hash: txHash,
           from_wallet: smartWalletAddress,
           to_wallet: toWallet,
-          amount_usdc: Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null,
           metadata: {
             app: 'investup-web',
             currency: 'USDC',
@@ -298,21 +299,28 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         };
 
         let storedTransaction: StoredTransaction | null = null;
-        const { data, error } = await supabase
-          .from('transactions')
-          .insert(payload)
-          .select('id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,amount_usdc')
-          .maybeSingle();
+        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null;
+        const insertResult = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('transactions')
+            .insert({ ...payload, [amountColumn]: normalizedAmountValue })
+            .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn}`)
+            .maybeSingle()
+        );
+        const { data, error } = insertResult;
 
         if (error) {
           const duplicate = error.message?.toLowerCase().includes('duplicate');
           if (!duplicate) throw error;
 
-          const { data: existingData, error: existingError } = await supabase
-            .from('transactions')
-            .select('id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,amount_usdc')
-            .eq('tx_hash', txHash)
-            .maybeSingle();
+          const existingResult = await runWithAmountColumnFallback((amountColumn) =>
+            supabase
+              .from('transactions')
+              .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn}`)
+              .eq('tx_hash', txHash)
+              .maybeSingle()
+          );
+          const { data: existingData, error: existingError } = existingResult;
 
           if (existingError) throw existingError;
           storedTransaction = (existingData ?? null) as StoredTransaction | null;
@@ -325,10 +333,10 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
             target.wallet_address &&
             target.wallet_address.toLowerCase() === toWallet.toLowerCase()
         );
-        const senderName = userAlias || user.email?.address || 'Remitente';
+        const senderName = userAlias || user.email?.address || 'Sender';
         const resolvedReceiverName =
-          receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Destinatario';
-        const normalizedAmount = Number(storedTransaction?.amount_usdc ?? amountUsdc);
+          receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Recipient';
+        const normalizedAmount = Number(getAmountValue(storedTransaction as Record<string, unknown>) ?? amountUsdc);
 
         setLastReceipt({
           uuid: String(storedTransaction?.id ?? txHash ?? ''),
@@ -346,7 +354,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
         return storedTransaction;
       } catch (error: any) {
-        console.error('Error guardando transaccion en Supabase:', error?.message ?? error);
+        console.error('Error saving transaction to Supabase:', error?.message ?? error);
         return null;
       }
     },
@@ -380,7 +388,6 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           tx_hash: txHash,
           from_wallet: smartWalletAddress,
           to_wallet: toWallet,
-          amount_usdc: Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0,
           interest_rate_ea: Number(pendingInvestment.interestRateEa ?? 0),
           term_months: Number(pendingInvestment.termMonths ?? 0),
           projected_return_usdc: projection.projectedReturnUsdc,
@@ -394,13 +401,20 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           },
         };
 
-        const { error } = await supabase.from('investments').insert(payload);
+        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
+        const { error } = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('investments')
+            .insert({ ...payload, [amountColumn]: normalizedAmountValue })
+            .select('id')
+            .maybeSingle()
+        );
         if (error && !error.message?.toLowerCase().includes('duplicate')) {
           throw error;
         }
         return !error;
       } catch (error: any) {
-        console.error('Error guardando inversion en Supabase:', error?.message ?? error);
+        console.error('Error saving investment to Supabase:', error?.message ?? error);
         return false;
       }
     },
@@ -414,22 +428,22 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data, error } = await supabase
           .from('projects')
-          .select('amount_raised')
+          .select('amount_received')
           .eq('id', projectId)
           .maybeSingle();
 
         if (error) throw error;
 
-        const currentRaised = Number((data as { amount_raised?: number | null } | null)?.amount_raised ?? 0);
+        const currentRaised = Number((data as { amount_received?: number | null } | null)?.amount_received ?? 0);
         const nextRaised = Number((currentRaised + amountUsdc).toFixed(2));
         const { error: updateError } = await supabase
           .from('projects')
-          .update({ amount_raised: nextRaised })
+          .update({ amount_received: nextRaised })
           .eq('id', projectId);
 
         if (updateError) throw updateError;
       } catch (error: any) {
-        console.error('Error actualizando monto recaudado del proyecto:', error?.message ?? error);
+        console.error('Error updating project raised amount:', error?.message ?? error);
       }
     },
     [supabase]
@@ -438,7 +452,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const getCachedUsdcQuote = useCallback(async () => {
     if (!pimlicoClient) {
       throw new Error(
-        'Falta Pimlico (NEXT_PUBLIC_PIMLICO_API_KEY o NEXT_PUBLIC_PIMLICO_BUNDLER_URL).'
+        'Missing Pimlico configuration (NEXT_PUBLIC_PIMLICO_API_KEY or NEXT_PUBLIC_PIMLICO_BUNDLER_URL).'
       );
     }
 
@@ -448,7 +462,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     }
 
     const quotes = await pimlicoClient.getTokenQuotes({ tokens: [USDC_ADDRESS] });
-    if (!quotes?.length) throw new Error('Pimlico no devolvio quote para USDC.');
+    if (!quotes?.length) throw new Error('Pimlico did not return a quote for USDC.');
 
     const quote = quotes[0];
     quoteCacheRef.current = { quote, expiresAt: now + PIMLICO_QUOTE_TTL_MS };
@@ -463,7 +477,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
     const fees = await publicClient.estimateFeesPerGas();
     const maxFeePerGas = BigInt(fees.maxFeePerGas ?? fees.gasPrice ?? BigInt(0));
-    if (maxFeePerGas <= BigInt(0)) throw new Error('No se pudo estimar maxFeePerGas.');
+    if (maxFeePerGas <= BigInt(0)) throw new Error('Could not estimate maxFeePerGas.');
 
     gasPriceCacheRef.current = { maxFeePerGas, expiresAt: now + GAS_PRICE_TTL_MS };
     return maxFeePerGas;
@@ -484,7 +498,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
       setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
     } catch (error) {
-      console.error('Error saldos:', error);
+      console.error('Error refreshing balances:', error);
     }
   }, [smartWalletAddress]);
 
@@ -511,7 +525,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       } catch (error: any) {
-        console.error('Error guardando rol:', error?.message ?? error);
+        console.error('Error saving role:', error?.message ?? error);
         localStorage.setItem(getRolKey(user.id), rolFrontend);
         localStorage.setItem(getOnboardingDoneKey(user.id), '1');
         setRolSeleccionado(rolFrontend);
@@ -541,7 +555,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       setWalletTargets((data ?? []) as UserWalletTarget[]);
     } catch (error: any) {
-      console.error('Error cargando wallets objetivo:', error?.message ?? error);
+      console.error('Error loading recipient wallets:', error?.message ?? error);
     } finally {
       setLoadingWallets(false);
     }
@@ -550,18 +564,18 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const enviarUSDC = useCallback(
     async (destino: string, monto: string) => {
       if (!client || !smartWalletAddress || !destino || !monto) {
-        alert('Faltan datos o la wallet no esta lista');
+        alert('Missing data or the wallet is not ready yet.');
         return false;
       }
       if (!destino.startsWith('0x') || destino.length !== 42) {
-        alert('Direccion destino invalida');
+        alert('Invalid destination wallet address.');
         return false;
       }
 
       setLoadingTx(true);
       try {
         const montoSolicitado = parseUnits(monto, USDC_DECIMALS);
-        if (montoSolicitado <= BigInt(0)) throw new Error('El monto debe ser mayor a 0.');
+        if (montoSolicitado <= BigInt(0)) throw new Error('The amount must be greater than 0.');
 
         const quote = await getCachedUsdcQuote();
         const maxFeePerGas = await getCachedMaxFeePerGas();
@@ -578,7 +592,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         });
         const costoTotalEstimado = montoSolicitado + gasCostUsdc;
         if ((balanceDisponible as bigint) < costoTotalEstimado) {
-          throw new Error('Saldo insuficiente para monto + gas en USDC.');
+          throw new Error('Insufficient balance for amount plus USDC gas.');
         }
 
         const allowance = await publicClient.readContract({
@@ -627,7 +641,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
             : rolSeleccionado === 'inversor'
               ? 'investment'
               : 'transfer';
-        const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Inversion' : 'Transferencia';
+        const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Investment' : 'Transfer';
         const provisionalReceiverName =
           pendingInvestment?.entrepreneurName ||
           walletTargets.find(
@@ -635,7 +649,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
               target.wallet_address &&
               target.wallet_address.toLowerCase() === destino.toLowerCase()
           )?.email ||
-          'Destinatario';
+          'Recipient';
 
         // Show the receipt as soon as we have an on-chain hash, even if the Supabase write fails later.
         setLastReceipt({
@@ -646,7 +660,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           status: 'submitted',
           txHash,
           createdAt: new Date().toISOString(),
-          senderName: userAlias || user?.email?.address || 'Remitente',
+          senderName: userAlias || user?.email?.address || 'Sender',
           senderWallet: smartWalletAddress,
           receiverName: provisionalReceiverName,
           receiverWallet: destino,
@@ -695,9 +709,9 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
       } catch (error: any) {
         const message = String(error?.message || error || '');
         if (message.includes('AA21') || message.includes("didn't pay prefund")) {
-          alert('Error AA21 del paymaster/bundler. Revisa configuracion de Pimlico.');
+          alert('AA21 paymaster or bundler error. Please review your Pimlico configuration.');
         } else {
-          alert(`Fallo la operacion: ${message || 'error desconocido'}`);
+          alert(`The transaction failed: ${message || 'unknown error'}`);
         }
         return false;
       } finally {
@@ -722,7 +736,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
   const abrirCompra = useCallback(async () => {
     if (!smartWalletAddress) {
-      alert('Espera a que tu Smart Wallet este lista.');
+      alert('Wait until your smart wallet is ready.');
       return;
     }
     await fundWallet({ address: smartWalletAddress as any });
@@ -730,7 +744,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
   const abrirRetiro = useCallback(() => {
     if (!smartWalletAddress) {
-      alert('Espera a que tu Smart Wallet este lista.');
+      alert('Wait until your smart wallet is ready.');
       return;
     }
     const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
@@ -771,7 +785,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error('Error consultando usuario:', error.message);
+        console.error('Error loading user record:', error.message);
         if (onboardingDone && rolLocalValido) {
           setRolSeleccionado(rolLocalValido);
           setFaseApp('dashboard');
@@ -796,7 +810,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         if (data?.role) payload.role = data.role;
         if (!data?.role && rolLocalDB) payload.role = rolLocalDB;
         const { error: upsertError } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
-        if (upsertError) console.error('Error sincronizando usuario:', upsertError.message);
+        if (upsertError) console.error('Error syncing user:', upsertError.message);
       }
 
       if (data?.role) {
@@ -866,6 +880,6 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
 
 export function useInvestUp() {
   const ctx = useContext(InvestUpContext);
-  if (!ctx) throw new Error('useInvestUp debe usarse dentro de InvestUpProvider');
+  if (!ctx) throw new Error('useInvestUp must be used inside InvestUpProvider');
   return ctx;
 }

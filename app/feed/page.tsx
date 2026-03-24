@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
+import { toEnglishSector } from '@/lib/sector-labels';
 
 type FeedProject = {
   id: string;
@@ -14,7 +15,7 @@ type FeedProject = {
   description: string;
   sector: string | null;
   amount_requested: number | null;
-  amount_raised: number | null;
+  amount_received: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -74,10 +75,10 @@ function IconHeart({ filled }: { filled?: boolean }) {
 }
 
 function formatAmount(amount: number | null, currency: string | null) {
-  if (amount === null || amount === undefined) return 'Sin monto';
+  if (amount === null || amount === undefined) return 'No amount';
   const code = currency ?? 'USD';
   try {
-    return new Intl.NumberFormat('es-ES', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: code,
       maximumFractionDigits: 0,
@@ -108,7 +109,7 @@ export default function FeedPage() {
   const [flippedId, setFlippedId] = useState<string | null>(null);
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [showCategories, setShowCategories] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -151,12 +152,12 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,amount_requested,amount_raised,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
+          'id,title,description,sector,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
         )
         .order('created_at', { ascending: false });
 
       if (error) {
-        setStatus(`No se pudo cargar feed: ${error.message}`);
+        setStatus(`Could not load the feed: ${error.message}`);
         setLoading(false);
         return;
       }
@@ -188,18 +189,18 @@ export default function FeedPage() {
     const uniqueCategories = Array.from(
       new Set(
         projects.map((project) => {
-          const sector = project.sector?.trim();
-          return sector && sector.length > 0 ? sector : 'Sin categoria';
+          const sector = toEnglishSector(project.sector);
+          return sector && sector.length > 0 ? sector : 'Uncategorized';
         })
       )
     );
-    return ['Todas', ...uniqueCategories];
+    return ['All', ...uniqueCategories];
   }, [projects]);
 
   const filteredProjects = useMemo(() => {
-    if (selectedCategory === 'Todas') return projects;
+    if (selectedCategory === 'All') return projects;
     return projects.filter((project) => {
-      const sector = project.sector?.trim() || 'Sin categoria';
+      const sector = toEnglishSector(project.sector) || 'Uncategorized';
       return sector === selectedCategory;
     });
   }, [projects, selectedCategory]);
@@ -219,21 +220,21 @@ export default function FeedPage() {
   };
 
   return (
-    <PageFrame title="Emprendimientos" subtitle="Proyectos publicados por emprendedores">
-      {loading ? <p className="text-sm text-gray-500">Cargando oportunidades...</p> : null}
+    <PageFrame title="Ventures" subtitle="Projects published by entrepreneurs">
+      {loading ? <p className="text-sm text-gray-500">Loading opportunities...</p> : null}
       {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Sugerencias de hoy</h2>
-          <p className="text-xs text-gray-500">{filteredProjects.length} proyectos</p>
+          <h2 className="text-lg font-semibold text-gray-900">Today&apos;s picks</h2>
+          <p className="text-xs text-gray-500">{filteredProjects.length} projects</p>
         </div>
         <button
           type="button"
           onClick={() => setShowCategories((prev) => !prev)}
           className="rounded-full border border-[#D3C4FC] bg-white/25 px-4 py-2 text-sm font-semibold text-[#6B39F4] backdrop-blur-md"
         >
-          Categorias
+          Categories
         </button>
       </div>
 
@@ -261,7 +262,7 @@ export default function FeedPage() {
 
       {!loading && filteredProjects.length === 0 ? (
         <div className="rounded-xl border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          No hay publicaciones para esta categoria.
+          There are no listings for this category.
         </div>
       ) : null}
 
@@ -270,11 +271,11 @@ export default function FeedPage() {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
               const amountLabel = formatAmount(project.amount_requested, project.currency);
-              const raisedLabel = formatAmount(project.amount_raised, project.currency);
-              const termLabel = project.term_months ? `${project.term_months} meses` : '--';
+              const raisedLabel = formatAmount(project.amount_received, project.currency);
+              const termLabel = project.term_months ? `${project.term_months} months` : '--';
               const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
-              const categoryLabel = project.sector?.trim() || 'Sin categoria';
-              const progress = calculateProgress(project.amount_raised, project.amount_requested);
+              const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
+              const progress = calculateProgress(project.amount_received, project.amount_requested);
 
           return (
             <div
@@ -308,7 +309,7 @@ export default function FeedPage() {
                         toggleWishlist(project.id);
                       }}
                       className="absolute right-3 top-3 rounded-full border border-white/25 bg-white/20 p-2 text-primary shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
-                      aria-label="Agregar a favoritos"
+                      aria-label="Add to favorites"
                     >
                       <IconHeart filled={isWishlisted} />
                     </button>
@@ -329,7 +330,7 @@ export default function FeedPage() {
                       <p className="text-xs text-gray-500">
                         {project.city || project.country
                           ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                          : 'Ubicacion pendiente'}
+                          : 'Location pending'}
                       </p>
                     </div>
                   </div>
@@ -337,24 +338,24 @@ export default function FeedPage() {
 
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-sky-400 via-sky-500 to-blue-600 p-4 text-white shadow-sm [backface-visibility:hidden] [transform:rotateY(180deg)]">
                   <p className="text-sm font-semibold">{project.title}</p>
-                  <p className="mt-1 text-xs text-white/70">Detalles de financiamiento</p>
+                  <p className="mt-1 text-xs text-white/70">Funding details</p>
 
                         <div className="mt-4 space-y-3 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-white/15 p-1.5 text-white">
-                        <IconTarget />
-                      </span>
-                      <div>
-                        <p className="text-xs text-white/70">Monto a recaudar</p>
-                        <p className="font-semibold">{amountLabel}</p>
-                      </div>
-                    </div>
+                              <IconTarget />
+                            </span>
+                            <div>
+                              <p className="text-xs text-white/70">Funding goal</p>
+                              <p className="font-semibold">{amountLabel}</p>
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2">
                             <span className="rounded-full bg-white/15 p-1.5 text-white">
                               <IconClock />
                             </span>
                             <div>
-                              <p className="text-xs text-white/70">Plazo</p>
+                              <p className="text-xs text-white/70">Term</p>
                               <p className="font-semibold">{termLabel}</p>
                             </div>
                           </div>
@@ -363,7 +364,7 @@ export default function FeedPage() {
                               <IconTarget />
                             </span>
                             <div>
-                              <p className="text-xs text-white/70">Recaudado</p>
+                              <p className="text-xs text-white/70">Raised</p>
                               <p className="font-semibold">{raisedLabel}</p>
                             </div>
                           </div>
@@ -372,7 +373,7 @@ export default function FeedPage() {
                               <IconPercent />
                       </span>
                       <div>
-                        <p className="text-xs text-white/70">Tasa de interes</p>
+                        <p className="text-xs text-white/70">Interest rate</p>
                         <p className="font-semibold">{rateLabel}</p>
                       </div>
                     </div>
@@ -393,9 +394,9 @@ export default function FeedPage() {
                       }}
                       className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
                     >
-                      Ver detalle
+                      View details
                     </button>
-                    <p className="text-xs text-white/70">Toca para volver</p>
+                    <p className="text-xs text-white/70">Tap to flip back</p>
                   </div>
                 </div>
               </div>

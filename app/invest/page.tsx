@@ -106,22 +106,22 @@ export default function InvestPage() {
   }, []);
 
   const helper = pendingInvestment
-    ? 'Revisa la simulacion y confirma la transferencia al emprendedor.'
+    ? 'Review the simulation and confirm the transfer to the entrepreneur.'
     : rolSeleccionado === 'emprendedor'
-      ? 'Selecciona un inversionista para devolver capital.'
-      : 'Selecciona un emprendedor para invertir.';
+      ? 'Choose an investor to send a repayment.'
+      : 'Choose an entrepreneur to invest in.';
 
   const canSubmit = useMemo(
     () => Boolean(walletDestino && Number(monto) > 0),
     [walletDestino, monto]
   );
 
-  const submitLabel = pendingInvestment ? 'Confirmar transferencia' : 'Send';
+  const submitLabel = pendingInvestment ? 'Confirm transfer' : 'Send';
   const normalizedAmount = useMemo(() => formatAmount(monto) || monto, [monto]);
 
   return (
     <PageFrame
-      title={pendingInvestment ? 'Transferencia de inversion' : 'Enviar'}
+      title={pendingInvestment ? 'Investment transfer' : 'Send'}
       subtitle={helper}
     >
       <div className="space-y-6 pb-40">
@@ -129,7 +129,7 @@ export default function InvestPage() {
           <div className="rounded-2xl border border-primary/15 bg-primary/10 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-primary/70">Inversion lista</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-primary/70">Investment ready</p>
                 <h2 className="mt-1 text-lg font-semibold text-gray-900">
                   {pendingInvestment.projectTitle}
                 </h2>
@@ -140,31 +140,31 @@ export default function InvestPage() {
                 onClick={() => router.push(`/feed/${pendingInvestment.projectId}/invest`)}
                 className="rounded-full border border-primary/20 bg-white/50 px-3 py-1 text-xs font-semibold text-primary"
               >
-                Editar
+                Edit
               </button>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-white/25 bg-white/30 p-3">
-                <p className="text-xs text-gray-500">Monto</p>
+                <p className="text-xs text-gray-500">Amount</p>
                 <p className="mt-1 text-sm font-semibold text-gray-900">
                   {pendingInvestment.amountUsdc} USDC
                 </p>
               </div>
               <div className="rounded-2xl border border-white/25 bg-white/30 p-3">
-                <p className="text-xs text-gray-500">Tasa EA</p>
+                <p className="text-xs text-gray-500">EA rate</p>
                 <p className="mt-1 text-sm font-semibold text-gray-900">
                   {pendingInvestment.interestRateEa}%
                 </p>
               </div>
               <div className="rounded-2xl border border-white/25 bg-white/30 p-3">
-                <p className="text-xs text-gray-500">Ganancia estimada</p>
+                <p className="text-xs text-gray-500">Estimated return</p>
                 <p className="mt-1 text-sm font-semibold text-emerald-700">
                   {pendingInvestment.projectedReturnUsdc} USDC
                 </p>
               </div>
               <div className="rounded-2xl border border-white/25 bg-white/30 p-3">
-                <p className="text-xs text-gray-500">Total proyectado</p>
+                <p className="text-xs text-gray-500">Projected total</p>
                 <p className="mt-1 text-sm font-semibold text-emerald-700">
                   {pendingInvestment.projectedTotalUsdc} USDC
                 </p>
@@ -181,7 +181,7 @@ export default function InvestPage() {
               }}
               className="mt-4 rounded-full border border-transparent px-1 text-sm font-semibold text-gray-600"
             >
-              Quitar simulacion
+              Clear simulation
             </button>
           </div>
         ) : null}
@@ -194,14 +194,14 @@ export default function InvestPage() {
               onClick={cargarWalletsObjetivo}
               className="rounded-full border border-purple-200 px-3 py-1 text-xs font-semibold text-purple-600"
             >
-              Refrescar
+              Refresh
             </button>
           }
         >
           {pendingInvestment ? (
             <div className="px-4 pb-0 pt-4">
               <div className="rounded-2xl border border-white/25 bg-white/15 p-4">
-                <p className="text-xs text-gray-500">Usuario emprendedor</p>
+                <p className="text-xs text-gray-500">Entrepreneur account</p>
                 <p className="mt-1 text-sm font-semibold text-gray-900">
                   {pendingInvestment.entrepreneurName}
                 </p>
@@ -212,10 +212,10 @@ export default function InvestPage() {
             </div>
           ) : null}
 
-          {loadingWallets ? <p className="px-4 py-4 text-sm text-gray-500">Cargando wallets...</p> : null}
+          {loadingWallets ? <p className="px-4 py-4 text-sm text-gray-500">Loading wallets...</p> : null}
           {!loadingWallets && walletTargets.length === 0 ? (
             <p className="px-4 py-4 text-sm text-gray-500">
-              No hay wallets disponibles en Supabase para este perfil.
+              No wallets are available in Supabase for this role.
             </p>
           ) : null}
           <div className="px-4 pb-4 pt-4">
@@ -223,7 +223,7 @@ export default function InvestPage() {
               type="text"
               value={walletDestino}
               onChange={(event) => setWalletDestino(event.target.value)}
-              placeholder="Nueva direccion 0x..."
+              placeholder="New 0x address..."
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-purple-200/40"
             />
           </div>
@@ -263,8 +263,8 @@ export default function InvestPage() {
 
         <Section title="From">
           <UserRow
-            name={userAlias || 'Usuario'}
-            subtitle={smartWalletAddress ? `Wallet - ${smartWalletAddress.slice(0, 8)}...` : 'Wallet no disponible'}
+            name={userAlias || 'User'}
+            subtitle={smartWalletAddress ? `Wallet - ${smartWalletAddress.slice(0, 8)}...` : 'Wallet not available'}
           />
         </Section>
 
@@ -321,7 +321,7 @@ export default function InvestPage() {
           !canSubmit || loadingTx ? 'bg-purple-300' : 'bg-purple-600'
         }`}
       >
-        {loadingTx ? 'Procesando...' : submitLabel}
+        {loadingTx ? 'Processing...' : submitLabel}
       </button>
     </PageFrame>
   );

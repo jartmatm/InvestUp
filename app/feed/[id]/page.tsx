@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestUp } from '@/lib/investup-context';
+import { toEnglishSector } from '@/lib/sector-labels';
 
 type ProjectDetail = {
   id: string;
@@ -15,7 +16,7 @@ type ProjectDetail = {
   sector: string | null;
   business_name: string | null;
   amount_requested: number | null;
-  amount_raised: number | null;
+  amount_received: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -35,10 +36,10 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const formatAmount = (amount: number | null, currency: string | null) => {
-  if (amount === null || amount === undefined) return 'Sin monto';
+  if (amount === null || amount === undefined) return 'No amount';
   const code = currency ?? 'USD';
   try {
-    return new Intl.NumberFormat('es-ES', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: code,
       maximumFractionDigits: 0,
@@ -106,7 +107,7 @@ export default function FeedDetailPage() {
   useEffect(() => {
     const loadProject = async () => {
       if (!projectId) {
-        setStatus('Publicacion no encontrada.');
+        setStatus('Listing not found.');
         setLoading(false);
         return;
       }
@@ -115,13 +116,13 @@ export default function FeedDetailPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,business_name,amount_requested,amount_raised,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
+          'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
         )
         .eq('id', projectId)
         .maybeSingle();
 
       if (error) {
-        setStatus(`No se pudo cargar la publicacion: ${error.message}`);
+        setStatus(`Could not load the listing: ${error.message}`);
         setLoading(false);
         return;
       }
@@ -140,8 +141,8 @@ export default function FeedDetailPage() {
   }, [projectId, supabase]);
 
   return (
-    <PageFrame title="Detalle" subtitle="Publicacion completa">
-      {loading ? <p className="text-sm text-gray-500">Cargando publicacion...</p> : null}
+    <PageFrame title="Details" subtitle="Full listing">
+      {loading ? <p className="text-sm text-gray-500">Loading listing...</p> : null}
       {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
       {!loading && project ? (
@@ -152,7 +153,7 @@ export default function FeedDetailPage() {
               onClick={() => router.back()}
               className="rounded-full border border-white/25 bg-white/20 px-4 py-2 text-sm font-semibold text-gray-700 backdrop-blur-md"
             >
-              Volver
+              Back
             </button>
             <button
               type="button"
@@ -162,7 +163,7 @@ export default function FeedDetailPage() {
                 project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
               }`}
             >
-              Invertir
+              Invest
             </button>
           </div>
 
@@ -183,7 +184,7 @@ export default function FeedDetailPage() {
               </div>
               {project.sector ? (
                 <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  {project.sector}
+                  {toEnglishSector(project.sector)}
                 </span>
               ) : null}
             </div>
@@ -192,62 +193,62 @@ export default function FeedDetailPage() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Monto a recaudar</p>
+                  <p className="text-xs text-gray-500">Funding goal</p>
                   <p className="mt-1 text-sm font-semibold text-gray-900">
                     {formatAmount(project.amount_requested, project.currency)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Monto recaudado</p>
+                  <p className="text-xs text-gray-500">Raised amount</p>
                   <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {formatAmount(project.amount_raised, project.currency)}
+                    {formatAmount(project.amount_received, project.currency)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Plazo</p>
+                  <p className="text-xs text-gray-500">Term</p>
                   <p className="mt-1 text-sm font-semibold text-gray-900">
-                {project.term_months ? `${project.term_months} meses` : '--'}
+                {project.term_months ? `${project.term_months} months` : '--'}
               </p>
             </div>
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Tasa EA</p>
+              <p className="text-xs text-gray-500">EA rate</p>
               <p className="mt-1 text-sm font-semibold text-gray-900">
                 {project.interest_rate ? `${project.interest_rate}%` : '--'}
               </p>
             </div>
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Ubicacion</p>
+              <p className="text-xs text-gray-500">Location</p>
               <p className="mt-1 text-sm font-semibold text-gray-900">
                 {project.city || project.country
                   ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                  : 'Pendiente'}
+                  : 'Pending'}
               </p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Progreso de recaudación</span>
-                  <span>{calculateProgress(project.amount_raised, project.amount_requested).toFixed(0)}%</span>
+                  <span>Funding progress</span>
+                  <span>{calculateProgress(project.amount_received, project.amount_requested).toFixed(0)}%</span>
                 </div>
                 <div className="mt-3 h-2 rounded-full bg-slate-200/80">
                   <div
                     className="h-2 rounded-full bg-[#6B39F4]"
-                    style={{ width: `${calculateProgress(project.amount_raised, project.amount_requested)}%` }}
+                    style={{ width: `${calculateProgress(project.amount_received, project.amount_requested)}%` }}
                   />
                 </div>
               </div>
 
           {project.publication_end_date ? (
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 text-sm text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <span className="text-xs text-gray-500">Fecha limite</span>
+              <span className="text-xs text-gray-500">Deadline</span>
               <p className="mt-1 font-semibold text-gray-900">{project.publication_end_date}</p>
             </div>
           ) : null}
 
           {!project.owner_wallet ? (
             <div className="rounded-2xl border border-amber-200/60 bg-amber-50/30 p-4 text-sm text-amber-900 backdrop-blur-md">
-              Este emprendimiento aun no tiene una wallet configurada, asi que por ahora no se puede iniciar la inversion.
+              This venture does not have a configured wallet yet, so the investment cannot start right now.
             </div>
           ) : null}
 
@@ -259,7 +260,7 @@ export default function FeedDetailPage() {
               project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
-            Invertir en este emprendimiento
+            Invest in this venture
           </button>
         </div>
       ) : null}

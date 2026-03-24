@@ -16,11 +16,11 @@ export default function WithdrawPage() {
   }, [faseApp, router]);
 
   return (
-    <PageFrame title="Retirar fondos" subtitle="Salida fiat desde USDC">
+    <PageFrame title="Withdraw funds" subtitle="Fiat payout from USDC">
       <div className="rounded-xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        <p className="text-sm text-slate-600">Acceso rapido a widget de retiro para tu wallet actual.</p>
+        <p className="text-sm text-slate-600">Quick access to the withdrawal widget for your current wallet.</p>
         <div className="mt-4">
-          <Button onClick={abrirRetiro}>Abrir retiro</Button>
+          <Button onClick={abrirRetiro}>Open withdrawal</Button>
         </div>
       </div>
     </PageFrame>

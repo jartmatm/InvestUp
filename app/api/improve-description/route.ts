@@ -4,7 +4,7 @@ const localImprove = (text: string) => {
   const clean = text.trim().replace(/\s+/g, ' ');
   if (!clean) return '';
   const body = clean.endsWith('.') ? clean : `${clean}.`;
-  return `Resumen ejecutivo: ${body}\n\nPropuesta de valor: ${body}\n\nUso del capital: ${body}`;
+  return `Executive summary: ${body}\n\nValue proposition: ${body}\n\nUse of funds: ${body}`;
 };
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const text = String(payload?.text ?? '').trim();
 
     if (!text) {
-      return NextResponse.json({ error: 'Texto requerido.' }, { status: 400 });
+      return NextResponse.json({ error: 'Text is required.' }, { status: 400 });
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
           {
             role: 'system',
             content:
-              'Mejora redaccion en espanol para pitch de emprendimiento. Mantener claridad, tono profesional y maximo 2500 caracteres.',
+              'Improve the writing for a venture pitch in English. Keep it clear, professional, and under 2500 characters.',
           },
           { role: 'user', content: text },
         ],
@@ -55,6 +55,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ improvedText: content.slice(0, 2500), provider: 'openai' });
   } catch {
-    return NextResponse.json({ error: 'No se pudo procesar la solicitud.' }, { status: 500 });
+    return NextResponse.json({ error: 'The request could not be processed.' }, { status: 500 });
   }
 }

@@ -16,9 +16,9 @@ function NavItem({ label, active }: NavItemProps) {
 export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around py-3">
-      <NavItem label="Inicio" active />
-      <NavItem label="Cartera" />
-      <NavItem label="Perfil" />
+      <NavItem label="Home" active />
+      <NavItem label="Wallet" />
+      <NavItem label="Profile" />
     </nav>
   );
 }

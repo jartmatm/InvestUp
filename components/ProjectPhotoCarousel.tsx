@@ -87,7 +87,7 @@ export default function ProjectPhotoCarousel({
             'flex h-full w-full items-center justify-center rounded-2xl bg-white/20 text-xs text-slate-500 backdrop-blur-md'
           }
         >
-          Sin imagen
+          No image
         </div>
       )}
 
@@ -96,18 +96,18 @@ export default function ProjectPhotoCarousel({
           <button
             type="button"
             onClick={showPrevious}
-            aria-label="Foto anterior"
+            aria-label="Previous photo"
             className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
-            <span className="text-lg leading-none">?</span>
+            <span className="text-lg leading-none">&lt;</span>
           </button>
           <button
             type="button"
             onClick={showNext}
-            aria-label="Foto siguiente"
+            aria-label="Next photo"
             className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
-            <span className="text-lg leading-none">?</span>
+            <span className="text-lg leading-none">&gt;</span>
           </button>
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 backdrop-blur-md">
             {slides.map((_, index) => (
@@ -118,7 +118,7 @@ export default function ProjectPhotoCarousel({
                   event.stopPropagation();
                   goToIndex(index);
                 }}
-                aria-label={`Ir a foto ${index + 1}`}
+                aria-label={`Go to photo ${index + 1}`}
                 className={`h-2.5 rounded-full transition-all ${
                   index === currentIndex ? 'w-5 bg-white' : 'w-2.5 bg-white/45'
                 }`}

@@ -1,3 +1,5 @@
+import { toEnglishSector } from '@/lib/sector-labels';
+
 type ProjectCardProps = {
   title: string;
   description: string;
@@ -37,7 +39,8 @@ export default function ProjectCard({
     amountRequested && amountRequested > 0 && amountRaised != null
       ? (Number(amountRaised) / Number(amountRequested)) * 100
       : progress;
-  const width = `${Math.max(0, Math.min(100, computedProgress))}%`;
+  const normalizedProgress = Math.max(0, Math.min(100, computedProgress));
+  const width = `${normalizedProgress}%`;
   return (
     <article className="glass-card rounded-xl p-4">
       {coverImage ? (
@@ -46,21 +49,25 @@ export default function ProjectCard({
       <h3 className="font-semibold text-gray-900">{title}</h3>
       <p className="mt-1 text-sm text-gray-500">{description}</p>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-        {sector ? <span>Sector: {sector}</span> : null}
+        {sector ? <span>Sector: {toEnglishSector(sector)}</span> : null}
         {city || country ? <span>{[city, country].filter(Boolean).join(', ')}</span> : null}
         {amountRequested != null ? (
           <span>
-            Solicitado {currency ?? 'USD'} {Number(amountRequested).toLocaleString()}
+            Requested {currency ?? 'USD'} {Number(amountRequested).toLocaleString()}
           </span>
         ) : null}
-        {amountRaised != null ? <span>Recaudado {currency ?? 'USD'} {Number(amountRaised).toLocaleString()}</span> : null}
-        {termMonths != null ? <span>Plazo: {termMonths} meses</span> : null}
-        {interestRate != null ? <span>Interes: {interestRate}%</span> : null}
-        {targetAmountUsd != null ? <span>Meta USD {Number(targetAmountUsd).toLocaleString()}</span> : null}
-        {interestRateEa != null ? <span>Interes {interestRateEa}% E.A.</span> : null}
-        {publicationEndDate ? <span>Publica hasta {publicationEndDate}</span> : null}
+        {amountRaised != null ? <span>Raised {currency ?? 'USD'} {Number(amountRaised).toLocaleString()}</span> : null}
+        {termMonths != null ? <span>Term: {termMonths} months</span> : null}
+        {interestRate != null ? <span>Interest: {interestRate}%</span> : null}
+        {targetAmountUsd != null ? <span>Target USD {Number(targetAmountUsd).toLocaleString()}</span> : null}
+        {interestRateEa != null ? <span>Interest {interestRateEa}% EA</span> : null}
+        {publicationEndDate ? <span>Published until {publicationEndDate}</span> : null}
       </div>
-      <div className="mt-4 h-2 rounded-full bg-gray-200">
+      <div className="mt-4 flex items-center justify-between text-xs font-semibold text-gray-600">
+        <span>Funding progress</span>
+        <span>{normalizedProgress.toFixed(0)}%</span>
+      </div>
+      <div className="mt-2 h-2 rounded-full bg-gray-200">
         <div className="h-2 rounded-full bg-primary" style={{ width }} />
       </div>
     </article>

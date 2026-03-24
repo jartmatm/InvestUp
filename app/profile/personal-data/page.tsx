@@ -134,7 +134,7 @@ export default function PersonalDataPage() {
       const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
 
       if (error) {
-        setStatus('No se pudo cargar tu perfil desde Supabase.');
+        setStatus('Could not load your profile from Supabase.');
       }
 
       const cols = new Set<string>(Object.keys(data ?? {}));
@@ -199,17 +199,17 @@ export default function PersonalDataPage() {
     const fullName = `${form.name} ${form.surname}`.trim();
     if (fullName) return fullName;
     const fromEmail = (form.email || user?.email?.address || '').split('@')[0];
-    return fromEmail || 'Usuario';
+    return fromEmail || 'User';
   }, [form.name, form.surname, form.email, user?.email?.address]);
 
   const displayEmail = useMemo(() => {
-    return form.email || user?.email?.address || 'Sin email';
+    return form.email || user?.email?.address || 'No email';
   }, [form.email, user?.email?.address]);
 
   const roleBadge = useMemo(() => {
-    if (form.role === 'investor') return 'Inversionista';
-    if (form.role === 'entrepreneur') return 'Emprendedor';
-    return 'Perfil';
+    if (form.role === 'investor') return 'Investor';
+    if (form.role === 'entrepreneur') return 'Entrepreneur';
+    return 'Profile';
   }, [form.role]);
 
   const updateForm = (key: keyof ProfileForm, value: string) => {
@@ -280,7 +280,7 @@ export default function PersonalDataPage() {
 
     const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
     if (error) {
-      setStatus(`No se pudo guardar en Supabase: ${error.message}`);
+      setStatus(`Could not save to Supabase: ${error.message}`);
       setSaving(false);
       return;
     }
@@ -292,7 +292,7 @@ export default function PersonalDataPage() {
 
     if (typeof window !== 'undefined') {
       const nextEmail = form.email || user.email?.address || '';
-      const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'Usuario');
+      const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
       window.localStorage.setItem('investup_display_name', nextDisplayName);
       window.localStorage.setItem('investup_email', nextEmail);
       if (form.avatar_url) {
@@ -305,17 +305,17 @@ export default function PersonalDataPage() {
 
     if (!hasAnyExtendedField) {
       setStatus(
-        'Guardado basico completado. Para guardar campos extendidos (name/surname/phone/country/gender/address/avatar), agrega columnas en la tabla users o profile_data/metadata.'
+        'Basic save completed. To store extended fields (name, surname, phone, country, gender, address, avatar), add the matching columns in users or profile_data/metadata.'
       );
     } else {
-      setStatus('Perfil actualizado correctamente.');
+      setStatus('Profile updated successfully.');
     }
 
     setSaving(false);
   };
 
   return (
-    <PageFrame title="Personal Data" subtitle="Modifica tu informacion personal">
+    <PageFrame title="Personal Data" subtitle="Update your personal information">
       <div className="space-y-6">
         <div className="flex flex-col items-center">
           <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
@@ -327,7 +327,7 @@ export default function PersonalDataPage() {
               </span>
             )}
             <span className="absolute bottom-0 left-0 right-0 bg-black/50 py-1 text-center text-[10px] font-semibold text-white">
-              Cambiar
+              Change
             </span>
             <input
               type="file"
@@ -343,7 +343,7 @@ export default function PersonalDataPage() {
           </span>
         </div>
 
-        {loadingProfile ? <p className="text-sm text-slate-500">Cargando perfil...</p> : null}
+        {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
 
         <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Field label="ID">
@@ -357,20 +357,20 @@ export default function PersonalDataPage() {
               placeholder="Email"
             />
           </Field>
-          <Field label="Nombre">
+          <Field label="First name">
             <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
           </Field>
-          <Field label="Apellido">
+          <Field label="Last name">
             <Input value={form.surname} onChange={(value) => updateForm('surname', value)} placeholder="Surname" />
           </Field>
-          <Field label="Telefono">
+          <Field label="Phone">
             <Input
               value={form.phone_number}
               onChange={(value) => updateForm('phone_number', value)}
               placeholder="Phone number"
             />
           </Field>
-          <Field label="Genero">
+          <Field label="Gender">
             <select
               value={form.gender}
               onChange={(event) => updateForm('gender', event.target.value)}
@@ -379,13 +379,13 @@ export default function PersonalDataPage() {
               <option value="">Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
-              <option value="prefer no say">Prefer no say</option>
+              <option value="prefer no say">Prefer not to say</option>
             </select>
           </Field>
-          <Field label="Direccion">
+          <Field label="Address">
             <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
           </Field>
-          <Field label="Pais">
+          <Field label="Country">
             <select
               value={form.country}
               onChange={(event) => onCountryChange(event.target.value)}
@@ -399,15 +399,15 @@ export default function PersonalDataPage() {
               ))}
             </select>
           </Field>
-          <Field label="Perfil">
+          <Field label="Role">
             <select
               value={form.role}
               onChange={(event) => updateForm('role', event.target.value)}
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
-              <option value="">Perfil</option>
-              <option value="investor">Perfil de inversionista</option>
-              <option value="entrepreneur">Perfil de emprendedor</option>
+              <option value="">Role</option>
+              <option value="investor">Investor profile</option>
+              <option value="entrepreneur">Entrepreneur profile</option>
             </select>
           </Field>
         </div>
@@ -417,7 +417,7 @@ export default function PersonalDataPage() {
           disabled={saving || loadingProfile}
           className="rounded-xl py-4 text-base"
         >
-          {saving ? 'Guardando...' : 'Guardar cambios'}
+          {saving ? 'Saving...' : 'Save changes'}
         </Button>
 
         {status ? <p className="text-xs text-slate-500">{status}</p> : null}
