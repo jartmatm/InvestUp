@@ -37,8 +37,13 @@ function IconPersonalData() {
 
 function IconSocialMedia() {
   return (
-    <svg viewBox="0 0 19 19" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-      <path d="M1 9.33333C1 13.9357 4.73096 17.6667 9.33333 17.6667C13.9357 17.6667 17.6667 13.9357 17.6667 9.33333C17.6667 4.73096 13.9357 1 9.33333 1C4.73096 1 1 4.73096 1 9.33333Z" />
+    <svg viewBox="0 0 19 19" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M1 9.33333C1 13.9357 4.73096 17.6667 9.33333 17.6667C13.9357 17.6667 17.6667 13.9357 17.6667 9.33333C17.6667 4.73096 13.9357 1 9.33333 1C4.73096 1 1 4.73096 1 9.33333Z"
+        stroke="#121A26"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

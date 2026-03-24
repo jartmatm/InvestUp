@@ -78,8 +78,13 @@ export default function FaqPage() {
   return (
     <PageFrame title="FAQ" subtitle="Frequently asked questions">
       <div className="space-y-6">
-        <div className="overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <img src="/profile/FAQ.svg" alt="FAQ" className="w-full" />
+        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">FAQ</p>
+          <h2 className="mt-2 text-lg font-semibold text-gray-900">Quick answers before you invest</h2>
+          <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            Review the most common questions about custody, wallets, returns, legal responsibility, and how
+            InvestUp works before making a move.
+          </p>
         </div>
 
         <div className="space-y-3">

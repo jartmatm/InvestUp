@@ -200,8 +200,12 @@ export default function SocialMediaPage() {
   return (
     <PageFrame title="Social Media" subtitle="Save your social profiles">
       <div className="space-y-6">
-        <div className="overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <img src="/profile/SocialMedia.svg" alt="Social Media" className="w-full" />
+        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Social profiles</p>
+          <h2 className="mt-2 text-lg font-semibold text-gray-900">Keep your public presence up to date</h2>
+          <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            Add your links so investors, founders, and partners can verify your presence across the web.
+          </p>
         </div>
 
         {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
