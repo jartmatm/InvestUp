@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'Can I withdraw my capital at any time?',
     answer:
-      'Liquidity depends on each investment’s smart contract terms. Once a project generates returns or reaches maturity, funds are released automatically to your wallet and can be converted to local currency through off-ramp partners.',
+      'Liquidity depends on each investment\'s smart contract terms. Once a project generates returns or reaches maturity, funds are released automatically to your wallet and can be converted to local currency through off-ramp partners.',
   },
   {
     question: 'What happens if I lose access to my account?',

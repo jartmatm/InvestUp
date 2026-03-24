@@ -1,17 +1,6 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Sora } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
-
-const displayFont = Sora({
-  variable: "--font-display",
-  subsets: ["latin"],
-});
-
-const bodyFont = Space_Grotesk({
-  variable: "--font-body",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "InvestUp",
@@ -25,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
+      <body className="antialiased">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

@@ -43,7 +43,7 @@ const TERMS_SECTIONS = [
   {
     title: '5. Disclaimer of warranties and limitation of liability',
     body: [
-      'InvestUp is provided “as is.” We do not guarantee uninterrupted service or error-free operation.',
+      'InvestUp is provided "as is." We do not guarantee uninterrupted service or error-free operation.',
       'InvestUp, its directors, or employees are not liable for Polygon network failures, wallet compromise, entrepreneur default, or digital asset price volatility.',
     ],
   },

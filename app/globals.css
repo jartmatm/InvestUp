@@ -4,6 +4,8 @@
   --primary: #4a6cf7;
   --primary-light: #6e8bff;
   --primary-dark: #2e4ad9;
+  --font-display: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  --font-body: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --gray-100: #f7f7f7;
   --gray-200: #ededed;
   --gray-300: #d4d4d4;
