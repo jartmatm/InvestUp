@@ -37,13 +37,14 @@ function IconPersonalData() {
 
 function IconSocialMedia() {
   return (
-    <svg viewBox="0 0 19 19" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M1 9.33333C1 13.9357 4.73096 17.6667 9.33333 17.6667C13.9357 17.6667 17.6667 13.9357 17.6667 9.33333C17.6667 4.73096 13.9357 1 9.33333 1C4.73096 1 1 4.73096 1 9.33333Z"
-        stroke="#121A26"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M12 21s-6.7-4.3-9.2-7.6C1 11.5 1.2 8.4 3.4 6.7c2-1.6 4.9-1.2 6.6.8l2 2.3 2-2.3c1.7-2 4.6-2.4 6.6-.8 2.2 1.7 2.4 4.8.6 6.7C18.7 16.7 12 21 12 21z" />
     </svg>
   );
 }
