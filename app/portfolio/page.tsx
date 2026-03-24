@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
@@ -145,6 +145,14 @@ const calculateTermMonths = (endDateIso: string) => {
   return Math.max(1, Math.ceil(daysDiff / 30));
 };
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error && 'message' in error) {
+    return String((error as { message?: unknown }).message ?? error);
+  }
+  return String(error);
+};
+
 export default function PortfolioPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -210,7 +218,7 @@ export default function PortfolioPage() {
     preloadCountry();
   }, [rolSeleccionado, supabase, user?.id]);
 
-  const loadMyProjects = async () => {
+  const loadMyProjects = useCallback(async () => {
     if (!user?.id) return;
     setLoadingProjects(true);
     const { data, error } = await supabase
@@ -228,13 +236,13 @@ export default function PortfolioPage() {
     }
     setMyProjects((data ?? []) as ProjectRow[]);
     setLoadingProjects(false);
-  };
+  }, [supabase, user?.id]);
 
   useEffect(() => {
     if (rolSeleccionado === 'emprendedor') {
       loadMyProjects();
     }
-  }, [rolSeleccionado, user?.id]);
+  }, [loadMyProjects, rolSeleccionado]);
 
   const onChangeForm = (key: keyof PublishForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -276,8 +284,8 @@ export default function PortfolioPage() {
         throw new Error(payload.error ?? 'Could not improve the description.');
       }
       onChangeForm('description', payload.improvedText.slice(0, 2500));
-    } catch (error: any) {
-      setStatus(`AI unavailable: ${error?.message ?? error}`);
+    } catch (error: unknown) {
+      setStatus(`AI unavailable: ${getErrorMessage(error)}`);
     } finally {
       setImprovingAI(false);
     }

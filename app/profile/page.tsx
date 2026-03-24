@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import PageFrame from '@/components/PageFrame';
 import { useInvestUp } from '@/lib/investup-context';
@@ -191,7 +191,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { faseApp, logoutApp } = useInvestUp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
-  const [languageLabel, setLanguageLabel] = useState('English (US)');
+  const languageLabel = 'English (US)';
   const safeName = displayName || 'User';
   const avatarNode = (
     <div className="h-20 w-20 overflow-hidden rounded-full border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
@@ -211,19 +211,6 @@ export default function ProfilePage() {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const syncLanguage = () => {
-      const nextLanguage = window.localStorage.getItem('investup_language') || 'English (US)';
-      setLanguageLabel(nextLanguage);
-    };
-
-    syncLanguage();
-    window.addEventListener('investup-language-updated', syncLanguage);
-    return () => window.removeEventListener('investup-language-updated', syncLanguage);
-  }, []);
 
   return (
     <PageFrame title="Profile" subtitle="Account settings" topSlot={avatarNode}>

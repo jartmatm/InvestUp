@@ -1,7 +1,6 @@
 'use client';
 
 import PageFrame from '@/components/PageFrame';
-import { LANGUAGE_OPTIONS, useAppLanguage } from '@/lib/app-language';
 
 function CheckIcon() {
   return (
@@ -12,38 +11,19 @@ function CheckIcon() {
 }
 
 export default function LanguagePage() {
-  const { languageLabel, setLanguageLabel, t } = useAppLanguage();
-
-  const handleSelectLanguage = (language: string) => {
-    setLanguageLabel(language as (typeof LANGUAGE_OPTIONS)[number]);
-  };
-
   return (
-    <PageFrame title="Language" subtitle="Choose the language for your account">
+    <PageFrame title="Language" subtitle="English is enabled for the full app experience">
       <div className="space-y-3">
-        {LANGUAGE_OPTIONS.map((language) => {
-          const active = language === languageLabel;
-          return (
-            <button
-              key={language}
-              type="button"
-              onClick={() => handleSelectLanguage(language)}
-              className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition ${
-                active
-                  ? 'border-[#6B39F4] bg-[#6B39F4]/10 text-[#6B39F4]'
-                  : 'border-white/25 bg-white/20 text-gray-800 hover:bg-white/30'
-              }`}
-            >
-              <div>
-                <p className="text-sm font-semibold">{language}</p>
-                <p className="text-xs text-gray-500">
-                  {active ? t('Currently selected') : t('Tap to use this language')}
-                </p>
-              </div>
-              {active ? <CheckIcon /> : null}
-            </button>
-          );
-        })}
+        <div className="flex w-full items-center justify-between rounded-2xl border border-[#6B39F4] bg-[#6B39F4]/10 px-4 py-4 text-left text-[#6B39F4] shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div>
+            <p className="text-sm font-semibold">English (US)</p>
+            <p className="text-xs text-gray-500">Currently selected</p>
+          </div>
+          <CheckIcon />
+        </div>
+        <div className="rounded-2xl border border-white/25 bg-white/20 px-4 py-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          Additional language packs were removed to keep the app lighter and faster on load.
+        </div>
       </div>
     </PageFrame>
   );

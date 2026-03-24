@@ -108,7 +108,18 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [flippedId, setFlippedId] = useState<string | null>(null);
-  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [wishlist, setWishlist] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      const stored = window.localStorage.getItem('investup_wishlist');
+      if (!stored) return [];
+      const parsed = JSON.parse(stored) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
+    } catch {
+      return [];
+    }
+  });
   const [showCategories, setShowCategories] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -174,18 +185,6 @@ export default function FeedPage() {
 
     loadFeed();
   }, [supabase]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem('investup_wishlist');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as string[];
-      if (Array.isArray(parsed)) setWishlist(parsed);
-    } catch {
-      setWishlist([]);
-    }
-  }, []);
 
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(

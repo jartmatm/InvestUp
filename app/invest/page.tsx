@@ -10,6 +10,11 @@ import {
   type PendingInvestment,
 } from '@/lib/pending-investment';
 
+const getInitialPendingInvestment = () => {
+  if (typeof window === 'undefined') return null;
+  return getPendingInvestment();
+};
+
 type SectionProps = {
   title: string;
   rightSlot?: ReactNode;
@@ -68,9 +73,13 @@ export default function InvestPage() {
     enviarUSDC,
   } = useInvestUp();
 
-  const [walletDestino, setWalletDestino] = useState('');
-  const [monto, setMonto] = useState('200.00');
-  const [pendingInvestment, setPendingInvestment] = useState<PendingInvestment | null>(null);
+  const [pendingInvestment, setPendingInvestment] = useState<PendingInvestment | null>(
+    getInitialPendingInvestment
+  );
+  const [walletDestino, setWalletDestino] = useState(
+    () => getInitialPendingInvestment()?.entrepreneurWallet ?? ''
+  );
+  const [monto, setMonto] = useState(() => getInitialPendingInvestment()?.amountUsdc ?? '200.00');
 
   const suggestions = [100, 200, 250, 300, 350, 400];
   const amountNumber = Number(monto);
@@ -96,14 +105,6 @@ export default function InvestPage() {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
-
-  useEffect(() => {
-    const pending = getPendingInvestment();
-    if (!pending) return;
-    setPendingInvestment(pending);
-    setWalletDestino(pending.entrepreneurWallet);
-    setMonto(pending.amountUsdc);
-  }, []);
 
   const helper = pendingInvestment
     ? 'Review the simulation and confirm the transfer to the entrepreneur.'

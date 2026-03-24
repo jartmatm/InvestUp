@@ -34,6 +34,12 @@ type UserWalletTarget = {
   wallet_address: string | null;
 };
 
+type UsdcQuote = {
+  postOpGas?: bigint;
+  exchangeRate: bigint;
+  paymaster: `0x${string}`;
+};
+
 type MovementType = 'investment' | 'repayment' | 'transfer';
 
 type ReceiptData = {
@@ -90,7 +96,7 @@ type RegisterRepaymentArgs = {
 type InvestUpContextType = {
   ready: boolean;
   authenticated: boolean;
-  login: (options?: any) => void;
+  login: (options?: Record<string, unknown>) => void;
   logoutApp: () => Promise<void>;
   faseApp: FaseApp;
   rolSeleccionado: FrontRole | null;
@@ -199,6 +205,14 @@ const normalizePendingInvestment = (
   return pendingInvestment;
 };
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'object' && error && 'message' in error) {
+    return String((error as { message?: unknown }).message ?? error);
+  }
+  return String(error);
+};
+
 export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
   const { fundWallet } = useFundWallet();
@@ -215,7 +229,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const [walletTargets, setWalletTargets] = useState<UserWalletTarget[]>([]);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
 
-  const quoteCacheRef = useRef<{ expiresAt: number; quote: any | null }>({
+  const quoteCacheRef = useRef<{ expiresAt: number; quote: UsdcQuote | null }>({
     expiresAt: 0,
     quote: null,
   });

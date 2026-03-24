@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAppLanguage } from '@/lib/app-language';
 
 function IconNavHome() {
   return (
@@ -60,12 +59,11 @@ function IconNavProfile() {
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { t } = useAppLanguage();
   const items = [
-    { href: '/home', label: t('Home'), icon: <IconNavHome /> },
-    { href: '/portfolio', label: t('Activity'), icon: <IconNavActivity /> },
-    { href: '/feed', label: t('Payments'), icon: <IconNavPayments /> },
-    { href: '/profile', label: t('Profile'), icon: <IconNavProfile /> },
+    { href: '/home', label: 'Home', icon: <IconNavHome /> },
+    { href: '/portfolio', label: 'Activity', icon: <IconNavActivity /> },
+    { href: '/feed', label: 'Payments', icon: <IconNavPayments /> },
+    { href: '/profile', label: 'Profile', icon: <IconNavProfile /> },
   ];
   const navSlots: Array<(typeof items)[number] | null> = [items[0], items[1], null, items[2], items[3]];
 
@@ -75,7 +73,7 @@ export default function BottomNav() {
         <div className="relative rounded-[20px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Link
             href="/invest"
-            aria-label={t('Send')}
+            aria-label="Send"
             className={`absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-[0_12px_24px_rgba(107,57,244,0.35)] ${
               pathname.startsWith('/invest') ? 'bg-[#5A27E0]' : 'bg-[#6B39F4]'
             }`}

@@ -188,13 +188,13 @@ export default function ProjectInvestPage() {
     [amountNumber, safeInterestRate, safeTermMonths]
   );
 
-  const entrepreneurName = useMemo(() => {
+  const entrepreneurName = (() => {
     const ownerName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
     if (ownerName) return ownerName;
     if (owner?.email) return owner.email.split('@')[0];
     if (project?.business_name) return project.business_name;
     return 'Entrepreneur';
-  }, [owner?.email, owner?.name, owner?.surname, project?.business_name]);
+  })();
 
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
   const canContinue = Boolean(project && entrepreneurWallet && amountNumber > 0);
