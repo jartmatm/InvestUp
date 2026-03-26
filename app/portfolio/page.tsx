@@ -464,14 +464,6 @@ export default function PortfolioPage() {
       opError = firstTry.error;
 
       if (opError?.message?.includes('invalid input value for enum project_status')) {
-        const secondTry = await supabase.from('projects').insert({
-          ...payload,
-          status: 'active',
-        });
-        opError = secondTry.error;
-      }
-
-      if (opError?.message?.includes('invalid input value for enum project_status')) {
         const thirdTry = await supabase.from('projects').insert(payload);
         opError = thirdTry.error;
       }

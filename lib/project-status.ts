@@ -10,7 +10,20 @@ type ProjectStatusLike = {
   amount_received?: number | null;
 };
 
-export const ACTIVE_PROJECT_STATUSES: ProjectStatus[] = ['published', 'financing_in_progress'];
+export const LEGACY_VISIBLE_PROJECT_STATUSES = [
+  'published',
+  'financing_in_progress',
+  'active',
+] as const;
+
+const normalizeLegacyProjectStatus = (
+  status: string | null | undefined
+): ProjectStatus => {
+  if (status === 'active') return 'published';
+  return (status ?? 'published') as ProjectStatus;
+};
+
+export const ACTIVE_PROJECT_STATUSES = [...LEGACY_VISIBLE_PROJECT_STATUSES];
 
 export const HOME_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
@@ -22,7 +35,7 @@ export const resolveProjectStatus = (project: ProjectStatusLike): ProjectStatus 
     return 'financing_in_progress';
   }
 
-  const normalizedStatus = (project.status ?? 'published') as ProjectStatus;
+  const normalizedStatus = normalizeLegacyProjectStatus(project.status);
   return normalizedStatus;
 };
 
@@ -34,7 +47,7 @@ export const getNextProjectStatusAfterFunding = (
     return 'financing_in_progress';
   }
 
-  return (currentStatus ?? 'published') as ProjectStatus;
+  return normalizeLegacyProjectStatus(currentStatus);
 };
 
 export const canDeleteProject = (project: ProjectStatusLike) => !isProjectFunded(project);
