@@ -1,9 +1,26 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 
 export default function LoginClient() {
-  const { login } = usePrivy();
+  const router = useRouter();
+  const { login, ready, authenticated } = usePrivy();
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      router.replace('/home');
+    }
+  }, [authenticated, ready, router]);
+
+  if (!ready || authenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f0fb] px-6 text-center text-sm text-gray-600">
+        Loading InvestApp...
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-screen w-screen flex-col justify-center overflow-hidden px-8">
