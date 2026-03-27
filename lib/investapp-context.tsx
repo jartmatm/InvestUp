@@ -12,9 +12,6 @@ import {
 import { useFundWallet, usePrivy } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
-import { createPublicClient, encodeFunctionData, formatUnits, http, parseUnits } from 'viem';
-import { polygon } from 'viem/chains';
-import { createPimlicoClient } from 'permissionless/clients/pimlico';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
   clearPendingInvestment,
@@ -175,11 +172,47 @@ const PIMLICO_BUNDLER_URL =
 const PIMLICO_QUOTE_TTL_MS = 30000;
 const ESTIMATED_USER_OP_GAS = BigInt(300000);
 const GAS_PRICE_TTL_MS = 30000;
+let publicClientPromise: Promise<any> | null = null;
+let pimlicoClientPromise: Promise<any> | null = null;
 
-const publicClient = createPublicClient({
-  chain: polygon,
-  transport: http('https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82'),
-});
+const getPublicClient = async () => {
+  if (!publicClientPromise) {
+    publicClientPromise = (async () => {
+      const [{ createPublicClient, http }, { polygon }] = await Promise.all([
+        import('viem'),
+        import('viem/chains'),
+      ]);
+
+      return createPublicClient({
+        chain: polygon,
+        transport: http('https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82'),
+      });
+    })();
+  }
+
+  return publicClientPromise;
+};
+
+const getPimlicoClient = async () => {
+  if (!PIMLICO_BUNDLER_URL) return null;
+
+  if (!pimlicoClientPromise) {
+    pimlicoClientPromise = (async () => {
+      const [{ createPimlicoClient }, { http }, { polygon }] = await Promise.all([
+        import('permissionless/clients/pimlico'),
+        import('viem'),
+        import('viem/chains'),
+      ]);
+
+      return createPimlicoClient({
+        chain: polygon,
+        transport: http(PIMLICO_BUNDLER_URL),
+      });
+    })();
+  }
+
+  return pimlicoClientPromise;
+};
 
 const InvestAppContext = createContext<InvestAppContextType | null>(null);
 
@@ -275,14 +308,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       global: { fetch: authedFetch },
     });
   }, [getAccessToken]);
-
-  const pimlicoClient = useMemo(() => {
-    if (!PIMLICO_BUNDLER_URL) return null;
-    return createPimlicoClient({
-      chain: polygon,
-      transport: http(PIMLICO_BUNDLER_URL),
-    });
-  }, []);
 
   const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
   const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
@@ -531,6 +556,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const getCachedUsdcQuote = useCallback(async () => {
+    const pimlicoClient = await getPimlicoClient();
     if (!pimlicoClient) {
       throw new Error(
         'Missing Pimlico configuration (NEXT_PUBLIC_PIMLICO_API_KEY or NEXT_PUBLIC_PIMLICO_BUNDLER_URL).'
@@ -548,9 +574,10 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     const quote = quotes[0];
     quoteCacheRef.current = { quote, expiresAt: now + PIMLICO_QUOTE_TTL_MS };
     return quote;
-  }, [pimlicoClient]);
+  }, []);
 
   const getCachedMaxFeePerGas = useCallback(async () => {
+    const publicClient = await getPublicClient();
     const now = Date.now();
     if (gasPriceCacheRef.current.maxFeePerGas && now < gasPriceCacheRef.current.expiresAt) {
       return gasPriceCacheRef.current.maxFeePerGas;
@@ -567,6 +594,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const actualizarSaldos = useCallback(async () => {
     if (!smartWalletAddress) return;
     try {
+      const [{ formatUnits }, publicClient] = await Promise.all([import('viem'), getPublicClient()]);
       const balPol = await publicClient.getBalance({ address: smartWalletAddress as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
@@ -661,6 +689,10 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
       setLoadingTx(true);
       try {
+        const [{ encodeFunctionData, formatUnits, parseUnits }, publicClient] = await Promise.all([
+          import('viem'),
+          getPublicClient(),
+        ]);
         const montoSolicitado = parseUnits(monto, USDC_DECIMALS);
         if (montoSolicitado <= BigInt(0)) throw new Error('The amount must be greater than 0.');
 

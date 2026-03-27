@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AppProviders } from "@/components/AppProviders";
 
 export const metadata: Metadata = {
   title: "InvestApp",
@@ -14,9 +13,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="antialiased">
-        <AppProviders>{children}</AppProviders>
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

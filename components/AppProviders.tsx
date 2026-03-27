@@ -1,40 +1,67 @@
 'use client';
 
-import { PrivyProvider } from '@privy-io/react-auth';
-import { SmartWalletsProvider } from '@privy-io/react-auth/smart-wallets';
-import { polygon } from 'viem/chains';
-import { InvestAppProvider } from '@/lib/investapp-context';
-import TransactionOverlay from '@/components/TransactionOverlay';
-import TransactionReceipt from '@/components/TransactionReceipt';
+import { useEffect, useState } from 'react';
+
+type AppBundle = {
+  InvestAppProvider: React.ComponentType<{ children: React.ReactNode }>;
+  SmartWalletsProvider: React.ComponentType<{
+    config: Record<string, unknown>;
+    children: React.ReactNode;
+  }>;
+  TransactionOverlay: React.ComponentType;
+  TransactionReceipt: React.ComponentType;
+};
 
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
+  const [bundle, setBundle] = useState<AppBundle | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadBundle = async () => {
+      const [smartWalletsModule, investAppModule, overlayModule, receiptModule] = await Promise.all([
+        import('@privy-io/react-auth/smart-wallets'),
+        import('@/lib/investapp-context'),
+        import('@/components/TransactionOverlay'),
+        import('@/components/TransactionReceipt'),
+      ]);
+
+      if (!active) return;
+
+      setBundle({
+        InvestAppProvider: investAppModule.InvestAppProvider,
+        SmartWalletsProvider: smartWalletsModule.SmartWalletsProvider,
+        TransactionOverlay: overlayModule.default,
+        TransactionReceipt: receiptModule.default,
+      });
+    };
+
+    void loadBundle();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!bundle) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f3f0fb] px-6 text-center text-sm text-gray-600">
+        Loading InvestApp...
+      </div>
+    );
+  }
+
+  const { InvestAppProvider, SmartWalletsProvider, TransactionOverlay, TransactionReceipt } = bundle;
+
   return (
-    <PrivyProvider
-      appId="cmlohriz801350cl7vrwvdb3i"
-      config={{
-        appearance: {
-          theme: 'light',
-          accentColor: '#5B4BFF',
-          showWalletLoginFirst: false,
-        },
-        supportedChains: [polygon],
-        loginMethods: ['email'],
-        embeddedWallets: {
-          ethereum: { createOnLogin: 'users-without-wallets' },
-        },
-      }}
-    >
-      <SmartWalletsProvider config={{ paymasterContext: { token: USDC_ADDRESS } }}>
-        <InvestAppProvider>
-          {children}
-          <TransactionOverlay />
-          <TransactionReceipt />
-        </InvestAppProvider>
-      </SmartWalletsProvider>
-    </PrivyProvider>
+    <SmartWalletsProvider config={{ paymasterContext: { token: USDC_ADDRESS } }}>
+      <InvestAppProvider>
+        {children}
+        <TransactionOverlay />
+        <TransactionReceipt />
+      </InvestAppProvider>
+    </SmartWalletsProvider>
   );
 }
-
-
