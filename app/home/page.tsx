@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -247,7 +247,7 @@ export default function HomePage() {
     abrirCompra,
     abrirCompraCoinbase,
     abrirRetiro,
-  } = useInvestUp();
+  } = useInvestApp();
   const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
   const [lastProject, setLastProject] = useState<LastProject | null>(null);

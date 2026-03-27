@@ -22,6 +22,10 @@ const SUPABASE_URL =
 const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+const AVATAR_KEYS = ['investapp_avatar_url', 'investup_avatar_url'] as const;
+const DISPLAY_NAME_KEYS = ['investapp_display_name', 'investup_display_name'] as const;
+const EMAIL_KEYS = ['investapp_email', 'investup_email'] as const;
+const PROFILE_UPDATED_EVENTS = ['investapp-profile-updated', 'investup-profile-updated'] as const;
 
 const parseProfileBlob = (value: unknown): ProfileBlob => {
   if (!value) return null;
@@ -45,6 +49,46 @@ const pickFirstFilledString = (...values: unknown[]) => {
     }
   }
   return '';
+};
+
+const readLegacyAwareStorage = (keys: readonly string[]) => {
+  if (typeof window === 'undefined') return '';
+
+  for (const key of keys) {
+    const value = window.localStorage.getItem(key) ?? '';
+    if (value) return value;
+  }
+
+  return '';
+};
+
+const syncProfileCache = ({
+  avatarUrl,
+  displayName,
+  email,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  email: string;
+}) => {
+  if (typeof window === 'undefined') return;
+
+  DISPLAY_NAME_KEYS.forEach((key) => {
+    window.localStorage.setItem(key, displayName);
+  });
+  EMAIL_KEYS.forEach((key) => {
+    window.localStorage.setItem(key, email);
+  });
+
+  if (avatarUrl) {
+    AVATAR_KEYS.forEach((key) => {
+      window.localStorage.setItem(key, avatarUrl);
+    });
+  } else {
+    AVATAR_KEYS.forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
+  }
 };
 
 export function useUserProfileSummary(): ProfileSummary {
@@ -93,9 +137,9 @@ export function useUserProfileSummary(): ProfileSummary {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const cachedAvatar = window.localStorage.getItem('investup_avatar_url') ?? '';
-    const cachedName = window.localStorage.getItem('investup_display_name') ?? '';
-    const cachedEmail = window.localStorage.getItem('investup_email') ?? '';
+    const cachedAvatar = readLegacyAwareStorage(AVATAR_KEYS);
+    const cachedName = readLegacyAwareStorage(DISPLAY_NAME_KEYS);
+    const cachedEmail = readLegacyAwareStorage(EMAIL_KEYS);
 
     if (cachedAvatar) setAvatarUrl(cachedAvatar);
     if (cachedName) setDisplayName(cachedName);
@@ -116,25 +160,14 @@ export function useUserProfileSummary(): ProfileSummary {
       const emailValue = pickFirstFilledString(data?.email, user.email?.address);
       const nameValue = pickFirstFilledString(data?.name, profileData?.name);
       const surnameValue = pickFirstFilledString(data?.surname, profileData?.surname);
-      const resolvedName = `${nameValue} ${surnameValue}`.trim() || (emailValue ? emailValue.split('@')[0] : 'Usuario');
-      const cachedAvatar =
-        typeof window !== 'undefined' ? window.localStorage.getItem('investup_avatar_url') ?? '' : '';
+      const resolvedName = `${nameValue} ${surnameValue}`.trim() || (emailValue ? emailValue.split('@')[0] : 'User');
+      const cachedAvatar = readLegacyAwareStorage(AVATAR_KEYS);
       const resolvedAvatar = pickFirstFilledString(data?.avatar_url, profileData?.avatar_url, cachedAvatar);
 
       setEmail(emailValue);
       setDisplayName(resolvedName);
       setAvatarUrl(resolvedAvatar);
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('investup_display_name', resolvedName);
-        window.localStorage.setItem('investup_email', emailValue);
-
-        if (resolvedAvatar) {
-          window.localStorage.setItem('investup_avatar_url', resolvedAvatar);
-        } else {
-          window.localStorage.removeItem('investup_avatar_url');
-        }
-      }
+      syncProfileCache({ avatarUrl: resolvedAvatar, displayName: resolvedName, email: emailValue });
 
       return Boolean(resolvedAvatar);
     } finally {
@@ -168,9 +201,9 @@ export function useUserProfileSummary(): ProfileSummary {
     };
 
     const handleProfileUpdate = () => {
-      const cachedAvatar = window.localStorage.getItem('investup_avatar_url') ?? '';
-      const cachedName = window.localStorage.getItem('investup_display_name') ?? '';
-      const cachedEmail = window.localStorage.getItem('investup_email') ?? '';
+      const cachedAvatar = readLegacyAwareStorage(AVATAR_KEYS);
+      const cachedName = readLegacyAwareStorage(DISPLAY_NAME_KEYS);
+      const cachedEmail = readLegacyAwareStorage(EMAIL_KEYS);
 
       if (cachedAvatar) setAvatarUrl(cachedAvatar);
       if (cachedName) setDisplayName(cachedName);
@@ -179,14 +212,18 @@ export function useUserProfileSummary(): ProfileSummary {
     };
 
     window.addEventListener('focus', handleFocus);
-    window.addEventListener('investup-profile-updated', handleProfileUpdate);
+    PROFILE_UPDATED_EVENTS.forEach((eventName) => {
+      window.addEventListener(eventName, handleProfileUpdate);
+    });
     window.addEventListener('storage', handleProfileUpdate);
 
     return () => {
       if (retryShort) window.clearTimeout(retryShort);
       if (retryLong) window.clearTimeout(retryLong);
       window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('investup-profile-updated', handleProfileUpdate);
+      PROFILE_UPDATED_EVENTS.forEach((eventName) => {
+        window.removeEventListener(eventName, handleProfileUpdate);
+      });
       window.removeEventListener('storage', handleProfileUpdate);
     };
   }, [loadProfile, user?.id]);

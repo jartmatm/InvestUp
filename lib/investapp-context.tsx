@@ -93,7 +93,7 @@ type RegisterRepaymentArgs = {
   toWallet: string;
 };
 
-type InvestUpContextType = {
+type InvestAppContextType = {
   ready: boolean;
   authenticated: boolean;
   login: (options?: Record<string, unknown>) => void;
@@ -181,7 +181,7 @@ const publicClient = createPublicClient({
   transport: http('https://polygon-mainnet.infura.io/v3/002caff678d04f258bed0609c0957c82'),
 });
 
-const InvestUpContext = createContext<InvestUpContextType | null>(null);
+const InvestAppContext = createContext<InvestAppContextType | null>(null);
 
 const mapRoleToFrontend = (role: string | null | undefined): FrontRole | null => {
   if (role === 'investor') return 'inversor';
@@ -214,7 +214,7 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
-export function InvestUpProvider({ children }: { children: React.ReactNode }) {
+export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
   const { fundWallet } = useFundWallet();
   const { client } = useSmartWallets();
@@ -288,8 +288,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
   const transferenciaTitulo =
     rolSeleccionado === 'emprendedor' ? 'Confirm repayment' : 'Confirm transfer';
-  const getRolKey = useCallback((id: string) => `investup_rol_${id}`, []);
-  const getOnboardingDoneKey = useCallback((id: string) => `investup_onboarding_done_${id}`, []);
+  const getRolKey = useCallback((id: string) => `investapp_rol_${id}`, []);
+  const getLegacyRolKey = useCallback((id: string) => `investup_rol_${id}`, []);
+  const getOnboardingDoneKey = useCallback((id: string) => `investapp_onboarding_done_${id}`, []);
+  const getLegacyOnboardingDoneKey = useCallback(
+    (id: string) => `investup_onboarding_done_${id}`,
+    []
+  );
 
   const registrarTransaccion = useCallback(
     async ({
@@ -315,7 +320,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           from_wallet: smartWalletAddress,
           to_wallet: toWallet,
           metadata: {
-            app: 'investup-web',
+            app: 'investapp-web',
             currency: 'USDC',
             ...metadata,
           },
@@ -417,7 +422,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
           projected_total_usdc: projection.projectedTotalUsdc,
           status: 'submitted',
           metadata: {
-            app: 'investup-web',
+            app: 'investapp-web',
             currency: pendingInvestment.currency,
             entrepreneur_name: pendingInvestment.entrepreneurName,
             created_from: 'project-investment-flow',
@@ -470,7 +475,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
               [amountColumn]: normalizedAmountValue,
               status: 'submitted',
               metadata: {
-                app: 'investup-web',
+                app: 'investapp-web',
                 currency: 'USDC',
                 receiver_email: receiver?.email ?? null,
                 created_from: 'direct-repayment-flow',
@@ -608,7 +613,13 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         setFaseApp('dashboard');
       }
     },
-    [getOnboardingDoneKey, getRolKey, smartWalletAddress, supabase, user]
+    [
+      getOnboardingDoneKey,
+      getRolKey,
+      smartWalletAddress,
+      supabase,
+      user,
+    ]
   );
 
   const cargarWalletsObjetivo = useCallback(async () => {
@@ -852,7 +863,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
         },
         body: JSON.stringify({
           walletAddress: smartWalletAddress,
-          partnerUserRef: user?.id ? `investup-${user.id}` : undefined,
+          partnerUserRef: user?.id ? `investapp-${user.id}` : undefined,
           redirectUrl: homeUrl,
         }),
       });
@@ -892,7 +903,9 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
   const logoutApp = useCallback(async () => {
     if (user?.id) {
       localStorage.removeItem(getRolKey(user.id));
+      localStorage.removeItem(getLegacyRolKey(user.id));
       localStorage.removeItem(getOnboardingDoneKey(user.id));
+      localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
     }
     clearPendingInvestment();
     await logout();
@@ -900,7 +913,14 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     setRolSeleccionado(null);
     setWalletTargets([]);
     setHistorial([]);
-  }, [getOnboardingDoneKey, getRolKey, logout, user?.id]);
+  }, [
+    getLegacyOnboardingDoneKey,
+    getLegacyRolKey,
+    getOnboardingDoneKey,
+    getRolKey,
+    logout,
+    user?.id,
+  ]);
 
   useEffect(() => {
     if (!ready) return;
@@ -910,11 +930,14 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     }
 
     const verificarUsuario = async () => {
-      const rolLocal = localStorage.getItem(getRolKey(user.id));
+      const rolLocal =
+        localStorage.getItem(getRolKey(user.id)) ?? localStorage.getItem(getLegacyRolKey(user.id));
       const rolLocalValido =
         rolLocal === 'inversor' || rolLocal === 'emprendedor' ? (rolLocal as FrontRole) : null;
       const rolLocalDB = mapRoleToDB(rolLocalValido);
-      const onboardingDone = localStorage.getItem(getOnboardingDoneKey(user.id)) === '1';
+      const onboardingDone =
+        (localStorage.getItem(getOnboardingDoneKey(user.id)) ??
+          localStorage.getItem(getLegacyOnboardingDoneKey(user.id))) === '1';
 
       const { data, error } = await supabase
         .from('users')
@@ -972,7 +995,17 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     };
 
     verificarUsuario();
-  }, [authenticated, getOnboardingDoneKey, getRolKey, ready, smartWalletAddress, supabase, user]);
+  }, [
+    authenticated,
+    getLegacyOnboardingDoneKey,
+    getLegacyRolKey,
+    getOnboardingDoneKey,
+    getRolKey,
+    ready,
+    smartWalletAddress,
+    supabase,
+    user,
+  ]);
 
   useEffect(() => {
     if (authenticated && smartWalletAddress) {
@@ -986,7 +1019,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     }
   }, [cargarWalletsObjetivo, faseApp]);
 
-  const value: InvestUpContextType = {
+  const value: InvestAppContextType = {
     ready,
     authenticated,
     login,
@@ -1014,11 +1047,11 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     clearReceipt: () => setLastReceipt(null),
   };
 
-  return <InvestUpContext.Provider value={value}>{children}</InvestUpContext.Provider>;
+  return <InvestAppContext.Provider value={value}>{children}</InvestAppContext.Provider>;
 }
 
-export function useInvestUp() {
-  const ctx = useContext(InvestUpContext);
-  if (!ctx) throw new Error('useInvestUp must be used inside InvestUpProvider');
+export function useInvestApp() {
+  const ctx = useContext(InvestAppContext);
+  if (!ctx) throw new Error('useInvestApp must be used inside InvestAppProvider');
   return ctx;
 }

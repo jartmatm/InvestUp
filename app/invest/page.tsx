@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import {
   clearPendingInvestment,
   getPendingInvestment,
@@ -71,7 +71,7 @@ export default function InvestPage() {
     transferLabel,
     cargarWalletsObjetivo,
     enviarUSDC,
-  } = useInvestUp();
+  } = useInvestApp();
 
   const [pendingInvestment, setPendingInvestment] = useState<PendingInvestment | null>(
     getInitialPendingInvestment

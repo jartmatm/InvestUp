@@ -5,12 +5,12 @@ import PageFrame from '@/components/PageFrame';
 
 const FAQS = [
   {
-    question: 'What is InvestUp exactly?',
+    question: 'What is InvestApp exactly?',
     answer:
-      'InvestUp is a Web3 infrastructure marketplace that connects investors directly with global entrepreneurs. We act as a technology bridge using smart contracts to enable investment agreements without traditional banking intermediaries.',
+      'InvestApp is a Web3 infrastructure marketplace that connects investors directly with global entrepreneurs. We act as a technology bridge using smart contracts to enable investment agreements without traditional banking intermediaries.',
   },
   {
-    question: 'Does InvestUp custody my money?',
+    question: 'Does InvestApp custody my money?',
     answer:
       'No. We are a non-custodial platform. We never touch, store, or manage your funds. All capital moves through smart contracts on the Polygon blockchain, and you keep full control of your assets at all times.',
   },
@@ -32,7 +32,7 @@ const FAQS = [
   {
     question: 'Who verifies the validity of projects?',
     answer:
-      'InvestUp operates as a marketplace. While we run basic identity checks, the responsibility for due diligence on each project belongs to the investor. We provide AI tools to help analyze data, but we do not guarantee project success.',
+      'InvestApp operates as a marketplace. While we run basic identity checks, the responsibility for due diligence on each project belongs to the investor. We provide AI tools to help analyze data, but we do not guarantee project success.',
   },
   {
     question: 'Can I withdraw my capital at any time?',
@@ -42,15 +42,15 @@ const FAQS = [
   {
     question: 'What happens if I lose access to my account?',
     answer:
-      'With an external wallet, you are solely responsible for your private keys. If you use email login via Privy, you can recover access through your identity provider, but InvestUp does not have master keys to enter your wallet.',
+      'With an external wallet, you are solely responsible for your private keys. If you use email login via Privy, you can recover access through your identity provider, but InvestApp does not have master keys to enter your wallet.',
   },
   {
-    question: 'Is InvestUp a bank or financial advisor?',
+    question: 'Is InvestApp a bank or financial advisor?',
     answer:
       'No. We are not a financial institution and we do not provide investment advice. We provide software and infrastructure for users to interact in a decentralized way.',
   },
   {
-    question: 'Is it legal to invest through InvestUp?',
+    question: 'Is it legal to invest through InvestApp?',
     answer:
       'We operate under international blockchain technology standards. Each user is responsible for complying with the laws and tax regulations of their country of residence regarding digital assets.',
   },
@@ -83,7 +83,7 @@ export default function FaqPage() {
           <h2 className="mt-2 text-lg font-semibold text-gray-900">Quick answers before you invest</h2>
           <p className="mt-2 text-sm leading-relaxed text-gray-600">
             Review the most common questions about custody, wallets, returns, legal responsibility, and how
-            InvestUp works before making a move.
+            InvestApp works before making a move.
           </p>
         </div>
 

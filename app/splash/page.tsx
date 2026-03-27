@@ -3,11 +3,11 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Particles from "react-tsparticles";
-import { useInvestUp } from "@/lib/investup-context";
+import { useInvestApp } from "@/lib/investapp-context";
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -49,7 +49,7 @@ export default function SplashScreen() {
       <div className="relative z-10 flex flex-col items-center animate-logoReveal">
         <img
           src="/logo.png"
-          alt="InvestUp"
+          alt="InvestApp"
           className="w-72 drop-shadow-[0_0_35px_rgba(255,255,255,0.4)]"
         />
       </div>

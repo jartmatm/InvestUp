@@ -24,7 +24,7 @@ export default function HelpCenterPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-white/25 bg-white/20 px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <p className="text-xs text-gray-500">Email support</p>
-            <p className="mt-1 text-sm font-semibold text-gray-900">support@investup.app</p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">support@investapp.app</p>
             <p className="mt-2 text-xs leading-relaxed text-gray-500">Best for account issues, wallet access questions, or profile updates.</p>
           </div>
           <div className="rounded-2xl border border-white/25 bg-white/20 px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

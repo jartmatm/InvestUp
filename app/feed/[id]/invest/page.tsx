@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
@@ -64,7 +64,7 @@ export default function ProjectInvestPage() {
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   const { getAccessToken } = usePrivy();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
   const [project, setProject] = useState<ProjectInvestmentDetail | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [amount, setAmount] = useState('100.00');

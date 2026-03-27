@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 
@@ -103,7 +103,7 @@ const normalizePhotos = (value: unknown): string[] => {
 export default function FeedPage() {
   const router = useRouter();
   const { getAccessToken } = usePrivy();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -112,7 +112,9 @@ export default function FeedPage() {
     if (typeof window === 'undefined') return [];
 
     try {
-      const stored = window.localStorage.getItem('investup_wishlist');
+      const stored =
+        window.localStorage.getItem('investapp_wishlist') ??
+        window.localStorage.getItem('investup_wishlist');
       if (!stored) return [];
       const parsed = JSON.parse(stored) as unknown;
       return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
@@ -214,7 +216,7 @@ export default function FeedPage() {
     setWishlist((prev) => {
       const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('investup_wishlist', JSON.stringify(next));
+        window.localStorage.setItem('investapp_wishlist', JSON.stringify(next));
       }
       return next;
     });

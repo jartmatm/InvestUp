@@ -13,7 +13,8 @@
   createdAt: string;
 };
 
-const PENDING_INVESTMENT_KEY = 'investup_pending_investment';
+const PENDING_INVESTMENT_KEY = 'investapp_pending_investment';
+const LEGACY_PENDING_INVESTMENT_KEY = 'investup_pending_investment';
 
 export function setPendingInvestment(value: PendingInvestment) {
   if (typeof window === 'undefined') return;
@@ -22,7 +23,9 @@ export function setPendingInvestment(value: PendingInvestment) {
 
 export function getPendingInvestment(): PendingInvestment | null {
   if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(PENDING_INVESTMENT_KEY);
+  const raw =
+    window.localStorage.getItem(PENDING_INVESTMENT_KEY) ??
+    window.localStorage.getItem(LEGACY_PENDING_INVESTMENT_KEY);
   if (!raw) return null;
 
   try {
@@ -37,4 +40,5 @@ export function getPendingInvestment(): PendingInvestment | null {
 export function clearPendingInvestment() {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(PENDING_INVESTMENT_KEY);
+  window.localStorage.removeItem(LEGACY_PENDING_INVESTMENT_KEY);
 }

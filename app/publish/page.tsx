@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 export default function PublishPage() {
   const router = useRouter();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');

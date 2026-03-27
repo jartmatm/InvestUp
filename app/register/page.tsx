@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login, faseApp } = useInvestUp();
+  const { login, faseApp } = useInvestApp();
 
   useEffect(() => {
     if (faseApp === 'dashboard') router.replace('/home');

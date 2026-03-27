@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 
@@ -66,7 +66,7 @@ export default function FeedDetailPage() {
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   const { getAccessToken } = usePrivy();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');

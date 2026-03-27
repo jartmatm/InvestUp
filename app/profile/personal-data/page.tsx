@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,7 +8,7 @@ import { getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 type ProfileForm = {
   id: string;
@@ -76,7 +76,7 @@ function Field({ label, children }: FieldProps) {
 export default function PersonalDataPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, smartWalletAddress, guardarRol } = useInvestUp();
+  const { faseApp, smartWalletAddress, guardarRol } = useInvestApp();
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -223,8 +223,8 @@ export default function PersonalDataPage() {
       const result = typeof reader.result === 'string' ? reader.result : '';
       updateForm('avatar_url', result);
       if (typeof window !== 'undefined' && result) {
-        window.localStorage.setItem('investup_avatar_url', result);
-        window.dispatchEvent(new Event('investup-profile-updated'));
+        window.localStorage.setItem('investapp_avatar_url', result);
+        window.dispatchEvent(new Event('investapp-profile-updated'));
       }
     };
     reader.readAsDataURL(file);
@@ -293,14 +293,14 @@ export default function PersonalDataPage() {
     if (typeof window !== 'undefined') {
       const nextEmail = form.email || user.email?.address || '';
       const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
-      window.localStorage.setItem('investup_display_name', nextDisplayName);
-      window.localStorage.setItem('investup_email', nextEmail);
+      window.localStorage.setItem('investapp_display_name', nextDisplayName);
+      window.localStorage.setItem('investapp_email', nextEmail);
       if (form.avatar_url) {
-        window.localStorage.setItem('investup_avatar_url', form.avatar_url);
+        window.localStorage.setItem('investapp_avatar_url', form.avatar_url);
       } else {
-        window.localStorage.removeItem('investup_avatar_url');
+        window.localStorage.removeItem('investapp_avatar_url');
       }
-      window.dispatchEvent(new Event('investup-profile-updated'));
+      window.dispatchEvent(new Event('investapp-profile-updated'));
     }
 
     if (!hasAnyExtendedField) {

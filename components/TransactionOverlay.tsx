@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import TransactionLoader from '@/components/TransactionLoader';
 
 export default function TransactionOverlay() {
-  const { loadingTx } = useInvestUp();
+  const { loadingTx } = useInvestApp();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import PageFrame from '@/components/PageFrame';
 
 const POLICY_SECTIONS = [
   {
-    title: 'Privacy Policy - InvestUp',
+    title: 'Privacy Policy - InvestApp',
     body: ['Last updated: March 25, 2026'],
   },
   {
@@ -33,7 +33,7 @@ const POLICY_SECTIONS = [
     title: '4. Transparency and blockchain (important)',
     body: [
       'Blockchain data is public and immutable. Any transaction on Polygon (investments, withdrawals, contract signatures) is visible to anyone using a block explorer (e.g., Polygonscan).',
-      'InvestUp cannot delete, modify, or anonymize data once written on-chain.',
+      'InvestApp cannot delete, modify, or anonymize data once written on-chain.',
     ],
   },
   {

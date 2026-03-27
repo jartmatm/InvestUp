@@ -4,11 +4,11 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 export default function WithdrawPage() {
   const router = useRouter();
-  const { faseApp, abrirRetiro } = useInvestUp();
+  const { faseApp, abrirRetiro } = useInvestApp();
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');

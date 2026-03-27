@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
@@ -52,7 +52,7 @@ function Field({ label, children }: FieldProps) {
 export default function SocialMediaPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
   const [form, setForm] = useState<SocialForm>(emptyForm);
   const [profileData, setProfileData] = useState<Record<string, unknown>>({});
   const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());

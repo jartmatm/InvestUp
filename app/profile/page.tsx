@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
 type SectionProps = {
@@ -189,7 +189,7 @@ function SettingItem({ label, value, danger, onClick, icon }: SettingItemProps) 
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { faseApp, logoutApp } = useInvestUp();
+  const { faseApp, logoutApp } = useInvestApp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const languageLabel = 'English (US)';
   const safeName = displayName || 'User';

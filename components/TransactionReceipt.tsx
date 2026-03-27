@@ -1,7 +1,7 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useState } from 'react';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 const mapStatus = (status: string) => {
   const key = status.toLowerCase();
@@ -25,7 +25,7 @@ const splitValue = (value: string) => {
 };
 
 export default function TransactionReceipt() {
-  const { lastReceipt, clearReceipt } = useInvestUp();
+  const { lastReceipt, clearReceipt } = useInvestApp();
   const [shareMessage, setShareMessage] = useState('');
 
   const formattedDate = useMemo(() => {
@@ -54,7 +54,7 @@ export default function TransactionReceipt() {
     ctx.fillRect(0, 0, width, 140);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 44px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText('InvestUp', padding, 92);
+    ctx.fillText('InvestApp', padding, 92);
 
     let y = 210;
     ctx.fillStyle = '#111827';
@@ -119,7 +119,7 @@ export default function TransactionReceipt() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
-    anchor.download = `investup-receipt-${lastReceipt.uuid || 'tx'}.png`;
+    anchor.download = `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`;
     anchor.click();
     URL.revokeObjectURL(url);
   };
@@ -128,19 +128,19 @@ export default function TransactionReceipt() {
     try {
       const blob = await createReceiptBlob();
       if (!blob) throw new Error('blob');
-      const file = new File([blob], `investup-receipt-${lastReceipt.uuid || 'tx'}.png`, {
+      const file = new File([blob], `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`, {
         type: 'image/png',
       });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: 'InvestUp Receipt', files: [file] });
+        await navigator.share({ title: 'InvestApp Receipt', files: [file] });
         return;
       }
 
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `investup-receipt-${lastReceipt.uuid || 'tx'}.png`;
+      anchor.download = `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`;
       anchor.click();
       URL.revokeObjectURL(url);
       setShareMessage('Image downloaded');
@@ -171,14 +171,14 @@ export default function TransactionReceipt() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>InvestUp Receipt</title>
+          <title>InvestApp Receipt</title>
           <style>
             body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #ffffff; }
             img { max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
-          <img src="${url}" alt="InvestUp Receipt" />
+          <img src="${url}" alt="InvestApp Receipt" />
           <script>
             window.onload = function () {
               window.print();
@@ -198,7 +198,7 @@ export default function TransactionReceipt() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl">
         <div className="flex flex-col items-center text-center">
-          <img src="/logo.png" alt="InvestUp" className="h-20 w-20 rounded-2xl bg-white p-2" />
+          <img src="/logo.png" alt="InvestApp" className="h-20 w-20 rounded-2xl bg-white p-2" />
           <h2 className="mt-4 text-xl font-semibold">Payment Receipt</h2>
         </div>
 

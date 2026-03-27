@@ -34,7 +34,7 @@ const getClientIp = (request: NextRequest) => {
 };
 
 const buildPartnerUserRef = (rawValue: string | undefined) => {
-  const baseValue = rawValue || `investup-${Date.now()}`;
+  const baseValue = rawValue || `investapp-${Date.now()}`;
   const sandboxEnabled = readFirstEnv('COINBASE_ONRAMP_SANDBOX').toLowerCase() === 'true';
   if (!sandboxEnabled || baseValue.startsWith('sandbox-')) return baseValue;
   return `sandbox-${baseValue}`;
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       requestHost: COINBASE_API_HOST,
       requestPath: COINBASE_API_PATH,
       requestBody,
-      source: 'investup-web',
+      source: 'investapp-web',
     });
 
     const response = await fetch(COINBASE_API_URL, {

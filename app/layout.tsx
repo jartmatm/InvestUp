@@ -3,7 +3,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/AppProviders";
 
 export const metadata: Metadata = {
-  title: "InvestUp",
+  title: "InvestApp",
   description: "Plataforma fintech para inversiones y repayments descentralizados",
 };
 

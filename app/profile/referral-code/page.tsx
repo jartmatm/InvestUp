@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
@@ -27,7 +27,7 @@ const generateReferralCode = () => {
 export default function ReferralCodePage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp } = useInvestUp();
+  const { faseApp } = useInvestApp();
   const [referralCode, setReferralCode] = useState('');
   const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -169,7 +169,7 @@ export default function ReferralCodePage() {
             className="w-full max-w-sm rounded-[30px] border border-white/35 bg-[linear-gradient(160deg,rgba(255,255,255,0.92),rgba(238,244,255,0.82))] p-6 text-center shadow-[0_24px_70px_rgba(15,23,42,0.28)] backdrop-blur-xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">InvestUp referral</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">InvestApp referral</p>
             <h3 className="mt-2 text-xl font-semibold text-[#1A1B25]">Invite with your code</h3>
             <p className="mt-2 text-sm leading-relaxed text-gray-600">
               Share this code with a new user so they can join through your invitation.

@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { faseApp, guardarRol, rolSeleccionado } = useInvestUp();
+  const { faseApp, guardarRol, rolSeleccionado } = useInvestApp();
   const [rol, setRol] = useState<'inversor' | 'emprendedor' | null>(rolSeleccionado);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
 

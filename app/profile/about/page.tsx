@@ -4,16 +4,16 @@ import PageFrame from '@/components/PageFrame';
 
 const ABOUT_SECTIONS = [
   {
-    title: 'About InvestUp Group',
+    title: 'About InvestApp Group',
     body: [
-      'InvestUp Group is next-generation software infrastructure designed to democratize access to global capital. We were born with a clear mission: remove bureaucratic barriers and bank intermediaries that slow entrepreneurs and limit investor opportunity.',
+      'InvestApp Group is next-generation software infrastructure designed to democratize access to global capital. We were born with a clear mission: remove bureaucratic barriers and bank intermediaries that slow entrepreneurs and limit investor opportunity.',
     ],
   },
   {
     title: 'What makes us different?',
     body: [
       'Web3 efficiency: We use the Polygon network to provide fast, transparent transactions with minimal fees.',
-      'Non-custodial control: With Privy integration, you are the sole owner of your keys and capital. InvestUp never touches your funds.',
+      'Non-custodial control: With Privy integration, you are the sole owner of your keys and capital. InvestApp never touches your funds.',
       'Data intelligence: We use AI and alternative scoring to deliver clear, transparent metrics on every opportunity.',
       'Global inclusion: An entrepreneur in Latin America or Southeast Asia can connect with an investor in Europe or Australia in seconds, settling in USDC, the leading stablecoin.',
     ],
@@ -22,7 +22,7 @@ const ABOUT_SECTIONS = [
     title: 'Risk Disclosure',
     body: [
       'Please read this section carefully before using the platform.',
-      'Using InvestUp Group involves emerging financial technologies that carry significant risks. By using our platform, you acknowledge and accept the following:',
+      'Using InvestApp Group involves emerging financial technologies that carry significant risks. By using our platform, you acknowledge and accept the following:',
     ],
     list: [
       {
@@ -35,7 +35,7 @@ const ABOUT_SECTIONS = [
       },
       {
         title: 'Digital asset risk (USDC)',
-        text: 'InvestUp uses USDC for settlement. Although it is a stablecoin, it is not free from peg, regulatory, or issuer solvency risks (Circle).',
+        text: 'InvestApp uses USDC for settlement. Although it is a stablecoin, it is not free from peg, regulatory, or issuer solvency risks (Circle).',
       },
       {
         title: 'Regulatory risk',
@@ -43,7 +43,7 @@ const ABOUT_SECTIONS = [
       },
       {
         title: 'No financial advice',
-        text: 'Content on InvestUp, including AI analysis and project descriptions, is provided for informational purposes only. InvestUp does not provide financial, legal, or tax advice. Please conduct your own due diligence.',
+        text: 'Content on InvestApp, including AI analysis and project descriptions, is provided for informational purposes only. InvestApp does not provide financial, legal, or tax advice. Please conduct your own due diligence.',
       },
     ],
   },
@@ -51,7 +51,7 @@ const ABOUT_SECTIONS = [
 
 export default function AboutAppPage() {
   return (
-    <PageFrame title="About App" subtitle="Learn more about InvestUp">
+    <PageFrame title="About App" subtitle="Learn more about InvestApp">
       <div className="space-y-6">
         {ABOUT_SECTIONS.map((section) => (
           <div

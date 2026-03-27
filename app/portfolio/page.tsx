@@ -10,7 +10,7 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import ProjectCard from '@/components/ProjectCard';
-import { useInvestUp } from '@/lib/investup-context';
+import { useInvestApp } from '@/lib/investapp-context';
 import {
   canDeleteProject,
   canPauseProject,
@@ -156,7 +156,7 @@ const getErrorMessage = (error: unknown) => {
 export default function PortfolioPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, historial, rolSeleccionado, smartWalletAddress } = useInvestUp();
+  const { faseApp, historial, rolSeleccionado, smartWalletAddress } = useInvestApp();
   const [showPublisher, setShowPublisher] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [form, setForm] = useState<PublishForm>(emptyForm);
