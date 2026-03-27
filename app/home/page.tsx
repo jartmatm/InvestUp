@@ -245,6 +245,7 @@ export default function HomePage() {
     balanceUSDC,
     lastReceipt,
     abrirCompra,
+    abrirCompraCoinbase,
     abrirRetiro,
   } = useInvestUp();
   const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
@@ -255,6 +256,10 @@ export default function HomePage() {
   const [loadingActiveInvestments, setLoadingActiveInvestments] = useState(false);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [showTopUpOptions, setShowTopUpOptions] = useState(false);
+  const [openingTopUpProvider, setOpeningTopUpProvider] = useState<'current' | 'coinbase' | null>(
+    null
+  );
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -427,6 +432,26 @@ export default function HomePage() {
     return () => window.clearInterval(interval);
   }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
+  const handleOpenCurrentTopUp = async () => {
+    setOpeningTopUpProvider('current');
+    try {
+      await abrirCompra();
+      setShowTopUpOptions(false);
+    } finally {
+      setOpeningTopUpProvider(null);
+    }
+  };
+
+  const handleOpenCoinbaseTopUp = async () => {
+    setOpeningTopUpProvider('coinbase');
+    try {
+      await abrirCompraCoinbase();
+      setShowTopUpOptions(false);
+    } finally {
+      setOpeningTopUpProvider(null);
+    }
+  };
+
   const displayName = useMemo(() => profileName || userAlias || 'User', [profileName, userAlias]);
   const roleLabel =
     rolSeleccionado === 'emprendedor'
@@ -459,7 +484,7 @@ export default function HomePage() {
   ];
 
   const actions: ActionItem[] = [
-    { label: 'Top up', icon: <IconPlus />, onClick: abrirCompra },
+    { label: 'Top up', icon: <IconPlus />, onClick: () => setShowTopUpOptions(true) },
     { label: 'Send', icon: <IconSend />, onClick: () => router.push('/invest') },
     { label: 'Withdraw', icon: <IconDownload />, onClick: abrirRetiro },
     { label: 'History', icon: <IconClock />, onClick: () => router.push('/portfolio') },
@@ -752,6 +777,77 @@ export default function HomePage() {
       </div>
 
       <BottomNav />
+
+      {showTopUpOptions ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.94),rgba(238,244,255,0.86))] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.24)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
+                  Top up options
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">Choose a provider</h3>
+                <p className="mt-2 text-sm text-[#666D80]">
+                  Keep the current wallet funding flow or open a Coinbase checkout for USDC on
+                  Polygon.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (openingTopUpProvider) return;
+                  setShowTopUpOptions(false);
+                }}
+                className="rounded-full border border-white/40 bg-white/70 px-3 py-1 text-sm font-semibold text-[#0F172A]"
+                aria-label="Close top up options"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={handleOpenCurrentTopUp}
+                disabled={openingTopUpProvider !== null}
+                className="w-full rounded-[20px] border border-white/25 bg-white/80 px-4 py-4 text-left shadow-[0_8px_24px_rgba(15,23,42,0.08)] transition hover:bg-white disabled:cursor-wait disabled:opacity-70"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#0F172A]">Current provider</p>
+                    <p className="mt-1 text-xs text-[#666D80]">
+                      Opens the same wallet funding flow you already use in the app.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-xs font-semibold text-[#4F46E5]">
+                    {openingTopUpProvider === 'current' ? 'Opening...' : 'Default'}
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenCoinbaseTopUp}
+                disabled={openingTopUpProvider !== null}
+                className="w-full rounded-[20px] border border-[#D6E4FF] bg-[linear-gradient(135deg,rgba(0,82,255,0.10),rgba(255,255,255,0.92))] px-4 py-4 text-left shadow-[0_10px_28px_rgba(0,82,255,0.12)] transition hover:bg-[linear-gradient(135deg,rgba(0,82,255,0.16),rgba(255,255,255,0.96))] disabled:cursor-wait disabled:opacity-70"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#0F172A]">Coinbase</p>
+                    <p className="mt-1 text-xs text-[#666D80]">
+                      Opens a hosted Coinbase checkout to buy USDC and send it to your Polygon
+                      smart wallet.
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-[#0052FF] px-3 py-1 text-xs font-semibold text-white">
+                    {openingTopUpProvider === 'coinbase' ? 'Opening...' : 'New'}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -115,6 +115,7 @@ type InvestUpContextType = {
   cargarWalletsObjetivo: () => Promise<void>;
   enviarUSDC: (destino: string, monto: string) => Promise<boolean>;
   abrirCompra: () => Promise<void>;
+  abrirCompraCoinbase: () => Promise<void>;
   abrirRetiro: () => void;
   lastReceipt: ReceiptData | null;
   clearReceipt: () => void;
@@ -836,12 +837,55 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     await fundWallet({ address: smartWalletAddress as any });
   }, [fundWallet, smartWalletAddress]);
 
+  const abrirCompraCoinbase = useCallback(async () => {
+    if (!smartWalletAddress) {
+      alert('Wait until your smart wallet is ready.');
+      return;
+    }
+
+    try {
+      const homeUrl = `${window.location.origin}/home`;
+      const response = await fetch('/api/coinbase/onramp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: smartWalletAddress,
+          partnerUserRef: user?.id ? `investup-${user.id}` : undefined,
+          redirectUrl: homeUrl,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { url?: string | null; error?: string; details?: unknown }
+        | null;
+
+      if (!response.ok || !payload?.url) {
+        const detail =
+          typeof payload?.details === 'string'
+            ? payload.details
+            : payload?.error || 'Could not create the Coinbase onramp session.';
+        throw new Error(detail);
+      }
+
+      const popup = window.open(payload.url, 'CoinbaseOnramp', 'width=480,height=760');
+      if (!popup) {
+        window.location.assign(payload.url);
+      }
+    } catch (error) {
+      const message = getErrorMessage(error);
+      alert(`Coinbase top up is not available right now: ${message}`);
+    }
+  }, [smartWalletAddress, user?.id]);
+
   const abrirRetiro = useCallback(() => {
     if (!smartWalletAddress) {
       alert('Wait until your smart wallet is ready.');
       return;
     }
-    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}`;
+    const redirectURL = encodeURIComponent(`${window.location.origin}/home`);
+    const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}&redirectURL=${redirectURL}`;
     window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
   }, [smartWalletAddress]);
 
@@ -964,6 +1008,7 @@ export function InvestUpProvider({ children }: { children: React.ReactNode }) {
     cargarWalletsObjetivo,
     enviarUSDC,
     abrirCompra,
+    abrirCompraCoinbase,
     abrirRetiro,
     lastReceipt,
     clearReceipt: () => setLastReceipt(null),
