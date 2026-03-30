@@ -201,6 +201,8 @@ type OwnerSummary = {
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
@@ -602,21 +604,12 @@ export default function HomePage() {
             <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-3 gap-2">
-            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
-              <p className="uppercase tracking-[0.18em] text-white/60">Active</p>
-              <p className="mt-2 text-sm text-white">{activeInvestments.length}</p>
-            </div>
-            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
-              <p className="uppercase tracking-[0.18em] text-white/60">Avg rate</p>
-              <p className="mt-2 text-sm text-white">
-                {investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
-              <p className="uppercase tracking-[0.18em] text-white/60">Earning</p>
-              <p className="mt-2 text-sm text-white">{formatMoney(investorEarnings, 'USD')}</p>
-            </div>
+          <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
+            <span>{`Active: ${activeInvestments.length}`}</span>
+            <span className="text-[#40C4AA]/60">&middot;</span>
+            <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
+            <span className="text-[#40C4AA]/60">&middot;</span>
+            <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
           </div>
         )}
       </div>

@@ -15,6 +15,7 @@ type FeedProject = {
   title: string;
   description: string;
   sector: string | null;
+  owner_user_id: string | null;
   amount_requested: number | null;
   amount_received: number | null;
   currency: string | null;
@@ -29,6 +30,8 @@ type FeedProject = {
 const SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
 const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
@@ -102,8 +105,8 @@ const normalizePhotos = (value: unknown): string[] => {
 
 export default function FeedPage() {
   const router = useRouter();
-  const { getAccessToken } = usePrivy();
-  const { faseApp } = useInvestApp();
+  const { user, getAccessToken } = usePrivy();
+  const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
@@ -166,7 +169,7 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
+          'id,title,description,sector,owner_user_id,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
         )
         .in('status', ACTIVE_PROJECT_STATUSES)
         .order('created_at', { ascending: false });
@@ -273,12 +276,31 @@ export default function FeedPage() {
         {filteredProjects.map((project) => {
           const isFlipped = flippedId === project.id;
           const isWishlisted = wishlist.includes(project.id);
-              const amountLabel = formatAmount(project.amount_requested, project.currency);
-              const raisedLabel = formatAmount(project.amount_received, project.currency);
-              const termLabel = project.term_months ? `${project.term_months} months` : '--';
-              const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
-              const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
-              const progress = calculateProgress(project.amount_received, project.amount_requested);
+          const amountLabel = formatAmount(project.amount_requested, project.currency);
+          const raisedLabel = formatAmount(project.amount_received, project.currency);
+          const termLabel = project.term_months ? `${project.term_months} months` : '--';
+          const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
+          const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
+          const progress = calculateProgress(project.amount_received, project.amount_requested);
+          const isOwnProject = Boolean(user?.id && project.owner_user_id && project.owner_user_id === user.id);
+          const isEntrepreneurView = rolSeleccionado === 'emprendedor';
+          const backActionLabel = isEntrepreneurView
+            ? isOwnProject
+              ? 'Edit'
+              : 'Details'
+            : 'Invest';
+          const handleBackAction = (event: React.MouseEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            if (isEntrepreneurView) {
+              if (isOwnProject) {
+                router.push(`/portfolio?edit=${project.id}`);
+                return;
+              }
+              router.push(`/feed/${project.id}`);
+              return;
+            }
+            router.push(`/feed/${project.id}/invest`);
+          };
 
           return (
             <div
@@ -426,13 +448,10 @@ export default function FeedPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          router.push(`/feed/${project.id}/invest`);
-                        }}
+                        onClick={handleBackAction}
                         className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#0F172A]"
                       >
-                        Invest
+                        {backActionLabel}
                       </button>
                     </div>
                     <p className="text-xs text-white/70">Tap to flip back</p>
