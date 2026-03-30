@@ -330,11 +330,23 @@ export default function FeedPage() {
                     </div>
 
                     <div className="pt-3">
-                      <p className="text-xs text-gray-500">
-                        {project.city || project.country
-                          ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                          : 'Location pending'}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-gray-500">
+                          {project.city || project.country
+                            ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
+                            : 'Location pending'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            router.push(`/feed/${project.id}`);
+                          }}
+                          className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary"
+                        >
+                          Details
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

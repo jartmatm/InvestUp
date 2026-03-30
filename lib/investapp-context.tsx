@@ -27,6 +27,10 @@ type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
 type UserWalletTarget = {
   id: string;
   email: string | null;
+  name: string | null;
+  surname: string | null;
+  avatar_url: string | null;
+  country: string | null;
   role: 'investor' | 'entrepreneur';
   wallet_address: string | null;
 };
@@ -110,7 +114,11 @@ type InvestAppContextType = {
   guardarRol: (rol: FrontRole) => Promise<void>;
   actualizarSaldos: () => Promise<void>;
   cargarWalletsObjetivo: () => Promise<void>;
-  enviarUSDC: (destino: string, monto: string) => Promise<boolean>;
+  enviarUSDC: (
+    destino: string,
+    monto: string,
+    options?: { movementType?: MovementType }
+  ) => Promise<boolean>;
   abrirCompra: () => Promise<void>;
   abrirCompraCoinbase: () => Promise<void>;
   abrirRetiro: () => void;
@@ -661,7 +669,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id,email,role,wallet_address')
+        .select('id,email,name,surname,avatar_url,country,role,wallet_address')
         .eq('role', roleTarget)
         .not('wallet_address', 'is', null)
         .neq('id', user.id)
@@ -677,7 +685,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   }, [authenticated, rolSeleccionado, supabase, user?.id]);
 
   const enviarUSDC = useCallback(
-    async (destino: string, monto: string) => {
+    async (destino: string, monto: string, options?: { movementType?: MovementType }) => {
       if (!client || !smartWalletAddress || !destino || !monto) {
         alert('Missing data or the wallet is not ready yet.');
         return false;
@@ -759,15 +767,16 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             target.wallet_address.toLowerCase() === destino.toLowerCase()
         );
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
+        const fallbackMovementType =
+          rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
         const movementType: MovementType =
           pendingInvestment
             ? 'investment'
-            : rolSeleccionado === 'emprendedor'
-              ? 'repayment'
-              : 'transfer';
+            : options?.movementType ?? fallbackMovementType;
         const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Investment' : 'Transfer';
         const provisionalReceiverName =
           pendingInvestment?.entrepreneurName ||
+          `${receiverTarget?.name ?? ''} ${receiverTarget?.surname ?? ''}`.trim() ||
           receiverTarget?.email ||
           'Recipient';
 

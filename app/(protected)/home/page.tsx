@@ -459,11 +459,10 @@ export default function HomePage() {
       : rolSeleccionado === 'inversor'
         ? 'Investor'
         : 'User';
-  const sectionTitle = rolSeleccionado === 'emprendedor' ? 'My listings' : 'Active investments';
-  const addLabel =
-    rolSeleccionado === 'emprendedor'
-      ? 'Add new listing'
-      : 'Invest in a new venture';
+  const sectionTitle = rolSeleccionado === 'emprendedor' ? 'My Business' : 'Active investments';
+  const sectionActionLabel = rolSeleccionado === 'emprendedor' ? 'Edit' : 'View all';
+  const sectionActionHref =
+    rolSeleccionado === 'emprendedor' && lastProject ? `/portfolio?edit=${lastProject.id}` : '/portfolio';
   const investorProjectedReturn = activeInvestments.reduce(
     (sum, investment) => sum + Number(investment.projected_return_usdc ?? 0),
     0
@@ -537,7 +536,8 @@ export default function HomePage() {
           <div>
             <p className="text-sm text-white/70">Available</p>
             <h2 className="mt-1 text-3xl font-bold">
-              {showBalance ? `$${balanceUSDC}` : 'XXXX.XX'}
+              {showBalance ? `$${balanceUSDC}` : 'XXXX.XX'}{' '}
+              <span className="text-lg font-semibold text-white/80">USD</span>
             </h2>
           </div>
           <button
@@ -587,10 +587,10 @@ export default function HomePage() {
         <h2 className="text-base font-semibold text-[#0F172A]">{sectionTitle}</h2>
         <button
           type="button"
-          onClick={() => router.push('/portfolio')}
+          onClick={() => router.push(sectionActionHref)}
           className="text-sm font-semibold text-[#6B39F4]"
         >
-          View all
+          {sectionActionLabel}
         </button>
       </div>
 
@@ -662,7 +662,11 @@ export default function HomePage() {
                 Loading your latest listing...
               </div>
             ) : lastProject ? (
-              <div className="overflow-hidden rounded-[16px] border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <button
+                type="button"
+                onClick={() => router.push(`/feed/${lastProject.id}`)}
+                className="w-full overflow-hidden rounded-[16px] border border-white/25 bg-white/20 text-left shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white/25"
+              >
                 {lastProject.photo_urls?.[0] ? (
                   <img
                     src={lastProject.photo_urls[0]}
@@ -685,8 +689,14 @@ export default function HomePage() {
                   <p className="mt-2 text-[11px] font-semibold text-[#6B39F4]">
                     {lastProject.interest_rate ? `${lastProject.interest_rate}% interest` : 'Interest pending'}
                   </p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <p className="text-[11px] text-[#818898]">Open venture details</p>
+                    <span className="rounded-full border border-[#D3C4FC] px-3 py-1 text-[11px] font-semibold text-[#6B39F4]">
+                      Details
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </button>
             ) : (
               <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
                 Your listings will appear here once they are active.
@@ -695,13 +705,15 @@ export default function HomePage() {
           </>
         )}
 
-        <button
-          type="button"
-          onClick={() => router.push(rolSeleccionado === 'emprendedor' ? '/portfolio' : '/feed')}
-          className="w-full rounded-[16px] border-2 border-dashed border-[#D3C4FC] py-4 text-sm font-semibold text-[#6B39F4]"
-        >
-          + {addLabel}
-        </button>
+        {rolSeleccionado === 'inversor' ? (
+          <button
+            type="button"
+            onClick={() => router.push('/feed')}
+            className="w-full rounded-[16px] border-2 border-dashed border-[#D3C4FC] py-4 text-sm font-semibold text-[#6B39F4]"
+          >
+            + Invest in a new venture
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-8">

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import { getCountries } from 'libphonenumber-js';
@@ -153,8 +153,22 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
+function PublishProjectIcon() {
+  return (
+    <svg width="19" height="17" viewBox="0 0 19 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M13.6068 2.08431C14.2636 1.80223 15 2.28378 15 3.00755V9.95572C15 10.6795 14.2636 11.161 13.6068 10.879L11.2812 9.88023C10.2681 9.44512 9.1974 9.16592 8.10547 9.05011C7.72156 9.00939 7.33502 8.98886 6.94742 8.98886H5H4.5C3.12123 8.98886 2 7.86829 2 6.48163C2 5.09498 3.12123 3.9744 4.5 3.9744H6.94742C8.43741 3.9744 9.91183 3.67113 11.2812 3.08303L13.6068 2.08431ZM17 3.00755C17 0.853721 14.8002 -0.604842 12.8176 0.246613L10.492 1.24533C9.37187 1.72639 8.16597 1.9744 6.94742 1.9744H4.5C2.01277 1.9744 0 3.99431 0 6.48163C0 8.85129 1.82684 10.7967 4.15036 10.9755L4.18022 11.155L4.87428 15.328C5.03463 16.2921 5.86784 17.0013 6.84713 17.0013H7C8.10651 17.0013 9 16.103 9 14.9992V11.2266C9.50939 11.3462 10.0087 11.5104 10.492 11.7179L12.8176 12.7167C14.8002 13.5681 17 12.1095 17 9.95572V9.33055C18.1652 8.91872 19 7.80748 19 6.50126C19 5.19504 18.1652 4.0838 17 3.67197V3.00755ZM6.84718 14.9999L6.18006 10.9889H6.94742L7 10.989V10.9909V14.9992L6.99995 15.0006L6.99939 15.0013H6.84771C6.84757 15.0011 6.84747 15.001 6.8474 15.0009M6.84733 15.0008C6.84734 15.0009 6.84737 15.0009 6.8474 15.0009C6.84735 15.0007 6.84727 15.0004 6.84718 14.9999M9 5.50126C9 4.94898 8.55228 4.50126 8 4.50126C7.44772 4.50126 7 4.94898 7 5.50126V7.50126C7 8.05354 7.44772 8.50126 8 8.50126C8.55228 8.50126 9 8.05354 9 7.50126V5.50126Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 export default function PortfolioPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, historial, rolSeleccionado, smartWalletAddress } = useInvestApp();
   const [showPublisher, setShowPublisher] = useState(false);
@@ -167,6 +181,8 @@ export default function PortfolioPage() {
   const [savingProject, setSavingProject] = useState(false);
   const [improvingAI, setImprovingAI] = useState(false);
   const [status, setStatus] = useState('');
+  const autoOpenedEditId = useRef<string | null>(null);
+  const editProjectIdFromUrl = searchParams.get('edit');
 
   const cityOptions = useMemo(() => {
     if (!form.country) return [];
@@ -291,15 +307,20 @@ export default function PortfolioPage() {
     }
   };
 
-  const startNewPublication = () => {
+  const startNewPublication = useCallback(() => {
+    if (myProjects.length >= 1) {
+      setStatus('You can only keep one business published at a time. Edit your current one to update it.');
+      return;
+    }
     setEditingProjectId(null);
     setForm((prev) => ({ ...emptyForm, country: prev.country }));
     setProjectPhotos([]);
     setProjectVideo('');
     setShowPublisher(true);
-  };
+    setStatus('');
+  }, [myProjects.length]);
 
-  const startEditPublication = (project: ProjectRow) => {
+  const startEditPublication = useCallback((project: ProjectRow) => {
     setEditingProjectId(project.id);
     const countryCode = normalizeCountryCode(project.country ?? '');
     setForm({
@@ -323,7 +344,21 @@ export default function PortfolioPage() {
     setProjectVideo(project.video_url ?? '');
     setShowPublisher(true);
     setStatus('');
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!editProjectIdFromUrl || myProjects.length === 0) return;
+    const projectToEdit = myProjects.find((project) => project.id === editProjectIdFromUrl);
+    if (!projectToEdit) return;
+    if (autoOpenedEditId.current === editProjectIdFromUrl) return;
+
+    startEditPublication(projectToEdit);
+    autoOpenedEditId.current = editProjectIdFromUrl;
+
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [editProjectIdFromUrl, myProjects, startEditPublication]);
 
   const deletePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
@@ -373,6 +408,10 @@ export default function PortfolioPage() {
 
   const publishProject = async () => {
     if (!user?.id) return;
+    if (!editingProjectId && myProjects.length >= 1) {
+      setStatus('You can only keep one business published at a time. Edit your current one to update it.');
+      return;
+    }
     const required: Array<[string, string]> = [
       ['title', form.title],
       ['businessName', form.businessName],
@@ -501,6 +540,8 @@ export default function PortfolioPage() {
     );
   }
 
+  const canCreateNewProject = myProjects.length === 0;
+
   return (
     <PageFrame title="Entrepreneur portfolio" subtitle="Publish your venture or credit request">
       <section className="rounded-xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
@@ -508,19 +549,22 @@ export default function PortfolioPage() {
           <h2 className="text-sm font-semibold text-slate-900">Publish project</h2>
           <button
             onClick={startNewPublication}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-sm transition hover:bg-primary-light"
+            disabled={!canCreateNewProject}
+            className={`flex h-10 w-10 items-center justify-center rounded-full text-white shadow-sm transition ${
+              canCreateNewProject
+                ? 'bg-primary hover:bg-primary-light'
+                : 'cursor-not-allowed bg-slate-300'
+            }`}
             aria-label="Open project form"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M16 22H9C5.68629 22 3 19.3137 3 16V7M14.5 2.1319V7.5C14.5 8.60457 15.3954 9.5 16.5 9.5H20.9374M14.5 2.1319C14.2178 2.04533 13.9216 2 13.6202 2H9C7.34315 2 6 3.34315 6 5V16C6 17.6569 7.34315 19 9 19H18C19.6569 19 21 17.6569 21 16V10.1098C21 9.90356 20.9788 9.69931 20.9374 9.5M14.5 2.1319C15.0377 2.29685 15.5242 2.61154 15.898 3.04763L20.2778 8.1574C20.6096 8.54456 20.8351 9.00716 20.9374 9.5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+            <PublishProjectIcon />
           </button>
         </div>
+        {!canCreateNewProject && !showPublisher ? (
+          <p className="mt-3 text-xs text-slate-500">
+            Only one business can stay published per user. Use Edit to update the current publication.
+          </p>
+        ) : null}
 
         {showPublisher ? (
           <div className="mt-4 space-y-3">

@@ -2,29 +2,20 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '@/components/Button';
-import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
-import { useInvestApp } from '@/lib/investapp-context';
 
 export default function PublishPage() {
   const router = useRouter();
-  const { faseApp } = useInvestApp();
 
   useEffect(() => {
-    if (faseApp === 'login') router.replace('/login');
-    if (faseApp === 'onboarding') router.replace('/onboarding');
-  }, [faseApp, router]);
+    router.replace('/portfolio');
+  }, [router]);
 
   return (
-    <PageFrame title="Publicar emprendimiento" subtitle="Crea una nueva oportunidad">
-      <div className="space-y-4 rounded-xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        <Input placeholder="Nombre del proyecto" />
-        <Input placeholder="Descripcion" />
-        <Input placeholder="Meta de inversion" />
-        <Button>Publicar</Button>
+    <PageFrame title="Publish project" subtitle="Redirecting to your business portfolio">
+      <div className="rounded-xl border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+        Opening your portfolio...
       </div>
     </PageFrame>
   );
 }
-
