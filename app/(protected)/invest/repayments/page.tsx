@@ -5,12 +5,18 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import { calculateInvestmentProjection } from '@/lib/investment-math';
+import {
+  detectInvestmentsSchema,
+  loadLegacyInvestmentsForProjects,
+} from '@/lib/supabase-ledger-compat';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 
 type InvestmentRow = {
   id: string;
   created_at: string;
+  project_id: string;
   investor_user_id: string | null;
   from_wallet: string | null;
   amount?: number | null;
@@ -32,8 +38,18 @@ type InvestorProfile = {
   wallet_address: string | null;
 };
 
+type ProjectRow = {
+  id: string;
+  title: string | null;
+  business_name: string | null;
+  interest_rate: number | null;
+  term_months: number | null;
+};
+
 type RepaymentCard = {
   id: string;
+  projectId: string;
+  investorUserId: string | null;
   displayName: string;
   avatarUrl: string | null;
   country: string | null;
@@ -125,26 +141,75 @@ export default function RepaymentsPage() {
       }
 
       setLoading(true);
-
-      const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-        supabase
-          .from('investments')
-          .select(`id,created_at,investor_user_id,from_wallet,${amountColumn},interest_rate_ea,term_months,projected_total_usdc,project_title,status`)
-          .eq('entrepreneur_user_id', user.id)
-          .in('status', ['submitted', 'confirmed'])
-          .order('created_at', { ascending: false })
+      const investmentSchema = await detectInvestmentsSchema(supabase);
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('id,title,business_name,interest_rate,term_months')
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      const projectMap = new Map(
+        ((projectData ?? []) as ProjectRow[]).map((project) => [String(project.id), project])
       );
+      const ownedProjectIds = Array.from(projectMap.keys());
 
-      if (error) {
-        setCards([]);
-        setLoading(false);
-        return;
+      let investments: InvestmentRow[] = [];
+
+      if (investmentSchema === 'legacy') {
+        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForProjects(
+          supabase,
+          ownedProjectIds
+        );
+
+        if (legacyError) {
+          setCards([]);
+          setLoading(false);
+          return;
+        }
+
+        investments = legacyData
+          .filter((item) => item.investor_user_id)
+          .map((item) => ({
+            id: item.id,
+            created_at: item.created_at,
+            project_id: item.project_id,
+            investor_user_id: item.investor_user_id,
+            from_wallet: item.from_wallet,
+            amount: item.amount,
+            amount_usdc: item.amount,
+            interest_rate_ea: Number(projectMap.get(item.project_id)?.interest_rate ?? 0),
+            term_months: Number(projectMap.get(item.project_id)?.term_months ?? 0),
+            projected_total_usdc: calculateInvestmentProjection({
+              amountUsdc: Number(item.amount ?? 0),
+              interestRateEa: Number(projectMap.get(item.project_id)?.interest_rate ?? 0),
+              termMonths: Number(projectMap.get(item.project_id)?.term_months ?? 0),
+            }).projectedTotalUsdc,
+            project_title:
+              projectMap.get(item.project_id)?.business_name ||
+              projectMap.get(item.project_id)?.title ||
+              null,
+            status: item.status,
+          }));
+      } else {
+        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('investments')
+            .select(`id,created_at,project_id,investor_user_id,from_wallet,${amountColumn},interest_rate_ea,term_months,projected_total_usdc,project_title,status`)
+            .eq('entrepreneur_user_id', user.id)
+            .in('status', ['submitted', 'confirmed'])
+            .order('created_at', { ascending: false })
+        );
+
+        if (error) {
+          setCards([]);
+          setLoading(false);
+          return;
+        }
+
+        investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
+          ...item,
+          amount: getAmountValue(item),
+        }));
       }
 
-      const investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
-        ...item,
-        amount: getAmountValue(item),
-      }));
       const investorIds = Array.from(
         new Set(investments.map((investment) => investment.investor_user_id).filter(Boolean))
       ) as string[];
@@ -167,6 +232,8 @@ export default function RepaymentsPage() {
             const profile = investment.investor_user_id ? profileMap.get(investment.investor_user_id) : undefined;
             return {
               id: investment.id,
+              projectId: investment.project_id,
+              investorUserId: investment.investor_user_id,
               displayName: nameFrom(profile),
               avatarUrl: profile?.avatar_url ?? null,
               country: profile?.country ?? null,
@@ -244,7 +311,7 @@ export default function RepaymentsPage() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            router.push(`/invest/wallet?mode=repayment&wallet=${encodeURIComponent(card.walletAddress)}&amount=${encodeURIComponent(card.repaymentAmount.toFixed(2))}&name=${encodeURIComponent(card.displayName)}`);
+                            router.push(`/invest/wallet?mode=repayment&wallet=${encodeURIComponent(card.walletAddress)}&amount=${encodeURIComponent(card.repaymentAmount.toFixed(2))}&name=${encodeURIComponent(card.displayName)}&projectId=${encodeURIComponent(card.projectId)}&investorUserId=${encodeURIComponent(card.investorUserId ?? '')}`);
                           }}
                           disabled={!card.walletAddress}
                           className={`mt-4 rounded-full px-4 py-2 text-xs font-semibold ${card.walletAddress ? 'bg-white text-slate-900' : 'bg-white/20 text-white/60'}`}

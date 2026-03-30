@@ -12,6 +12,11 @@ import {
   getNextRepaymentDate,
   type InvestmentHealth,
 } from '@/lib/investor-overview';
+import { calculateInvestmentProjection } from '@/lib/investment-math';
+import {
+  detectInvestmentsSchema,
+  loadLegacyInvestmentsForInvestor,
+} from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useInvestApp } from '@/lib/investapp-context';
 
@@ -34,6 +39,8 @@ type ProjectRow = {
   business_name: string | null;
   photo_urls: string[] | null;
   owner_user_id: string | null;
+  interest_rate: number | null;
+  term_months: number | null;
 };
 
 type OwnerRow = {
@@ -178,35 +185,66 @@ export default function InvestorPortfolioDashboard() {
       setLoading(true);
       setStatus('');
 
-      const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-        supabase
-          .from('investments')
-          .select(
-            `id,created_at,project_id,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-          )
-          .eq('investor_user_id', user.id)
-          .in('status', ['submitted', 'confirmed'])
-          .order('created_at', { ascending: false })
-      );
+      const investmentSchema = await detectInvestmentsSchema(supabase);
+      let investments: InvestmentRow[] = [];
 
-      if (error) {
-        setStatus('Could not load your investments right now. Please try again in a moment.');
-        setItems([]);
-        setLoading(false);
-        return;
+      if (investmentSchema === 'legacy') {
+        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForInvestor(
+          supabase,
+          user.id
+        );
+
+        if (legacyError) {
+          setStatus('Could not load your investments right now. Please try again in a moment.');
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
+        investments = legacyData.map((item) => ({
+          id: item.id,
+          created_at: item.created_at,
+          project_id: item.project_id,
+          amount: item.amount,
+          amount_usdc: item.amount,
+          interest_rate_ea: null,
+          term_months: null,
+          projected_return_usdc: null,
+          projected_total_usdc: null,
+          status: item.status,
+        }));
+      } else {
+        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('investments')
+            .select(
+              `id,created_at,project_id,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
+            )
+            .eq('investor_user_id', user.id)
+            .in('status', ['submitted', 'confirmed'])
+            .order('created_at', { ascending: false })
+        );
+
+        if (error) {
+          setStatus('Could not load your investments right now. Please try again in a moment.');
+          setItems([]);
+          setLoading(false);
+          return;
+        }
+
+        investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
+          ...item,
+          amount: getAmountValue(item),
+        }));
       }
 
-      const investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
-        ...item,
-        amount: getAmountValue(item),
-      }));
       const projectIds = Array.from(new Set(investments.map((item) => item.project_id).filter(Boolean)));
 
       const projectMap = new Map<string, ProjectRow>();
       if (projectIds.length > 0) {
         const { data: projectsData } = await supabase
           .from('projects')
-          .select('id,title,business_name,photo_urls,owner_user_id')
+          .select('id,title,business_name,photo_urls,owner_user_id,interest_rate,term_months')
           .in('id', projectIds);
         ((projectsData ?? []) as ProjectRow[]).forEach((project) => {
           projectMap.set(project.id, {
@@ -233,7 +271,22 @@ export default function InvestorPortfolioDashboard() {
       setItems(
         investments.map((investment) => {
           const project = projectMap.get(investment.project_id);
-          const nextRepaymentDate = getNextRepaymentDate(investment.created_at, investment.term_months);
+          const nextRepaymentDate = getNextRepaymentDate(
+            investment.created_at,
+            investment.term_months ?? project?.term_months ?? 0
+          );
+          const projection =
+            investment.projected_return_usdc != null
+              ? {
+                  projectedReturnUsdc: Number(investment.projected_return_usdc),
+                }
+              : calculateInvestmentProjection({
+                  amountUsdc: Number(investment.amount ?? 0),
+                  interestRateEa: Number(
+                    investment.interest_rate_ea ?? project?.interest_rate ?? 0
+                  ),
+                  termMonths: Number(investment.term_months ?? project?.term_months ?? 0),
+                });
           return {
             id: investment.id,
             createdAt: investment.created_at,
@@ -244,8 +297,8 @@ export default function InvestorPortfolioDashboard() {
             ),
             coverImage: project?.photo_urls?.[0] ?? null,
             amountInvested: Number(investment.amount ?? 0),
-            interestRateEa: investment.interest_rate_ea,
-            projectedReturnUsdc: Number(investment.projected_return_usdc ?? 0),
+            interestRateEa: investment.interest_rate_ea ?? project?.interest_rate ?? null,
+            projectedReturnUsdc: Number(projection.projectedReturnUsdc ?? 0),
             nextRepaymentDate,
             nextRepaymentLabel: formatNextRepaymentDate(nextRepaymentDate),
             health: getInvestmentHealth(nextRepaymentDate),

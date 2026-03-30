@@ -12,6 +12,13 @@ import {
   getInvestmentHealthMeta,
   getNextRepaymentDate,
 } from '@/lib/investor-overview';
+import { calculateInvestmentProjection } from '@/lib/investment-math';
+import {
+  detectInvestmentsSchema,
+  detectTransactionsSchema,
+  loadLegacyInvestmentsForInvestor,
+  loadLegacyTransactionsForUser,
+} from '@/lib/supabase-ledger-compat';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
@@ -183,6 +190,7 @@ type ProjectFundingSummary = {
   currency: string | null;
   photo_urls: string[] | null;
   interest_rate: number | null;
+  term_months: number | null;
 };
 
 type HomeActiveInvestment = ActiveInvestmentRow & {
@@ -348,31 +356,62 @@ export default function HomePage() {
       }
 
       setLoadingActiveInvestments(true);
-      const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-        supabase
-          .from('investments')
-          .select(
-            `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-          )
-          .eq('investor_user_id', user.id)
-          .in('status', ['submitted', 'confirmed'])
-          .order('created_at', { ascending: false })
-          .limit(5)
-      );
+      const investmentSchema = await detectInvestmentsSchema(supabase);
+      let investments: ActiveInvestmentRow[] = [];
 
-      if (error) {
-        console.error('Error loading active investments:', error.message);
-        setActiveInvestments([]);
-        setLoadingActiveInvestments(false);
-        return;
+      if (investmentSchema === 'legacy') {
+        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForInvestor(
+          supabase,
+          user.id
+        );
+
+        if (legacyError) {
+          console.error('Error loading active investments:', legacyError.message);
+          setActiveInvestments([]);
+          setLoadingActiveInvestments(false);
+          return;
+        }
+
+        investments = legacyData.slice(0, 5).map((item) => ({
+          id: item.id,
+          created_at: item.created_at,
+          project_id: item.project_id,
+          project_title: null,
+          amount: item.amount,
+          interest_rate_ea: null,
+          term_months: null,
+          projected_return_usdc: null,
+          projected_total_usdc: null,
+          status: item.status,
+        }));
+      } else {
+        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
+          supabase
+            .from('investments')
+            .select(
+              `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
+            )
+            .eq('investor_user_id', user.id)
+            .in('status', ['submitted', 'confirmed'])
+            .order('created_at', { ascending: false })
+            .limit(5)
+        );
+
+        if (error) {
+          console.error('Error loading active investments:', error.message);
+          setActiveInvestments([]);
+          setLoadingActiveInvestments(false);
+          return;
+        }
+
+        investments = ((data ?? []) as RawActiveInvestmentRow[])
+          .filter((item) => item.id)
+          .map((item) => ({
+            ...item,
+            amount: getAmountValue(item),
+          })) as ActiveInvestmentRow[];
       }
 
-      const investments = ((data ?? []) as RawActiveInvestmentRow[])
-        .filter((item) => item.id)
-        .map((item) => ({
-          ...item,
-          amount: getAmountValue(item),
-        })) as ActiveInvestmentRow[];
       const projectIds = Array.from(
         new Set(investments.map((investment) => investment.project_id).filter(Boolean))
       );
@@ -381,7 +420,7 @@ export default function HomePage() {
       if (projectIds.length > 0) {
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
-          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate')
+          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate,term_months')
           .in('id', projectIds);
 
         if (projectsError) {
@@ -417,6 +456,29 @@ export default function HomePage() {
       setActiveInvestments(
         investments.map((investment) => ({
           ...investment,
+          ...(() => {
+            const project = projectMap.get(investment.project_id) ?? null;
+            const projection =
+              investment.projected_return_usdc != null && investment.projected_total_usdc != null
+                ? {
+                    projectedReturnUsdc: Number(investment.projected_return_usdc),
+                    projectedTotalUsdc: Number(investment.projected_total_usdc),
+                  }
+                : calculateInvestmentProjection({
+                    amountUsdc: Number(investment.amount ?? 0),
+                    interestRateEa: Number(
+                      investment.interest_rate_ea ?? project?.interest_rate ?? 0
+                    ),
+                    termMonths: Number(investment.term_months ?? project?.term_months ?? 0),
+                  });
+
+            return {
+              projected_return_usdc: projection.projectedReturnUsdc,
+              projected_total_usdc: projection.projectedTotalUsdc,
+              interest_rate_ea: investment.interest_rate_ea ?? project?.interest_rate ?? null,
+              term_months: investment.term_months ?? project?.term_months ?? null,
+              };
+          })(),
           project: projectMap.get(investment.project_id) ?? null,
           ownerName: (() => {
             const ownerId = projectMap.get(investment.project_id)?.owner_user_id;
@@ -447,6 +509,37 @@ export default function HomePage() {
       }
 
       setLoadingTransactions(true);
+      const transactionSchema = await detectTransactionsSchema(supabase);
+
+      if (transactionSchema === 'legacy' && user?.id) {
+        const { data: legacyData, error: legacyError } = await loadLegacyTransactionsForUser(
+          supabase,
+          user.id,
+          12
+        );
+
+        if (legacyError) {
+          console.error('Error loading transactions:', legacyError.message);
+          setTransactions([]);
+          setLoadingTransactions(false);
+          return;
+        }
+
+        setTransactions(
+          legacyData.map((item) => ({
+            id: item.id,
+            created_at: item.created_at,
+            movement_type: item.movement_type as TransactionRow['movement_type'],
+            status: item.status,
+            from_wallet: item.from_wallet,
+            to_wallet: item.to_wallet,
+            amount: item.amount,
+          }))
+        );
+        setLoadingTransactions(false);
+        return;
+      }
+
       const filters = [user?.id ? `user_id.eq.${user.id}` : null];
       if (smartWalletAddress) {
         filters.push(`from_wallet.eq.${smartWalletAddress}`);

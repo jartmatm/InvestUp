@@ -19,6 +19,11 @@ import {
   type PendingInvestment,
 } from '@/lib/pending-investment';
 import { getNextProjectStatusAfterFunding } from '@/lib/project-status';
+import {
+  detectInvestmentsSchema,
+  detectTransactionsSchema,
+  generateLegacyRowIds,
+} from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 
 type FrontRole = 'inversor' | 'emprendedor';
@@ -60,11 +65,13 @@ type ReceiptData = {
 type StoredTransaction = {
   id: string;
   created_at: string;
-  movement_type: MovementType;
+  movement_type?: MovementType;
+  type?: MovementType;
   status: string;
   tx_hash: string | null;
   from_wallet: string | null;
   to_wallet: string | null;
+  meta?: Record<string, unknown> | null;
   amount?: number | null;
   amount_usdc?: number | null;
 };
@@ -92,6 +99,8 @@ type RegisterRepaymentArgs = {
   transactionId?: string | null;
   amountUsdc: string;
   toWallet: string;
+  projectId?: string | null;
+  investorUserId?: string | null;
 };
 
 type InvestAppContextType = {
@@ -117,7 +126,7 @@ type InvestAppContextType = {
   enviarUSDC: (
     destino: string,
     monto: string,
-    options?: { movementType?: MovementType }
+    options?: { movementType?: MovementType; projectId?: string | null; investorUserId?: string | null }
   ) => Promise<boolean>;
   abrirCompra: () => Promise<void>;
   abrirCompraCoinbase: () => Promise<void>;
@@ -281,6 +290,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     expiresAt: 0,
     maxFeePerGas: null,
   });
+  const transactionSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
+  const investmentSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -319,6 +330,26 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [getAccessToken]);
 
+  const getTransactionSchema = useCallback(async () => {
+    if (transactionSchemaRef.current !== 'unknown') {
+      return transactionSchemaRef.current;
+    }
+
+    const schema = await detectTransactionsSchema(supabase);
+    transactionSchemaRef.current = schema;
+    return schema;
+  }, [supabase]);
+
+  const getInvestmentSchema = useCallback(async () => {
+    if (investmentSchemaRef.current !== 'unknown') {
+      return investmentSchemaRef.current;
+    }
+
+    const schema = await detectInvestmentsSchema(supabase);
+    investmentSchemaRef.current = schema;
+    return schema;
+  }, [supabase]);
+
   const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
   const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
   const transferenciaTitulo =
@@ -345,44 +376,80 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
       try {
         const amountValue = Number(amountUsdc);
-        const payload = {
-          user_id: user.id,
-          role: mapRoleToDB(rolSeleccionado),
-          movement_type: movementType,
-          status,
-          chain: 'polygon',
-          tx_hash: txHash,
-          from_wallet: smartWalletAddress,
-          to_wallet: toWallet,
-          metadata: {
-            app: 'investapp-web',
-            currency: 'USDC',
-            ...metadata,
-          },
-        };
-
         let storedTransaction: StoredTransaction | null = null;
         const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null;
-        const insertResult = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('transactions')
-            .insert({ ...payload, [amountColumn]: normalizedAmountValue })
-            .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn}`)
-            .maybeSingle()
-        );
+        const transactionSchema = await getTransactionSchema();
+        const insertResult =
+          transactionSchema === 'legacy'
+            ? await runWithAmountColumnFallback((amountColumn) => {
+                const legacyIds = generateLegacyRowIds();
+                return supabase
+                  .from('transactions')
+                  .insert({
+                    id: legacyIds.id,
+                    uuid: legacyIds.uuid,
+                    user_id: user.id,
+                    type: movementType,
+                    status,
+                    currency: 'USDC',
+                    tx_hash: txHash,
+                    meta: {
+                      app: 'investapp-web',
+                      role: mapRoleToDB(rolSeleccionado),
+                      chain: 'polygon',
+                      from_wallet: smartWalletAddress,
+                      to_wallet: toWallet,
+                      ...metadata,
+                    },
+                    [amountColumn]: normalizedAmountValue,
+                  })
+                  .select(`id,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
+                  .maybeSingle();
+              })
+            : await runWithAmountColumnFallback((amountColumn) =>
+                supabase
+                  .from('transactions')
+                  .insert({
+                    user_id: user.id,
+                    role: mapRoleToDB(rolSeleccionado),
+                    movement_type: movementType,
+                    status,
+                    chain: 'polygon',
+                    tx_hash: txHash,
+                    from_wallet: smartWalletAddress,
+                    to_wallet: toWallet,
+                    metadata: {
+                      app: 'investapp-web',
+                      currency: 'USDC',
+                      ...metadata,
+                    },
+                    [amountColumn]: normalizedAmountValue,
+                  })
+                  .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc`)
+                  .maybeSingle()
+              );
         const { data, error } = insertResult;
 
         if (error) {
           const duplicate = error.message?.toLowerCase().includes('duplicate');
           if (!duplicate) throw error;
 
-          const existingResult = await runWithAmountColumnFallback((amountColumn) =>
-            supabase
-              .from('transactions')
-              .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn}`)
-              .eq('tx_hash', txHash)
-              .maybeSingle()
-          );
+          const existingResult =
+            transactionSchema === 'legacy'
+              ? await runWithAmountColumnFallback((amountColumn) =>
+                  supabase
+                    .from('transactions')
+                    .select(`id,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
+                    .eq('tx_hash', txHash)
+                    .maybeSingle()
+                )
+              : await runWithAmountColumnFallback((amountColumn) =>
+                  supabase
+                    .from('transactions')
+                    .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc`)
+                    .eq('tx_hash', txHash)
+                    .maybeSingle()
+                );
           const { data: existingData, error: existingError } = existingResult;
 
           if (existingError) throw existingError;
@@ -400,19 +467,29 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         const resolvedReceiverName =
           receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Recipient';
         const normalizedAmount = Number(getAmountValue(storedTransaction as Record<string, unknown>) ?? amountUsdc);
+        const metaObject =
+          storedTransaction?.meta && typeof storedTransaction.meta === 'object'
+            ? storedTransaction.meta
+            : null;
 
         setLastReceipt({
           uuid: String(storedTransaction?.id ?? txHash ?? ''),
-          type: (storedTransaction?.movement_type ?? movementType) as MovementType,
+          type: (storedTransaction?.movement_type ?? storedTransaction?.type ?? movementType) as MovementType,
           amount: Number.isFinite(normalizedAmount) ? normalizedAmount.toFixed(2) : amountUsdc,
           currency: 'USDC',
           status: String(storedTransaction?.status ?? status),
           txHash: String(storedTransaction?.tx_hash ?? txHash),
           createdAt: String(storedTransaction?.created_at ?? new Date().toISOString()),
           senderName,
-          senderWallet: smartWalletAddress,
+          senderWallet:
+            (typeof metaObject?.from_wallet === 'string' ? metaObject.from_wallet : null) ??
+            storedTransaction?.from_wallet ??
+            smartWalletAddress,
           receiverName: resolvedReceiverName,
-          receiverWallet: toWallet,
+          receiverWallet:
+            (typeof metaObject?.to_wallet === 'string' ? metaObject.to_wallet : null) ??
+            storedTransaction?.to_wallet ??
+            toWallet,
         });
 
         return storedTransaction;
@@ -421,7 +498,16 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [rolSeleccionado, smartWalletAddress, supabase, user?.email, user?.id, userAlias, walletTargets]
+    [
+      getTransactionSchema,
+      rolSeleccionado,
+      smartWalletAddress,
+      supabase,
+      user?.email,
+      user?.id,
+      userAlias,
+      walletTargets,
+    ]
   );
 
   const registrarInversion = useCallback(
@@ -441,37 +527,64 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           interestRateEa: Number(pendingInvestment.interestRateEa ?? 0),
           termMonths: Number(pendingInvestment.termMonths ?? 0),
         });
-
-        const payload = {
-          transaction_id: transactionId ?? null,
-          investor_user_id: user.id,
-          entrepreneur_user_id: pendingInvestment.entrepreneurUserId || null,
-          project_id: pendingInvestment.projectId,
-          project_title: pendingInvestment.projectTitle,
-          tx_hash: txHash,
-          from_wallet: smartWalletAddress,
-          to_wallet: toWallet,
-          interest_rate_ea: Number(pendingInvestment.interestRateEa ?? 0),
-          term_months: Number(pendingInvestment.termMonths ?? 0),
-          projected_return_usdc: projection.projectedReturnUsdc,
-          projected_total_usdc: projection.projectedTotalUsdc,
-          status: 'submitted',
-          metadata: {
-            app: 'investapp-web',
-            currency: pendingInvestment.currency,
-            entrepreneur_name: pendingInvestment.entrepreneurName,
-            created_from: 'project-investment-flow',
-          },
-        };
-
         const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
-        const { error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('investments')
-            .insert({ ...payload, [amountColumn]: normalizedAmountValue })
-            .select('id')
-            .maybeSingle()
-        );
+        const investmentSchema = await getInvestmentSchema();
+        const { error } =
+          investmentSchema === 'legacy'
+            ? await runWithAmountColumnFallback((amountColumn) => {
+                const legacyProjectId = Number(pendingInvestment.projectId);
+                if (!Number.isFinite(legacyProjectId)) {
+                  throw new Error(
+                    `Legacy investments table expects a numeric project_id, but received "${pendingInvestment.projectId}".`
+                  );
+                }
+                const legacyTransactionId =
+                  transactionId && Number.isFinite(Number(transactionId))
+                    ? Number(transactionId)
+                    : null;
+                const legacyIds = generateLegacyRowIds();
+                return supabase
+                  .from('investments')
+                  .insert({
+                    id: legacyIds.id,
+                    uuid: legacyIds.uuid,
+                    investor_id: user.id,
+                    project_id: legacyProjectId,
+                    transaction_id: legacyTransactionId,
+                    status: 'submitted',
+                    [amountColumn]: normalizedAmountValue,
+                  })
+                  .select('id')
+                  .maybeSingle();
+              })
+            : await runWithAmountColumnFallback((amountColumn) =>
+                supabase
+                  .from('investments')
+                  .insert({
+                    transaction_id: transactionId ?? null,
+                    investor_user_id: user.id,
+                    entrepreneur_user_id: pendingInvestment.entrepreneurUserId || null,
+                    project_id: pendingInvestment.projectId,
+                    project_title: pendingInvestment.projectTitle,
+                    tx_hash: txHash,
+                    from_wallet: smartWalletAddress,
+                    to_wallet: toWallet,
+                    interest_rate_ea: Number(pendingInvestment.interestRateEa ?? 0),
+                    term_months: Number(pendingInvestment.termMonths ?? 0),
+                    projected_return_usdc: projection.projectedReturnUsdc,
+                    projected_total_usdc: projection.projectedTotalUsdc,
+                    status: 'submitted',
+                    metadata: {
+                      app: 'investapp-web',
+                      currency: pendingInvestment.currency,
+                      entrepreneur_name: pendingInvestment.entrepreneurName,
+                      created_from: 'project-investment-flow',
+                    },
+                    [amountColumn]: normalizedAmountValue,
+                  })
+                  .select('id')
+                  .maybeSingle()
+              );
         if (error && !error.message?.toLowerCase().includes('duplicate')) {
           throw error;
         }
@@ -481,11 +594,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [smartWalletAddress, supabase, user?.id]
+    [getInvestmentSchema, smartWalletAddress, supabase, user?.id]
   );
 
   const registrarRepayment = useCallback(
-    async ({ txHash, transactionId, amountUsdc, toWallet }: RegisterRepaymentArgs) => {
+    async ({ txHash, transactionId, amountUsdc, toWallet, projectId, investorUserId }: RegisterRepaymentArgs) => {
       if (!user?.id || !smartWalletAddress) return false;
 
       try {
@@ -502,8 +615,9 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             .from('repayments')
             .insert({
               transaction_id: transactionId ?? null,
+              project_id: projectId ? Number(projectId) : null,
               entrepreneur_user_id: user.id,
-              investor_user_id: receiver?.id ?? null,
+              investor_user_id: investorUserId ?? receiver?.id ?? null,
               tx_hash: txHash,
               from_wallet: smartWalletAddress,
               to_wallet: toWallet,
@@ -687,7 +801,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   }, [authenticated, rolSeleccionado, supabase, user?.id]);
 
   const enviarUSDC = useCallback(
-    async (destino: string, monto: string, options?: { movementType?: MovementType }) => {
+    async (
+      destino: string,
+      monto: string,
+      options?: { movementType?: MovementType; projectId?: string | null; investorUserId?: string | null }
+    ) => {
       if (!client || !smartWalletAddress || !destino || !monto) {
         alert('Missing data or the wallet is not ready yet.');
         return false;
@@ -849,6 +967,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             transactionId: transactionRow?.id ?? null,
             amountUsdc: enviadoFmt,
             toWallet: destino,
+            projectId: options?.projectId ?? null,
+            investorUserId: options?.investorUserId ?? null,
           });
         }
 

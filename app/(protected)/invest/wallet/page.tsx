@@ -104,6 +104,8 @@ export default function WalletTransferPage() {
     enviarUSDC,
   } = useInvestApp();
   const mode = searchParams.get('mode');
+  const repaymentProjectId = searchParams.get('projectId');
+  const repaymentInvestorUserId = searchParams.get('investorUserId');
   const allowPendingInvestment = mode !== 'repayment' && mode !== 'transfer';
   const transferMode =
     mode === 'repayment' && rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
@@ -386,7 +388,17 @@ export default function WalletTransferPage() {
       <button
         type="button"
         onClick={async () => {
-          const success = await enviarUSDC(walletDestino, formatAmount(monto) || monto, pendingInvestment ? undefined : { movementType: transferMode });
+          const success = await enviarUSDC(
+            walletDestino,
+            formatAmount(monto) || monto,
+            pendingInvestment
+              ? undefined
+              : {
+                  movementType: transferMode,
+                  projectId: transferMode === 'repayment' ? repaymentProjectId : null,
+                  investorUserId: transferMode === 'repayment' ? repaymentInvestorUserId : null,
+                }
+          );
           if (!success) return;
           if (pendingInvestment) {
             clearPendingInvestment();
