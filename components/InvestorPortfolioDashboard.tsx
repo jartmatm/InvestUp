@@ -19,7 +19,6 @@ type InvestmentRow = {
   id: string;
   created_at: string;
   project_id: string;
-  project_title: string | null;
   amount?: number | null;
   amount_usdc?: number | null;
   interest_rate_ea: number | null;
@@ -183,7 +182,7 @@ export default function InvestorPortfolioDashboard() {
         supabase
           .from('investments')
           .select(
-            `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
+            `id,created_at,project_id,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
           )
           .eq('investor_user_id', user.id)
           .in('status', ['submitted', 'confirmed'])
@@ -191,7 +190,7 @@ export default function InvestorPortfolioDashboard() {
       );
 
       if (error) {
-        setStatus(`Could not load your investments: ${error.message}`);
+        setStatus('Could not load your investments right now. Please try again in a moment.');
         setItems([]);
         setLoading(false);
         return;
@@ -239,7 +238,7 @@ export default function InvestorPortfolioDashboard() {
             id: investment.id,
             createdAt: investment.created_at,
             projectId: investment.project_id,
-            businessName: project?.business_name || project?.title || investment.project_title || 'Business',
+            businessName: project?.business_name || project?.title || 'Business',
             ownerName: ownerNameFrom(
               project?.owner_user_id ? ownerMap.get(project.owner_user_id) : undefined
             ),
@@ -348,7 +347,9 @@ export default function InvestorPortfolioDashboard() {
             <div className="mt-5 max-h-[460px] space-y-3 overflow-y-auto pr-1">
               {filteredItems.length === 0 ? (
                 <div className="rounded-2xl border border-white/25 bg-white/25 p-4 text-sm text-gray-500">
-                  No investments found for the selected filter.
+                  {items.length === 0
+                    ? 'You do not have investments yet. Once you fund a venture, it will appear here.'
+                    : 'No investments found for the selected filter.'}
                 </div>
               ) : (
                 filteredItems.map((item) => {

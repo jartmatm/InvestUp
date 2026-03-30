@@ -44,11 +44,12 @@ export default function SplashScreen() {
 
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-6">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,#071121_0%,#121D42_46%,#22175C_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(72,192,255,0.22),transparent_28%),radial-gradient(circle_at_24%_75%,rgba(64,196,170,0.24),transparent_24%),radial-gradient(circle_at_78%_24%,rgba(124,92,255,0.26),transparent_26%),radial-gradient(circle_at_bottom,rgba(255,107,203,0.22),transparent_22%)]" />
-      <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-[#40C4AA]/18 blur-3xl" />
-      <div className="absolute right-[-4rem] top-20 h-80 w-80 rounded-full bg-[#6B39F4]/24 blur-3xl" />
-      <div className="absolute bottom-[-7rem] left-1/2 h-72 w-[28rem] -translate-x-1/2 rounded-full bg-[#FF6BCB]/16 blur-3xl" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,17,33,0.6)_0%,rgba(18,29,66,0.6)_46%,rgba(34,23,92,0.6)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(72,192,255,0.14),transparent_28%),radial-gradient(circle_at_24%_75%,rgba(64,196,170,0.16),transparent_24%),radial-gradient(circle_at_78%_24%,rgba(124,92,255,0.18),transparent_26%),radial-gradient(circle_at_bottom,rgba(255,107,203,0.16),transparent_22%)]" />
+      <div className="absolute inset-0 bg-white/10" />
+      <div className="absolute -left-20 top-8 h-72 w-72 rounded-full bg-[#40C4AA]/12 blur-3xl" />
+      <div className="absolute right-[-4rem] top-20 h-80 w-80 rounded-full bg-[#6B39F4]/16 blur-3xl" />
+      <div className="absolute bottom-[-7rem] left-1/2 h-72 w-[28rem] -translate-x-1/2 rounded-full bg-[#FF6BCB]/12 blur-3xl" />
 
       <div className="relative z-10 flex flex-col items-center">
         <div className="relative flex w-full max-w-[28rem] items-center justify-center">

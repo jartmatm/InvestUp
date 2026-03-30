@@ -46,11 +46,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (!bundle) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f3f0fb] px-6 text-center text-sm text-gray-600">
-        Loading InvestApp...
-      </div>
-    );
+    return <div className="min-h-screen bg-transparent" />;
   }
 
   const { InvestAppProvider, SmartWalletsProvider, TransactionOverlay, TransactionReceipt } = bundle;
