@@ -70,11 +70,13 @@ export default function FeedDetailPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
-  const { getAccessToken } = usePrivy();
-  const { faseApp } = useInvestApp();
+  const { user, getAccessToken } = usePrivy();
+  const { faseApp, rolSeleccionado } = useInvestApp();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
+  const [showShareOptions, setShowShareOptions] = useState(false);
+  const [shareStatus, setShareStatus] = useState('');
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -155,6 +157,36 @@ export default function FeedDetailPage() {
     loadProject();
   }, [projectId, supabase]);
 
+  const isEntrepreneurView = rolSeleccionado === 'emprendedor';
+  const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
+
+  const getShareUrl = () => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/feed/${project?.id ?? projectId}`;
+  };
+
+  const openSharePopup = () => {
+    setShareStatus('');
+    setShowShareOptions(true);
+  };
+
+  const shareText = project?.title ? `Check out ${project.title} on InvestApp` : 'Check out this venture on InvestApp';
+
+  const copyShareLink = async () => {
+    try {
+      const url = getShareUrl();
+      await navigator.clipboard.writeText(url);
+      setShareStatus('Link copied.');
+    } catch {
+      setShareStatus('Could not copy the link.');
+    }
+  };
+
+  const openShareWindow = (url: string) => {
+    if (typeof window === 'undefined') return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <PageFrame title="Details" subtitle="Full listing">
       {loading ? <p className="text-sm text-gray-500">Loading listing...</p> : null}
@@ -172,13 +204,23 @@ export default function FeedDetailPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push(`/feed/${project.id}/invest`)}
-              disabled={!project.owner_wallet}
+              onClick={() => {
+                if (canEditProject) {
+                  router.push(`/portfolio?edit=${project.id}`);
+                  return;
+                }
+                if (isEntrepreneurView) {
+                  openSharePopup();
+                  return;
+                }
+                router.push(`/feed/${project.id}/invest`);
+              }}
+              disabled={!isEntrepreneurView && !project.owner_wallet}
               className={`rounded-full px-5 py-2 text-sm font-semibold text-white shadow-lg transition ${
-                project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
+                isEntrepreneurView || project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
               }`}
             >
-              Invest
+              {canEditProject ? 'Edit' : isEntrepreneurView ? 'Share' : 'Invest'}
             </button>
           </div>
 
@@ -267,7 +309,7 @@ export default function FeedDetailPage() {
             </div>
           ) : null}
 
-          {!project.owner_wallet ? (
+          {!isEntrepreneurView && !project.owner_wallet ? (
             <div className="rounded-2xl border border-amber-200/60 bg-amber-50/30 p-4 text-sm text-amber-900 backdrop-blur-md">
               This venture does not have a configured wallet yet, so the investment cannot start right now.
             </div>
@@ -275,14 +317,102 @@ export default function FeedDetailPage() {
 
           <button
             type="button"
-            onClick={() => router.push(`/feed/${project.id}/invest`)}
-            disabled={!project.owner_wallet}
+            onClick={() => {
+              if (isEntrepreneurView) {
+                openSharePopup();
+                return;
+              }
+              router.push(`/feed/${project.id}/invest`);
+            }}
+            disabled={!isEntrepreneurView && !project.owner_wallet}
             className={`w-full rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
-              project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
+              isEntrepreneurView || project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
-            Invest in this venture
+            {isEntrepreneurView ? 'Share' : 'Invest in this venture'}
           </button>
+        </div>
+      ) : null}
+
+      {showShareOptions && project ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.94),rgba(238,244,255,0.86))] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.24)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">Share</p>
+                <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">{project.title}</h3>
+                <p className="mt-2 text-sm text-[#666D80]">Choose how you want to share this venture.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShareOptions(false)}
+                className="rounded-full border border-white/40 bg-white/70 px-3 py-1 text-sm font-semibold text-[#0F172A]"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              {typeof navigator !== 'undefined' && navigator.share ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.share({ title: project.title, text: shareText, url: getShareUrl() });
+                      setShowShareOptions(false);
+                    } catch {
+                      setShareStatus('Share was cancelled.');
+                    }
+                  }}
+                  className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+                >
+                  Native share
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => void copyShareLink()}
+                className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              >
+                Copy link
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openShareWindow(
+                    `https://wa.me/?text=${encodeURIComponent(`${shareText} ${getShareUrl()}`)}`
+                  )
+                }
+                className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openShareWindow(
+                    `https://t.me/share/url?url=${encodeURIComponent(getShareUrl())}&text=${encodeURIComponent(shareText)}`
+                  )
+                }
+                className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              >
+                Telegram
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  openShareWindow(
+                    `mailto:?subject=${encodeURIComponent(project.title)}&body=${encodeURIComponent(`${shareText}\n\n${getShareUrl()}`)}`
+                  )
+                }
+                className="col-span-2 rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+              >
+                Email
+              </button>
+            </div>
+
+            {shareStatus ? <p className="mt-4 text-sm text-[#6B39F4]">{shareStatus}</p> : null}
+          </div>
         </div>
       ) : null}
     </PageFrame>

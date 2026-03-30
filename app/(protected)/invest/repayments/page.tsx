@@ -87,7 +87,6 @@ export default function RepaymentsPage() {
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [cards, setCards] = useState<RepaymentCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState('');
   const [flippedId, setFlippedId] = useState<string | null>(null);
 
   const supabase = useMemo(() => {
@@ -124,7 +123,6 @@ export default function RepaymentsPage() {
       }
 
       setLoading(true);
-      setStatus('');
 
       const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
         supabase
@@ -136,7 +134,6 @@ export default function RepaymentsPage() {
       );
 
       if (error) {
-        setStatus(`Could not load the repayments: ${error.message}`);
         setCards([]);
         setLoading(false);
         return;
@@ -195,7 +192,6 @@ export default function RepaymentsPage() {
       ) : (
         <>
           {loading ? <p className="text-sm text-gray-500">Loading investors...</p> : null}
-          {status ? <p className="mb-4 text-sm text-rose-600">{status}</p> : null}
 
           {!loading && cards.length === 0 ? (
             <div className="rounded-[20px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

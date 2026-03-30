@@ -369,7 +369,9 @@ export default function WalletTransferPage() {
                 type="button"
                 onClick={() => setMonto(suggestion.toFixed(2))}
                 className={`rounded-xl border py-3 text-center font-semibold ${
-                  amountNumber === suggestion ? 'border-primary bg-primary text-white' : 'border-white/25 bg-white/20 text-gray-700'
+                  amountNumber === suggestion
+                    ? 'border-[#6B39F4] bg-[#6B39F4] text-white'
+                    : 'border-white/25 bg-white/20 text-gray-700'
                 }`}
               >
                 ${suggestion}
@@ -396,8 +398,8 @@ export default function WalletTransferPage() {
           setWalletDestino('');
         }}
         disabled={!canSubmit || loadingTx}
-        className={`fixed bottom-[5.5rem] left-5 right-5 z-10 rounded-xl py-4 font-semibold text-white shadow-lg ${
-          !canSubmit || loadingTx ? 'bg-primary/40' : 'bg-primary'
+        className={`fixed bottom-[6.1rem] left-1/2 z-[70] w-[calc(100%-2.5rem)] max-w-[24rem] -translate-x-1/2 rounded-2xl py-4 font-semibold text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] ${
+          !canSubmit || loadingTx ? 'bg-[#6B39F4]/40' : 'bg-[#6B39F4]'
         }`}
       >
         {loadingTx ? 'Processing...' : submitLabel}
