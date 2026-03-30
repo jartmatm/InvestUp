@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import { getCountries } from 'libphonenumber-js';
-import InvestmentCard from '@/components/InvestmentCard';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
+import InvestorPortfolioDashboard from '@/components/InvestorPortfolioDashboard';
 import PageFrame from '@/components/PageFrame';
 import ProjectCard from '@/components/ProjectCard';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -20,6 +20,10 @@ import {
   type ProjectStatus,
 } from '@/lib/project-status';
 import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
+import {
+  getMinimumInvestmentValue,
+  runWithMinimumInvestmentFallback,
+} from '@/lib/supabase-minimum-investment';
 
 type ProjectRow = {
   id: string;
@@ -38,6 +42,7 @@ type ProjectRow = {
   country: string | null;
   description: string;
   amount_requested: number | null;
+  minimum_investment: number | null;
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
@@ -61,6 +66,7 @@ type PublishForm = {
   city: string;
   description: string;
   amountRequested: string;
+  minimumInvestment: string;
   currency: string;
   publicationEndDate: string;
   interestRateEa: string;
@@ -114,6 +120,7 @@ const emptyForm: PublishForm = {
   city: '',
   description: '',
   amountRequested: '',
+  minimumInvestment: '',
   currency: 'USD',
   publicationEndDate: '',
   interestRateEa: '',
@@ -170,7 +177,7 @@ export default function PortfolioPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, historial, rolSeleccionado, smartWalletAddress } = useInvestApp();
+  const { faseApp, rolSeleccionado, smartWalletAddress } = useInvestApp();
   const [showPublisher, setShowPublisher] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [form, setForm] = useState<PublishForm>(emptyForm);
@@ -237,20 +244,32 @@ export default function PortfolioPage() {
   const loadMyProjects = useCallback(async () => {
     if (!user?.id) return;
     setLoadingProjects(true);
-    const { data, error } = await supabase
-      .from('projects')
-      .select(
-        'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
-      )
-      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
+    const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
+      const selectFields: string = includeMinimumInvestment
+        ? 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,minimum_investment,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
+        : 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at';
+
+      return supabase
+        .from('projects')
+        .select(selectFields)
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .order('created_at', { ascending: false }) as unknown as PromiseLike<{
+        data: ProjectRow[];
+        error: PostgrestError | null;
+      }>;
+    });
 
     if (error) {
       setStatus(`Could not load your projects: ${error.message}`);
       setLoadingProjects(false);
       return;
     }
-    setMyProjects((data ?? []) as ProjectRow[]);
+    setMyProjects(
+      ((data ?? []) as ProjectRow[]).map((project) => ({
+        ...project,
+        minimum_investment: getMinimumInvestmentValue(project),
+      }))
+    );
     setLoadingProjects(false);
   }, [supabase, user?.id]);
 
@@ -336,6 +355,7 @@ export default function PortfolioPage() {
       city: project.city ?? '',
       description: project.description ?? '',
       amountRequested: String(project.amount_requested ?? ''),
+      minimumInvestment: String(project.minimum_investment ?? ''),
       currency: project.currency ?? 'USD',
       publicationEndDate: project.publication_end_date ?? '',
       interestRateEa: String(project.interest_rate ?? ''),
@@ -424,6 +444,7 @@ export default function PortfolioPage() {
       ['city', form.city],
       ['description', form.description],
       ['amountRequested', form.amountRequested],
+      ['minimumInvestment', form.minimumInvestment],
       ['currency', form.currency],
       ['publicationEndDate', form.publicationEndDate],
       ['interestRateEa', form.interestRateEa],
@@ -474,6 +495,7 @@ export default function PortfolioPage() {
       country: selectedCountry?.name ?? form.country,
       description: form.description,
       amount_requested: Number(form.amountRequested),
+      minimum_investment: Number(form.minimumInvestment),
       amount_received: nextAmountReceived,
       currency: form.currency,
       term_months: termMonths,
@@ -486,20 +508,35 @@ export default function PortfolioPage() {
         submitted_from: 'portfolio_page',
       },
     };
+    const payloadWithoutMinimumInvestment = { ...payload };
+    delete (payloadWithoutMinimumInvestment as { minimum_investment?: number }).minimum_investment;
 
     let opError: { message?: string } | null = null;
     if (editingProjectId) {
-      const result = await supabase
+      let result = await supabase
         .from('projects')
         .update(payload)
         .eq('id', editingProjectId)
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      if (result.error?.message?.toLowerCase().includes('minimum_investment')) {
+        result = await supabase
+          .from('projects')
+          .update(payloadWithoutMinimumInvestment)
+          .eq('id', editingProjectId)
+          .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      }
       opError = result.error;
     } else {
-      const firstTry = await supabase.from('projects').insert({
+      let firstTry = await supabase.from('projects').insert({
         ...payload,
         status: 'published',
       });
+      if (firstTry.error?.message?.toLowerCase().includes('minimum_investment')) {
+        firstTry = await supabase.from('projects').insert({
+          ...payloadWithoutMinimumInvestment,
+          status: 'published',
+        });
+      }
       opError = firstTry.error;
 
       if (opError?.message?.includes('invalid input value for enum project_status')) {
@@ -525,19 +562,7 @@ export default function PortfolioPage() {
   };
 
   if (rolSeleccionado !== 'emprendedor') {
-    return (
-      <PageFrame title="My investments" subtitle="Summary of your activity">
-        <div className="space-y-3">
-          {historial.length === 0 ? (
-            <InvestmentCard title="No activity yet" detail="Your activity will appear here." />
-          ) : (
-            historial.map((item, index) => (
-              <InvestmentCard key={`${item}-${index}`} title={`Activity ${index + 1}`} detail={item} />
-            ))
-          )}
-        </div>
-      </PageFrame>
-    );
+    return <InvestorPortfolioDashboard />;
   }
 
   const canCreateNewProject = myProjects.length === 0;
@@ -690,6 +715,12 @@ export default function PortfolioPage() {
                 onChange={(value) => onChangeForm('amountRequested', value)}
                 type="number"
                 placeholder="Requested amount"
+              />
+              <Input
+                value={form.minimumInvestment}
+                onChange={(value) => onChangeForm('minimumInvestment', value)}
+                type="number"
+                placeholder="Minimum investment"
               />
               <select
                 value={form.currency}

@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
+import InvestorWalletCard from '@/components/InvestorWalletCard';
+import {
+  formatNextRepaymentDate,
+  getInvestmentHealth,
+  getInvestmentHealthMeta,
+  getNextRepaymentDate,
+} from '@/lib/investor-overview';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
@@ -150,6 +157,7 @@ type ActiveInvestmentRow = {
   project_title: string | null;
   amount: number | null;
   interest_rate_ea: number | null;
+  term_months: number | null;
   projected_return_usdc: number | null;
   projected_total_usdc: number | null;
   status: 'submitted' | 'confirmed' | 'failed';
@@ -168,6 +176,8 @@ type RawActiveInvestmentRow = Omit<ActiveInvestmentRow, 'amount'> & {
 type ProjectFundingSummary = {
   id: string;
   title: string;
+  business_name: string | null;
+  owner_user_id: string | null;
   amount_requested: number | null;
   amount_received: number | null;
   currency: string | null;
@@ -177,6 +187,15 @@ type ProjectFundingSummary = {
 
 type HomeActiveInvestment = ActiveInvestmentRow & {
   project: ProjectFundingSummary | null;
+  ownerName: string;
+  nextRepaymentLabel: string;
+};
+
+type OwnerSummary = {
+  id: string;
+  name: string | null;
+  surname: string | null;
+  email: string | null;
 };
 
 const SUPABASE_URL =
@@ -331,12 +350,12 @@ export default function HomePage() {
         supabase
           .from('investments')
           .select(
-            `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,projected_return_usdc,projected_total_usdc,status`
+            `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
           )
           .eq('investor_user_id', user.id)
           .in('status', ['submitted', 'confirmed'])
           .order('created_at', { ascending: false })
-          .limit(4)
+          .limit(5)
       );
 
       if (error) {
@@ -360,7 +379,7 @@ export default function HomePage() {
       if (projectIds.length > 0) {
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
-          .select('id,title,amount_requested,amount_received,currency,photo_urls,interest_rate')
+          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate')
           .in('id', projectIds);
 
         if (projectsError) {
@@ -372,10 +391,42 @@ export default function HomePage() {
         }
       }
 
+      const ownerIds = Array.from(
+        new Set(
+          [...projectMap.values()].map((project) => project.owner_user_id).filter(Boolean)
+        )
+      ) as string[];
+      const ownerMap = new Map<string, OwnerSummary>();
+      if (ownerIds.length > 0) {
+        const { data: ownersData, error: ownersError } = await supabase
+          .from('users')
+          .select('id,name,surname,email')
+          .in('id', ownerIds);
+
+        if (ownersError) {
+          console.error('Error loading investment owners:', ownersError.message);
+        } else {
+          ((ownersData ?? []) as OwnerSummary[]).forEach((owner) => {
+            ownerMap.set(owner.id, owner);
+          });
+        }
+      }
+
       setActiveInvestments(
         investments.map((investment) => ({
           ...investment,
           project: projectMap.get(investment.project_id) ?? null,
+          ownerName: (() => {
+            const ownerId = projectMap.get(investment.project_id)?.owner_user_id;
+            const owner = ownerId ? ownerMap.get(ownerId) : undefined;
+            const fullName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
+            if (fullName) return fullName;
+            if (owner?.email) return owner.email.split('@')[0];
+            return 'Business owner';
+          })(),
+          nextRepaymentLabel: formatNextRepaymentDate(
+            getNextRepaymentDate(investment.created_at, investment.term_months)
+          ),
         }))
       );
       setLoadingActiveInvestments(false);
@@ -463,7 +514,7 @@ export default function HomePage() {
   const sectionActionLabel = rolSeleccionado === 'emprendedor' ? 'Edit' : 'View all';
   const sectionActionHref =
     rolSeleccionado === 'emprendedor' && lastProject ? `/portfolio?edit=${lastProject.id}` : '/portfolio';
-  const investorProjectedReturn = activeInvestments.reduce(
+  const investorEarnings = activeInvestments.reduce(
     (sum, investment) => sum + Number(investment.projected_return_usdc ?? 0),
     0
   );
@@ -475,12 +526,6 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
-  const investmentThemes = [
-    'bg-gradient-to-br from-[#6B39F4] via-[#5C6CFF] to-[#3290FF]',
-    'bg-gradient-to-br from-[#1F8BFF] via-[#00B8D9] to-[#34D399]',
-    'bg-gradient-to-br from-[#FF7A18] via-[#FF5E62] to-[#FF3D71]',
-    'bg-gradient-to-br from-[#0EA5A4] via-[#22C55E] to-[#84CC16]',
-  ];
 
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => setShowTopUpOptions(true) },
@@ -550,21 +595,30 @@ export default function HomePage() {
           </button>
         </div>
 
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
-          <span>
-            {rolSeleccionado === 'emprendedor'
-              ? `Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`
-              : `Active: ${activeInvestments.length}`}
-          </span>
-          <span className="text-[#40C4AA]/60">&middot;</span>
-          <span>
-            {rolSeleccionado === 'emprendedor'
-              ? `Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`
-              : investorProjectedReturn > 0
-                ? `Est. return: ${formatMoney(investorProjectedReturn, 'USD')}`
-                : `Avg. rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}
-          </span>
-        </div>
+        {rolSeleccionado === 'emprendedor' ? (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
+            <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
+            <span className="text-[#40C4AA]/60">&middot;</span>
+            <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
+              <p className="uppercase tracking-[0.18em] text-white/60">Active</p>
+              <p className="mt-2 text-sm text-white">{activeInvestments.length}</p>
+            </div>
+            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
+              <p className="uppercase tracking-[0.18em] text-white/60">Avg rate</p>
+              <p className="mt-2 text-sm text-white">
+                {investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/15 px-3 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(15,23,42,0.12)] backdrop-blur-md">
+              <p className="uppercase tracking-[0.18em] text-white/60">Earning</p>
+              <p className="mt-2 text-sm text-white">{formatMoney(investorEarnings, 'USD')}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mb-8 grid grid-cols-4 gap-4 text-center">
@@ -601,54 +655,51 @@ export default function HomePage() {
               Loading your active investments...
             </div>
           ) : activeInvestments.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {activeInvestments.map((investment, index) => {
-                const project = investment.project;
-                const progress = calculateFundingProgress(
-                  project?.amount_received ?? 0,
-                  project?.amount_requested ?? 0
-                );
-                const projectTitle = project?.title || investment.project_title || 'Project';
+            <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#818898]">
+                  Investment cards
+                </p>
+                <span className="text-xs text-[#818898]">Swipe to review</span>
+              </div>
+              <div className="overflow-x-auto pb-2">
+                <div className="flex min-w-max items-stretch pr-8">
+                  {activeInvestments.slice(0, 5).map((investment, index) => {
+                    const project = investment.project;
+                    const projectTitle =
+                      project?.business_name || project?.title || investment.project_title || 'Business';
+                    const tone = getInvestmentHealthMeta(
+                      getInvestmentHealth(
+                        getNextRepaymentDate(investment.created_at, investment.term_months)
+                      )
+                    );
 
-                return (
-                  <button
-                    key={investment.id}
-                    type="button"
-                    onClick={() => router.push(`/feed/${investment.project_id}`)}
-                    className={`aspect-[0.95] rounded-[20px] p-4 text-left text-white shadow-[0_12px_30px_rgba(15,23,42,0.16)] ${investmentThemes[index % investmentThemes.length]}`}
-                  >
-                    <div className="flex h-full flex-col justify-between">
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.2em] text-white/70">
-                          Active investment
-                        </p>
-                        <h3 className="mt-2 text-base font-semibold leading-tight">{projectTitle}</h3>
-                        <p className="mt-2 text-xs text-white/80">
-                          {formatMoney(investment.amount ?? 0, 'USD')} invested
-                        </p>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between text-[11px] text-white/80">
-                          <span>Raised</span>
-                          <span>{formatMoney(project?.amount_received ?? 0, project?.currency ?? 'USD')}</span>
-                        </div>
-                        <div className="mt-2 h-2 rounded-full bg-white/20">
-                          <div className="h-2 rounded-full bg-white" style={{ width: `${progress}%` }} />
-                        </div>
-                        <div className="mt-3 flex items-center justify-between text-[11px] text-white/80">
-                          <span>Rate</span>
-                          <span>{investment.interest_rate_ea ? `${investment.interest_rate_ea}% EA` : '--'}</span>
-                        </div>
-                        <div className="mt-1 flex items-center justify-between text-[11px] text-white/80">
-                          <span>Return</span>
-                          <span>{formatMoney(investment.projected_return_usdc ?? 0, 'USD')}</span>
+                    return (
+                      <div
+                        key={investment.id}
+                        className="relative shrink-0"
+                        style={{
+                          marginLeft: index === 0 ? 0 : -112,
+                          zIndex: activeInvestments.length - index,
+                        }}
+                      >
+                        <InvestorWalletCard
+                          businessName={projectTitle}
+                          thumbnailUrl={project?.photo_urls?.[0] ?? null}
+                          investmentId={investment.id}
+                          ownerName={investment.ownerName}
+                          nextRepayment={investment.nextRepaymentLabel}
+                          amountLabel={formatMoney(investment.amount ?? 0, 'USD')}
+                          onClick={() => router.push(`/feed/${investment.project_id}`)}
+                        />
+                        <div className="pointer-events-none absolute bottom-4 left-5 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+                          {tone.label}
                         </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">

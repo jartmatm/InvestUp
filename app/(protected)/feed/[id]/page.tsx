@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
+import {
+  getMinimumInvestmentValue,
+  runWithMinimumInvestmentFallback,
+} from '@/lib/supabase-minimum-investment';
 
 type ProjectDetail = {
   id: string;
@@ -17,6 +21,7 @@ type ProjectDetail = {
   sector: string | null;
   business_name: string | null;
   amount_requested: number | null;
+  minimum_investment: number | null;
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
@@ -114,14 +119,21 @@ export default function FeedDetailPage() {
       }
       setLoading(true);
       setStatus('');
-      const { data, error } = await supabase
-        .from('projects')
-        .select(
-          'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
-        )
-        .eq('id', projectId)
-        .in('status', ACTIVE_PROJECT_STATUSES)
-        .maybeSingle();
+      const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
+        const selectFields: string = includeMinimumInvestment
+          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
+          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet';
+
+        return supabase
+          .from('projects')
+          .select(selectFields)
+          .eq('id', projectId)
+          .in('status', ACTIVE_PROJECT_STATUSES)
+          .maybeSingle() as unknown as PromiseLike<{
+          data: ProjectDetail | null;
+          error: PostgrestError | null;
+        }>;
+      });
 
       if (error) {
         setStatus(`Could not load the listing: ${error.message}`);
@@ -132,6 +144,7 @@ export default function FeedDetailPage() {
       const normalizedProject = data
         ? ({
             ...(data as ProjectDetail),
+            minimum_investment: getMinimumInvestmentValue(data as Record<string, unknown>),
             photo_urls: normalizePhotos((data as ProjectDetail).photo_urls),
           } as ProjectDetail)
         : null;
@@ -216,6 +229,12 @@ export default function FeedDetailPage() {
               <p className="text-xs text-gray-500">EA rate</p>
               <p className="mt-1 text-sm font-semibold text-gray-900">
                 {project.interest_rate ? `${project.interest_rate}%` : '--'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <p className="text-xs text-gray-500">Minimum investment</p>
+              <p className="mt-1 text-sm font-semibold text-gray-900">
+                {formatAmount(project.minimum_investment, project.currency)}
               </p>
             </div>
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

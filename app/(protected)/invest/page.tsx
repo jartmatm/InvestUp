@@ -46,7 +46,7 @@ function TransferCard({ title, description, gradient, onClick }: TransferCardPro
 
 export default function InvestPage() {
   const router = useRouter();
-  const { faseApp } = useInvestApp();
+  const { faseApp, rolSeleccionado } = useInvestApp();
   const [hasPendingInvestment, setHasPendingInvestment] = useState(() => {
     if (typeof window === 'undefined') return false;
     return Boolean(getPendingInvestment());
@@ -99,10 +99,14 @@ export default function InvestPage() {
           onClick={() => router.push('/invest/wallet?mode=transfer')}
         />
         <TransferCard
-          title="Send repayment"
-          description="Review the investors of your business and launch a repayment with prefilled details."
+          title={rolSeleccionado === 'inversor' ? 'Invest' : 'Send repayment'}
+          description={
+            rolSeleccionado === 'inversor'
+              ? 'Open Ventures and pick a business to invest with a prefilled transfer flow.'
+              : 'Review the investors of your business and launch a repayment with prefilled details.'
+          }
           gradient="linear-gradient(135deg, #FFBE4C 0%, #F59E0B 100%)"
-          onClick={() => router.push('/invest/repayments')}
+          onClick={() => router.push(rolSeleccionado === 'inversor' ? '/feed' : '/invest/repayments')}
         />
       </div>
     </PageFrame>

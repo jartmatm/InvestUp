@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -11,6 +11,10 @@ import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
+import {
+  getMinimumInvestmentValue,
+  runWithMinimumInvestmentFallback,
+} from '@/lib/supabase-minimum-investment';
 
 type ProjectInvestmentDetail = {
   id: string;
@@ -19,6 +23,7 @@ type ProjectInvestmentDetail = {
   business_name: string | null;
   sector: string | null;
   amount_requested: number | null;
+  minimum_investment: number | null;
   currency: string | null;
   term_months: number | null;
   interest_rate: number | null;
@@ -116,14 +121,21 @@ export default function ProjectInvestPage() {
       setLoading(true);
       setStatus('');
 
-      const { data, error } = await supabase
-        .from('projects')
-        .select(
-          'id,title,description,business_name,sector,amount_requested,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
-        )
-        .eq('id', projectId)
-        .in('status', ACTIVE_PROJECT_STATUSES)
-        .maybeSingle();
+      const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
+        const selectFields: string = includeMinimumInvestment
+          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
+          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls';
+
+        return supabase
+          .from('projects')
+          .select(selectFields)
+          .eq('id', projectId)
+          .in('status', ACTIVE_PROJECT_STATUSES)
+          .maybeSingle() as unknown as PromiseLike<{
+          data: ProjectInvestmentDetail | null;
+          error: PostgrestError | null;
+        }>;
+      });
 
       if (error) {
         setStatus(`Could not load the project: ${error.message}`);
@@ -134,6 +146,7 @@ export default function ProjectInvestPage() {
       const normalizedProject = data
         ? ({
             ...(data as ProjectInvestmentDetail),
+            minimum_investment: getMinimumInvestmentValue(data as Record<string, unknown>),
             photo_urls: normalizePhotos((data as ProjectInvestmentDetail).photo_urls),
           } as ProjectInvestmentDetail)
         : null;
@@ -150,9 +163,9 @@ export default function ProjectInvestPage() {
         setOwner(null);
       }
 
-      const suggestedAmount = normalizedProject?.amount_requested
-        ? Math.max(1, Math.min(Number(normalizedProject.amount_requested), 100))
-        : 100;
+      const suggestedAmount = normalizedProject?.minimum_investment
+        ? Number(normalizedProject.minimum_investment)
+        : 50;
       setAmount(suggestedAmount.toFixed(2));
       setLoading(false);
     };
@@ -178,6 +191,7 @@ export default function ProjectInvestPage() {
   const safeInterestRate = Number(project?.interest_rate ?? 0);
   const safeTermMonths = Number(project?.term_months ?? 0);
   const currencyCode = project?.currency ?? 'USD';
+  const minimumInvestment = Number(project?.minimum_investment ?? 0);
   const projection = useMemo(
     () =>
       calculateInvestmentProjection({
@@ -198,7 +212,9 @@ export default function ProjectInvestPage() {
 
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
   const canContinue = Boolean(project && entrepreneurWallet && amountNumber > 0);
-  const quickAmounts = [50, 100, 250, 500];
+  const quickAmounts = Array.from(
+    new Set([minimumInvestment || 50, (minimumInvestment || 50) * 2, (minimumInvestment || 50) * 5, (minimumInvestment || 50) * 10])
+  ).slice(0, 4);
 
   const handleContinue = () => {
     if (!project) {
@@ -211,6 +227,10 @@ export default function ProjectInvestPage() {
     }
     if (!amountNumber || amountNumber <= 0) {
       setStatus('Enter a valid investment amount.');
+      return;
+    }
+    if (minimumInvestment > 0 && amountNumber < minimumInvestment) {
+      setStatus(`The minimum investment for this venture is ${minimumInvestment.toFixed(2)} USDC.`);
       return;
     }
 
@@ -287,6 +307,12 @@ export default function ProjectInvestPage() {
               <p className="text-xs text-gray-500">Entrepreneur wallet</p>
               <p className="mt-1 break-all text-sm font-medium text-gray-800">
                 {entrepreneurWallet || 'Configuration pending'}
+              </p>
+            </div>
+            <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/10 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-primary/70">Minimum investment</p>
+              <p className="mt-2 text-lg font-semibold text-gray-900">
+                {formatCurrency(minimumInvestment || 0, currencyCode)}
               </p>
             </div>
           </div>

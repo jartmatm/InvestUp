@@ -336,16 +336,28 @@ export default function FeedPage() {
                             ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
                             : 'Location pending'}
                         </p>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            router.push(`/feed/${project.id}`);
-                          }}
-                          className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary"
-                        >
-                          Details
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              router.push(`/feed/${project.id}`);
+                            }}
+                            className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-semibold text-primary"
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              router.push(`/feed/${project.id}/invest`);
+                            }}
+                            className="rounded-full border border-[#6B39F4]/20 bg-[#6B39F4] px-3 py-1 text-[10px] font-semibold text-white"
+                          >
+                            Invest
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -400,17 +412,29 @@ export default function FeedPage() {
                           </div>
                         </div>
 
-                        <div className="mt-5 flex items-center justify-between">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        router.push(`/feed/${project.id}`);
-                      }}
-                      className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
-                    >
-                      View details
-                    </button>
+                  <div className="mt-5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          router.push(`/feed/${project.id}`);
+                        }}
+                        className="rounded-full border border-white/30 bg-white/20 px-4 py-2 text-xs font-semibold text-white backdrop-blur-md"
+                      >
+                        View details
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          router.push(`/feed/${project.id}/invest`);
+                        }}
+                        className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-[#0F172A]"
+                      >
+                        Invest
+                      </button>
+                    </div>
                     <p className="text-xs text-white/70">Tap to flip back</p>
                   </div>
                 </div>
