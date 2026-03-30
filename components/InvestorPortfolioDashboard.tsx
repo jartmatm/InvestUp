@@ -242,13 +242,18 @@ export default function InvestorPortfolioDashboard() {
 
       const projectMap = new Map<string, ProjectRow>();
       if (projectIds.length > 0) {
+        const normalizedProjectIds = projectIds.map((projectId) => {
+          const numericValue = Number(projectId);
+          return Number.isFinite(numericValue) ? numericValue : projectId;
+        });
         const { data: projectsData } = await supabase
           .from('projects')
           .select('id,title,business_name,photo_urls,owner_user_id,interest_rate,term_months')
-          .in('id', projectIds);
+          .in('id', normalizedProjectIds);
         ((projectsData ?? []) as ProjectRow[]).forEach((project) => {
-          projectMap.set(project.id, {
+          projectMap.set(String(project.id), {
             ...project,
+            id: String(project.id),
             photo_urls: normalizePhotos(project.photo_urls),
           });
         });

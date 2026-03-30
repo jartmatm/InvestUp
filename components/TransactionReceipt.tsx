@@ -37,6 +37,14 @@ export default function TransactionReceipt() {
 
   if (!lastReceipt) return null;
 
+  const loadReceiptLogo = async () =>
+    await new Promise<HTMLImageElement | null>((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => resolve(null);
+      image.src = '/investapp-splash-logo.png';
+    });
+
   const createReceiptBlob = async (): Promise<Blob | null> => {
     const width = 1080;
     const height = 1600;
@@ -52,6 +60,10 @@ export default function TransactionReceipt() {
 
     ctx.fillStyle = '#4f46e5';
     ctx.fillRect(0, 0, width, 140);
+    const logoImage = await loadReceiptLogo();
+    if (logoImage) {
+      ctx.drawImage(logoImage, width - padding - 96, 22, 96, 96);
+    }
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 44px system-ui, -apple-system, Segoe UI, sans-serif';
     ctx.fillText('InvestApp', padding, 92);
@@ -198,7 +210,11 @@ export default function TransactionReceipt() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl">
         <div className="flex flex-col items-center text-center">
-          <img src="/logo.png" alt="InvestApp" className="h-20 w-20 rounded-2xl bg-white p-2" />
+          <img
+            src="/investapp-splash-logo.png"
+            alt="InvestApp"
+            className="h-20 w-20 rounded-2xl bg-white/95 p-2"
+          />
           <h2 className="mt-4 text-xl font-semibold">Payment Receipt</h2>
         </div>
 
@@ -253,25 +269,25 @@ export default function TransactionReceipt() {
         <div className="mt-6 grid grid-cols-4 gap-2">
           <button
             onClick={onDownload}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"
+            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
             Download
           </button>
           <button
             onClick={onPrint}
-            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-primary"
+            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
             Print
           </button>
           <button
             onClick={onShare}
-            className="rounded-full border border-white/50 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
             Share
           </button>
           <button
             onClick={clearReceipt}
-            className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
             Close
           </button>

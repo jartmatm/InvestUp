@@ -418,16 +418,21 @@ export default function HomePage() {
 
       const projectMap = new Map<string, ProjectFundingSummary>();
       if (projectIds.length > 0) {
+        const normalizedProjectIds = projectIds
+          .map((projectId) => {
+            const numericValue = Number(projectId);
+            return Number.isFinite(numericValue) ? numericValue : projectId;
+          });
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate,term_months')
-          .in('id', projectIds);
+          .in('id', normalizedProjectIds);
 
         if (projectsError) {
           console.error('Error loading invested projects:', projectsError.message);
         } else {
           ((projectsData ?? []) as ProjectFundingSummary[]).forEach((project) => {
-            projectMap.set(project.id, project);
+            projectMap.set(String(project.id), { ...project, id: String(project.id) });
           });
         }
       }
@@ -748,8 +753,8 @@ export default function HomePage() {
                 </p>
                 <span className="text-xs text-[#818898]">Swipe to review</span>
               </div>
-              <div className="overflow-x-auto pb-2">
-                <div className="flex min-w-max items-stretch pr-8">
+              <div className="overflow-hidden pb-2">
+                <div className="flex items-stretch pr-2">
                   {activeInvestments.slice(0, 5).map((investment, index) => {
                     const project = investment.project;
                     const projectTitle =
@@ -765,7 +770,7 @@ export default function HomePage() {
                         key={investment.id}
                         className="relative shrink-0"
                         style={{
-                          marginLeft: index === 0 ? 0 : -112,
+                          marginLeft: index === 0 ? 0 : -120,
                           zIndex: activeInvestments.length - index,
                         }}
                       >

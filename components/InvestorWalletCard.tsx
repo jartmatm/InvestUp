@@ -34,7 +34,7 @@ export default function InvestorWalletCard({
     <button
       type="button"
       onClick={onClick}
-      className="relative h-[190px] w-[300px] overflow-hidden rounded-[24px] p-5 text-left text-white shadow-[0_18px_38px_rgba(15,23,42,0.18)]"
+      className="relative h-[186px] w-[248px] overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_38px_rgba(15,23,42,0.18)]"
       style={{ backgroundImage: getInvestmentCardBackground(investmentId) }}
     >
       <div className="absolute inset-0 opacity-25">
@@ -45,11 +45,13 @@ export default function InvestorWalletCard({
 
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">Business</p>
-            <h3 className="mt-2 max-w-[10rem] text-lg font-semibold leading-tight">{businessName}</h3>
+            <h3 className="mt-2 max-w-[8.6rem] break-words text-[15px] font-semibold leading-[1.1]">
+              {businessName}
+            </h3>
           </div>
-          <div className="h-14 w-14 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
             {thumbnailUrl ? (
               <img src={thumbnailUrl} alt={businessName} className="h-full w-full object-cover" />
             ) : (
@@ -62,7 +64,7 @@ export default function InvestorWalletCard({
 
         <div className="relative">
           <p className="text-xs uppercase tracking-[0.18em] text-white/60">Investment ID</p>
-          <p className="mt-2 text-lg font-medium tracking-[0.28em] text-white/95">
+          <p className="mt-2 text-[15px] font-medium tracking-[0.22em] text-white/95">
             {formatInvestmentCardNumber(investmentId)}
           </p>
         </div>
@@ -70,15 +72,15 @@ export default function InvestorWalletCard({
         <div className="grid grid-cols-3 gap-4 text-white">
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-white/65">Owner</p>
-            <p className="mt-2 text-sm font-semibold leading-tight">{ownerName}</p>
+            <p className="mt-2 text-xs font-semibold leading-tight">{ownerName}</p>
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-white/65">Next repayment</p>
-            <p className="mt-2 text-sm font-semibold leading-tight">{nextRepayment}</p>
+            <p className="mt-2 text-xs font-semibold leading-tight">{nextRepayment}</p>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-[0.22em] text-white/65">Invested</p>
-            <p className="mt-2 text-sm font-semibold leading-tight">{amountLabel}</p>
+            <p className="mt-2 text-xs font-semibold leading-tight">{amountLabel}</p>
           </div>
         </div>
       </div>

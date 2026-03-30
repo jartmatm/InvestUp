@@ -147,7 +147,10 @@ export default function RepaymentsPage() {
         .select('id,title,business_name,interest_rate,term_months')
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
       const projectMap = new Map(
-        ((projectData ?? []) as ProjectRow[]).map((project) => [String(project.id), project])
+        ((projectData ?? []) as ProjectRow[]).map((project) => [
+          String(project.id),
+          { ...project, id: String(project.id) },
+        ])
       );
       const ownedProjectIds = Array.from(projectMap.keys());
 
