@@ -229,7 +229,12 @@ export default function ProfilePage() {
   }, [faseApp, router]);
 
   return (
-    <PageFrame title="Profile" subtitle="Account settings" topSlot={avatarNode}>
+    <PageFrame
+      title="Profile"
+      subtitle="Account settings"
+      topSlot={avatarNode}
+      headerAlign="center"
+    >
       <div className="space-y-6">
         <Section title="Account">
           <SettingItem icon={<IconPersonalData />} label="Personal Data" onClick={() => router.push('/profile/personal-data')} />
@@ -250,7 +255,7 @@ export default function ProfilePage() {
         </Section>
 
         <Section title="Preferences">
-          <SettingItem icon={<IconSettings />} label="Settings" />
+          <SettingItem icon={<IconSettings />} label="Settings" onClick={() => router.push('/profile/settings')} />
           <SettingItem icon={<IconLanguage />} label="Language" value={languageLabel} onClick={() => router.push('/profile/language')} />
           <SettingItem icon={<IconHelpCenter />} label="Help Center" onClick={() => router.push('/profile/help-center')} />
           <SettingItem icon={<IconFaq />} label="FAQ" onClick={() => router.push('/profile/faq')} />

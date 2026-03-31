@@ -17,11 +17,18 @@ const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
-const generateReferralCode = () => {
+const getReferralStorageKey = (userId: string) => `investapp_referral_code_${userId}`;
+
+const generateStableReferralCode = (seed: string) => {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'INV-';
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
   for (let i = 0; i < 8; i += 1) {
-    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+    hash = (hash * 1664525 + 1013904223) >>> 0;
+    code += alphabet[hash % alphabet.length];
   }
   return code;
 };
@@ -95,7 +102,24 @@ export default function ReferralCodePage() {
       setAvailableColumns(cols);
 
       const existingCode = (data?.referral_code as string | null) ?? '';
-      setReferralCode(existingCode || generateReferralCode());
+      const cachedCode =
+        typeof window !== 'undefined'
+          ? window.localStorage.getItem(getReferralStorageKey(user.id)) ?? ''
+          : '';
+      const stableCode = existingCode || cachedCode || generateStableReferralCode(user.id);
+
+      setReferralCode(stableCode);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(getReferralStorageKey(user.id), stableCode);
+      }
+
+      if (!existingCode && cols.has('referral_code')) {
+        await supabase
+          .from('users')
+          .upsert({ id: user.id, referral_code: stableCode }, { onConflict: 'id' });
+      }
+
       setLoadingProfile(false);
     };
 
@@ -117,6 +141,10 @@ export default function ReferralCodePage() {
       setStatus(`Could not save to Supabase: ${error.message}`);
       setSaving(false);
       return;
+    }
+
+    if (typeof window !== 'undefined' && user?.id) {
+      window.localStorage.setItem(getReferralStorageKey(user.id), referralCode);
     }
 
     setStatus('Referral code saved successfully.');

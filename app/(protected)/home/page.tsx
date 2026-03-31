@@ -764,14 +764,11 @@ export default function HomePage() {
             </div>
           ) : activeInvestments.length > 0 ? (
             <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#818898]">
-                  Investment cards
-                </p>
+              <div className="mb-3 flex justify-end">
                 <span className="text-xs text-[#818898]">Swipe to review</span>
               </div>
-              <div className="overflow-hidden pb-2">
-                <div className="flex items-stretch pr-2">
+              <div className="flex justify-center overflow-hidden pb-2">
+                <div className="flex items-stretch px-3">
                   {activeInvestments.slice(0, 5).map((investment, index) => {
                     const project = investment.project;
                     const projectTitle =
@@ -785,18 +782,25 @@ export default function HomePage() {
                       investment.created_at,
                       investment.term_months
                     );
+                    const statusClassName =
+                      tone.label === 'Up to date'
+                        ? 'border-[#40C4AA]/35 text-[#1A8E78]'
+                        : tone.label === 'Due soon'
+                          ? 'border-[#FFBE4C]/35 text-[#C77C00]'
+                          : 'border-[#DF1C41]/25 text-[#DF1C41]';
 
                     return (
                       <div
                         key={investment.id}
                         className="relative shrink-0"
                         style={{
-                          marginLeft: index === 0 ? 0 : -132,
+                          marginLeft: index === 0 ? 0 : -148,
                           zIndex: activeInvestments.length - index,
                         }}
                       >
                         <InvestorWalletCard
                           statusLabel={tone.label}
+                          statusClassName={statusClassName}
                           businessName={projectTitle}
                           thumbnailUrl={project?.photo_urls?.[0] ?? null}
                           investmentId={investment.id}

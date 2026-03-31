@@ -51,6 +51,76 @@ body {
   background-attachment: fixed;
 }
 
+body.investapp-dark {
+  color: #eef2ff;
+  background-color: #08111f;
+  background-image:
+    radial-gradient(circle at top, rgba(107, 57, 244, 0.18) 0%, rgba(8, 17, 31, 0) 34%),
+    linear-gradient(180deg, #08111f 0%, #0b1628 45%, #08111f 100%);
+}
+
+body.investapp-dark .bg-white\/20,
+body.investapp-dark .bg-white\/25,
+body.investapp-dark .bg-white\/30,
+body.investapp-dark .bg-white\/55,
+body.investapp-dark .bg-white\/80,
+body.investapp-dark .bg-white {
+  background-color: rgba(10, 20, 34, 0.72) !important;
+}
+
+body.investapp-dark .border-white\/20,
+body.investapp-dark .border-white\/25,
+body.investapp-dark .border-white\/30,
+body.investapp-dark .border-slate-200,
+body.investapp-dark .border-slate-100,
+body.investapp-dark .border-gray-200 {
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+body.investapp-dark .bg-slate-100,
+body.investapp-dark .bg-slate-200\/80,
+body.investapp-dark .bg-gray-200 {
+  background-color: rgba(51, 65, 85, 0.38) !important;
+}
+
+body.investapp-dark .text-gray-900,
+body.investapp-dark .text-gray-800,
+body.investapp-dark .text-slate-900,
+body.investapp-dark .text-slate-700,
+body.investapp-dark .text-purple-700,
+body.investapp-dark .text-\[\#0F172A\],
+body.investapp-dark .text-\[\#1A1B25\] {
+  color: #eef2ff !important;
+}
+
+body.investapp-dark .text-gray-600,
+body.investapp-dark .text-gray-500,
+body.investapp-dark .text-gray-400,
+body.investapp-dark .text-slate-500,
+body.investapp-dark .text-slate-400,
+body.investapp-dark .text-\[\#818898\] {
+  color: #94a3b8 !important;
+}
+
+body.investapp-dark input,
+body.investapp-dark select,
+body.investapp-dark textarea {
+  color: #eef2ff !important;
+  background-color: rgba(8, 15, 27, 0.76) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+body.investapp-dark input::placeholder,
+body.investapp-dark textarea::placeholder {
+  color: #7f8ea3 !important;
+}
+
+body.investapp-dark .glass-card {
+  background: rgba(10, 20, 34, 0.68);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 42px rgba(2, 6, 23, 0.42);
+}
+
 h1,
 h2,
 h3,

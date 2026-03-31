@@ -351,25 +351,18 @@ export default function PersonalDataPage() {
           <Field label="ID">
             <Input value={form.id} readOnly placeholder="ID" />
           </Field>
-          <Field label="Email">
-            <Input
-              value={form.email}
-              onChange={(value) => updateForm('email', value)}
-              readOnly={!canEditEmail}
-              placeholder="Email"
-            />
-          </Field>
           <Field label="First name">
             <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
           </Field>
           <Field label="Last name">
             <Input value={form.surname} onChange={(value) => updateForm('surname', value)} placeholder="Surname" />
           </Field>
-          <Field label="Phone">
+          <Field label="Email">
             <Input
-              value={form.phone_number}
-              onChange={(value) => updateForm('phone_number', value)}
-              placeholder="Phone number"
+              value={form.email}
+              onChange={(value) => updateForm('email', value)}
+              readOnly={!canEditEmail}
+              placeholder="Email"
             />
           </Field>
           <Field label="Gender">
@@ -384,9 +377,6 @@ export default function PersonalDataPage() {
               <option value="prefer no say">Prefer not to say</option>
             </select>
           </Field>
-          <Field label="Address">
-            <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
-          </Field>
           <Field label="Country">
             <select
               value={form.country}
@@ -400,6 +390,16 @@ export default function PersonalDataPage() {
                 </option>
               ))}
             </select>
+          </Field>
+          <Field label="Address">
+            <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
+          </Field>
+          <Field label="Phone">
+            <Input
+              value={form.phone_number}
+              onChange={(value) => updateForm('phone_number', value)}
+              placeholder="Phone number"
+            />
           </Field>
           <Field label="Role">
             <select

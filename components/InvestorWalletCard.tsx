@@ -5,6 +5,7 @@ import {
 
 type InvestorWalletCardProps = {
   statusLabel: string;
+  statusClassName: string;
   businessName: string;
   thumbnailUrl?: string | null;
   investmentId: string;
@@ -24,6 +25,7 @@ const initialsFrom = (value: string) =>
 
 export default function InvestorWalletCard({
   statusLabel,
+  statusClassName,
   businessName,
   thumbnailUrl,
   investmentId,
@@ -36,7 +38,7 @@ export default function InvestorWalletCard({
     <button
       type="button"
       onClick={onClick}
-      className="relative h-[186px] w-[272px] overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_38px_rgba(15,23,42,0.18)]"
+      className="relative h-[186px] w-[300px] overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_38px_rgba(15,23,42,0.18)]"
       style={{ backgroundImage: getInvestmentCardBackground(investmentId) }}
     >
       <div className="absolute inset-0 opacity-25">
@@ -48,14 +50,18 @@ export default function InvestorWalletCard({
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <span className="inline-flex rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+            <span
+              className={`inline-flex rounded-full border bg-white/90 px-2 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] shadow-[0_8px_16px_rgba(15,23,42,0.18)] ${statusClassName}`}
+            >
               {statusLabel}
             </span>
-            <h3 className="mt-3 max-w-[9.8rem] break-words text-[15px] font-semibold leading-[1.1]">
+            <h3 className="mt-3 max-w-[11.4rem] break-words text-[15px] font-semibold leading-[1.1]">
               {businessName}
             </h3>
           </div>
-          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
+          <div className="relative h-12 w-12 shrink-0">
+            <div className="absolute inset-[-8px] rounded-full bg-white/35 blur-xl" />
+            <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
             {thumbnailUrl ? (
               <img src={thumbnailUrl} alt={businessName} className="h-full w-full object-cover" />
             ) : (
@@ -63,6 +69,7 @@ export default function InvestorWalletCard({
                 {initialsFrom(businessName)}
               </div>
             )}
+            </div>
           </div>
         </div>
 
