@@ -748,7 +748,11 @@ export default function PortfolioPage() {
             </div>
 
             <div className="pt-2 text-center">
-              <Button className="mx-auto max-w-xs bg-primary text-white" onClick={publishProject} disabled={savingProject}>
+              <Button
+                className="mx-auto max-w-xs !rounded-full !bg-[#6B39F4] !text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] hover:!bg-[#5B31CF]"
+                onClick={publishProject}
+                disabled={savingProject}
+              >
                 {savingProject
                   ? editingProjectId
                     ? 'Saving...'

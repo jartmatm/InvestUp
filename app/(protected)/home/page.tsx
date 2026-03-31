@@ -263,6 +263,23 @@ const formatTransactionDate = (value: string) => {
   });
 };
 
+const formatInvestmentCardDate = (value: Date | null) => {
+  if (!value || Number.isNaN(value.getTime())) return '--/--/--';
+  return value.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+  });
+};
+
+const formatInvestmentCardAmount = (amount: number | null) => {
+  if (amount == null) return '0.00 USD';
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount) + ' USD';
+};
+
 export default function HomePage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -764,28 +781,30 @@ export default function HomePage() {
                         getNextRepaymentDate(investment.created_at, investment.term_months)
                       )
                     );
+                    const nextRepaymentDate = getNextRepaymentDate(
+                      investment.created_at,
+                      investment.term_months
+                    );
 
                     return (
                       <div
                         key={investment.id}
                         className="relative shrink-0"
                         style={{
-                          marginLeft: index === 0 ? 0 : -120,
+                          marginLeft: index === 0 ? 0 : -132,
                           zIndex: activeInvestments.length - index,
                         }}
                       >
                         <InvestorWalletCard
+                          statusLabel={tone.label}
                           businessName={projectTitle}
                           thumbnailUrl={project?.photo_urls?.[0] ?? null}
                           investmentId={investment.id}
                           ownerName={investment.ownerName}
-                          nextRepayment={investment.nextRepaymentLabel}
-                          amountLabel={formatMoney(investment.amount ?? 0, 'USD')}
+                          nextRepayment={formatInvestmentCardDate(nextRepaymentDate)}
+                          amountLabel={formatInvestmentCardAmount(investment.amount ?? 0)}
                           onClick={() => router.push(`/feed/${investment.project_id}`)}
                         />
-                        <div className="pointer-events-none absolute bottom-4 left-5 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
-                          {tone.label}
-                        </div>
                       </div>
                     );
                   })}
