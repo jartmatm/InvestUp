@@ -425,8 +425,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         let storedTransaction: StoredTransaction | null = null;
         const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null;
         const transactionSchema = await getTransactionSchema();
-        const persistedStatus =
-          transactionSchema === 'legacy' ? status : status === 'completed' ? 'confirmed' : status;
+        const persistedStatus = status === 'completed' ? 'confirmed' : status;
         const insertResult =
           transactionSchema === 'legacy'
             ? await runWithAmountColumnFallback((amountColumn) => {
