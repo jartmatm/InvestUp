@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
+import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -164,6 +165,13 @@ export default function FeedPage() {
 
   useEffect(() => {
     const loadFeed = async () => {
+      if (rolSeleccionado === 'emprendedor') {
+        setProjects([]);
+        setLoading(false);
+        setStatus('');
+        return;
+      }
+
       setLoading(true);
       setStatus('');
       const { data, error } = await supabase
@@ -189,7 +197,7 @@ export default function FeedPage() {
     };
 
     loadFeed();
-  }, [supabase]);
+  }, [rolSeleccionado, supabase]);
 
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(
@@ -224,6 +232,10 @@ export default function FeedPage() {
       return next;
     });
   };
+
+  if (rolSeleccionado === 'emprendedor') {
+    return <EntrepreneurFeedDashboard />;
+  }
 
   return (
     <PageFrame title="Ventures" subtitle="Projects published by entrepreneurs">
@@ -283,20 +295,11 @@ export default function FeedPage() {
           const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
           const progress = calculateProgress(project.amount_received, project.amount_requested);
           const isOwnProject = Boolean(user?.id && project.owner_user_id && project.owner_user_id === user.id);
-          const isEntrepreneurView = rolSeleccionado === 'emprendedor';
-          const backActionLabel = isEntrepreneurView
-            ? isOwnProject
-              ? 'Edit'
-              : 'Details'
-            : 'Invest';
+          const backActionLabel = isOwnProject ? 'Edit' : 'Invest';
           const handleBackAction = (event: React.MouseEvent<HTMLButtonElement>) => {
             event.stopPropagation();
-            if (isEntrepreneurView) {
-              if (isOwnProject) {
-                router.push(`/portfolio?edit=${project.id}`);
-                return;
-              }
-              router.push(`/feed/${project.id}`);
+            if (isOwnProject) {
+              router.push(`/portfolio?edit=${project.id}`);
               return;
             }
             router.push(`/feed/${project.id}/invest`);
