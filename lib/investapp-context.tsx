@@ -64,6 +64,7 @@ type ReceiptData = {
 
 type StoredTransaction = {
   id: string;
+  uuid?: string | null;
   created_at: string;
   movement_type?: MovementType;
   type?: MovementType;
@@ -81,7 +82,7 @@ type RegisterTransactionArgs = {
   toWallet: string;
   amountUsdc: string;
   movementType: MovementType;
-  status?: 'submitted' | 'confirmed' | 'failed';
+  status?: 'submitted' | 'confirmed' | 'completed' | 'failed';
   metadata?: Record<string, unknown>;
   receiverName?: string;
 };
@@ -97,6 +98,7 @@ type RegisterInvestmentArgs = {
 type RegisterRepaymentArgs = {
   txHash: string;
   transactionId?: string | null;
+  transactionUuid?: string | null;
   amountUsdc: string;
   toWallet: string;
   projectId?: string | null;
@@ -266,6 +268,50 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
+const getReceiptStatus = (status: string | null | undefined) => {
+  const normalized = String(status ?? '').toLowerCase();
+  if (
+    normalized === 'completed' ||
+    normalized === 'confirmed' ||
+    normalized === 'approved' ||
+    normalized === 'success'
+  ) {
+    return 'completed';
+  }
+  if (normalized === 'failed' || normalized === 'rejected') return 'failed';
+  if (normalized === 'pending') return 'pending';
+  if (normalized === 'submitted') return 'submitted';
+  return status ?? 'completed';
+};
+
+const asTextId = (value: string | number | null | undefined) => {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text.length > 0 ? text : null;
+};
+
+const asNumericId = (value: string | number | null | undefined) => {
+  if (value == null) return null;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : null;
+};
+
+const buildUniqueIdCandidates = (
+  ...values: Array<string | number | null | undefined>
+): Array<string | number | null> => {
+  const seen = new Set<string>();
+  const result: Array<string | number | null> = [];
+
+  values.forEach((value) => {
+    const key = value == null ? '__null__' : `${typeof value}:${String(value)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(value ?? null);
+  });
+
+  return result;
+};
+
 export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
   const { fundWallet } = useFundWallet();
@@ -379,6 +425,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         let storedTransaction: StoredTransaction | null = null;
         const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null;
         const transactionSchema = await getTransactionSchema();
+        const persistedStatus =
+          transactionSchema === 'legacy' ? status : status === 'completed' ? 'confirmed' : status;
         const insertResult =
           transactionSchema === 'legacy'
             ? await runWithAmountColumnFallback((amountColumn) => {
@@ -390,7 +438,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                     uuid: legacyIds.uuid,
                     user_id: user.id,
                     type: movementType,
-                    status,
+                    status: persistedStatus,
                     currency: 'USDC',
                     tx_hash: txHash,
                     meta: {
@@ -403,7 +451,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                     },
                     [amountColumn]: normalizedAmountValue,
                   })
-                  .select(`id,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
+                  .select(`id,uuid,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
                   .maybeSingle();
               })
             : await runWithAmountColumnFallback((amountColumn) =>
@@ -413,7 +461,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                     user_id: user.id,
                     role: mapRoleToDB(rolSeleccionado),
                     movement_type: movementType,
-                    status,
+                    status: persistedStatus,
                     chain: 'polygon',
                     tx_hash: txHash,
                     from_wallet: smartWalletAddress,
@@ -439,7 +487,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
               ? await runWithAmountColumnFallback((amountColumn) =>
                   supabase
                     .from('transactions')
-                    .select(`id,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
+                    .select(`id,uuid,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
                     .eq('tx_hash', txHash)
                     .maybeSingle()
                 )
@@ -473,11 +521,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             : null;
 
         setLastReceipt({
-          uuid: String(storedTransaction?.id ?? txHash ?? ''),
+          uuid: String(storedTransaction?.uuid ?? storedTransaction?.id ?? txHash ?? ''),
           type: (storedTransaction?.movement_type ?? storedTransaction?.type ?? movementType) as MovementType,
           amount: Number.isFinite(normalizedAmount) ? normalizedAmount.toFixed(2) : amountUsdc,
           currency: 'USDC',
-          status: String(storedTransaction?.status ?? status),
+          status: getReceiptStatus(String(storedTransaction?.status ?? persistedStatus)),
           txHash: String(storedTransaction?.tx_hash ?? txHash),
           createdAt: String(storedTransaction?.created_at ?? new Date().toISOString()),
           senderName,
@@ -551,7 +599,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                     investor_id: user.id,
                     project_id: legacyProjectId,
                     transaction_id: legacyTransactionId,
-                    status: 'submitted',
+                    status: 'confirmed',
                     [amountColumn]: normalizedAmountValue,
                   })
                   .select('id')
@@ -573,7 +621,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                     term_months: Number(pendingInvestment.termMonths ?? 0),
                     projected_return_usdc: projection.projectedReturnUsdc,
                     projected_total_usdc: projection.projectedTotalUsdc,
-                    status: 'submitted',
+                    status: 'confirmed',
                     metadata: {
                       app: 'investapp-web',
                       currency: pendingInvestment.currency,
@@ -598,7 +646,15 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const registrarRepayment = useCallback(
-    async ({ txHash, transactionId, amountUsdc, toWallet, projectId, investorUserId }: RegisterRepaymentArgs) => {
+    async ({
+      txHash,
+      transactionId,
+      transactionUuid,
+      amountUsdc,
+      toWallet,
+      projectId,
+      investorUserId,
+    }: RegisterRepaymentArgs) => {
       if (!user?.id || !smartWalletAddress) return false;
 
       try {
@@ -610,35 +666,66 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         );
 
         const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
-        const { error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('repayments')
-            .insert({
-              transaction_id: transactionId ?? null,
-              project_id: projectId ? Number(projectId) : null,
-              entrepreneur_user_id: user.id,
-              investor_user_id: investorUserId ?? receiver?.id ?? null,
-              tx_hash: txHash,
-              from_wallet: smartWalletAddress,
-              to_wallet: toWallet,
-              [amountColumn]: normalizedAmountValue,
-              status: 'submitted',
-              metadata: {
-                app: 'investapp-web',
-                currency: 'USDC',
-                receiver_email: receiver?.email ?? null,
-                created_from: 'direct-repayment-flow',
-              },
-            })
-            .select('id')
-            .maybeSingle()
+        const transactionIdCandidates = buildUniqueIdCandidates(
+          asTextId(transactionUuid),
+          asTextId(transactionId),
+          null
+        );
+        const projectIdCandidates = buildUniqueIdCandidates(
+          asTextId(projectId),
+          asNumericId(projectId),
+          null
         );
 
-        if (error && !error.message?.toLowerCase().includes('duplicate')) {
-          throw error;
+        let saved = false;
+        let lastError: unknown = null;
+
+        for (const projectCandidate of projectIdCandidates) {
+          for (const transactionCandidate of transactionIdCandidates) {
+            const { error } = await runWithAmountColumnFallback((amountColumn) => {
+              const payload: Record<string, unknown> = {
+                entrepreneur_user_id: user.id,
+                investor_user_id: investorUserId ?? receiver?.id ?? null,
+                tx_hash: txHash,
+                from_wallet: smartWalletAddress,
+                to_wallet: toWallet,
+                [amountColumn]: normalizedAmountValue,
+                status: 'confirmed',
+                metadata: {
+                  app: 'investapp-web',
+                  currency: 'USDC',
+                  receiver_email: receiver?.email ?? null,
+                  created_from: 'direct-repayment-flow',
+                },
+              };
+
+              if (projectCandidate !== null) {
+                payload.project_id = projectCandidate;
+              }
+              if (transactionCandidate !== null) {
+                payload.transaction_id = transactionCandidate;
+              }
+
+              return supabase.from('repayments').insert(payload).select('id').maybeSingle();
+            });
+
+            if (!error || error.message?.toLowerCase().includes('duplicate')) {
+              saved = true;
+              lastError = null;
+              break;
+            }
+
+            lastError = error;
+          }
+
+          if (saved) break;
         }
 
-        return !error;
+        if (!saved && lastError) {
+          throw lastError;
+        }
+
+        return saved;
       } catch (error: any) {
         console.error('Error saving repayment to Supabase:', error?.message ?? error);
         return false;
@@ -906,7 +993,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           type: movementType,
           amount: Number(enviadoFmt).toFixed(2),
           currency: 'USDC',
-          status: 'submitted',
+          status: 'completed',
           txHash,
           createdAt: new Date().toISOString(),
           senderName: userAlias || user?.email?.address || 'Sender',
@@ -922,6 +1009,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           toWallet: destino,
           amountUsdc: enviadoFmt,
           movementType,
+          status: 'completed',
           receiverName: pendingInvestment?.entrepreneurName,
           metadata: pendingInvestment
             ? {
@@ -965,6 +1053,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           await registrarRepayment({
             txHash,
             transactionId: transactionRow?.id ?? null,
+            transactionUuid: transactionRow?.uuid ?? null,
             amountUsdc: enviadoFmt,
             toWallet: destino,
             projectId: options?.projectId ?? null,

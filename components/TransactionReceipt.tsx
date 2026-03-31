@@ -5,8 +5,10 @@ import { useInvestApp } from '@/lib/investapp-context';
 
 const mapStatus = (status: string) => {
   const key = status.toLowerCase();
-  if (key === 'confirmed' || key === 'success' || key === 'approved') return 'Approved';
-  if (key === 'failed' || key === 'rejected') return 'Rejected';
+  if (key === 'completed' || key === 'confirmed' || key === 'success' || key === 'approved') {
+    return 'Completed';
+  }
+  if (key === 'failed' || key === 'rejected') return 'Failed';
   if (key === 'pending') return 'Pending';
   if (key === 'submitted') return 'Submitted';
   return status;

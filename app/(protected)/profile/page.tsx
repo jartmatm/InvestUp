@@ -39,12 +39,28 @@ function IconSocialMedia() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-5 w-5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
+      strokeLinecap="round"
     >
-      <path d="M12 21s-6.7-4.3-9.2-7.6C1 11.5 1.2 8.4 3.4 6.7c2-1.6 4.9-1.2 6.6.8l2 2.3 2-2.3c1.7-2 4.6-2.4 6.6-.8 2.2 1.7 2.4 4.8.6 6.7C18.7 16.7 12 21 12 21z" />
+      <path d="M10 14.0433C10.9925 14.1485 11.9657 14.4023 12.8866 14.7978L15.2122 15.7965C16.5319 16.3633 18 15.3933 18 13.9545V7.00629C18 5.56749 16.5319 4.59743 15.2122 5.1642L12.8866 6.16292C11.6418 6.6975 10.3017 6.97314 8.94742 6.97314H6.5C4.567 6.97314 3 8.54338 3 10.4804C3 12.4174 4.567 13.9876 6.5 13.9876H7M10 14.0433C9.65105 14.0063 9.29971 13.9876 8.94742 13.9876H7M10 14.0433V18.9979C10 19.5514 9.55228 20 9 20H8.84713C8.35829 20 7.9411 19.6459 7.86073 19.1627L7 13.9876M10 9.5V11.5M21 8V13" />
+    </svg>
+  );
+}
+
+function IconFavorites() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    >
+      <path d="M6.50828 6.44612C8.26182 4.9003 10.5957 5.3544 11.9952 7.04253C13.3948 5.3544 15.6984 4.91656 17.4821 6.44612C19.2658 7.97568 19.4825 10.5765 18.1055 12.4047C17.048 13.8086 14.0116 16.6506 12.659 17.8942C12.2819 18.2409 11.7085 18.2409 11.3314 17.8942C9.9788 16.6506 6.94238 13.8086 5.88494 12.4047C4.50788 10.5765 4.75475 7.99194 6.50828 6.44612Z" />
     </svg>
   );
 }
@@ -189,7 +205,7 @@ function SettingItem({ label, value, danger, onClick, icon }: SettingItemProps) 
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { faseApp, logoutApp } = useInvestApp();
+  const { faseApp, logoutApp, rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const languageLabel = 'English (US)';
   const safeName = displayName || 'User';
@@ -224,6 +240,13 @@ export default function ProfilePage() {
         <Section title="Transactions">
           <SettingItem icon={<IconPaymentMethod />} label="Payment Method" />
           <SettingItem icon={<IconBankAccount />} label="Bank Account" />
+          {rolSeleccionado === 'inversor' ? (
+            <SettingItem
+              icon={<IconFavorites />}
+              label="Favorites"
+              onClick={() => router.push('/profile/favorites')}
+            />
+          ) : null}
         </Section>
 
         <Section title="Preferences">

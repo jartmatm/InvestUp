@@ -70,6 +70,7 @@ export const isMissingColumnError = (error: PostgrestError | null, columns: stri
 
 const normalizeLedgerStatus = (value: string | null | undefined): 'submitted' | 'confirmed' | 'failed' => {
   if (value === 'confirmed') return 'confirmed';
+  if (value === 'completed') return 'confirmed';
   if (value === 'failed') return 'failed';
   return 'submitted';
 };
