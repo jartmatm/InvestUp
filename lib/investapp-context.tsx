@@ -675,46 +675,53 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           asNumericId(projectId),
           null
         );
+        const repaymentStatusCandidates = ['paid', 'pending', null] as const;
 
         let saved = false;
         let lastError: unknown = null;
 
-        for (const projectCandidate of projectIdCandidates) {
-          for (const transactionCandidate of transactionIdCandidates) {
-            const { error } = await runWithAmountColumnFallback((amountColumn) => {
-              const payload: Record<string, unknown> = {
-                entrepreneur_user_id: user.id,
-                investor_user_id: investorUserId ?? receiver?.id ?? null,
-                tx_hash: txHash,
-                from_wallet: smartWalletAddress,
-                to_wallet: toWallet,
-                [amountColumn]: normalizedAmountValue,
-                status: 'confirmed',
-                metadata: {
-                  app: 'investapp-web',
-                  currency: 'USDC',
-                  receiver_email: receiver?.email ?? null,
-                  created_from: 'direct-repayment-flow',
-                },
-              };
+        for (const repaymentStatus of repaymentStatusCandidates) {
+          for (const projectCandidate of projectIdCandidates) {
+            for (const transactionCandidate of transactionIdCandidates) {
+              const { error } = await runWithAmountColumnFallback((amountColumn) => {
+                const payload: Record<string, unknown> = {
+                  entrepreneur_user_id: user.id,
+                  investor_user_id: investorUserId ?? receiver?.id ?? null,
+                  tx_hash: txHash,
+                  from_wallet: smartWalletAddress,
+                  to_wallet: toWallet,
+                  [amountColumn]: normalizedAmountValue,
+                  metadata: {
+                    app: 'investapp-web',
+                    currency: 'USDC',
+                    receiver_email: receiver?.email ?? null,
+                    created_from: 'direct-repayment-flow',
+                  },
+                };
 
-              if (projectCandidate !== null) {
-                payload.project_id = projectCandidate;
+                if (repaymentStatus !== null) {
+                  payload.status = repaymentStatus;
+                }
+                if (projectCandidate !== null) {
+                  payload.project_id = projectCandidate;
+                }
+                if (transactionCandidate !== null) {
+                  payload.transaction_id = transactionCandidate;
+                }
+
+                return supabase.from('repayments').insert(payload).select('id').maybeSingle();
+              });
+
+              if (!error || error.message?.toLowerCase().includes('duplicate')) {
+                saved = true;
+                lastError = null;
+                break;
               }
-              if (transactionCandidate !== null) {
-                payload.transaction_id = transactionCandidate;
-              }
 
-              return supabase.from('repayments').insert(payload).select('id').maybeSingle();
-            });
-
-            if (!error || error.message?.toLowerCase().includes('duplicate')) {
-              saved = true;
-              lastError = null;
-              break;
+              lastError = error;
             }
 
-            lastError = error;
+            if (saved) break;
           }
 
           if (saved) break;
