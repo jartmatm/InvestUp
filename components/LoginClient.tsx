@@ -10,7 +10,7 @@ export default function LoginClient() {
 
   useEffect(() => {
     if (ready && authenticated) {
-      router.replace('/home');
+      router.replace('/onboarding');
     }
   }, [authenticated, ready, router]);
 

@@ -1,71 +1,220 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/Button';
 import { useInvestApp } from '@/lib/investapp-context';
+
+const ONBOARDING_SLIDES = [
+  '/onboarding/onboarding-1.png',
+  '/onboarding/onboarding-2.png',
+  '/onboarding/onboarding-3.png',
+  '/onboarding/onboarding-4.png',
+  '/onboarding/onboarding-5.png',
+] as const;
+
+const SWIPE_THRESHOLD = 48;
+
+type OnboardingStage = 'slides' | 'profile';
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { faseApp, guardarRol, rolSeleccionado } = useInvestApp();
   const [rol, setRol] = useState<'inversor' | 'emprendedor' | null>(rolSeleccionado);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [stage, setStage] = useState<OnboardingStage>('slides');
+  const touchStartX = useRef<number | null>(null);
+  const touchCurrentX = useRef<number | null>(null);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'dashboard') router.replace('/home');
   }, [faseApp, router]);
 
+  useEffect(() => {
+    setRol(rolSeleccionado);
+  }, [rolSeleccionado]);
+
+  if (faseApp !== 'onboarding') {
+    return <main className="min-h-screen bg-transparent" />;
+  }
+
+  const goToNext = () => {
+    setCurrentSlide((previous) => {
+      if (previous >= ONBOARDING_SLIDES.length - 1) {
+        setStage('profile');
+        return previous;
+      }
+
+      return previous + 1;
+    });
+  };
+
+  const goToPrevious = () => {
+    setCurrentSlide((previous) => Math.max(0, previous - 1));
+  };
+
+  const skipSlides = () => {
+    setStage('profile');
+  };
+
+  const handleTouchStart = (clientX: number) => {
+    touchStartX.current = clientX;
+    touchCurrentX.current = clientX;
+  };
+
+  const handleTouchMove = (clientX: number) => {
+    touchCurrentX.current = clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current === null || touchCurrentX.current === null) {
+      touchStartX.current = null;
+      touchCurrentX.current = null;
+      return;
+    }
+
+    const deltaX = touchCurrentX.current - touchStartX.current;
+
+    if (deltaX <= -SWIPE_THRESHOLD) {
+      goToNext();
+    } else if (deltaX >= SWIPE_THRESHOLD) {
+      goToPrevious();
+    }
+
+    touchStartX.current = null;
+    touchCurrentX.current = null;
+  };
+
+  if (stage === 'profile') {
+    return (
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-transparent px-5 py-8 text-gray-900">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/assets/fondo_home.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-white/35 backdrop-blur-[3px]" />
+
+        <section className="relative mx-auto w-full max-w-xl rounded-[30px] border border-white/35 bg-white/75 p-6 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#6B39F4] to-[#9A7CFF] text-lg font-semibold text-white shadow-[0_14px_36px_rgba(107,57,244,0.28)]">
+            IA
+          </div>
+
+          <div className="text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#6B39F4]/70">
+              Welcome
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
+              Choose your profile
+            </h1>
+            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
+              We will tailor your experience depending on whether you want to invest in ventures or
+              grow your own business.
+            </p>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              onClick={() => setRol('inversor')}
+              className={`rounded-[24px] border px-5 py-5 text-left transition ${
+                rol === 'inversor'
+                  ? 'border-[#6B39F4]/35 bg-[#6B39F4]/10 text-[#6B39F4] shadow-[0_14px_28px_rgba(107,57,244,0.12)]'
+                  : 'border-slate-200/80 bg-white/80 text-slate-700 hover:bg-white'
+              }`}
+            >
+              <p className="text-base font-semibold">Investor</p>
+              <p className={`mt-1 text-sm ${rol === 'inversor' ? 'text-[#6B39F4]/80' : 'text-slate-500'}`}>
+                Explore businesses and invest with confidence.
+              </p>
+            </button>
+
+            <button
+              onClick={() => setRol('emprendedor')}
+              className={`rounded-[24px] border px-5 py-5 text-left transition ${
+                rol === 'emprendedor'
+                  ? 'border-[#40C4AA]/35 bg-[#40C4AA]/12 text-[#1C9A82] shadow-[0_14px_28px_rgba(64,196,170,0.12)]'
+                  : 'border-slate-200/80 bg-white/80 text-slate-700 hover:bg-white'
+              }`}
+            >
+              <p className="text-base font-semibold">Entrepreneur</p>
+              <p
+                className={`mt-1 text-sm ${rol === 'emprendedor' ? 'text-[#1C9A82]/80' : 'text-slate-500'}`}
+              >
+                Publish your business and connect with investors.
+              </p>
+            </button>
+          </div>
+
+          <label className="mt-6 flex items-start gap-3 rounded-2xl border border-white/55 bg-white/70 px-4 py-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={acceptsTerms}
+              onChange={(event) => setAcceptsTerms(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#6B39F4]"
+            />
+            <span>I accept the terms and conditions.</span>
+          </label>
+
+          <div className="mt-6 space-y-3">
+            <Button
+              disabled={!rol || !acceptsTerms}
+              onClick={async () => {
+                if (!rol) return;
+                await guardarRol(rol);
+              }}
+            >
+              Continue
+            </Button>
+
+            <button
+              type="button"
+              onClick={() => setStage('slides')}
+              className="w-full text-center text-sm font-medium text-slate-500 transition hover:text-slate-700"
+            >
+              Back to onboarding
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-transparent px-5 py-8 text-gray-900">
-      <section className="mx-auto w-full max-w-xl rounded-2xl border border-white/25 bg-white/20 p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        <h1 className="text-2xl font-semibold tracking-tight">Basic information</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Choose your profile. You can change it later.
-        </p>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setRol('inversor')}
-            className={`rounded-lg border p-4 text-left transition ${rol === 'inversor' ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
-          >
-            <p className="text-sm font-semibold">Investor</p>
-            <p className={`text-xs ${rol === 'inversor' ? 'text-primary/80' : 'text-gray-500'}`}>
-              Invest in ventures
-            </p>
-          </button>
-          <button
-            onClick={() => setRol('emprendedor')}
-            className={`rounded-lg border p-4 text-left transition ${rol === 'emprendedor' ? 'border-primary bg-primary/10 text-primary shadow-sm' : 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
-          >
-            <p className="text-sm font-semibold">Entrepreneur</p>
-            <p className={`text-xs ${rol === 'emprendedor' ? 'text-primary/80' : 'text-gray-500'}`}>
-              Send payments to investors
-            </p>
-          </button>
-        </div>
-
-        <label className="mt-5 flex items-center gap-2 text-sm text-gray-600">
-          <input
-            type="checkbox"
-            checked={acceptsTerms}
-            onChange={(event) => setAcceptsTerms(event.target.checked)}
+    <main className="flex min-h-screen items-center justify-center bg-[#F7F8FF] px-3 py-4">
+      <div
+        className="relative w-full max-w-[410px] touch-pan-y select-none"
+        onTouchStart={(event) => handleTouchStart(event.touches[0]?.clientX ?? 0)}
+        onTouchMove={(event) => handleTouchMove(event.touches[0]?.clientX ?? 0)}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="relative mx-auto aspect-[271/588] w-full overflow-hidden rounded-[32px] shadow-[0_20px_60px_rgba(122,90,248,0.16)]">
+          <Image
+            key={ONBOARDING_SLIDES[currentSlide]}
+            src={ONBOARDING_SLIDES[currentSlide]}
+            alt={`Onboarding slide ${currentSlide + 1}`}
+            fill
+            priority
+            sizes="(max-width: 480px) 100vw, 410px"
+            className="bg-[#F7F8FF] object-contain object-center"
           />
-          I accept the terms and conditions
-        </label>
 
-        <div className="mt-6">
-          <Button
-            disabled={!rol || !acceptsTerms}
-            onClick={async () => {
-              if (!rol) return;
-              await guardarRol(rol);
-            }}
-          >
-            Continue
-          </Button>
+          <button
+            type="button"
+            aria-label="Skip onboarding"
+            onClick={skipSlides}
+            className="absolute right-[4.5%] top-[2.2%] h-[8.8%] w-[22%] rounded-full bg-transparent"
+          />
+
+          <button
+            type="button"
+            aria-label={currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Finish onboarding' : 'Next slide'}
+            onClick={goToNext}
+            className="absolute bottom-[4.1%] left-1/2 h-[9%] w-[76%] -translate-x-1/2 rounded-full bg-transparent"
+          />
         </div>
-      </section>
+      </div>
     </main>
   );
 }
