@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '@/components/Button';
 import { useInvestApp } from '@/lib/investapp-context';
 
 const ONBOARDING_SLIDES = [
@@ -154,19 +153,32 @@ export default function OnboardingPage() {
               onChange={(event) => setAcceptsTerms(event.target.checked)}
               className="mt-0.5 h-4 w-4 accent-[#6B39F4]"
             />
-            <span>I accept the terms and conditions.</span>
+            <span>
+              I accept the{' '}
+              <a
+                href="https://www.investappgroup.com"
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-[#6B39F4] underline decoration-[#6B39F4]/40 underline-offset-2"
+              >
+                terms and conditions
+              </a>
+              .
+            </span>
           </label>
 
           <div className="mt-6 space-y-3">
-            <Button
+            <button
+              type="button"
               disabled={!rol || !acceptsTerms}
+              className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(107,57,244,0.22)] transition hover:bg-[#5c2ff0] disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
               onClick={async () => {
                 if (!rol) return;
                 await guardarRol(rol);
               }}
             >
               Continue
-            </Button>
+            </button>
 
             <button
               type="button"
