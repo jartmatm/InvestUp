@@ -7,6 +7,7 @@
   amountUsdc: string;
   interestRateEa: number;
   termMonths: number;
+  installmentCount: number;
   projectedReturnUsdc: string;
   projectedTotalUsdc: string;
   currency: string;

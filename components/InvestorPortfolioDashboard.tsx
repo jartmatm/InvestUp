@@ -41,6 +41,7 @@ type ProjectRow = {
   owner_user_id: string | null;
   interest_rate: number | null;
   term_months: number | null;
+  installment_count: number | null;
 };
 
 type OwnerRow = {
@@ -248,7 +249,7 @@ export default function InvestorPortfolioDashboard() {
         });
         const { data: projectsData } = await supabase
           .from('projects')
-          .select('id,title,business_name,photo_urls,owner_user_id,interest_rate,term_months')
+          .select('id,title,business_name,photo_urls,owner_user_id,interest_rate,term_months,installment_count')
           .in('id', normalizedProjectIds);
         ((projectsData ?? []) as ProjectRow[]).forEach((project) => {
           projectMap.set(String(project.id), {
@@ -276,9 +277,10 @@ export default function InvestorPortfolioDashboard() {
       setItems(
         investments.map((investment) => {
           const project = projectMap.get(investment.project_id);
+          const repaymentInstallments = investment.term_months ?? project?.installment_count ?? project?.term_months ?? 0;
           const nextRepaymentDate = getNextRepaymentDate(
             investment.created_at,
-            investment.term_months ?? project?.term_months ?? 0
+            repaymentInstallments
           );
           const projection =
             investment.projected_return_usdc != null
@@ -290,7 +292,7 @@ export default function InvestorPortfolioDashboard() {
                   interestRateEa: Number(
                     investment.interest_rate_ea ?? project?.interest_rate ?? 0
                   ),
-                  termMonths: Number(investment.term_months ?? project?.term_months ?? 0),
+                  termMonths: Number(repaymentInstallments),
                 });
           return {
             id: investment.id,

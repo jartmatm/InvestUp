@@ -5,8 +5,13 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import PaymentScheduleTable from '@/components/PaymentScheduleTable';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
+import {
+  normalizePaymentScheduleRow,
+  type PaymentScheduleRow,
+} from '@/lib/payment-schedule';
 import {
   detectInvestmentsSchema,
   loadLegacyInvestmentsForProjects,
@@ -23,6 +28,7 @@ type EntrepreneurProjectRow = {
   currency: string | null;
   interest_rate: number | null;
   term_months: number | null;
+  installment_count: number | null;
   publication_end_date: string | null;
   status: string | null;
 };
@@ -62,6 +68,15 @@ type SummaryItem = {
   nextDueLabel: string;
   installmentAmount: number;
   healthTone: ReturnType<typeof getInvestmentHealthMeta>;
+};
+
+type PaymentScheduleGroup = {
+  creditId: string;
+  investorUserId: string | null;
+  investorName: string;
+  investorAvatarUrl: string | null;
+  investorCountry: string | null;
+  rows: PaymentScheduleRow[];
 };
 
 const SUPABASE_URL =
@@ -224,6 +239,7 @@ export default function EntrepreneurFeedDashboard() {
   const { user, getAccessToken } = usePrivy();
   const [project, setProject] = useState<EntrepreneurProjectRow | null>(null);
   const [summaryItems, setSummaryItems] = useState<SummaryItem[]>([]);
+  const [scheduleGroups, setScheduleGroups] = useState<PaymentScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
@@ -260,6 +276,7 @@ export default function EntrepreneurFeedDashboard() {
       if (!user?.id) {
         setProject(null);
         setSummaryItems([]);
+        setScheduleGroups([]);
         setLoading(false);
         return;
       }
@@ -270,7 +287,7 @@ export default function EntrepreneurFeedDashboard() {
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select(
-          'id,title,business_name,amount_requested,amount_received,currency,interest_rate,term_months,publication_end_date,status'
+          'id,title,business_name,amount_requested,amount_received,currency,interest_rate,term_months,installment_count,publication_end_date,status'
         )
         .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
@@ -281,6 +298,7 @@ export default function EntrepreneurFeedDashboard() {
         setStatus('Could not load your venture dashboard right now.');
         setProject(null);
         setSummaryItems([]);
+        setScheduleGroups([]);
         setLoading(false);
         return;
       }
@@ -290,11 +308,15 @@ export default function EntrepreneurFeedDashboard() {
 
       if (!currentProject) {
         setSummaryItems([]);
+        setScheduleGroups([]);
         setLoading(false);
         return;
       }
 
       const projectId = String(currentProject.id);
+      const scheduleInstallments = Number(
+        currentProject.installment_count ?? currentProject.term_months ?? 1
+      );
       const investmentSchema = await detectInvestmentsSchema(supabase);
       let investments: InvestmentRow[] = [];
 
@@ -322,11 +344,11 @@ export default function EntrepreneurFeedDashboard() {
             amount: item.amount,
             amount_usdc: item.amount,
             interest_rate_ea: Number(currentProject.interest_rate ?? 0),
-            term_months: Number(currentProject.term_months ?? 0),
+            term_months: scheduleInstallments,
             projected_total_usdc: calculateInvestmentProjection({
               amountUsdc: Number(item.amount ?? 0),
               interestRateEa: Number(currentProject.interest_rate ?? 0),
-              termMonths: Number(currentProject.term_months ?? 0),
+              termMonths: scheduleInstallments,
             }).projectedTotalUsdc,
             status: item.status,
           }));
@@ -373,23 +395,93 @@ export default function EntrepreneurFeedDashboard() {
         });
       }
 
+      const nextScheduleByInvestor = new Map<string, PaymentScheduleRow>();
+      let groupedSchedules: PaymentScheduleGroup[] = [];
+      const normalizedScheduleProjectId = Number.isFinite(Number(projectId))
+        ? Number(projectId)
+        : projectId;
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('payment_schedule')
+        .select(
+          'id,credit_id,investment_id,project_id,investor_user_id,entrepreneur_user_id,installment_number,installment_count,due_date,fixed_payment,interest_percent,principal_amount,remaining_balance,paid_amount,status,tx_hash'
+        )
+        .eq('project_id', normalizedScheduleProjectId)
+        .order('installment_number', { ascending: true });
+
+      if (
+        scheduleError &&
+        !scheduleError.message.toLowerCase().includes('payment_schedule') &&
+        !scheduleError.message.toLowerCase().includes('schema cache')
+      ) {
+        setStatus('Could not load your payment schedule right now.');
+      }
+
+      if (!scheduleError && scheduleData) {
+        const normalizedRows = (scheduleData as Record<string, unknown>[]).map(
+          normalizePaymentScheduleRow
+        );
+
+        const rowsByCredit = new Map<string, PaymentScheduleRow[]>();
+        normalizedRows.forEach((row) => {
+          if (!rowsByCredit.has(row.credit_id)) {
+            rowsByCredit.set(row.credit_id, []);
+          }
+          rowsByCredit.get(row.credit_id)?.push(row);
+
+          if (row.investor_user_id && row.status !== 'paid') {
+            const current = nextScheduleByInvestor.get(row.investor_user_id);
+            const currentTime = current?.due_date ? new Date(current.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+            const rowTime = row.due_date ? new Date(row.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+            if (!current || rowTime < currentTime) {
+              nextScheduleByInvestor.set(row.investor_user_id, row);
+            }
+          }
+        });
+
+        groupedSchedules = Array.from(rowsByCredit.entries())
+          .map(([creditId, rows]) => {
+            const investorUserId = rows[0]?.investor_user_id ?? null;
+            const investor = investorUserId ? profileMap.get(investorUserId) : undefined;
+            return {
+              creditId,
+              investorUserId,
+              investorName: nameFrom(investor),
+              investorAvatarUrl: investor?.avatar_url ?? null,
+              investorCountry: investor?.country ?? null,
+              rows,
+            };
+          })
+          .sort((a, b) => {
+            const left = a.rows[0]?.due_date ? new Date(a.rows[0].due_date ?? '').getTime() : Number.MAX_SAFE_INTEGER;
+            const right = b.rows[0]?.due_date ? new Date(b.rows[0].due_date ?? '').getTime() : Number.MAX_SAFE_INTEGER;
+            return left - right;
+          });
+      }
+
       const items = investments
         .filter((investment) => Boolean(investment.from_wallet))
         .map((investment) => {
           const investor = investment.investor_user_id
             ? profileMap.get(investment.investor_user_id)
             : undefined;
+          const scheduleSnapshot = investment.investor_user_id
+            ? nextScheduleByInvestor.get(investment.investor_user_id)
+            : undefined;
           const totalRepayment =
             Number(investment.projected_total_usdc ?? 0) ||
             calculateInvestmentProjection({
               amountUsdc: Number(investment.amount ?? 0),
               interestRateEa: Number(investment.interest_rate_ea ?? currentProject.interest_rate ?? 0),
-              termMonths: Number(investment.term_months ?? currentProject.term_months ?? 0),
+              termMonths: Number(
+                investment.term_months ?? currentProject.installment_count ?? currentProject.term_months ?? 0
+              ),
             }).projectedTotalUsdc;
-          const nextDueDate = getNextInstallmentDate(
-            investment.created_at,
-            investment.term_months ?? currentProject.term_months
-          );
+          const nextDueDate = scheduleSnapshot?.due_date
+            ? new Date(scheduleSnapshot.due_date)
+            : getNextInstallmentDate(
+                investment.created_at,
+                investment.term_months ?? currentProject.installment_count ?? currentProject.term_months
+              );
           const health = getInvestmentHealth(nextDueDate);
 
           return {
@@ -401,10 +493,12 @@ export default function EntrepreneurFeedDashboard() {
             walletAddress: investor?.wallet_address ?? investment.from_wallet ?? '',
             nextDueDate,
             nextDueLabel: formatDate(nextDueDate),
-            installmentAmount: getInstallmentAmount(
-              totalRepayment,
-              investment.term_months ?? currentProject.term_months
-            ),
+            installmentAmount:
+              scheduleSnapshot?.fixed_payment ??
+              getInstallmentAmount(
+                totalRepayment,
+                investment.term_months ?? currentProject.installment_count ?? currentProject.term_months
+              ),
             healthTone: getInvestmentHealthMeta(health),
           };
         })
@@ -415,6 +509,7 @@ export default function EntrepreneurFeedDashboard() {
         });
 
       setSummaryItems(items);
+      setScheduleGroups(groupedSchedules);
       setLoading(false);
     };
 
@@ -569,6 +664,56 @@ export default function EntrepreneurFeedDashboard() {
                         </button>
                       </div>
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Payment schedule</h3>
+              <p className="text-sm text-slate-500">
+                Review the amortization plan for every investor and track each installment.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {scheduleGroups.length === 0 ? (
+                <div className="rounded-[22px] border border-white/20 bg-white/20 p-4 text-sm text-slate-500">
+                  The amortization table will appear here once an investment is registered and the payment
+                  schedule migration is active in Supabase.
+                </div>
+              ) : (
+                scheduleGroups.map((group) => (
+                  <div
+                    key={group.creditId}
+                    className="rounded-[24px] border border-white/25 bg-white/30 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+                  >
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20">
+                        {group.investorAvatarUrl ? (
+                          <img
+                            src={group.investorAvatarUrl}
+                            alt={group.investorName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-primary">
+                            {initialsFrom(group.investorName)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{group.investorName}</p>
+                        <p className="truncate text-xs text-slate-500">
+                          {group.investorCountry || 'Country pending'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <PaymentScheduleTable rows={group.rows} currency={currency} />
                   </div>
                 ))
               )}

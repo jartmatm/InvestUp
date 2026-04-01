@@ -46,6 +46,7 @@ type ProjectRow = {
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
+  installment_count: number | null;
   interest_rate: number | null;
   publication_end_date: string | null;
   photo_urls: string[] | null;
@@ -69,6 +70,7 @@ type PublishForm = {
   minimumInvestment: string;
   currency: string;
   publicationEndDate: string;
+  installmentCount: string;
   interestRateEa: string;
 };
 
@@ -125,6 +127,7 @@ const emptyForm: PublishForm = {
   minimumInvestment: '',
   currency: 'USD',
   publicationEndDate: '',
+  installmentCount: '3',
   interestRateEa: '',
 };
 
@@ -248,8 +251,8 @@ export default function PortfolioPage() {
     setLoadingProjects(true);
     const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
       const selectFields: string = includeMinimumInvestment
-        ? 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,minimum_investment,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at'
-        : 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,interest_rate,publication_end_date,photo_urls,video_url,created_at';
+        ? 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,publication_end_date,photo_urls,video_url,created_at'
+        : 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,publication_end_date,photo_urls,video_url,created_at';
 
       return supabase
         .from('projects')
@@ -360,6 +363,7 @@ export default function PortfolioPage() {
       minimumInvestment: String(project.minimum_investment ?? ''),
       currency: project.currency ?? 'USD',
       publicationEndDate: project.publication_end_date ?? '',
+      installmentCount: String(project.installment_count ?? project.term_months ?? 1),
       interestRateEa: String(project.interest_rate ?? ''),
     });
     setProjectPhotos(project.photo_urls ?? []);
@@ -449,6 +453,7 @@ export default function PortfolioPage() {
       ['minimumInvestment', form.minimumInvestment],
       ['currency', form.currency],
       ['publicationEndDate', form.publicationEndDate],
+      ['installmentCount', form.installmentCount],
       ['interestRateEa', form.interestRateEa],
     ];
     const missing = required.find((entry) => !entry[1].trim());
@@ -467,8 +472,13 @@ export default function PortfolioPage() {
 
     const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
     const termMonths = calculateTermMonths(form.publicationEndDate);
+    const installmentCount = Math.max(1, Number(form.installmentCount));
     if (termMonths <= 0) {
       setStatus('The publication end date must be later than today.');
+      return;
+    }
+    if (!Number.isFinite(installmentCount) || installmentCount <= 0) {
+      setStatus('Installments must be greater than 0.');
       return;
     }
 
@@ -501,6 +511,7 @@ export default function PortfolioPage() {
       amount_received: nextAmountReceived,
       currency: form.currency,
       term_months: termMonths,
+      installment_count: installmentCount,
       publication_end_date: form.publicationEndDate,
       interest_rate: Number(form.interestRateEa),
       status: nextStatus,
@@ -705,7 +716,7 @@ export default function PortfolioPage() {
               <p className="mt-1 text-right text-xs text-slate-500">{form.description.length}/2500</p>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <Input
                 value={form.publicationEndDate}
                 onChange={(value) => onChangeForm('publicationEndDate', value)}
@@ -723,6 +734,12 @@ export default function PortfolioPage() {
                 onChange={(value) => onChangeForm('minimumInvestment', value)}
                 type="number"
                 placeholder="Minimum investment"
+              />
+              <Input
+                value={form.installmentCount}
+                onChange={(value) => onChangeForm('installmentCount', value)}
+                type="number"
+                placeholder="Installments"
               />
               <select
                 value={form.currency}

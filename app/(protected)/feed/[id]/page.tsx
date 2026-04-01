@@ -5,8 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import PaymentScheduleTable from '@/components/PaymentScheduleTable';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
+import {
+  normalizePaymentScheduleRow,
+  type PaymentScheduleRow,
+} from '@/lib/payment-schedule';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import {
@@ -25,6 +30,7 @@ type ProjectDetail = {
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
+  installment_count: number | null;
   interest_rate: number | null;
   city: string | null;
   country: string | null;
@@ -33,6 +39,11 @@ type ProjectDetail = {
   video_url: string | null;
   owner_user_id: string | null;
   owner_wallet: string | null;
+};
+
+type PaymentScheduleGroup = {
+  creditId: string;
+  rows: PaymentScheduleRow[];
 };
 
 const SUPABASE_URL =
@@ -77,6 +88,8 @@ export default function FeedDetailPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
+  const [scheduleGroups, setScheduleGroups] = useState<PaymentScheduleGroup[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
 
@@ -125,8 +138,8 @@ export default function FeedDetailPage() {
       setStatus('');
       const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
         const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
-          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet';
+          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
+          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet';
 
         return supabase
           .from('projects')
@@ -158,6 +171,57 @@ export default function FeedDetailPage() {
 
     loadProject();
   }, [projectId, supabase]);
+
+  useEffect(() => {
+    const loadPaymentSchedule = async () => {
+      if (!projectId || !user?.id || rolSeleccionado !== 'inversor') {
+        setScheduleGroups([]);
+        setScheduleLoading(false);
+        return;
+      }
+
+      setScheduleLoading(true);
+      const normalizedProjectId = Number.isFinite(Number(projectId)) ? Number(projectId) : projectId;
+      const { data, error } = await supabase
+        .from('payment_schedule')
+        .select(
+          'id,credit_id,investment_id,project_id,investor_user_id,entrepreneur_user_id,installment_number,installment_count,due_date,fixed_payment,interest_percent,principal_amount,remaining_balance,paid_amount,status,tx_hash'
+        )
+        .eq('project_id', normalizedProjectId)
+        .eq('investor_user_id', user.id)
+        .order('installment_number', { ascending: true });
+
+      if (error) {
+        const errorText = error.message.toLowerCase();
+        if (!errorText.includes('payment_schedule') && !errorText.includes('schema cache')) {
+          setStatus((previous) => previous || 'Could not load the payment schedule for this venture.');
+        }
+        setScheduleGroups([]);
+        setScheduleLoading(false);
+        return;
+      }
+
+      const normalizedRows = ((data ?? []) as Record<string, unknown>[]).map(normalizePaymentScheduleRow);
+      const rowsByCredit = new Map<string, PaymentScheduleRow[]>();
+
+      normalizedRows.forEach((row) => {
+        if (!rowsByCredit.has(row.credit_id)) {
+          rowsByCredit.set(row.credit_id, []);
+        }
+        rowsByCredit.get(row.credit_id)?.push(row);
+      });
+
+      setScheduleGroups(
+        Array.from(rowsByCredit.entries()).map(([creditId, rows]) => ({
+          creditId,
+          rows,
+        }))
+      );
+      setScheduleLoading(false);
+    };
+
+    void loadPaymentSchedule();
+  }, [projectId, rolSeleccionado, supabase, user?.id]);
 
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
   const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
@@ -333,6 +397,43 @@ export default function FeedDetailPage() {
           >
             {isEntrepreneurView ? 'Share' : 'Invest in this venture'}
           </button>
+
+          {!isEntrepreneurView ? (
+            <section className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900">Payment schedule</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Full amortization plan for your investment in this venture.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                {scheduleLoading ? (
+                  <p className="text-sm text-gray-500">Loading payment schedule...</p>
+                ) : scheduleGroups.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Your payment schedule will appear here once your investment is confirmed.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {scheduleGroups.map((group, index) => (
+                      <div
+                        key={group.creditId}
+                        className="rounded-2xl border border-white/20 bg-white/25 p-3"
+                      >
+                        {scheduleGroups.length > 1 ? (
+                          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">
+                            Credit {String(index + 1).padStart(2, '0')}
+                          </p>
+                        ) : null}
+                        <PaymentScheduleTable rows={group.rows} currency={project.currency ?? 'USD'} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : null}
         </div>
       ) : null}
 

@@ -191,6 +191,7 @@ type ProjectFundingSummary = {
   photo_urls: string[] | null;
   interest_rate: number | null;
   term_months: number | null;
+  installment_count: number | null;
 };
 
 type HomeActiveInvestment = ActiveInvestmentRow & {
@@ -442,7 +443,7 @@ export default function HomePage() {
           });
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
-          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate,term_months')
+          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate,term_months,installment_count')
           .in('id', normalizedProjectIds);
 
         if (projectsError) {
@@ -480,6 +481,8 @@ export default function HomePage() {
           ...investment,
           ...(() => {
             const project = projectMap.get(investment.project_id) ?? null;
+            const repaymentInstallments =
+              investment.term_months ?? project?.installment_count ?? project?.term_months ?? 0;
             const projection =
               investment.projected_return_usdc != null && investment.projected_total_usdc != null
                 ? {
@@ -491,14 +494,14 @@ export default function HomePage() {
                     interestRateEa: Number(
                       investment.interest_rate_ea ?? project?.interest_rate ?? 0
                     ),
-                    termMonths: Number(investment.term_months ?? project?.term_months ?? 0),
+                    termMonths: Number(repaymentInstallments),
                   });
 
             return {
               projected_return_usdc: projection.projectedReturnUsdc,
               projected_total_usdc: projection.projectedTotalUsdc,
               interest_rate_ea: investment.interest_rate_ea ?? project?.interest_rate ?? null,
-              term_months: investment.term_months ?? project?.term_months ?? null,
+              term_months: repaymentInstallments || null,
               };
           })(),
           project: projectMap.get(investment.project_id) ?? null,
@@ -511,7 +514,12 @@ export default function HomePage() {
             return 'Business owner';
           })(),
           nextRepaymentLabel: formatNextRepaymentDate(
-            getNextRepaymentDate(investment.created_at, investment.term_months)
+            getNextRepaymentDate(
+              investment.created_at,
+              investment.term_months ??
+                projectMap.get(investment.project_id)?.installment_count ??
+                projectMap.get(investment.project_id)?.term_months
+            )
           ),
         }))
       );

@@ -26,6 +26,7 @@ type ProjectInvestmentDetail = {
   minimum_investment: number | null;
   currency: string | null;
   term_months: number | null;
+  installment_count: number | null;
   interest_rate: number | null;
   owner_user_id: string | null;
   owner_wallet: string | null;
@@ -125,8 +126,8 @@ export default function ProjectInvestPage() {
 
       const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
         const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
-          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls';
+          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,installment_count,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
+          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,installment_count,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls';
 
         return supabase
           .from('projects')
@@ -191,7 +192,7 @@ export default function ProjectInvestPage() {
 
   const amountNumber = Number(amount || 0);
   const safeInterestRate = Number(project?.interest_rate ?? 0);
-  const safeTermMonths = Number(project?.term_months ?? 0);
+  const safeInstallmentCount = Number(project?.installment_count ?? project?.term_months ?? 0);
   const currencyCode = project?.currency ?? 'USD';
   const minimumInvestment = Number(project?.minimum_investment ?? 0);
   const projection = useMemo(
@@ -199,9 +200,9 @@ export default function ProjectInvestPage() {
       calculateInvestmentProjection({
         amountUsdc: Number.isFinite(amountNumber) ? amountNumber : 0,
         interestRateEa: safeInterestRate,
-        termMonths: safeTermMonths,
+        termMonths: safeInstallmentCount,
       }),
-    [amountNumber, safeInterestRate, safeTermMonths]
+    [amountNumber, safeInterestRate, safeInstallmentCount]
   );
 
   const entrepreneurName = (() => {
@@ -244,7 +245,8 @@ export default function ProjectInvestPage() {
       entrepreneurWallet,
       amountUsdc: amountNumber.toFixed(2),
       interestRateEa: safeInterestRate,
-      termMonths: safeTermMonths,
+      termMonths: safeInstallmentCount,
+      installmentCount: safeInstallmentCount,
       projectedReturnUsdc: projection.projectedReturnUsdc.toFixed(2),
       projectedTotalUsdc: projection.projectedTotalUsdc.toFixed(2),
       currency: 'USDC',
@@ -370,8 +372,10 @@ export default function ProjectInvestPage() {
               <p className="mt-2 text-lg font-semibold text-gray-900">{safeInterestRate}%</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Term</p>
-              <p className="mt-2 text-lg font-semibold text-gray-900">{safeTermMonths || 0} months</p>
+              <p className="text-xs text-gray-500">Installments</p>
+              <p className="mt-2 text-lg font-semibold text-gray-900">
+                {safeInstallmentCount || 0} months
+              </p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
               <p className="text-xs text-gray-500">Effective yield</p>
