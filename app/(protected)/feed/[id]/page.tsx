@@ -5,12 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
-import PaymentScheduleTable from '@/components/PaymentScheduleTable';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
-  normalizePaymentScheduleRow,
-  type PaymentScheduleRow,
+  getPaymentScheduleStatusMeta,
+  normalizePaymentScheduleRecord,
 } from '@/lib/payment-schedule';
 import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
@@ -43,7 +42,9 @@ type ProjectDetail = {
 
 type PaymentScheduleGroup = {
   creditId: string;
-  rows: PaymentScheduleRow[];
+  nextDueDate: string | null;
+  installmentCount: number;
+  status: string | null;
 };
 
 const SUPABASE_URL =
@@ -185,11 +186,11 @@ export default function FeedDetailPage() {
       const { data, error } = await supabase
         .from('payment_schedule')
         .select(
-          'id,credit_id,investment_id,project_id,investor_user_id,entrepreneur_user_id,installment_number,installment_count,due_date,fixed_payment,interest_percent,principal_amount,remaining_balance,paid_amount,status,tx_hash'
+          'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan'
         )
         .eq('project_id', normalizedProjectId)
         .eq('investor_user_id', user.id)
-        .order('installment_number', { ascending: true });
+        .order('next_due_date', { ascending: true, nullsFirst: false });
 
       if (error) {
         const errorText = error.message.toLowerCase();
@@ -201,20 +202,16 @@ export default function FeedDetailPage() {
         return;
       }
 
-      const normalizedRows = ((data ?? []) as Record<string, unknown>[]).map(normalizePaymentScheduleRow);
-      const rowsByCredit = new Map<string, PaymentScheduleRow[]>();
-
-      normalizedRows.forEach((row) => {
-        if (!rowsByCredit.has(row.credit_id)) {
-          rowsByCredit.set(row.credit_id, []);
-        }
-        rowsByCredit.get(row.credit_id)?.push(row);
-      });
+      const normalizedRecords = ((data ?? []) as Record<string, unknown>[]).map(
+        normalizePaymentScheduleRecord
+      );
 
       setScheduleGroups(
-        Array.from(rowsByCredit.entries()).map(([creditId, rows]) => ({
-          creditId,
-          rows,
+        normalizedRecords.map((record) => ({
+          creditId: record.credit_id,
+          nextDueDate: record.next_due_date,
+          installmentCount: record.installment_count,
+          status: record.status,
         }))
       );
       setScheduleLoading(false);
@@ -401,34 +398,69 @@ export default function FeedDetailPage() {
           {!isEntrepreneurView ? (
             <section className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
               <div>
-                <h3 className="text-base font-semibold text-gray-900">Payment schedule</h3>
+                <h3 className="text-base font-semibold text-gray-900">Contract</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Full amortization plan for your investment in this venture.
+                  Open the generated smart contract and review the full amortization plan on a
+                  dedicated page.
                 </p>
               </div>
 
               <div className="mt-4">
                 {scheduleLoading ? (
-                  <p className="text-sm text-gray-500">Loading payment schedule...</p>
+                  <p className="text-sm text-gray-500">Loading contract...</p>
                 ) : scheduleGroups.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    Your payment schedule will appear here once your investment is confirmed.
+                    Your contract will appear here once your investment is confirmed.
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {scheduleGroups.map((group, index) => (
-                      <div
-                        key={group.creditId}
-                        className="rounded-2xl border border-white/20 bg-white/25 p-3"
-                      >
-                        {scheduleGroups.length > 1 ? (
-                          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">
-                            Credit {String(index + 1).padStart(2, '0')}
-                          </p>
-                        ) : null}
-                        <PaymentScheduleTable rows={group.rows} currency={project.currency ?? 'USD'} />
-                      </div>
-                    ))}
+                    {scheduleGroups.map((group, index) => {
+                      const statusMeta = getPaymentScheduleStatusMeta(group.status);
+
+                      return (
+                        <div
+                          key={group.creditId}
+                          className="rounded-2xl border border-white/20 bg-white/25 p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">
+                                Credit {String(index + 1).padStart(2, '0')}
+                              </p>
+                              <p className="mt-2 text-sm text-gray-600">
+                                {group.nextDueDate
+                                  ? `Next due ${new Date(group.nextDueDate).toLocaleDateString('en-GB', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: '2-digit',
+                                    })}`
+                                  : 'Next due pending'}
+                              </p>
+                              <p className="mt-1 text-sm text-gray-600">
+                                {group.installmentCount} installment
+                                {group.installmentCount === 1 ? '' : 's'}
+                              </p>
+                            </div>
+
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusMeta.className}`}
+                            >
+                              {statusMeta.label}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
+                            }
+                            className="mt-4 rounded-full bg-[#6B39F4] px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            View contract
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

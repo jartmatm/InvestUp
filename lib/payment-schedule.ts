@@ -1,9 +1,43 @@
 export type PaymentScheduleStatus = 'pending' | 'paid' | 'late' | 'partial';
 
+export type PaymentPlanEntry = {
+  installment_number: number;
+  due_date: string | null;
+  fixed_payment: number;
+  interest_percent: number;
+  interest_amount: number;
+  principal_amount: number;
+  remaining_balance: number;
+  paid_amount: number;
+  status: string | null;
+  tx_hash: string | null;
+};
+
+export type PaymentScheduleRecord = {
+  id: string;
+  credit_id: string;
+  project_id: string;
+  investor_user_id: string | null;
+  entrepreneur_user_id: string | null;
+  annual_interest_rate: number;
+  monthly_interest_rate: number;
+  installment_count: number;
+  current_installment_number: number;
+  schedule_start_date: string | null;
+  next_due_date: string | null;
+  original_principal: number;
+  total_paid_amount: number;
+  current_installment_amount: number;
+  outstanding_balance: number;
+  status: string | null;
+  tx_hash: string | null;
+  payment_plan: PaymentPlanEntry[];
+  metadata: Record<string, unknown> | null;
+};
+
 export type PaymentScheduleRow = {
   id: string;
   credit_id: string;
-  investment_id: string;
   project_id: string;
   investor_user_id: string | null;
   entrepreneur_user_id: string | null;
@@ -19,32 +53,80 @@ export type PaymentScheduleRow = {
   tx_hash: string | null;
 };
 
-export const normalizePaymentScheduleRow = (
+const asNumber = (value: unknown) => Number(value ?? 0);
+
+const asOptionalText = (value: unknown) =>
+  typeof value === 'string' && value.trim().length > 0 ? value : null;
+
+const normalizePaymentPlanEntry = (value: unknown): PaymentPlanEntry | null => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const row = value as Record<string, unknown>;
+
+  return {
+    installment_number: asNumber(row.installment_number),
+    due_date: asOptionalText(row.due_date),
+    fixed_payment: asNumber(row.fixed_payment),
+    interest_percent: asNumber(row.interest_percent),
+    interest_amount: asNumber(row.interest_amount),
+    principal_amount: asNumber(row.principal_amount),
+    remaining_balance: asNumber(row.remaining_balance),
+    paid_amount: asNumber(row.paid_amount),
+    status: asOptionalText(row.status),
+    tx_hash: asOptionalText(row.tx_hash),
+  };
+};
+
+export const normalizePaymentScheduleRecord = (
   row: Record<string, unknown>
-): PaymentScheduleRow => ({
+): PaymentScheduleRecord => ({
   id: String(row.id ?? ''),
   credit_id: String(row.credit_id ?? ''),
-  investment_id: String(row.investment_id ?? ''),
   project_id: String(row.project_id ?? ''),
-  investor_user_id:
-    typeof row.investor_user_id === 'string' && row.investor_user_id.trim().length > 0
-      ? row.investor_user_id
+  investor_user_id: asOptionalText(row.investor_user_id),
+  entrepreneur_user_id: asOptionalText(row.entrepreneur_user_id),
+  annual_interest_rate: asNumber(row.annual_interest_rate),
+  monthly_interest_rate: asNumber(row.monthly_interest_rate),
+  installment_count: asNumber(row.installment_count),
+  current_installment_number: asNumber(row.current_installment_number),
+  schedule_start_date: asOptionalText(row.schedule_start_date),
+  next_due_date: asOptionalText(row.next_due_date),
+  original_principal: asNumber(row.original_principal),
+  total_paid_amount: asNumber(row.total_paid_amount),
+  current_installment_amount: asNumber(row.current_installment_amount),
+  outstanding_balance: asNumber(row.outstanding_balance),
+  status: asOptionalText(row.status),
+  tx_hash: asOptionalText(row.tx_hash),
+  payment_plan: Array.isArray(row.payment_plan)
+    ? row.payment_plan
+        .map(normalizePaymentPlanEntry)
+        .filter((item): item is PaymentPlanEntry => Boolean(item))
+    : [],
+  metadata:
+    row.metadata && typeof row.metadata === 'object' && !Array.isArray(row.metadata)
+      ? (row.metadata as Record<string, unknown>)
       : null,
-  entrepreneur_user_id:
-    typeof row.entrepreneur_user_id === 'string' && row.entrepreneur_user_id.trim().length > 0
-      ? row.entrepreneur_user_id
-      : null,
-  installment_number: Number(row.installment_number ?? 0),
-  installment_count: Number(row.installment_count ?? 0),
-  due_date: typeof row.due_date === 'string' ? row.due_date : null,
-  fixed_payment: Number(row.fixed_payment ?? 0),
-  interest_percent: Number(row.interest_percent ?? 0),
-  principal_amount: Number(row.principal_amount ?? 0),
-  remaining_balance: Number(row.remaining_balance ?? 0),
-  paid_amount: Number(row.paid_amount ?? 0),
-  status: typeof row.status === 'string' ? row.status : null,
-  tx_hash: typeof row.tx_hash === 'string' ? row.tx_hash : null,
 });
+
+export const expandPaymentScheduleRows = (
+  record: PaymentScheduleRecord
+): PaymentScheduleRow[] =>
+  record.payment_plan.map((entry) => ({
+    id: `${record.credit_id}:${entry.installment_number}`,
+    credit_id: record.credit_id,
+    project_id: record.project_id,
+    investor_user_id: record.investor_user_id,
+    entrepreneur_user_id: record.entrepreneur_user_id,
+    installment_number: entry.installment_number,
+    installment_count: record.installment_count,
+    due_date: entry.due_date,
+    fixed_payment: entry.fixed_payment,
+    interest_percent: entry.interest_percent,
+    principal_amount: entry.principal_amount,
+    remaining_balance: entry.remaining_balance,
+    paid_amount: entry.paid_amount,
+    status: entry.status,
+    tx_hash: entry.tx_hash,
+  }));
 
 export const formatPaymentScheduleMoney = (value: number, currency = 'USD') => {
   try {

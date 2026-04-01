@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
-import PaymentScheduleTable from '@/components/PaymentScheduleTable';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
 import {
-  normalizePaymentScheduleRow,
-  type PaymentScheduleRow,
+  expandPaymentScheduleRows,
+  getPaymentScheduleStatusMeta,
+  normalizePaymentScheduleRecord,
+  type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
 import {
   detectInvestmentsSchema,
@@ -76,7 +77,7 @@ type PaymentScheduleGroup = {
   investorName: string;
   investorAvatarUrl: string | null;
   investorCountry: string | null;
-  rows: PaymentScheduleRow[];
+  rows: ReturnType<typeof expandPaymentScheduleRows>;
 };
 
 const SUPABASE_URL =
@@ -395,7 +396,7 @@ export default function EntrepreneurFeedDashboard() {
         });
       }
 
-      const nextScheduleByInvestor = new Map<string, PaymentScheduleRow>();
+      const nextScheduleByInvestor = new Map<string, PaymentScheduleRecord>();
       let groupedSchedules: PaymentScheduleGroup[] = [];
       const normalizedScheduleProjectId = Number.isFinite(Number(projectId))
         ? Number(projectId)
@@ -403,10 +404,10 @@ export default function EntrepreneurFeedDashboard() {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('payment_schedule')
         .select(
-          'id,credit_id,investment_id,project_id,investor_user_id,entrepreneur_user_id,installment_number,installment_count,due_date,fixed_payment,interest_percent,principal_amount,remaining_balance,paid_amount,status,tx_hash'
+          'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan'
         )
         .eq('project_id', normalizedScheduleProjectId)
-        .order('installment_number', { ascending: true });
+        .order('next_due_date', { ascending: true, nullsFirst: false });
 
       if (
         scheduleError &&
@@ -417,43 +418,45 @@ export default function EntrepreneurFeedDashboard() {
       }
 
       if (!scheduleError && scheduleData) {
-        const normalizedRows = (scheduleData as Record<string, unknown>[]).map(
-          normalizePaymentScheduleRow
+        const normalizedRecords = (scheduleData as Record<string, unknown>[]).map(
+          normalizePaymentScheduleRecord
         );
 
-        const rowsByCredit = new Map<string, PaymentScheduleRow[]>();
-        normalizedRows.forEach((row) => {
-          if (!rowsByCredit.has(row.credit_id)) {
-            rowsByCredit.set(row.credit_id, []);
-          }
-          rowsByCredit.get(row.credit_id)?.push(row);
-
-          if (row.investor_user_id && row.status !== 'paid') {
-            const current = nextScheduleByInvestor.get(row.investor_user_id);
-            const currentTime = current?.due_date ? new Date(current.due_date).getTime() : Number.MAX_SAFE_INTEGER;
-            const rowTime = row.due_date ? new Date(row.due_date).getTime() : Number.MAX_SAFE_INTEGER;
-            if (!current || rowTime < currentTime) {
-              nextScheduleByInvestor.set(row.investor_user_id, row);
+        normalizedRecords.forEach((record) => {
+          if (record.investor_user_id && record.status !== 'paid') {
+            const current = nextScheduleByInvestor.get(record.investor_user_id);
+            const currentTime = current?.next_due_date
+              ? new Date(current.next_due_date).getTime()
+              : Number.MAX_SAFE_INTEGER;
+            const recordTime = record.next_due_date
+              ? new Date(record.next_due_date).getTime()
+              : Number.MAX_SAFE_INTEGER;
+            if (!current || recordTime < currentTime) {
+              nextScheduleByInvestor.set(record.investor_user_id, record);
             }
           }
         });
 
-        groupedSchedules = Array.from(rowsByCredit.entries())
-          .map(([creditId, rows]) => {
-            const investorUserId = rows[0]?.investor_user_id ?? null;
+        groupedSchedules = normalizedRecords
+          .map((record) => {
+            const investorUserId = record.investor_user_id ?? null;
             const investor = investorUserId ? profileMap.get(investorUserId) : undefined;
             return {
-              creditId,
+              creditId: record.credit_id,
               investorUserId,
               investorName: nameFrom(investor),
               investorAvatarUrl: investor?.avatar_url ?? null,
               investorCountry: investor?.country ?? null,
-              rows,
+              rows: expandPaymentScheduleRows(record),
             };
           })
           .sort((a, b) => {
-            const left = a.rows[0]?.due_date ? new Date(a.rows[0].due_date ?? '').getTime() : Number.MAX_SAFE_INTEGER;
-            const right = b.rows[0]?.due_date ? new Date(b.rows[0].due_date ?? '').getTime() : Number.MAX_SAFE_INTEGER;
+            const left = a.rows[0]?.due_date
+              ? new Date(a.rows[0].due_date ?? '').getTime()
+              : Number.MAX_SAFE_INTEGER;
+            const right = b.rows[0]?.due_date
+              ? new Date(b.rows[0].due_date ?? '').getTime()
+              : Number.MAX_SAFE_INTEGER;
             return left - right;
           });
       }
@@ -476,8 +479,8 @@ export default function EntrepreneurFeedDashboard() {
                 investment.term_months ?? currentProject.installment_count ?? currentProject.term_months ?? 0
               ),
             }).projectedTotalUsdc;
-          const nextDueDate = scheduleSnapshot?.due_date
-            ? new Date(scheduleSnapshot.due_date)
+          const nextDueDate = scheduleSnapshot?.next_due_date
+            ? new Date(scheduleSnapshot.next_due_date)
             : getNextInstallmentDate(
                 investment.created_at,
                 investment.term_months ?? currentProject.installment_count ?? currentProject.term_months
@@ -494,7 +497,7 @@ export default function EntrepreneurFeedDashboard() {
             nextDueDate,
             nextDueLabel: formatDate(nextDueDate),
             installmentAmount:
-              scheduleSnapshot?.fixed_payment ??
+              scheduleSnapshot?.current_installment_amount ??
               getInstallmentAmount(
                 totalRepayment,
                 investment.term_months ?? currentProject.installment_count ?? currentProject.term_months
@@ -672,50 +675,99 @@ export default function EntrepreneurFeedDashboard() {
 
           <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Payment schedule</h3>
+              <h3 className="text-lg font-semibold text-slate-900">Contracts</h3>
               <p className="text-sm text-slate-500">
-                Review the amortization plan for every investor and track each installment.
+                Open each investment contract in its own page to review the generated smart
+                contract and full amortization table.
               </p>
             </div>
 
             <div className="mt-5 space-y-4">
               {scheduleGroups.length === 0 ? (
                 <div className="rounded-[22px] border border-white/20 bg-white/20 p-4 text-sm text-slate-500">
-                  The amortization table will appear here once an investment is registered and the payment
-                  schedule migration is active in Supabase.
+                  Contracts will appear here once an investment is registered and the payment
+                  schedule is available in Supabase.
                 </div>
               ) : (
-                scheduleGroups.map((group) => (
-                  <div
-                    key={group.creditId}
-                    className="rounded-[24px] border border-white/25 bg-white/30 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
-                  >
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20">
-                        {group.investorAvatarUrl ? (
-                          <img
-                            src={group.investorAvatarUrl}
-                            alt={group.investorName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-primary">
-                            {initialsFrom(group.investorName)}
-                          </div>
-                        )}
-                      </div>
+                scheduleGroups.map((group) => {
+                  const activeRow =
+                    group.rows.find((row) => row.status !== 'paid') ??
+                    group.rows[group.rows.length - 1] ??
+                    null;
+                  const activeStatus = getPaymentScheduleStatusMeta(activeRow?.status ?? null);
+                  const nextDueDate =
+                    activeRow?.due_date && !Number.isNaN(new Date(activeRow.due_date).getTime())
+                      ? new Date(activeRow.due_date)
+                      : null;
 
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{group.investorName}</p>
-                        <p className="truncate text-xs text-slate-500">
-                          {group.investorCountry || 'Country pending'}
-                        </p>
+                  return (
+                    <div
+                      key={group.creditId}
+                      className="rounded-[24px] border border-white/25 bg-white/30 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.06)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20">
+                          {group.investorAvatarUrl ? (
+                            <img
+                              src={group.investorAvatarUrl}
+                              alt={group.investorName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-primary">
+                              {initialsFrom(group.investorName)}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-slate-900">
+                                {group.investorName}
+                              </p>
+                              <p className="truncate text-xs text-slate-500">
+                                {group.investorCountry || 'Country pending'}
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${activeStatus.className}`}
+                            >
+                              {activeStatus.label}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-2xl border border-white/20 bg-white/25 px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                                Next due
+                              </p>
+                              <p className="mt-1 font-semibold text-slate-900">
+                                {formatDate(nextDueDate)}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl border border-white/20 bg-white/25 px-3 py-3">
+                              <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                                Installments
+                              </p>
+                              <p className="mt-1 font-semibold text-slate-900">{group.rows.length}</p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
+                            }
+                            className="mt-4 rounded-full bg-[#6B39F4] px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            View contract
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    <PaymentScheduleTable rows={group.rows} currency={currency} />
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </section>
