@@ -9,7 +9,7 @@ import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
-import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
+import { ACTIVE_PROJECT_STATUSES, isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import {
   getMinimumInvestmentValue,
@@ -28,6 +28,7 @@ type ProjectInvestmentDetail = {
   term_months: number | null;
   installment_count: number | null;
   interest_rate: number | null;
+  status: string | null;
   owner_user_id: string | null;
   owner_wallet: string | null;
   city: string | null;
@@ -126,8 +127,8 @@ export default function ProjectInvestPage() {
 
       const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
         const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,installment_count,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls'
-          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,installment_count,interest_rate,owner_user_id,owner_wallet,city,country,photo_urls';
+          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,installment_count,interest_rate,status,owner_user_id,owner_wallet,city,country,photo_urls'
+          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,installment_count,interest_rate,status,owner_user_id,owner_wallet,city,country,photo_urls';
 
         return supabase
           .from('projects')
@@ -153,6 +154,14 @@ export default function ProjectInvestPage() {
             photo_urls: normalizePhotos((data as ProjectInvestmentDetail).photo_urls),
           } as ProjectInvestmentDetail)
         : null;
+
+      if (normalizedProject && !isProjectPubliclyVisible(normalizedProject)) {
+        setProject(null);
+        setStatus('This listing is no longer active for new investments.');
+        setLoading(false);
+        return;
+      }
+
       setProject(normalizedProject);
 
       if (normalizedProject?.owner_user_id) {

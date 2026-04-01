@@ -8,7 +8,11 @@ import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
-import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
+import {
+  ACTIVE_PROJECT_STATUSES,
+  getProjectRepaymentTermMonths,
+  isProjectPubliclyVisible,
+} from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 
 type FeedProject = {
@@ -17,10 +21,12 @@ type FeedProject = {
   description: string;
   sector: string | null;
   owner_user_id: string | null;
+  status: string | null;
   amount_requested: number | null;
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
+  installment_count: number | null;
   interest_rate: number | null;
   city: string | null;
   country: string | null;
@@ -177,7 +183,7 @@ export default function FeedPage() {
       const { data, error } = await supabase
         .from('projects')
         .select(
-          'id,title,description,sector,owner_user_id,amount_requested,amount_received,currency,term_months,interest_rate,city,country,publication_end_date,photo_urls'
+          'id,title,description,sector,owner_user_id,status,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls'
         )
         .in('status', ACTIVE_PROJECT_STATUSES)
         .order('created_at', { ascending: false });
@@ -192,7 +198,8 @@ export default function FeedPage() {
         ...project,
         photo_urls: normalizePhotos(project.photo_urls),
       }));
-      setProjects(normalizedProjects);
+      const visibleProjects = normalizedProjects.filter((project) => isProjectPubliclyVisible(project));
+      setProjects(visibleProjects);
       setLoading(false);
     };
 
@@ -290,7 +297,8 @@ export default function FeedPage() {
           const isWishlisted = wishlist.includes(project.id);
           const amountLabel = formatAmount(project.amount_requested, project.currency);
           const raisedLabel = formatAmount(project.amount_received, project.currency);
-          const termLabel = project.term_months ? `${project.term_months} months` : '--';
+          const repaymentTerm = getProjectRepaymentTermMonths(project);
+          const termLabel = repaymentTerm ? `${repaymentTerm} months` : '--';
           const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : '--';
           const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
           const progress = calculateProgress(project.amount_received, project.amount_requested);
@@ -407,7 +415,7 @@ export default function FeedPage() {
                               <IconClock />
                             </span>
                             <div>
-                              <p className="text-xs text-white/70">Term</p>
+                              <p className="text-xs text-white/70">Installments</p>
                               <p className="font-semibold">{termLabel}</p>
                             </div>
                           </div>

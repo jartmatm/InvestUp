@@ -11,7 +11,11 @@ import {
   getPaymentScheduleStatusMeta,
   normalizePaymentScheduleRecord,
 } from '@/lib/payment-schedule';
-import { ACTIVE_PROJECT_STATUSES } from '@/lib/project-status';
+import {
+  ACTIVE_PROJECT_STATUSES,
+  getProjectRepaymentTermMonths,
+  isProjectPubliclyVisible,
+} from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import {
   getMinimumInvestmentValue,
@@ -34,6 +38,7 @@ type ProjectDetail = {
   city: string | null;
   country: string | null;
   publication_end_date: string | null;
+  status: string | null;
   photo_urls: string[] | null;
   video_url: string | null;
   owner_user_id: string | null;
@@ -139,8 +144,8 @@ export default function FeedDetailPage() {
       setStatus('');
       const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
         const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet'
-          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls,video_url,owner_user_id,owner_wallet';
+          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,status,photo_urls,video_url,owner_user_id,owner_wallet'
+          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,status,photo_urls,video_url,owner_user_id,owner_wallet';
 
         return supabase
           .from('projects')
@@ -166,12 +171,24 @@ export default function FeedDetailPage() {
             photo_urls: normalizePhotos((data as ProjectDetail).photo_urls),
           } as ProjectDetail)
         : null;
+
+      if (
+        normalizedProject &&
+        rolSeleccionado !== 'emprendedor' &&
+        !isProjectPubliclyVisible(normalizedProject)
+      ) {
+        setProject(null);
+        setStatus('This listing is no longer active for new investments.');
+        setLoading(false);
+        return;
+      }
+
       setProject(normalizedProject);
       setLoading(false);
     };
 
     loadProject();
-  }, [projectId, supabase]);
+  }, [projectId, rolSeleccionado, supabase]);
 
   useEffect(() => {
     const loadPaymentSchedule = async () => {
@@ -222,6 +239,7 @@ export default function FeedDetailPage() {
 
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
   const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
+  const repaymentTermMonths = getProjectRepaymentTermMonths(project ?? {});
 
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
@@ -325,9 +343,9 @@ export default function FeedDetailPage() {
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Term</p>
+                  <p className="text-xs text-gray-500">Installments</p>
                   <p className="mt-1 text-sm font-semibold text-gray-900">
-                {project.term_months ? `${project.term_months} months` : '--'}
+                {repaymentTermMonths ? `${repaymentTermMonths} months` : '--'}
               </p>
             </div>
             <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

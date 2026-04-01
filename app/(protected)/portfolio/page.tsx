@@ -15,6 +15,7 @@ import {
   canDeleteProject,
   canPauseProject,
   getNextProjectStatusAfterFunding,
+  getProjectRepaymentTermMonths,
   getProjectStatusLabel,
   getProjectStatusTone,
   type ProjectStatus,
@@ -148,13 +149,24 @@ const normalizeCountryCode = (rawCountry: string) => {
   return byName?.code ?? '';
 };
 
-const calculateTermMonths = (endDateIso: string) => {
-  const start = new Date();
-  const end = new Date(endDateIso);
-  if (Number.isNaN(end.getTime())) return 0;
-  const msDiff = end.getTime() - start.getTime();
-  const daysDiff = Math.max(0, msDiff / (1000 * 60 * 60 * 24));
-  return Math.max(1, Math.ceil(daysDiff / 30));
+const parsePublicationEndDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match) {
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 59, 999);
+  }
+
+  const fallback = new Date(value);
+  if (Number.isNaN(fallback.getTime())) return null;
+  return new Date(
+    fallback.getFullYear(),
+    fallback.getMonth(),
+    fallback.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -471,10 +483,14 @@ export default function PortfolioPage() {
     }
 
     const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
-    const termMonths = calculateTermMonths(form.publicationEndDate);
+    const publicationEndDate = parsePublicationEndDate(form.publicationEndDate);
     const installmentCount = Math.max(1, Number(form.installmentCount));
-    if (termMonths <= 0) {
-      setStatus('The publication end date must be later than today.');
+    if (!publicationEndDate) {
+      setStatus('Choose a valid publication end date.');
+      return;
+    }
+    if (publicationEndDate.getTime() < Date.now()) {
+      setStatus('The publication end date cannot be in the past.');
       return;
     }
     if (!Number.isFinite(installmentCount) || installmentCount <= 0) {
@@ -510,7 +526,7 @@ export default function PortfolioPage() {
       minimum_investment: Number(form.minimumInvestment),
       amount_received: nextAmountReceived,
       currency: form.currency,
-      term_months: termMonths,
+      term_months: installmentCount,
       installment_count: installmentCount,
       publication_end_date: form.publicationEndDate,
       interest_rate: Number(form.interestRateEa),
@@ -519,6 +535,8 @@ export default function PortfolioPage() {
       video_url: projectVideo || null,
       metadata: {
         submitted_from: 'portfolio_page',
+        publication_date: existingProject?.created_at ?? new Date().toISOString(),
+        publication_end_date: form.publicationEndDate,
       },
     };
     const payloadWithoutMinimumInvestment = { ...payload };
@@ -717,6 +735,10 @@ export default function PortfolioPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-white/25 bg-white/20 px-4 py-3 text-xs text-slate-500 shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md md:col-span-4">
+                Publication starts automatically on the day you save it and remains active until the
+                end date below.
+              </div>
               <Input
                 value={form.publicationEndDate}
                 onChange={(value) => onChangeForm('publicationEndDate', value)}
@@ -739,7 +761,7 @@ export default function PortfolioPage() {
                 value={form.installmentCount}
                 onChange={(value) => onChangeForm('installmentCount', value)}
                 type="number"
-                placeholder="Installments"
+                placeholder="Installments / payment term"
               />
               <select
                 value={form.currency}
@@ -802,7 +824,7 @@ export default function PortfolioPage() {
               amountRequested={project.amount_requested}
               amountRaised={project.amount_received}
               currency={project.currency}
-              termMonths={project.term_months}
+              termMonths={getProjectRepaymentTermMonths(project)}
               interestRate={project.interest_rate}
               publicationEndDate={project.publication_end_date}
               coverImage={project.photo_urls?.[0] ?? null}

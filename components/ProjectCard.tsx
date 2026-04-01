@@ -57,7 +57,7 @@ export default function ProjectCard({
           </span>
         ) : null}
         {amountRaised != null ? <span>Raised {currency ?? 'USD'} {Number(amountRaised).toLocaleString()}</span> : null}
-        {termMonths != null ? <span>Term: {termMonths} months</span> : null}
+        {termMonths != null ? <span>Installments: {termMonths} months</span> : null}
         {interestRate != null ? <span>Interest: {interestRate}%</span> : null}
         {targetAmountUsd != null ? <span>Target USD {Number(targetAmountUsd).toLocaleString()}</span> : null}
         {interestRateEa != null ? <span>Interest {interestRateEa}% EA</span> : null}
