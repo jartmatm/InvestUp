@@ -10,7 +10,6 @@ const ONBOARDING_SLIDES = [
   '/onboarding/onboarding-2.png',
   '/onboarding/onboarding-3.png',
   '/onboarding/onboarding-4.png',
-  '/onboarding/onboarding-5.png',
 ] as const;
 
 const SWIPE_THRESHOLD = 48;
