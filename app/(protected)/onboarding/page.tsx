@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import InvestAppLogo from '@/components/InvestAppLogo';
 import { useInvestApp } from '@/lib/investapp-context';
 
 const ONBOARDING_SLIDES = [
@@ -96,8 +97,10 @@ export default function OnboardingPage() {
         <div className="absolute inset-0 bg-white/35 backdrop-blur-[3px]" />
 
         <section className="relative mx-auto w-full max-w-xl rounded-[30px] border border-white/35 bg-white/75 p-6 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#6B39F4] to-[#9A7CFF] text-lg font-semibold text-white shadow-[0_14px_36px_rgba(107,57,244,0.28)]">
-            IA
+          <div className="mx-auto mb-6 flex items-center justify-center">
+            <div className="scale-[0.48] origin-center">
+              <InvestAppLogo />
+            </div>
           </div>
 
           <div className="text-center">

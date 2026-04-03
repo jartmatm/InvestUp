@@ -45,10 +45,12 @@ export default function LoginClient() {
         </div>
 
         <h1 className="mb-3 text-3xl font-bold leading-tight text-gray-800">
-          Register with your <br /> email!
+          Sign in with email, <br /> passkey, Google or X
         </h1>
 
-        <p className="mb-10 text-gray-600">Sign up effortlessly with just one step!</p>
+        <p className="mb-10 text-gray-600">
+          Choose the login method that feels best for you and continue securely into InvestApp.
+        </p>
 
         <button
           onClick={login}

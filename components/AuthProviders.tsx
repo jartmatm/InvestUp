@@ -14,7 +14,7 @@ export function AuthProviders({ children }: { children: React.ReactNode }) {
           showWalletLoginFirst: false,
         },
         supportedChains: [polygon],
-        loginMethods: ['email'],
+        loginMethods: ['email', 'passkey', 'google', 'twitter'],
         embeddedWallets: {
           ethereum: { createOnLogin: 'users-without-wallets' },
         },
