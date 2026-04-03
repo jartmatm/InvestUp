@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import InvestAppLogo from '@/components/InvestAppLogo';
 import { useInvestApp } from '@/lib/investapp-context';
-import { PRE_AUTH_TERMS_KEY } from '@/lib/legal-consent';
 
 const ONBOARDING_SLIDES = [
   '/onboarding/onboarding-1.svg',
@@ -36,12 +35,6 @@ export default function OnboardingPage() {
   useEffect(() => {
     setRol(rolSeleccionado);
   }, [rolSeleccionado]);
-
-  useEffect(() => {
-    if (window.localStorage.getItem(PRE_AUTH_TERMS_KEY) === '1') {
-      setAcceptsTerms(true);
-    }
-  }, []);
 
   if (faseApp !== 'onboarding') {
     return <main className="min-h-screen bg-transparent" />;

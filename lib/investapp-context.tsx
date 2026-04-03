@@ -25,7 +25,6 @@ import {
   generateLegacyRowIds,
 } from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
-import { PRE_AUTH_TERMS_KEY } from '@/lib/legal-consent';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -849,7 +848,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         localStorage.setItem(getRolKey(user.id), rolFrontend);
         localStorage.setItem(getOnboardingDoneKey(user.id), '1');
-        localStorage.removeItem(PRE_AUTH_TERMS_KEY);
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       } catch (error: any) {
@@ -1164,7 +1162,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(getOnboardingDoneKey(user.id));
       localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
     }
-    localStorage.removeItem(PRE_AUTH_TERMS_KEY);
     clearPendingInvestment();
     await logout();
     setFaseApp('login');
@@ -1236,7 +1233,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         if (roleFront) {
           localStorage.setItem(getRolKey(user.id), roleFront);
           localStorage.setItem(getOnboardingDoneKey(user.id), '1');
-          localStorage.removeItem(PRE_AUTH_TERMS_KEY);
           setRolSeleccionado(roleFront);
           setFaseApp('dashboard');
           return;
