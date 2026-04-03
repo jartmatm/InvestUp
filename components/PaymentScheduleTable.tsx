@@ -23,7 +23,7 @@ export default function PaymentScheduleTable({
             <th className="px-3 py-3 font-semibold">Fixed payment</th>
             <th className="px-3 py-3 font-semibold">Interest (%)</th>
             <th className="px-3 py-3 font-semibold">Principal payment</th>
-            <th className="px-3 py-3 font-semibold">Pending balance</th>
+            <th className="px-3 py-3 font-semibold">Ending balance</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100/80">
@@ -50,7 +50,7 @@ export default function PaymentScheduleTable({
                   {formatPaymentScheduleMoney(row.principal_amount, currency)}
                 </td>
                 <td className="px-3 py-4">
-                  {formatPaymentScheduleMoney(row.remaining_balance, currency)}
+                  {formatPaymentScheduleMoney(row.ending_balance, currency)}
                 </td>
               </tr>
             );

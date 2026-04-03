@@ -48,6 +48,7 @@ export type PaymentScheduleRow = {
   interest_percent: number;
   principal_amount: number;
   remaining_balance: number;
+  ending_balance: number;
   paid_amount: number;
   status: string | null;
   tx_hash: string | null;
@@ -57,6 +58,11 @@ const asNumber = (value: unknown) => Number(value ?? 0);
 
 const asOptionalText = (value: unknown) =>
   typeof value === 'string' && value.trim().length > 0 ? value : null;
+
+const BALANCE_TOLERANCE = 0.02;
+
+const isCloseEnough = (left: number, right: number, tolerance = BALANCE_TOLERANCE) =>
+  Math.abs(left - right) <= tolerance;
 
 const normalizePaymentPlanEntry = (value: unknown): PaymentPlanEntry | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -109,8 +115,8 @@ export const normalizePaymentScheduleRecord = (
 
 export const expandPaymentScheduleRows = (
   record: PaymentScheduleRecord
-): PaymentScheduleRow[] =>
-  record.payment_plan.map((entry) => ({
+): PaymentScheduleRow[] => {
+  const rowsWithoutEnding = record.payment_plan.map((entry) => ({
     id: `${record.credit_id}:${entry.installment_number}`,
     credit_id: record.credit_id,
     project_id: record.project_id,
@@ -127,6 +133,43 @@ export const expandPaymentScheduleRows = (
     status: entry.status,
     tx_hash: entry.tx_hash,
   }));
+
+  let openingBalanceMatches = 0;
+  let endingBalanceMatches = 0;
+
+  for (let index = 0; index < rowsWithoutEnding.length - 1; index += 1) {
+    const current = rowsWithoutEnding[index];
+    const next = rowsWithoutEnding[index + 1];
+
+    const openingExpectedNext = Math.max(current.remaining_balance - current.principal_amount, 0);
+    const endingExpectedNext = Math.max(current.remaining_balance - next.principal_amount, 0);
+
+    if (isCloseEnough(openingExpectedNext, next.remaining_balance)) {
+      openingBalanceMatches += 1;
+    }
+
+    if (isCloseEnough(endingExpectedNext, next.remaining_balance)) {
+      endingBalanceMatches += 1;
+    }
+  }
+
+  const storesOpeningBalance =
+    openingBalanceMatches > 0 && openingBalanceMatches > endingBalanceMatches;
+
+  return rowsWithoutEnding.map((row, index) => {
+    const nextRow = rowsWithoutEnding[index + 1];
+    const derivedEndingBalance = storesOpeningBalance
+      ? nextRow
+        ? nextRow.remaining_balance
+        : Math.max(row.remaining_balance - row.principal_amount, 0)
+      : row.remaining_balance;
+
+    return {
+      ...row,
+      ending_balance: derivedEndingBalance,
+    };
+  });
+};
 
 export const formatPaymentScheduleMoney = (value: number, currency = 'USD') => {
   try {
