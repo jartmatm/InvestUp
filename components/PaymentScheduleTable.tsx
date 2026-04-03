@@ -21,7 +21,7 @@ export default function PaymentScheduleTable({
           <tr className="text-xs uppercase tracking-[0.16em] text-slate-400">
             <th className="px-3 py-3 font-semibold">Month</th>
             <th className="px-3 py-3 font-semibold">Fixed payment</th>
-            <th className="px-3 py-3 font-semibold">Interest (%)</th>
+            <th className="px-3 py-3 font-semibold">Interest $</th>
             <th className="px-3 py-3 font-semibold">Principal payment</th>
             <th className="px-3 py-3 font-semibold">Ending balance</th>
           </tr>
@@ -45,7 +45,9 @@ export default function PaymentScheduleTable({
                 <td className="px-3 py-4 font-medium text-slate-900">
                   {formatPaymentScheduleMoney(row.fixed_payment, currency)}
                 </td>
-                <td className="px-3 py-4">{row.interest_percent.toFixed(2)}%</td>
+                <td className="px-3 py-4">
+                  {formatPaymentScheduleMoney(row.interest_amount, currency)}
+                </td>
                 <td className="px-3 py-4">
                   {formatPaymentScheduleMoney(row.principal_amount, currency)}
                 </td>

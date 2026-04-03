@@ -46,6 +46,7 @@ export type PaymentScheduleRow = {
   due_date: string | null;
   fixed_payment: number;
   interest_percent: number;
+  interest_amount: number;
   principal_amount: number;
   remaining_balance: number;
   ending_balance: number;
@@ -127,6 +128,7 @@ export const expandPaymentScheduleRows = (
     due_date: entry.due_date,
     fixed_payment: entry.fixed_payment,
     interest_percent: entry.interest_percent,
+    interest_amount: entry.interest_amount,
     principal_amount: entry.principal_amount,
     remaining_balance: entry.remaining_balance,
     paid_amount: entry.paid_amount,
