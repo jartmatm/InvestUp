@@ -20,7 +20,7 @@ import {
   loadLegacyTransactionsForUser,
 } from '@/lib/supabase-ledger-compat';
 import { useInvestApp } from '@/lib/investapp-context';
-import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
+import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -173,6 +173,7 @@ type ActiveInvestmentRow = {
 type RawTransactionRow = Omit<TransactionRow, 'amount'> & {
   amount?: number | null;
   amount_usdc?: number | null;
+  tx_hash?: string | null;
 };
 
 type RawActiveInvestmentRow = Omit<ActiveInvestmentRow, 'amount'> & {
@@ -205,6 +206,54 @@ type OwnerSummary = {
   name: string | null;
   surname: string | null;
   email: string | null;
+};
+
+type SearchProjectRow = {
+  id: string | number;
+  uuid?: string | null;
+  title: string | null;
+  business_name: string | null;
+  owner_user_id: string | null;
+  owner_id?: string | null;
+  amount_requested: number | null;
+  amount_received: number | null;
+  currency: string | null;
+  photo_urls: string[] | null;
+  status: string | null;
+  publication_end_date?: string | null;
+};
+
+type SearchUserRow = {
+  id: string;
+  name: string | null;
+  surname: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  wallet_address: string | null;
+  role: string | null;
+};
+
+type SearchProjectResult = {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string | null;
+};
+
+type SearchUserResult = {
+  id: string;
+  displayName: string;
+  subtitle: string;
+  avatarUrl: string | null;
+  linkedProjectId: string | null;
+};
+
+type SearchTransactionResult = {
+  id: string;
+  txHash: string | null;
+  createdAt: string;
+  movementType: string;
+  amount: number | null;
 };
 
 const SUPABASE_URL =
@@ -281,6 +330,24 @@ const formatInvestmentCardAmount = (amount: number | null) => {
   }).format(amount) + ' USD';
 };
 
+const normalizeSearchQuery = (value: string) => value.trim().replace(/\s+/g, ' ');
+
+const sanitizeSearchFragment = (value: string) =>
+  normalizeSearchQuery(value).replace(/[,()]/g, ' ').trim();
+
+const shortenIdentifier = (value: string | null | undefined, size = 6) => {
+  if (!value) return '';
+  if (value.length <= size * 2) return value;
+  return `${value.slice(0, size)}...${value.slice(-size)}`;
+};
+
+const getUserDisplayName = (user: SearchUserRow) => {
+  const fullName = `${user.name ?? ''} ${user.surname ?? ''}`.trim();
+  if (fullName) return fullName;
+  if (user.email) return user.email.split('@')[0];
+  return shortenIdentifier(user.id, 8) || 'User';
+};
+
 export default function HomePage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -307,6 +374,13 @@ export default function HomePage() {
   const [openingTopUpProvider, setOpeningTopUpProvider] = useState<'current' | 'coinbase' | null>(
     null
   );
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchProjects, setSearchProjects] = useState<SearchProjectResult[]>([]);
+  const [searchUsers, setSearchUsers] = useState<SearchUserResult[]>([]);
+  const [searchTransactions, setSearchTransactions] = useState<SearchTransactionResult[]>([]);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -608,6 +682,238 @@ export default function HomePage() {
     return () => window.clearInterval(interval);
   }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
+  useEffect(() => {
+    if (!showSearch) return;
+
+    const normalizedQuery = normalizeSearchQuery(searchQuery);
+    if (normalizedQuery.length < 2) {
+      setSearchProjects([]);
+      setSearchUsers([]);
+      setSearchTransactions([]);
+      setSearchError(null);
+      setSearching(false);
+      return;
+    }
+
+    let isCancelled = false;
+    const timeout = window.setTimeout(async () => {
+      const searchTerm = sanitizeSearchFragment(normalizedQuery);
+      const wildcardTerm = `%${searchTerm.replace(/\s+/g, '%')}%`;
+      const exactProjectId = /^\d+$/.test(searchTerm) ? Number(searchTerm) : null;
+      const exactUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        searchTerm
+      )
+        ? searchTerm
+        : null;
+
+      setSearching(true);
+      setSearchError(null);
+
+      try {
+        const projectFilters = [
+          `title.ilike.${wildcardTerm}`,
+          `business_name.ilike.${wildcardTerm}`,
+          `owner_user_id.ilike.${wildcardTerm}`,
+          `owner_id.ilike.${wildcardTerm}`,
+        ];
+
+        if (exactProjectId !== null) {
+          projectFilters.push(`id.eq.${exactProjectId}`);
+        }
+
+        if (exactUuid) {
+          projectFilters.push(`uuid.eq.${exactUuid}`);
+        }
+
+        const [projectsResponse, usersResponse] = await Promise.all([
+          supabase
+            .from('projects')
+            .select(
+              'id,uuid,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
+            )
+            .or(projectFilters.join(','))
+            .order('created_at', { ascending: false })
+            .limit(6),
+          supabase
+            .from('users')
+            .select('id,name,surname,email,avatar_url,wallet_address,role')
+            .or(
+              [
+                `name.ilike.${wildcardTerm}`,
+                `surname.ilike.${wildcardTerm}`,
+                `email.ilike.${wildcardTerm}`,
+                `id.ilike.${wildcardTerm}`,
+                `wallet_address.ilike.${wildcardTerm}`,
+              ].join(',')
+            )
+            .limit(6),
+        ]);
+
+        if (projectsResponse.error) {
+          throw projectsResponse.error;
+        }
+
+        if (usersResponse.error) {
+          throw usersResponse.error;
+        }
+
+        const currentUserId = user?.id ?? null;
+        const visibleProjects = ((projectsResponse.data ?? []) as SearchProjectRow[])
+          .map((project) => ({ ...project, id: String(project.id) }))
+          .filter((project) => {
+            const isOwnedByCurrentUser =
+              Boolean(currentUserId) &&
+              [project.owner_user_id, project.owner_id].filter(Boolean).includes(currentUserId);
+            return isOwnedByCurrentUser || isProjectPubliclyVisible(project);
+          })
+          .slice(0, 6);
+
+        const rawUsers = (usersResponse.data ?? []) as SearchUserRow[];
+        const userIds = rawUsers.map((entry) => entry.id);
+        const userProjectMap = new Map<string, string>();
+
+        if (userIds.length > 0) {
+          const [ownerUserProjects, ownerIdProjects] = await Promise.all([
+            supabase
+              .from('projects')
+              .select(
+                'id,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
+              )
+              .in('owner_user_id', userIds)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('projects')
+              .select(
+                'id,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
+              )
+              .in('owner_id', userIds)
+              .order('created_at', { ascending: false }),
+          ]);
+
+          const candidateProjects = [
+            ...(((ownerUserProjects.data ?? []) as SearchProjectRow[]).map((project) => ({
+              ...project,
+              id: String(project.id),
+            }))),
+            ...(((ownerIdProjects.data ?? []) as SearchProjectRow[]).map((project) => ({
+              ...project,
+              id: String(project.id),
+            }))),
+          ].filter((project) => isProjectPubliclyVisible(project));
+
+          candidateProjects.forEach((project) => {
+            [project.owner_user_id, project.owner_id].filter(Boolean).forEach((ownerId) => {
+              if (!userProjectMap.has(ownerId as string)) {
+                userProjectMap.set(ownerId as string, project.id);
+              }
+            });
+          });
+        }
+
+        let transactionMatches: SearchTransactionResult[] = [];
+        if (user?.id) {
+          const transactionSchema = await detectTransactionsSchema(supabase);
+
+          if (transactionSchema === 'legacy') {
+            const { data, error } = await supabase
+              .from('transactions')
+              .select('id,created_at,user_id,type,status,tx_hash,amount,amount_usdc')
+              .eq('user_id', user.id)
+              .or(`tx_hash.ilike.${wildcardTerm},id.ilike.${wildcardTerm}`)
+              .order('created_at', { ascending: false })
+              .limit(4);
+
+            if (error) {
+              throw error;
+            }
+
+            transactionMatches = ((data ?? []) as Array<{
+              id: string | number;
+              created_at: string;
+              type: string | null;
+              tx_hash: string | null;
+              amount?: number | null;
+              amount_usdc?: number | null;
+            }>).map((entry) => ({
+              id: String(entry.id),
+              txHash: entry.tx_hash ?? null,
+              createdAt: entry.created_at,
+              movementType: entry.type ?? 'transfer',
+              amount: getAmountValue(entry),
+            }));
+          } else {
+            const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
+              supabase
+                .from('transactions')
+                .select(`id,created_at,movement_type,tx_hash,${amountColumn},amount_usdc`)
+                .eq('user_id', user.id)
+                .or(`tx_hash.ilike.${wildcardTerm},id.ilike.${wildcardTerm}`)
+                .order('created_at', { ascending: false })
+                .limit(4)
+            );
+
+            if (error) {
+              throw error;
+            }
+
+            transactionMatches = ((data ?? []) as RawTransactionRow[]).map((entry) => ({
+              id: String(entry.id),
+              txHash: 'tx_hash' in entry ? (entry as RawTransactionRow & { tx_hash?: string | null }).tx_hash ?? null : null,
+              createdAt: entry.created_at,
+              movementType: entry.movement_type ?? 'transfer',
+              amount: getAmountValue(entry),
+            }));
+          }
+        }
+
+        if (isCancelled) return;
+
+        setSearchProjects(
+          visibleProjects.map((project) => ({
+            id: project.id,
+            title: project.business_name || project.title || `Venture #${project.id}`,
+            subtitle: `${formatMoney(project.amount_received ?? 0, project.currency ?? 'USD')} raised of ${formatMoney(
+              project.amount_requested ?? 0,
+              project.currency ?? 'USD'
+            )}`,
+            imageUrl: project.photo_urls?.[0] ?? null,
+          }))
+        );
+
+        setSearchUsers(
+          rawUsers.map((entry) => ({
+            id: entry.id,
+            displayName: getUserDisplayName(entry),
+            subtitle:
+              entry.wallet_address ??
+              entry.email ??
+              shortenIdentifier(entry.id, 10) ??
+              'User profile',
+            avatarUrl: entry.avatar_url ?? null,
+            linkedProjectId: userProjectMap.get(entry.id) ?? null,
+          }))
+        );
+
+        setSearchTransactions(transactionMatches);
+      } catch (error) {
+        if (isCancelled) return;
+        setSearchProjects([]);
+        setSearchUsers([]);
+        setSearchTransactions([]);
+        setSearchError(error instanceof Error ? error.message : 'We could not load search results.');
+      } finally {
+        if (!isCancelled) {
+          setSearching(false);
+        }
+      }
+    }, 260);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [searchQuery, showSearch, supabase, user?.id]);
+
   const handleOpenCurrentTopUp = async () => {
     setOpeningTopUpProvider('current');
     try {
@@ -629,6 +935,8 @@ export default function HomePage() {
   };
 
   const displayName = useMemo(() => profileName || userAlias || 'User', [profileName, userAlias]);
+  const trimmedSearchQuery = normalizeSearchQuery(searchQuery);
+  const totalSearchResults = searchProjects.length + searchUsers.length + searchTransactions.length;
   const roleLabel =
     rolSeleccionado === 'emprendedor'
       ? 'Entrepreneur'
@@ -684,6 +992,19 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="Search"
+              onClick={() => {
+                if (showSearch) {
+                  setShowSearch(false);
+                  setSearchQuery('');
+                  setSearchError(null);
+                  setSearchProjects([]);
+                  setSearchUsers([]);
+                  setSearchTransactions([]);
+                  setSearching(false);
+                  return;
+                }
+                setShowSearch(true);
+              }}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#0F172A] shadow-sm"
             >
               <IconSearch />
@@ -697,6 +1018,192 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+
+        {showSearch ? (
+          <div className="mb-6 space-y-3">
+            <div className="flex items-center gap-3 rounded-[22px] border border-white/25 bg-white/20 px-4 py-3 backdrop-blur-md shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+              <span className="text-[#818898]">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                autoFocus
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by venture, user, wallet, DID or tx hash"
+                className="flex-1 bg-transparent text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8]"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="rounded-full px-2 py-1 text-xs font-semibold text-[#6B39F4]"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="max-h-[360px] overflow-y-auto rounded-[22px] border border-white/25 bg-white/20 p-4 backdrop-blur-md shadow-[0_10px_28px_rgba(15,23,42,0.08)]">
+              {trimmedSearchQuery.length < 2 ? (
+                <p className="text-sm text-[#818898]">
+                  Start typing to search ventures, people, wallet addresses, DIDs, project IDs, or
+                  your transaction hashes.
+                </p>
+              ) : searching ? (
+                <p className="text-sm text-[#818898]">Searching InvestApp...</p>
+              ) : searchError ? (
+                <p className="text-sm text-[#DF1C41]">We could not load search results right now.</p>
+              ) : totalSearchResults === 0 ? (
+                <p className="text-sm text-[#818898]">
+                  No matches found for <span className="font-semibold text-[#0F172A]">{trimmedSearchQuery}</span>.
+                </p>
+              ) : (
+                <div className="space-y-5">
+                  {searchProjects.length > 0 ? (
+                    <section className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
+                        Ventures
+                      </p>
+                      <div className="space-y-2">
+                        {searchProjects.map((project) => (
+                          <button
+                            key={project.id}
+                            type="button"
+                            onClick={() => {
+                              setShowSearch(false);
+                              setSearchQuery('');
+                              router.push(`/feed/${project.id}`);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
+                          >
+                            {project.imageUrl ? (
+                              <img
+                                src={project.imageUrl}
+                                alt={project.title}
+                                className="h-12 w-12 rounded-[14px] object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#EEF2FF] text-xs font-semibold text-[#6B39F4]">
+                                #{project.id}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-[#0F172A]">{project.title}</p>
+                              <p className="truncate text-xs text-[#818898]">{project.subtitle}</p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#6B39F4]">Open</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {searchUsers.length > 0 ? (
+                    <section className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
+                        People
+                      </p>
+                      <div className="space-y-2">
+                        {searchUsers.map((entry) =>
+                          entry.linkedProjectId ? (
+                            <button
+                              key={entry.id}
+                              type="button"
+                              onClick={() => {
+                                setShowSearch(false);
+                                setSearchQuery('');
+                                router.push(`/feed/${entry.linkedProjectId}`);
+                              }}
+                              className="flex w-full items-center gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
+                            >
+                              {entry.avatarUrl ? (
+                                <img
+                                  src={entry.avatarUrl}
+                                  alt={entry.displayName}
+                                  className="h-11 w-11 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#6B39F4]">
+                                  {entry.displayName.slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-[#0F172A]">
+                                  {entry.displayName}
+                                </p>
+                                <p className="truncate text-xs text-[#818898]">{entry.subtitle}</p>
+                              </div>
+                              <span className="text-xs font-semibold text-[#6B39F4]">Venture</span>
+                            </button>
+                          ) : (
+                            <div
+                              key={entry.id}
+                              className="flex items-center gap-3 rounded-[18px] border border-white/30 bg-white/60 px-3 py-3"
+                            >
+                              {entry.avatarUrl ? (
+                                <img
+                                  src={entry.avatarUrl}
+                                  alt={entry.displayName}
+                                  className="h-11 w-11 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#6B39F4]">
+                                  {entry.displayName.slice(0, 1).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold text-[#0F172A]">
+                                  {entry.displayName}
+                                </p>
+                                <p className="truncate text-xs text-[#818898]">{entry.subtitle}</p>
+                              </div>
+                              <span className="text-[11px] font-medium text-[#94A3B8]">Profile match</span>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {searchTransactions.length > 0 ? (
+                    <section className="space-y-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
+                        Hashes
+                      </p>
+                      <div className="space-y-2">
+                        {searchTransactions.map((transaction) => (
+                          <button
+                            key={transaction.id}
+                            type="button"
+                            onClick={() => {
+                              setShowSearch(false);
+                              setSearchQuery('');
+                              router.push('/portfolio');
+                            }}
+                            className="flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold text-[#0F172A]">
+                                {shortenIdentifier(transaction.txHash ?? transaction.id, 10)}
+                              </p>
+                              <p className="truncate text-xs text-[#818898]">
+                                {transaction.movementType} · {formatTransactionDate(transaction.createdAt)}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#6B39F4]">
+                              {formatTransactionAmount(transaction.amount)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
 
       <div
         className="mb-6 rounded-[18px] bg-[#6B39F4] bg-cover bg-center p-6 text-white shadow-[0_20px_40px_rgba(107,57,244,0.25)]"

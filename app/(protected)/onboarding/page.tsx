@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useInvestApp } from '@/lib/investapp-context';
 
 const ONBOARDING_SLIDES = [
-  '/onboarding/onboarding-1.png',
-  '/onboarding/onboarding-2.png',
-  '/onboarding/onboarding-3.png',
-  '/onboarding/onboarding-4.png',
+  '/onboarding/onboarding-1.svg',
+  '/onboarding/onboarding-2.svg',
+  '/onboarding/onboarding-3.svg',
+  '/onboarding/onboarding-4.svg',
 ] as const;
 
 const SWIPE_THRESHOLD = 48;
