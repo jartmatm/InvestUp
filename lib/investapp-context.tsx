@@ -25,6 +25,7 @@ import {
   generateLegacyRowIds,
 } from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { PRE_AUTH_TERMS_KEY } from '@/lib/legal-consent';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -848,14 +849,12 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         localStorage.setItem(getRolKey(user.id), rolFrontend);
         localStorage.setItem(getOnboardingDoneKey(user.id), '1');
+        localStorage.removeItem(PRE_AUTH_TERMS_KEY);
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       } catch (error: any) {
         console.error('Error saving role:', error?.message ?? error);
-        localStorage.setItem(getRolKey(user.id), rolFrontend);
-        localStorage.setItem(getOnboardingDoneKey(user.id), '1');
-        setRolSeleccionado(rolFrontend);
-        setFaseApp('dashboard');
+        alert('We could not finish creating your account. Please try again.');
       }
     },
     [
@@ -1165,6 +1164,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(getOnboardingDoneKey(user.id));
       localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
     }
+    localStorage.removeItem(PRE_AUTH_TERMS_KEY);
     clearPendingInvestment();
     await logout();
     setFaseApp('login');
@@ -1218,9 +1218,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         !!smartWalletAddress &&
         (!data?.wallet_address || data.wallet_address.toLowerCase() !== smartWalletAddress.toLowerCase());
       const roleNeedsBackfill = !data?.role && !!rolLocalDB;
-      const userNeedsInsert = !data;
 
-      if (userNeedsInsert || walletNeedsUpdate || roleNeedsBackfill) {
+      if (data && (walletNeedsUpdate || roleNeedsBackfill)) {
         const payload: any = {
           id: user.id,
           email: user.email?.address ?? null,
@@ -1237,6 +1236,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         if (roleFront) {
           localStorage.setItem(getRolKey(user.id), roleFront);
           localStorage.setItem(getOnboardingDoneKey(user.id), '1');
+          localStorage.removeItem(PRE_AUTH_TERMS_KEY);
           setRolSeleccionado(roleFront);
           setFaseApp('dashboard');
           return;
