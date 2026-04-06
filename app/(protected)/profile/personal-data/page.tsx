@@ -424,7 +424,7 @@ export default function PersonalDataPage() {
         <Button
           onClick={saveProfile}
           disabled={saving || loadingProfile}
-          className="rounded-xl py-4 text-base"
+          className="rounded-xl py-4 text-base !bg-[#6B39F4] !text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] hover:!bg-[#5B31CF]"
         >
           {saving ? 'Saving...' : 'Save changes'}
         </Button>
