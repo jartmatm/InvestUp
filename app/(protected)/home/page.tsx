@@ -361,6 +361,8 @@ export default function HomePage() {
     abrirCompra,
     abrirCompraCoinbase,
     abrirRetiro,
+    notificationsEnabled,
+    unreadNotificationsCount,
   } = useInvestApp();
   const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
   const [showBalance, setShowBalance] = useState(true);
@@ -964,7 +966,7 @@ export default function HomePage() {
     { label: 'Top up', icon: <IconPlus />, onClick: () => setShowTopUpOptions(true) },
     { label: 'Send', icon: <IconSend />, onClick: () => router.push('/invest') },
     { label: 'Withdraw', icon: <IconDownload />, onClick: abrirRetiro },
-    { label: 'History', icon: <IconClock />, onClick: () => router.push('/portfolio') },
+    { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
   ];
 
   return (
@@ -1012,9 +1014,19 @@ export default function HomePage() {
             <button
               type="button"
               aria-label="Notifications"
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#0F172A] shadow-sm"
+              onClick={() => router.push('/notifications')}
+              className={`relative flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md shadow-sm ${
+                notificationsEnabled
+                  ? 'border-white/25 bg-white/20 text-[#0F172A]'
+                  : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
+              }`}
             >
               <IconBell />
+              {unreadNotificationsCount > 0 ? (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B39F4] px-1 text-[10px] font-semibold text-white">
+                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                </span>
+              ) : null}
             </button>
           </div>
         </div>
@@ -1179,7 +1191,9 @@ export default function HomePage() {
                             onClick={() => {
                               setShowSearch(false);
                               setSearchQuery('');
-                              router.push('/portfolio');
+                              router.push(
+                                `/history?q=${encodeURIComponent(transaction.txHash ?? transaction.id)}`
+                              );
                             }}
                             className="flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
                           >
@@ -1401,7 +1415,7 @@ export default function HomePage() {
           <h2 className="text-base font-semibold text-[#0F172A]">Transactions</h2>
           <button
             type="button"
-            onClick={() => router.push('/portfolio')}
+            onClick={() => router.push('/history')}
             className="text-sm font-semibold text-[#6B39F4]"
           >
             View all

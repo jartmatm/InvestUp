@@ -78,7 +78,7 @@ function Field({ label, children }: FieldProps) {
 export default function PersonalDataPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, smartWalletAddress, guardarRol } = useInvestApp();
+  const { faseApp, smartWalletAddress, guardarRol, pushNotification } = useInvestApp();
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -304,6 +304,13 @@ export default function PersonalDataPage() {
       }
       window.dispatchEvent(new Event('investapp-profile-updated'));
     }
+
+    pushNotification({
+      kind: 'profile_update',
+      title: 'Profile updated',
+      body: 'Your personal information and account preferences were updated successfully.',
+      actionHref: '/profile/personal-data',
+    });
 
     if (!hasAnyExtendedField) {
       setStatus(

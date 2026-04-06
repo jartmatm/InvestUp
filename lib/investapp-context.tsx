@@ -14,15 +14,29 @@ import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
+  buildTransactionNotificationKey,
+  createNotificationEntry,
+  formatNotificationAmount,
+  readNotificationsEnabled,
+  readStoredNotifications,
+  requestBrowserNotificationPermission,
+  showBrowserNotification,
+  writeNotificationsEnabled,
+  writeStoredNotifications,
+  type AppNotification,
+  type CreateAppNotificationInput,
+} from '@/lib/app-notifications';
+import {
   clearPendingInvestment,
   getPendingInvestment,
   type PendingInvestment,
 } from '@/lib/pending-investment';
-import { getNextProjectStatusAfterFunding } from '@/lib/project-status';
+import { getNextProjectStatusAfterFunding, HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import {
   detectInvestmentsSchema,
   detectTransactionsSchema,
   generateLegacyRowIds,
+  loadLegacyTransactionsForUser,
 } from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 
@@ -105,6 +119,17 @@ type RegisterRepaymentArgs = {
   investorUserId?: string | null;
 };
 
+type NotificationTrackedTransaction = {
+  id: string;
+  created_at: string;
+  movement_type: 'investment' | 'repayment' | 'transfer' | 'buy' | 'withdrawal';
+  status: string;
+  from_wallet: string | null;
+  to_wallet: string | null;
+  tx_hash: string | null;
+  amount: number | null;
+};
+
 type InvestAppContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -135,6 +160,13 @@ type InvestAppContextType = {
   abrirRetiro: () => void;
   lastReceipt: ReceiptData | null;
   clearReceipt: () => void;
+  notificationsEnabled: boolean;
+  notifications: AppNotification[];
+  unreadNotificationsCount: number;
+  setNotificationsEnabled: (enabled: boolean) => void;
+  markNotificationAsRead: (notificationId: string) => void;
+  markAllNotificationsAsRead: () => void;
+  pushNotification: (input: CreateAppNotificationInput) => void;
 };
 
 const SUPABASE_URL =
@@ -284,6 +316,123 @@ const getReceiptStatus = (status: string | null | undefined) => {
   return status ?? 'completed';
 };
 
+const getNotificationTransactionDirection = (
+  transaction: Pick<NotificationTrackedTransaction, 'movement_type' | 'from_wallet' | 'to_wallet'>,
+  walletAddress?: string | null
+) => {
+  if (transaction.movement_type === 'buy') return 'incoming' as const;
+  if (transaction.movement_type === 'withdrawal') return 'outgoing' as const;
+
+  const currentWallet = walletAddress?.toLowerCase();
+  const fromWallet = transaction.from_wallet?.toLowerCase();
+  const toWallet = transaction.to_wallet?.toLowerCase();
+
+  if (!currentWallet) return 'neutral' as const;
+  if (toWallet === currentWallet && fromWallet !== currentWallet) return 'incoming' as const;
+  if (fromWallet === currentWallet && toWallet !== currentWallet) return 'outgoing' as const;
+  return 'neutral' as const;
+};
+
+const buildTransactionNotificationInput = (
+  transaction: NotificationTrackedTransaction,
+  walletAddress?: string | null
+): CreateAppNotificationInput => {
+  const amountLabel = formatNotificationAmount(transaction.amount);
+  const direction = getNotificationTransactionDirection(transaction, walletAddress);
+  const counterparty =
+    direction === 'incoming' ? transaction.from_wallet : transaction.to_wallet;
+  const walletLabel = counterparty ? `${counterparty.slice(0, 8)}...` : 'your wallet';
+  const actionHref = transaction.tx_hash
+    ? `/history?q=${encodeURIComponent(transaction.tx_hash)}`
+    : '/history';
+
+  if (transaction.movement_type === 'buy') {
+    return {
+      kind: 'wallet_incoming',
+      title: 'Money arrived to your wallet',
+      body: `${amountLabel} landed in your wallet from a top up or external deposit.`,
+      createdAt: transaction.created_at,
+      txHash: transaction.tx_hash,
+      actionHref,
+    };
+  }
+
+  if (transaction.movement_type === 'investment') {
+    if (direction === 'incoming') {
+      return {
+        kind: 'wallet_incoming',
+        title: 'New investment received',
+        body: `${amountLabel} entered your wallet as an investment.`,
+        createdAt: transaction.created_at,
+        txHash: transaction.tx_hash,
+        actionHref,
+      };
+    }
+
+    return {
+      kind: 'investment',
+      title: 'Investment transfer completed',
+      body: `${amountLabel} was sent from your wallet to fund a venture.`,
+      createdAt: transaction.created_at,
+      txHash: transaction.tx_hash,
+      actionHref,
+    };
+  }
+
+  if (transaction.movement_type === 'repayment') {
+    if (direction === 'incoming') {
+      return {
+        kind: 'wallet_incoming',
+        title: 'Repayment received',
+        body: `${amountLabel} reached your wallet as a repayment.`,
+        createdAt: transaction.created_at,
+        txHash: transaction.tx_hash,
+        actionHref,
+      };
+    }
+
+    return {
+      kind: 'repayment',
+      title: 'Repayment sent',
+      body: `${amountLabel} was sent from your wallet as a repayment.`,
+      createdAt: transaction.created_at,
+      txHash: transaction.tx_hash,
+      actionHref,
+    };
+  }
+
+  if (transaction.movement_type === 'withdrawal') {
+    return {
+      kind: 'withdrawal',
+      title: 'Withdrawal registered',
+      body: `${amountLabel} is being processed as a withdrawal from your wallet.`,
+      createdAt: transaction.created_at,
+      txHash: transaction.tx_hash,
+      actionHref,
+    };
+  }
+
+  if (direction === 'incoming') {
+    return {
+      kind: 'wallet_incoming',
+      title: 'Money arrived to your wallet',
+      body: `${amountLabel} was received from ${walletLabel}.`,
+      createdAt: transaction.created_at,
+      txHash: transaction.tx_hash,
+      actionHref,
+    };
+  }
+
+  return {
+    kind: 'transfer',
+    title: 'Transfer completed',
+    body: `${amountLabel} was sent to ${walletLabel}.`,
+    createdAt: transaction.created_at,
+    txHash: transaction.tx_hash,
+    actionHref,
+  };
+};
+
 const asTextId = (value: string | number | null | undefined) => {
   if (value == null) return null;
   const text = String(value).trim();
@@ -327,6 +476,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const [loadingWallets, setLoadingWallets] = useState(false);
   const [walletTargets, setWalletTargets] = useState<UserWalletTarget[]>([]);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
+  const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const quoteCacheRef = useRef<{ expiresAt: number; quote: UsdcQuote | null }>({
     expiresAt: 0,
@@ -338,6 +489,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   });
   const transactionSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
   const investmentSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
+  const seenTransactionNotificationKeysRef = useRef<Set<string>>(new Set());
+  const bootstrappedTransactionNotificationsRef = useRef(false);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -396,6 +549,68 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     return schema;
   }, [supabase]);
 
+  const loadTransactionsForNotifications = useCallback(async () => {
+    if (!user?.id && !smartWalletAddress) {
+      return [] as NotificationTrackedTransaction[];
+    }
+
+    const transactionSchema = await getTransactionSchema();
+
+    if (transactionSchema === 'legacy') {
+      if (!user?.id) return [] as NotificationTrackedTransaction[];
+
+      const { data, error } = await loadLegacyTransactionsForUser(supabase, user.id, 40);
+      if (error) {
+        console.error('Error loading notification transactions:', error.message);
+        return [] as NotificationTrackedTransaction[];
+      }
+
+      return data.map((transaction) => ({
+        id: transaction.id,
+        created_at: transaction.created_at,
+        movement_type: transaction.movement_type as NotificationTrackedTransaction['movement_type'],
+        status: transaction.status,
+        from_wallet: transaction.from_wallet,
+        to_wallet: transaction.to_wallet,
+        tx_hash: transaction.tx_hash,
+        amount: transaction.amount,
+      }));
+    }
+
+    const filters = [user?.id ? `user_id.eq.${user.id}` : null];
+    if (smartWalletAddress) {
+      filters.push(`from_wallet.eq.${smartWalletAddress}`);
+      filters.push(`to_wallet.eq.${smartWalletAddress}`);
+    }
+
+    const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
+      supabase
+        .from('transactions')
+        .select(`id,created_at,movement_type,status,from_wallet,to_wallet,tx_hash,${amountColumn}`)
+        .or(filters.filter(Boolean).join(','))
+        .order('created_at', { ascending: false })
+        .limit(40)
+    );
+
+    if (error) {
+      console.error('Error loading notification transactions:', error.message);
+      return [] as NotificationTrackedTransaction[];
+    }
+
+    return ((data ?? []) as StoredTransaction[])
+      .filter((transaction) => transaction.id)
+      .map((transaction) => ({
+        id: transaction.id,
+        created_at: transaction.created_at,
+        movement_type: (transaction.movement_type ?? transaction.type ?? 'transfer') as NotificationTrackedTransaction['movement_type'],
+        status: transaction.status,
+        from_wallet: transaction.from_wallet,
+        to_wallet: transaction.to_wallet,
+        tx_hash: transaction.tx_hash,
+        amount: getAmountValue(transaction),
+      }));
+  }, [getTransactionSchema, smartWalletAddress, supabase, user?.id]);
+
   const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
   const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
   const transferenciaTitulo =
@@ -406,6 +621,88 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const getLegacyOnboardingDoneKey = useCallback(
     (id: string) => `investup_onboarding_done_${id}`,
     []
+  );
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications]
+  );
+
+  const persistNotifications = useCallback(
+    (nextNotifications: AppNotification[]) => {
+      setNotifications(nextNotifications);
+      if (user?.id) {
+        writeStoredNotifications(user.id, nextNotifications);
+      }
+    },
+    [user?.id]
+  );
+
+  const pushNotification = useCallback(
+    (input: CreateAppNotificationInput) => {
+      if (!user?.id || !notificationsEnabled) return;
+
+      let createdNotification: AppNotification | null = null;
+
+      setNotifications((currentNotifications) => {
+        if (
+          input.dedupeKey &&
+          currentNotifications.some((notification) => notification.dedupeKey === input.dedupeKey)
+        ) {
+          return currentNotifications;
+        }
+
+        createdNotification = createNotificationEntry(input);
+        const nextNotifications = [createdNotification, ...currentNotifications].slice(0, 80);
+        writeStoredNotifications(user.id, nextNotifications);
+        return nextNotifications;
+      });
+
+      if (createdNotification) {
+        showBrowserNotification(createdNotification);
+      }
+    },
+    [notificationsEnabled, user?.id]
+  );
+
+  const markNotificationAsRead = useCallback(
+    (notificationId: string) => {
+      setNotifications((currentNotifications) => {
+        const nextNotifications = currentNotifications.map((notification) =>
+          notification.id === notificationId ? { ...notification, read: true } : notification
+        );
+        if (user?.id) {
+          writeStoredNotifications(user.id, nextNotifications);
+        }
+        return nextNotifications;
+      });
+    },
+    [user?.id]
+  );
+
+  const markAllNotificationsAsRead = useCallback(() => {
+    setNotifications((currentNotifications) => {
+      const nextNotifications = currentNotifications.map((notification) => ({
+        ...notification,
+        read: true,
+      }));
+      if (user?.id) {
+        writeStoredNotifications(user.id, nextNotifications);
+      }
+      return nextNotifications;
+    });
+  }, [user?.id]);
+
+  const setNotificationsEnabled = useCallback(
+    (enabled: boolean) => {
+      setNotificationsEnabledState(enabled);
+      if (user?.id) {
+        writeNotificationsEnabled(user.id, enabled);
+      }
+      if (enabled) {
+        void requestBrowserNotificationPermission();
+      }
+    },
+    [user?.id]
   );
 
   const registrarTransaccion = useCallback(
@@ -1006,6 +1303,34 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         });
 
         setHistorial((prev) => [`${tipo} ${enviadoFmt} USDC -> ${destino.slice(0, 8)}...`, ...prev]);
+        const transactionNotificationKey = buildTransactionNotificationKey(txHash, txHash);
+        if (transactionNotificationKey) {
+          seenTransactionNotificationKeysRef.current.add(transactionNotificationKey);
+        }
+
+        pushNotification({
+          kind:
+            movementType === 'investment'
+              ? 'investment'
+              : movementType === 'repayment'
+                ? 'repayment'
+                : 'transfer',
+          title:
+            movementType === 'investment'
+              ? 'Investment transfer completed'
+              : movementType === 'repayment'
+                ? 'Repayment sent'
+                : 'Transfer completed',
+          body:
+            movementType === 'investment'
+              ? `${formatNotificationAmount(enviadoFmt)} was sent to ${
+                  pendingInvestment?.projectTitle || provisionalReceiverName
+                }.`
+              : `${formatNotificationAmount(enviadoFmt)} was sent to ${provisionalReceiverName}.`,
+          txHash,
+          dedupeKey: transactionNotificationKey,
+          actionHref: `/history?q=${encodeURIComponent(txHash)}`,
+        });
 
         const transactionRow = await registrarTransaccion({
           txHash,
@@ -1089,6 +1414,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       registrarTransaccion,
       rolSeleccionado,
       smartWalletAddress,
+      pushNotification,
       user?.email?.address,
       userAlias,
       walletTargets,
@@ -1101,7 +1427,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     await fundWallet({ address: smartWalletAddress as any });
-  }, [fundWallet, smartWalletAddress]);
+    pushNotification({
+      kind: 'top_up',
+      title: 'Top up flow opened',
+      body: 'Complete the provider steps to add more funds to your wallet.',
+      actionHref: '/home',
+    });
+  }, [fundWallet, pushNotification, smartWalletAddress]);
 
   const abrirCompraCoinbase = useCallback(async () => {
     if (!smartWalletAddress) {
@@ -1139,11 +1471,18 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       if (!popup) {
         window.location.assign(payload.url);
       }
+
+      pushNotification({
+        kind: 'top_up',
+        title: 'Coinbase top up started',
+        body: 'Finish the Coinbase flow to recharge your account.',
+        actionHref: '/home',
+      });
     } catch (error) {
       const message = getErrorMessage(error);
       alert(`Coinbase top up is not available right now: ${message}`);
     }
-  }, [smartWalletAddress, user?.id]);
+  }, [pushNotification, smartWalletAddress, user?.id]);
 
   const abrirRetiro = useCallback(() => {
     if (!smartWalletAddress) {
@@ -1153,7 +1492,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     const redirectURL = encodeURIComponent(`${window.location.origin}/home`);
     const moonpayUrl = `https://sell.moonpay.com/?apiKey=pk_test_123&baseCurrencyCode=usdc_polygon&walletAddress=${smartWalletAddress}&redirectURL=${redirectURL}`;
     window.open(moonpayUrl, 'MoonPaySell', 'width=450,height=700');
-  }, [smartWalletAddress]);
+    pushNotification({
+      kind: 'withdrawal',
+      title: 'Withdrawal flow opened',
+      body: 'Finish the withdrawal provider steps to cash out your funds.',
+      actionHref: '/withdraw',
+    });
+  }, [pushNotification, smartWalletAddress]);
 
   const logoutApp = useCallback(async () => {
     if (user?.id) {
@@ -1174,6 +1519,91 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     getOnboardingDoneKey,
     getRolKey,
     logout,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setNotifications([]);
+      setNotificationsEnabledState(true);
+      seenTransactionNotificationKeysRef.current = new Set();
+      bootstrappedTransactionNotificationsRef.current = false;
+      return;
+    }
+
+    const storedNotifications = readStoredNotifications(user.id);
+    persistNotifications(storedNotifications);
+    setNotificationsEnabledState(readNotificationsEnabled(user.id));
+    seenTransactionNotificationKeysRef.current = new Set(
+      storedNotifications
+        .map((notification) => notification.dedupeKey)
+        .filter((dedupeKey): dedupeKey is string => Boolean(dedupeKey))
+    );
+    bootstrappedTransactionNotificationsRef.current = false;
+  }, [persistNotifications, user?.id]);
+
+  useEffect(() => {
+    if (!authenticated || (!user?.id && !smartWalletAddress)) return;
+
+    let active = true;
+
+    const syncTransactionsToNotifications = async () => {
+      const recentTransactions = await loadTransactionsForNotifications();
+      if (!active) return;
+
+      const chronologicalTransactions = [...recentTransactions].sort(
+        (left, right) =>
+          new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+      );
+
+      if (!bootstrappedTransactionNotificationsRef.current) {
+        chronologicalTransactions.forEach((transaction) => {
+          const dedupeKey = buildTransactionNotificationKey(
+            transaction.tx_hash,
+            transaction.id
+          );
+          if (dedupeKey) {
+            seenTransactionNotificationKeysRef.current.add(dedupeKey);
+          }
+        });
+        bootstrappedTransactionNotificationsRef.current = true;
+        return;
+      }
+
+      chronologicalTransactions.forEach((transaction) => {
+        const dedupeKey = buildTransactionNotificationKey(
+          transaction.tx_hash,
+          transaction.id
+        );
+        if (!dedupeKey || seenTransactionNotificationKeysRef.current.has(dedupeKey)) {
+          return;
+        }
+
+        seenTransactionNotificationKeysRef.current.add(dedupeKey);
+        if (!notificationsEnabled) return;
+
+        pushNotification({
+          ...buildTransactionNotificationInput(transaction, smartWalletAddress),
+          dedupeKey,
+        });
+      });
+    };
+
+    void syncTransactionsToNotifications();
+    const interval = window.setInterval(() => {
+      void syncTransactionsToNotifications();
+    }, HOME_REFRESH_INTERVAL_MS);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [
+    authenticated,
+    loadTransactionsForNotifications,
+    notificationsEnabled,
+    pushNotification,
+    smartWalletAddress,
     user?.id,
   ]);
 
@@ -1299,6 +1729,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     abrirRetiro,
     lastReceipt,
     clearReceipt: () => setLastReceipt(null),
+    notificationsEnabled,
+    notifications,
+    unreadNotificationsCount,
+    setNotificationsEnabled,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    pushNotification,
   };
 
   return <InvestAppContext.Provider value={value}>{children}</InvestAppContext.Provider>;
