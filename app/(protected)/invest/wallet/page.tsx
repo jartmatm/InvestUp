@@ -388,7 +388,7 @@ export default function WalletTransferPage() {
       <button
         type="button"
         onClick={async () => {
-          const success = await enviarUSDC(
+          const result = await enviarUSDC(
             walletDestino,
             formatAmount(monto) || monto,
             pendingInvestment
@@ -399,7 +399,7 @@ export default function WalletTransferPage() {
                   investorUserId: transferMode === 'repayment' ? repaymentInvestorUserId : null,
                 }
           );
-          if (!success) return;
+          if (!result.success) return;
           if (pendingInvestment) {
             clearPendingInvestment();
             setPendingInvestment(null);

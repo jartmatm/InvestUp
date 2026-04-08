@@ -17,6 +17,8 @@ const mapStatus = (status: string) => {
 const mapType = (type: string) => {
   if (type === 'investment') return 'Investment';
   if (type === 'repayment') return 'Repayment';
+  if (type === 'withdrawal') return 'Withdrawal';
+  if (type === 'transfer') return 'Transfer';
   return type;
 };
 

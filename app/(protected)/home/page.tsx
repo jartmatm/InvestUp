@@ -360,7 +360,6 @@ export default function HomePage() {
     lastReceipt,
     abrirCompra,
     abrirCompraCoinbase,
-    abrirRetiro,
     notificationsEnabled,
     unreadNotificationsCount,
   } = useInvestApp();
@@ -965,7 +964,7 @@ export default function HomePage() {
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => setShowTopUpOptions(true) },
     { label: 'Send', icon: <IconSend />, onClick: () => router.push('/invest') },
-    { label: 'Withdraw', icon: <IconDownload />, onClick: abrirRetiro },
+    { label: 'Withdraw', icon: <IconDownload />, onClick: () => router.push('/withdraw') },
     { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
   ];
 

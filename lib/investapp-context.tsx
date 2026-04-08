@@ -60,7 +60,7 @@ type UsdcQuote = {
   paymaster: `0x${string}`;
 };
 
-type MovementType = 'investment' | 'repayment' | 'transfer';
+type MovementType = 'investment' | 'repayment' | 'transfer' | 'withdrawal';
 
 type ReceiptData = {
   uuid: string;
@@ -130,6 +130,11 @@ type NotificationTrackedTransaction = {
   amount: number | null;
 };
 
+type SendUsdcResult = {
+  success: boolean;
+  txHash: string | null;
+};
+
 type InvestAppContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -154,7 +159,7 @@ type InvestAppContextType = {
     destino: string,
     monto: string,
     options?: { movementType?: MovementType; projectId?: string | null; investorUserId?: string | null }
-  ) => Promise<boolean>;
+  ) => Promise<SendUsdcResult>;
   abrirCompra: () => Promise<void>;
   abrirCompraCoinbase: () => Promise<void>;
   abrirRetiro: () => void;
@@ -1195,11 +1200,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     ) => {
       if (!client || !smartWalletAddress || !destino || !monto) {
         alert('Missing data or the wallet is not ready yet.');
-        return false;
+        return { success: false, txHash: null };
       }
       if (!destino.startsWith('0x') || destino.length !== 42) {
         alert('Invalid destination wallet address.');
-        return false;
+        return { success: false, txHash: null };
       }
 
       setLoadingTx(true);
@@ -1280,8 +1285,16 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           pendingInvestment
             ? 'investment'
             : options?.movementType ?? fallbackMovementType;
-        const tipo = movementType === 'repayment' ? 'Repayment' : movementType === 'investment' ? 'Investment' : 'Transfer';
+        const tipo =
+          movementType === 'repayment'
+            ? 'Repayment'
+            : movementType === 'investment'
+              ? 'Investment'
+              : movementType === 'withdrawal'
+                ? 'Withdrawal'
+                : 'Transfer';
         const provisionalReceiverName =
+          (movementType === 'withdrawal' ? 'Manual withdrawal wallet' : null) ||
           pendingInvestment?.entrepreneurName ||
           `${receiverTarget?.name ?? ''} ${receiverTarget?.surname ?? ''}`.trim() ||
           receiverTarget?.email ||
@@ -1314,19 +1327,25 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
               ? 'investment'
               : movementType === 'repayment'
                 ? 'repayment'
-                : 'transfer',
+                : movementType === 'withdrawal'
+                  ? 'withdrawal'
+                  : 'transfer',
           title:
             movementType === 'investment'
               ? 'Investment transfer completed'
               : movementType === 'repayment'
                 ? 'Repayment sent'
-                : 'Transfer completed',
+                : movementType === 'withdrawal'
+                  ? 'Withdrawal sent'
+                  : 'Transfer completed',
           body:
             movementType === 'investment'
               ? `${formatNotificationAmount(enviadoFmt)} was sent to ${
                   pendingInvestment?.projectTitle || provisionalReceiverName
                 }.`
-              : `${formatNotificationAmount(enviadoFmt)} was sent to ${provisionalReceiverName}.`,
+              : movementType === 'withdrawal'
+                ? `${formatNotificationAmount(enviadoFmt)} was sent to the manual withdrawal wallet.`
+                : `${formatNotificationAmount(enviadoFmt)} was sent to ${provisionalReceiverName}.`,
           txHash,
           dedupeKey: transactionNotificationKey,
           actionHref: `/history?q=${encodeURIComponent(txHash)}`,
@@ -1355,6 +1374,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                   receiver_name: receiverTarget?.email ?? 'Investor',
                   created_from: 'direct-repayment-flow',
                 }
+              : movementType === 'withdrawal'
+                ? {
+                    receiver_name: 'Manual withdrawal wallet',
+                    created_from: 'manual-withdrawal-flow',
+                  }
               : {
                   receiver_user_id: receiverTarget?.id ?? null,
                   receiver_name: receiverTarget?.email ?? 'Recipient',
@@ -1390,7 +1414,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         }
 
         await actualizarSaldos();
-        return true;
+        return { success: true, txHash };
       } catch (error: any) {
         const message = String(error?.message || error || '');
         if (message.includes('AA21') || message.includes("didn't pay prefund")) {
@@ -1398,7 +1422,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         } else {
           alert(`The transaction failed: ${message || 'unknown error'}`);
         }
-        return false;
+        return { success: false, txHash: null };
       } finally {
         setLoadingTx(false);
       }
