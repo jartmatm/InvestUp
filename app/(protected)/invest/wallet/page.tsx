@@ -192,20 +192,24 @@ export default function WalletTransferPage() {
   useEffect(() => {
     const loadRecentWallets = async () => {
       if (!smartWalletAddress) {
-        setRecentWallets(mappedTargets.slice(0, 3));
+        setRecentWallets([]);
         return;
       }
 
       setLoadingRecentWallets(true);
       try {
-        const filters = [`from_wallet.eq.${smartWalletAddress}`, `to_wallet.eq.${smartWalletAddress}`];
-        if (user?.id) filters.unshift(`user_id.eq.${user.id}`);
-        const { data, error } = await supabase
+        let query = supabase
           .from('transactions')
           .select('from_wallet,to_wallet')
-          .or(filters.join(','))
+          .or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`)
           .order('created_at', { ascending: false })
           .limit(24);
+
+        if (user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
 
         const orderedAddresses: string[] = [];
@@ -249,16 +253,10 @@ export default function WalletTransferPage() {
           })
           .filter((item): item is RecentWallet => Boolean(item));
 
-        if (recent.length === 0) {
-          setRecentWallets(mappedTargets.slice(0, 3));
-        } else {
-          setRecentWallets([...recent, ...mappedTargets].filter((item, index, arr) => {
-            return arr.findIndex((entry) => entry.walletAddress === item.walletAddress) === index;
-          }).slice(0, 3));
-        }
+        setRecentWallets(recent.slice(0, 3));
       } catch (error) {
         console.error('Error loading recent wallets:', error);
-        setRecentWallets(mappedTargets.slice(0, 3));
+        setRecentWallets([]);
       } finally {
         setLoadingRecentWallets(false);
       }

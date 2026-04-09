@@ -217,20 +217,23 @@ async function loadTransactionsForHistory({
     };
   }
 
-  const filters = [userId ? `user_id.eq.${userId}` : null];
-  if (smartWalletAddress) {
-    filters.push(`from_wallet.eq.${smartWalletAddress}`);
-    filters.push(`to_wallet.eq.${smartWalletAddress}`);
-  }
-
-  const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-    supabase
+  const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
+    let query = supabase
       .from('transactions')
       .select(`id,created_at,movement_type,status,from_wallet,to_wallet,tx_hash,${amountColumn}`)
-      .or(filters.filter(Boolean).join(','))
       .order('created_at', { ascending: false })
-      .limit(limit)
-  );
+      .limit(limit);
+
+    if (userId) {
+      query = query.eq('user_id', userId);
+    }
+
+    if (smartWalletAddress) {
+      query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
+    }
+
+    return query;
+  });
 
   if (error) {
     return { data: [], error };

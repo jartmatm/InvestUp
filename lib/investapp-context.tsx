@@ -286,6 +286,34 @@ const mapRoleToDB = (role: FrontRole | null | undefined): 'investor' | 'entrepre
   return null;
 };
 
+type PrivyLinkedAccountLike = {
+  type?: string;
+  address?: string;
+};
+
+const getManagedWalletAddressFromUser = (
+  user:
+    | {
+        smartWallet?: { address?: string };
+        linkedAccounts?: PrivyLinkedAccountLike[];
+      }
+    | null
+    | undefined
+) => {
+  if (typeof user?.smartWallet?.address === 'string') {
+    return user.smartWallet.address;
+  }
+
+  const linkedAccounts = user?.linkedAccounts ?? [];
+
+  const smartWallet = linkedAccounts.find(
+    (account) => account.type === 'smart_wallet' && typeof account.address === 'string'
+  );
+  if (smartWallet?.address) return smartWallet.address;
+
+  return undefined;
+};
+
 const normalizePendingInvestment = (
   pendingInvestment: PendingInvestment | null,
   destinationWallet: string
@@ -470,7 +498,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
   const { fundWallet } = useFundWallet();
   const { client } = useSmartWallets();
-  const smartWalletAddress = client?.account?.address;
+  const managedWalletAddress = useMemo(() => getManagedWalletAddressFromUser(user), [user]);
+  const smartWalletAddress = client?.account?.address ?? managedWalletAddress;
 
   const [faseApp, setFaseApp] = useState<FaseApp>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<FrontRole | null>(null);
@@ -582,20 +611,23 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }));
     }
 
-    const filters = [user?.id ? `user_id.eq.${user.id}` : null];
-    if (smartWalletAddress) {
-      filters.push(`from_wallet.eq.${smartWalletAddress}`);
-      filters.push(`to_wallet.eq.${smartWalletAddress}`);
-    }
-
-    const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-      supabase
+    const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
+      let query = supabase
         .from('transactions')
         .select(`id,created_at,movement_type,status,from_wallet,to_wallet,tx_hash,${amountColumn}`)
-        .or(filters.filter(Boolean).join(','))
         .order('created_at', { ascending: false })
-        .limit(40)
-    );
+        .limit(40);
+
+      if (user?.id) {
+        query = query.eq('user_id', user.id);
+      }
+
+      if (smartWalletAddress) {
+        query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
+      }
+
+      return query;
+    });
 
     if (error) {
       console.error('Error loading notification transactions:', error.message);

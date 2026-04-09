@@ -649,20 +649,23 @@ export default function HomePage() {
         return;
       }
 
-      const filters = [user?.id ? `user_id.eq.${user.id}` : null];
-      if (smartWalletAddress) {
-        filters.push(`from_wallet.eq.${smartWalletAddress}`);
-        filters.push(`to_wallet.eq.${smartWalletAddress}`);
-      }
-
-      const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-        supabase
+      const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
+        let query = supabase
           .from('transactions')
           .select(`id,created_at,movement_type,status,from_wallet,to_wallet,${amountColumn}`)
-          .or(filters.filter(Boolean).join(','))
           .order('created_at', { ascending: false })
-          .limit(12)
-      );
+          .limit(12);
+
+        if (user?.id) {
+          query = query.eq('user_id', user.id);
+        }
+
+        if (smartWalletAddress) {
+          query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
+        }
+
+        return query;
+      });
 
       if (error) {
         console.error('Error loading transactions:', error.message);
@@ -1671,5 +1674,4 @@ export default function HomePage() {
     </div>
   );
 }
-
 
