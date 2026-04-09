@@ -19,6 +19,7 @@ import {
   loadLegacyInvestmentsForInvestor,
   loadLegacyTransactionsForUser,
 } from '@/lib/supabase-ledger-compat';
+import { getWithdrawProfileReadiness } from '@/lib/profile-completeness';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
@@ -382,6 +383,9 @@ export default function HomePage() {
   const [searchProjects, setSearchProjects] = useState<SearchProjectResult[]>([]);
   const [searchUsers, setSearchUsers] = useState<SearchUserResult[]>([]);
   const [searchTransactions, setSearchTransactions] = useState<SearchTransactionResult[]>([]);
+  const [showWithdrawProfilePrompt, setShowWithdrawProfilePrompt] = useState(false);
+  const [missingWithdrawProfileFields, setMissingWithdrawProfileFields] = useState<string[]>([]);
+  const [checkingWithdrawRequirements, setCheckingWithdrawRequirements] = useState(false);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -935,6 +939,52 @@ export default function HomePage() {
     }
   };
 
+  const handleWithdrawClick = async () => {
+    if (checkingWithdrawRequirements) return;
+
+    if (!user?.id) {
+      router.push('/login');
+      return;
+    }
+
+    setCheckingWithdrawRequirements(true);
+
+    try {
+      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+
+      if (error) {
+        setMissingWithdrawProfileFields([]);
+        setShowWithdrawProfilePrompt(true);
+        return;
+      }
+
+      const fallbackRole =
+        rolSeleccionado === 'inversor'
+          ? 'investor'
+          : rolSeleccionado === 'emprendedor'
+            ? 'entrepreneur'
+            : '';
+
+      const readiness = getWithdrawProfileReadiness({
+        record: (data as Record<string, unknown> | null) ?? null,
+        fallbackEmail: user.email?.address ?? '',
+        fallbackRole,
+      });
+
+      if (readiness.isComplete) {
+        setShowWithdrawProfilePrompt(false);
+        setMissingWithdrawProfileFields([]);
+        router.push('/withdraw');
+        return;
+      }
+
+      setMissingWithdrawProfileFields(readiness.missingFields);
+      setShowWithdrawProfilePrompt(true);
+    } finally {
+      setCheckingWithdrawRequirements(false);
+    }
+  };
+
   const displayName = useMemo(() => profileName || userAlias || 'User', [profileName, userAlias]);
   const trimmedSearchQuery = normalizeSearchQuery(searchQuery);
   const totalSearchResults = searchProjects.length + searchUsers.length + searchTransactions.length;
@@ -964,7 +1014,7 @@ export default function HomePage() {
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => setShowTopUpOptions(true) },
     { label: 'Send', icon: <IconSend />, onClick: () => router.push('/invest') },
-    { label: 'Withdraw', icon: <IconDownload />, onClick: () => router.push('/withdraw') },
+    { label: 'Withdraw', icon: <IconDownload />, onClick: handleWithdrawClick },
     { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
   ];
 
@@ -1548,6 +1598,71 @@ export default function HomePage() {
                     {openingTopUpProvider === 'coinbase' ? 'Opening...' : 'New'}
                   </span>
                 </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {showWithdrawProfilePrompt ? (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.94),rgba(238,244,255,0.86))] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.24)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#DF1C41]">
+                  Withdraw locked
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">
+                  Complete your profile first
+                </h3>
+                <p className="mt-2 text-sm text-[#666D80]">
+                  Before making any withdrawal, you need to complete all your personal data,
+                  including your profile photo.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWithdrawProfilePrompt(false)}
+                className="rounded-full border border-white/40 bg-white/70 px-3 py-1 text-sm font-semibold text-[#0F172A]"
+                aria-label="Close profile completion prompt"
+              >
+                Close
+              </button>
+            </div>
+
+            {missingWithdrawProfileFields.length > 0 ? (
+              <div className="mt-5 rounded-[20px] border border-[#F6B7C3] bg-[#FFF1F3] px-4 py-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#DF1C41]">
+                  Missing fields
+                </p>
+                <p className="mt-2 text-sm text-[#7A2033]">
+                  {missingWithdrawProfileFields.join(', ')}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-[20px] border border-[#F6B7C3] bg-[#FFF1F3] px-4 py-4 text-sm text-[#7A2033]">
+                We could not verify your profile information right now, so please review your
+                personal data before requesting a withdrawal.
+              </div>
+            )}
+
+            <div className="mt-5 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWithdrawProfilePrompt(false);
+                  router.push('/profile/personal-data');
+                }}
+                className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-4 text-sm font-semibold text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] transition hover:bg-[#5B31CF]"
+              >
+                Go to Personal Data
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowWithdrawProfilePrompt(false)}
+                className="w-full rounded-[18px] border border-white/35 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] transition hover:bg-white"
+              >
+                Not now
               </button>
             </div>
           </div>
