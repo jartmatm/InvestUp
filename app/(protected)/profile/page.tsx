@@ -244,7 +244,11 @@ export default function ProfilePage() {
 
         <Section title="Transactions">
           <SettingItem icon={<IconPaymentMethod />} label="Payment Method" />
-          <SettingItem icon={<IconBankAccount />} label="Bank Account" />
+          <SettingItem
+            icon={<IconBankAccount />}
+            label="Bank Account"
+            onClick={() => router.push('/profile/bank-account')}
+          />
           {rolSeleccionado === 'inversor' ? (
             <SettingItem
               icon={<IconFavorites />}
