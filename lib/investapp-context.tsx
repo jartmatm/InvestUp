@@ -1303,7 +1303,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         const pendingInvestment =
           rolSeleccionado === 'inversor'
-            ? normalizePendingInvestment(getPendingInvestment(), destino)
+            ? normalizePendingInvestment(getPendingInvestment(user?.id), destino)
             : null;
         const receiverTarget = walletTargets.find(
           (target) =>
@@ -1432,7 +1432,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
               Number(enviadoFmt)
             );
           }
-          clearPendingInvestment();
+          clearPendingInvestment(user?.id);
         } else if (movementType === 'repayment') {
           await registrarRepayment({
             txHash,
@@ -1474,6 +1474,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       user?.email?.address,
       userAlias,
       walletTargets,
+      user?.id,
     ]
   );
 
@@ -1563,7 +1564,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(getOnboardingDoneKey(user.id));
       localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
     }
-    clearPendingInvestment();
+    clearPendingInvestment(user?.id);
     await logout();
     setFaseApp('login');
     setRolSeleccionado(null);

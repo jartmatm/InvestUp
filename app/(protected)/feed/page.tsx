@@ -14,6 +14,7 @@ import {
   isProjectPubliclyVisible,
 } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
+import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
 
 type FeedProject = {
   id: string;
@@ -118,20 +119,7 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [flippedId, setFlippedId] = useState<string | null>(null);
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return [];
-
-    try {
-      const stored =
-        window.localStorage.getItem('investapp_wishlist') ??
-        window.localStorage.getItem('investup_wishlist');
-      if (!stored) return [];
-      const parsed = JSON.parse(stored) as unknown;
-      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : [];
-    } catch {
-      return [];
-    }
-  });
+  const [wishlist, setWishlist] = useState<string[]>([]);
   const [showCategories, setShowCategories] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -168,6 +156,10 @@ export default function FeedPage() {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
+
+  useEffect(() => {
+    setWishlist(readWishlist(user?.id));
+  }, [user?.id]);
 
   useEffect(() => {
     const loadFeed = async () => {
@@ -233,9 +225,7 @@ export default function FeedPage() {
   const toggleWishlist = (id: string) => {
     setWishlist((prev) => {
       const next = prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id];
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('investapp_wishlist', JSON.stringify(next));
-      }
+      writeWishlist(user?.id, next);
       return next;
     });
   };

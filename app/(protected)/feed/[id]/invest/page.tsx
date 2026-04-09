@@ -72,7 +72,7 @@ export default function ProjectInvestPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
-  const { getAccessToken } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
   const [project, setProject] = useState<ProjectInvestmentDetail | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
@@ -260,7 +260,7 @@ export default function ProjectInvestPage() {
       projectedTotalUsdc: projection.projectedTotalUsdc.toFixed(2),
       currency: 'USDC',
       createdAt: new Date().toISOString(),
-    });
+    }, user?.id);
 
     router.push('/invest');
   };

@@ -110,7 +110,7 @@ export default function WalletTransferPage() {
   const transferMode =
     mode === 'repayment' && rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
   const [pendingInvestment, setPendingInvestment] = useState<PendingInvestment | null>(() =>
-    allowPendingInvestment ? getPendingInvestment() : null
+    allowPendingInvestment ? getPendingInvestment(user?.id) : null
   );
   const [walletDestino, setWalletDestino] = useState('');
   const [monto, setMonto] = useState('200.00');
@@ -173,11 +173,11 @@ export default function WalletTransferPage() {
       return;
     }
     if (typeof window === 'undefined') return undefined;
-    const syncPending = () => setPendingInvestment(getPendingInvestment());
+    const syncPending = () => setPendingInvestment(getPendingInvestment(user?.id));
     syncPending();
     window.addEventListener('focus', syncPending);
     return () => window.removeEventListener('focus', syncPending);
-  }, [allowPendingInvestment]);
+  }, [allowPendingInvestment, user?.id]);
 
   useEffect(() => {
     if (pendingInvestment) {
@@ -399,7 +399,7 @@ export default function WalletTransferPage() {
           );
           if (!result.success) return;
           if (pendingInvestment) {
-            clearPendingInvestment();
+            clearPendingInvestment(user?.id);
             setPendingInvestment(null);
           }
           if (transferMode === 'repayment' && !pendingInvestment) {

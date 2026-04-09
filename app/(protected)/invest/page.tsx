@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePrivy } from '@privy-io/react-auth';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getPendingInvestment } from '@/lib/pending-investment';
@@ -46,10 +47,11 @@ function TransferCard({ title, description, gradient, onClick }: TransferCardPro
 
 export default function InvestPage() {
   const router = useRouter();
+  const { user } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [hasPendingInvestment, setHasPendingInvestment] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return Boolean(getPendingInvestment());
+    return Boolean(getPendingInvestment(user?.id));
   });
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function InvestPage() {
     if (typeof window === 'undefined') return undefined;
 
     const syncPendingInvestment = () => {
-      setHasPendingInvestment(Boolean(getPendingInvestment()));
+      setHasPendingInvestment(Boolean(getPendingInvestment(user?.id)));
     };
 
     syncPendingInvestment();
@@ -72,7 +74,7 @@ export default function InvestPage() {
       window.removeEventListener('focus', syncPendingInvestment);
       window.removeEventListener('storage', syncPendingInvestment);
     };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!hasPendingInvestment) return;

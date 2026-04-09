@@ -8,6 +8,7 @@ import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { toEnglishSector } from '@/lib/sector-labels';
+import { readWishlist } from '@/lib/wishlist-storage';
 
 type FavoriteProject = {
   id: string | number;
@@ -45,7 +46,7 @@ const formatAmount = (amount: number | null) => {
 
 export default function FavoritesPage() {
   const router = useRouter();
-  const { getAccessToken } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FavoriteProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,18 +103,7 @@ export default function FavoritesPage() {
         return;
       }
 
-      let wishlist: string[] = [];
-      try {
-        const stored =
-          window.localStorage.getItem('investapp_wishlist') ??
-          window.localStorage.getItem('investup_wishlist');
-        const parsed = stored ? (JSON.parse(stored) as unknown) : [];
-        wishlist = Array.isArray(parsed)
-          ? parsed.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-          : [];
-      } catch {
-        wishlist = [];
-      }
+      const wishlist = readWishlist(user?.id);
 
       if (wishlist.length === 0) {
         setProjects([]);
@@ -157,7 +147,7 @@ export default function FavoritesPage() {
     };
 
     void loadFavorites();
-  }, [rolSeleccionado, supabase]);
+  }, [rolSeleccionado, supabase, user?.id]);
 
   return (
     <PageFrame title="Favorites" subtitle="Your saved ventures in one place">

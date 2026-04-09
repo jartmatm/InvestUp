@@ -14,19 +14,32 @@
   createdAt: string;
 };
 
-const PENDING_INVESTMENT_KEY = 'investapp_pending_investment';
-const LEGACY_PENDING_INVESTMENT_KEY = 'investup_pending_investment';
+const getPendingInvestmentKeys = (userId: string) =>
+  [`investapp_pending_investment_${userId}`, `investup_pending_investment_${userId}`] as const;
 
-export function setPendingInvestment(value: PendingInvestment) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(PENDING_INVESTMENT_KEY, JSON.stringify(value));
+export function setPendingInvestment(
+  value: PendingInvestment,
+  userId: string | null | undefined
+) {
+  if (typeof window === 'undefined' || !userId) return;
+  const serialized = JSON.stringify(value);
+  getPendingInvestmentKeys(userId).forEach((key) => {
+    window.localStorage.setItem(key, serialized);
+  });
 }
 
-export function getPendingInvestment(): PendingInvestment | null {
-  if (typeof window === 'undefined') return null;
-  const raw =
-    window.localStorage.getItem(PENDING_INVESTMENT_KEY) ??
-    window.localStorage.getItem(LEGACY_PENDING_INVESTMENT_KEY);
+export function getPendingInvestment(
+  userId: string | null | undefined
+): PendingInvestment | null {
+  if (typeof window === 'undefined' || !userId) return null;
+
+  let raw = '';
+  for (const key of getPendingInvestmentKeys(userId)) {
+    const value = window.localStorage.getItem(key) ?? '';
+    if (!value) continue;
+    raw = value;
+    break;
+  }
   if (!raw) return null;
 
   try {
@@ -38,8 +51,9 @@ export function getPendingInvestment(): PendingInvestment | null {
   }
 }
 
-export function clearPendingInvestment() {
-  if (typeof window === 'undefined') return;
-  window.localStorage.removeItem(PENDING_INVESTMENT_KEY);
-  window.localStorage.removeItem(LEGACY_PENDING_INVESTMENT_KEY);
+export function clearPendingInvestment(userId: string | null | undefined) {
+  if (typeof window === 'undefined' || !userId) return;
+  getPendingInvestmentKeys(userId).forEach((key) => {
+    window.localStorage.removeItem(key);
+  });
 }

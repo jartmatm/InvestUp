@@ -9,6 +9,7 @@ import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
+import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
 
 type ProfileForm = {
   id: string;
@@ -224,8 +225,8 @@ export default function PersonalDataPage() {
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
       updateForm('avatar_url', result);
-      if (typeof window !== 'undefined' && result) {
-        window.localStorage.setItem('investapp_avatar_url', result);
+      if (typeof window !== 'undefined' && user?.id && result) {
+        writeProfileAvatarCache(user.id, result);
         window.dispatchEvent(new Event('investapp-profile-updated'));
       }
     };
@@ -295,12 +296,12 @@ export default function PersonalDataPage() {
     if (typeof window !== 'undefined') {
       const nextEmail = form.email || user.email?.address || '';
       const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
-      window.localStorage.setItem('investapp_display_name', nextDisplayName);
-      window.localStorage.setItem('investapp_email', nextEmail);
-      if (form.avatar_url) {
-        window.localStorage.setItem('investapp_avatar_url', form.avatar_url);
-      } else {
-        window.localStorage.removeItem('investapp_avatar_url');
+      if (user.id) {
+        writeProfileSummaryCache(user.id, {
+          avatarUrl: form.avatar_url,
+          displayName: nextDisplayName,
+          email: nextEmail,
+        });
       }
       window.dispatchEvent(new Event('investapp-profile-updated'));
     }
@@ -434,4 +435,3 @@ export default function PersonalDataPage() {
     </PageFrame>
   );
 }
-
