@@ -1546,7 +1546,7 @@ export default function HomePage() {
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">Choose a provider</h3>
                 <p className="mt-2 text-sm text-[#666D80]">
-                  Keep the current wallet funding flow or open a Coinbase checkout for USDC on
+                  Start with MoonPay or open Coinbase as a second checkout option for USDC on
                   Polygon.
                 </p>
               </div>
@@ -1572,13 +1572,13 @@ export default function HomePage() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#0F172A]">Current provider</p>
+                    <p className="text-sm font-semibold text-[#0F172A]">MoonPay</p>
                     <p className="mt-1 text-xs text-[#666D80]">
-                      Opens the same wallet funding flow you already use in the app.
+                      Opens Privy&apos;s card funding flow with MoonPay as the preferred provider.
                     </p>
                   </div>
                   <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-xs font-semibold text-[#4F46E5]">
-                    {openingTopUpProvider === 'current' ? 'Opening...' : 'Default'}
+                    {openingTopUpProvider === 'current' ? 'Opening...' : 'MoonPay'}
                   </span>
                 </div>
               </button>
@@ -1674,4 +1674,3 @@ export default function HomePage() {
     </div>
   );
 }
-

@@ -26,9 +26,9 @@ export default function OnboardingPage() {
   const [stage, setStage] = useState<OnboardingStage>('slides');
   const touchStartX = useRef<number | null>(null);
   const touchCurrentX = useRef<number | null>(null);
+  const showOnboarding = faseApp === 'onboarding' || faseApp === 'login';
 
   useEffect(() => {
-    if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'dashboard') router.replace('/home');
   }, [faseApp, router]);
 
@@ -36,7 +36,7 @@ export default function OnboardingPage() {
     setRol(rolSeleccionado);
   }, [rolSeleccionado]);
 
-  if (faseApp !== 'onboarding') {
+  if (!showOnboarding) {
     return <main className="min-h-screen bg-transparent" />;
   }
 
@@ -176,6 +176,10 @@ export default function OnboardingPage() {
               className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(107,57,244,0.22)] transition hover:bg-[#5c2ff0] disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
               onClick={async () => {
                 if (!rol) return;
+                if (faseApp === 'login') {
+                  router.push('/login');
+                  return;
+                }
                 await guardarRol(rol);
               }}
             >

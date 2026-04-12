@@ -73,16 +73,6 @@ function IconReferralCode() {
   );
 }
 
-function IconPaymentMethod() {
-  return (
-    <svg viewBox="0 0 17 14" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="1" width="15" height="12" rx="2" />
-      <path d="M1 5.5H16" />
-      <circle cx="10.5" cy="9" r="1.5" />
-    </svg>
-  );
-}
-
 function IconBankAccount() {
   return (
     <svg viewBox="0 0 17 17" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -243,7 +233,6 @@ export default function ProfilePage() {
         </Section>
 
         <Section title="Transactions">
-          <SettingItem icon={<IconPaymentMethod />} label="Payment Method" />
           <SettingItem
             icon={<IconBankAccount />}
             label="Bank Account"

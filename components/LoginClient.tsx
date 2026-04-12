@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePrivy } from '@privy-io/react-auth';
+import { useModalStatus, usePrivy } from '@privy-io/react-auth';
 
 export default function LoginClient() {
   const router = useRouter();
   const { login, ready, authenticated } = usePrivy();
+  const { isOpen } = useModalStatus();
   const hasOpenedLogin = useRef(false);
+  const hasSeenLoginModalOpen = useRef(false);
 
   useEffect(() => {
     if (ready && authenticated) {
@@ -23,6 +25,19 @@ export default function LoginClient() {
     hasOpenedLogin.current = true;
     login();
   }, [authenticated, login, ready]);
+
+  useEffect(() => {
+    if (!ready || authenticated) return;
+
+    if (isOpen) {
+      hasSeenLoginModalOpen.current = true;
+      return;
+    }
+
+    if (hasOpenedLogin.current && hasSeenLoginModalOpen.current) {
+      router.replace('/onboarding');
+    }
+  }, [authenticated, isOpen, ready, router]);
 
   if (!ready || authenticated) {
     return <div className="min-h-screen bg-transparent" />;

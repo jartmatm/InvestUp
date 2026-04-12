@@ -12,6 +12,7 @@ import {
 import { useFundWallet, usePrivy } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
+import { polygon } from 'viem/chains';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
   buildTransactionNotificationKey,
@@ -1483,11 +1484,26 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       alert('Wait until your smart wallet is ready.');
       return;
     }
-    await fundWallet({ address: smartWalletAddress as any });
+    await fundWallet({
+      address: smartWalletAddress as any,
+      options: {
+        chain: polygon,
+        asset: 'USDC',
+        defaultFundingMethod: 'card',
+        card: {
+          preferredProvider: 'moonpay',
+        },
+        uiConfig: {
+          landing: {
+            title: 'Top up with MoonPay',
+          },
+        },
+      },
+    });
     pushNotification({
       kind: 'top_up',
-      title: 'Top up flow opened',
-      body: 'Complete the provider steps to add more funds to your wallet.',
+      title: 'MoonPay top up opened',
+      body: 'Complete the MoonPay steps to add USDC to your wallet.',
       actionHref: '/home',
     });
   }, [fundWallet, pushNotification, smartWalletAddress]);

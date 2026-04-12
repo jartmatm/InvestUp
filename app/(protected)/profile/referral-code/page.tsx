@@ -38,9 +38,7 @@ export default function ReferralCodePage() {
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
   const [referralCode, setReferralCode] = useState('');
-  const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [showPopup, setShowPopup] = useState(false);
 
@@ -99,7 +97,6 @@ export default function ReferralCodePage() {
       }
 
       const cols = new Set<string>(Object.keys(data ?? {}));
-      setAvailableColumns(cols);
 
       const existingCode = (data?.referral_code as string | null) ?? '';
       const cachedCode =
@@ -125,31 +122,6 @@ export default function ReferralCodePage() {
 
     loadReferral();
   }, [supabase, user?.id]);
-
-  const saveReferralCode = async () => {
-    if (!user?.id) return;
-    setSaving(true);
-    setStatus('');
-
-    const payload: Record<string, unknown> = { id: user.id };
-    if (availableColumns.has('referral_code')) {
-      payload.referral_code = referralCode || null;
-    }
-
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
-    if (error) {
-      setStatus(`Could not save to Supabase: ${error.message}`);
-      setSaving(false);
-      return;
-    }
-
-    if (typeof window !== 'undefined' && user?.id) {
-      window.localStorage.setItem(getReferralStorageKey(user.id), referralCode);
-    }
-
-    setStatus('Referral code saved successfully.');
-    setSaving(false);
-  };
 
   return (
     <PageFrame title="Referral Code" subtitle="Share and earn rewards">
@@ -183,10 +155,6 @@ export default function ReferralCodePage() {
           <Input value={referralCode} readOnly placeholder="Referral code" />
         </div>
 
-        <Button onClick={saveReferralCode} disabled={saving || loadingProfile} className="rounded-xl py-4 text-base">
-          {saving ? 'Saving...' : 'Save referral code'}
-        </Button>
-
         {status ? <p className="text-xs text-slate-500">{status}</p> : null}
       </div>
 
@@ -208,7 +176,10 @@ export default function ReferralCodePage() {
               <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500">Referral code</p>
               <p className="mt-2 text-2xl font-semibold tracking-[0.2em] text-[#1A1B25]">{referralCode}</p>
             </div>
-            <Button onClick={() => setShowPopup(false)} className="mt-5 rounded-xl px-6 py-2 text-sm">
+            <Button
+              onClick={() => setShowPopup(false)}
+              className="mt-5 rounded-xl px-6 py-2 text-sm !bg-[#6B39F4] !text-white shadow-[0_14px_28px_rgba(107,57,244,0.22)] hover:!bg-[#5B31CF]"
+            >
               Close
             </Button>
           </div>
