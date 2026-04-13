@@ -33,6 +33,16 @@ export default function OnboardingPage() {
   }, [faseApp, router]);
 
   useEffect(() => {
+    if (faseApp === 'onboarding') {
+      setStage('profile');
+    }
+
+    if (faseApp === 'login') {
+      setStage('slides');
+    }
+  }, [faseApp]);
+
+  useEffect(() => {
     setRol(rolSeleccionado);
   }, [rolSeleccionado]);
 
@@ -40,15 +50,22 @@ export default function OnboardingPage() {
     return <main className="min-h-screen bg-transparent" />;
   }
 
-  const goToNext = () => {
-    setCurrentSlide((previous) => {
-      if (previous >= ONBOARDING_SLIDES.length - 1) {
-        setStage('profile');
-        return previous;
-      }
+  const completeSlides = () => {
+    if (faseApp === 'login') {
+      router.push('/login');
+      return;
+    }
 
-      return previous + 1;
-    });
+    setStage('profile');
+  };
+
+  const goToNext = () => {
+    if (currentSlide >= ONBOARDING_SLIDES.length - 1) {
+      completeSlides();
+      return;
+    }
+
+    setCurrentSlide((previous) => Math.min(previous + 1, ONBOARDING_SLIDES.length - 1));
   };
 
   const goToPrevious = () => {
@@ -56,7 +73,7 @@ export default function OnboardingPage() {
   };
 
   const skipSlides = () => {
-    setStage('profile');
+    completeSlides();
   };
 
   const handleTouchStart = (clientX: number) => {
