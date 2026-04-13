@@ -162,7 +162,6 @@ type InvestAppContextType = {
     options?: { movementType?: MovementType; projectId?: string | null; investorUserId?: string | null }
   ) => Promise<SendUsdcResult>;
   abrirCompra: () => Promise<void>;
-  abrirCompraCoinbase: () => Promise<void>;
   abrirRetiro: () => void;
   lastReceipt: ReceiptData | null;
   clearReceipt: () => void;
@@ -1484,78 +1483,35 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       alert('Wait until your smart wallet is ready.');
       return;
     }
-    await fundWallet({
-      address: smartWalletAddress as any,
-      options: {
-        chain: polygon,
-        asset: 'USDC',
-        defaultFundingMethod: 'card',
-        card: {
-          preferredProvider: 'moonpay',
-        },
-        uiConfig: {
-          landing: {
-            title: 'Top up with MoonPay',
+    try {
+      const result = await fundWallet({
+        address: smartWalletAddress,
+        options: {
+          chain: polygon,
+          asset: 'USDC',
+          uiConfig: {
+            landing: {
+              title: 'Top up',
+            },
           },
         },
-      },
-    });
-    pushNotification({
-      kind: 'top_up',
-      title: 'MoonPay top up opened',
-      body: 'Complete the MoonPay steps to add USDC to your wallet.',
-      actionHref: '/home',
-    });
-  }, [fundWallet, pushNotification, smartWalletAddress]);
-
-  const abrirCompraCoinbase = useCallback(async () => {
-    if (!smartWalletAddress) {
-      alert('Wait until your smart wallet is ready.');
-      return;
-    }
-
-    try {
-      const homeUrl = `${window.location.origin}/home`;
-      const response = await fetch('/api/coinbase/onramp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: smartWalletAddress,
-          partnerUserRef: user?.id ? `investapp-${user.id}` : undefined,
-          redirectUrl: homeUrl,
-        }),
       });
 
-      const payload = (await response.json().catch(() => null)) as
-        | { url?: string | null; error?: string; details?: unknown }
-        | null;
-
-      if (!response.ok || !payload?.url) {
-        const detail =
-          typeof payload?.details === 'string'
-            ? payload.details
-            : payload?.error || 'Could not create the Coinbase onramp session.';
-        throw new Error(detail);
-      }
-
-      const popup = window.open(payload.url, 'CoinbaseOnramp', 'width=480,height=760');
-      if (!popup) {
-        window.location.assign(payload.url);
+      if (result?.status !== 'completed') {
+        return;
       }
 
       pushNotification({
         kind: 'top_up',
-        title: 'Coinbase top up started',
-        body: 'Finish the Coinbase flow to recharge your account.',
+        title: 'Top up completed',
+        body: 'Your top up request finished. Your balance will update once the funds arrive.',
         actionHref: '/home',
       });
     } catch (error) {
       const message = getErrorMessage(error);
-      alert(`Coinbase top up is not available right now: ${message}`);
+      alert(`Top up is not available right now: ${message}`);
     }
-  }, [pushNotification, smartWalletAddress, user?.id]);
+  }, [fundWallet, pushNotification, smartWalletAddress]);
 
   const abrirRetiro = useCallback(() => {
     if (!smartWalletAddress) {
@@ -1798,7 +1754,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     cargarWalletsObjetivo,
     enviarUSDC,
     abrirCompra,
-    abrirCompraCoinbase,
     abrirRetiro,
     lastReceipt,
     clearReceipt: () => setLastReceipt(null),
