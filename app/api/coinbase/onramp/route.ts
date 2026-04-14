@@ -40,6 +40,34 @@ const buildPartnerUserRef = (rawValue: string | undefined) => {
   return `sandbox-${baseValue}`;
 };
 
+const getAllowedRedirectOrigins = (requestOrigin: string) => {
+  const rawOrigins = readFirstEnv('COINBASE_ONRAMP_ALLOWED_ORIGINS');
+  const extraOrigins = rawOrigins
+    ? rawOrigins
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean)
+    : [];
+
+  return new Set([requestOrigin, ...extraOrigins]);
+};
+
+const normalizeRedirectUrl = (
+  rawUrl: string | undefined,
+  requestOrigin: string,
+  allowedOrigins: Set<string>
+) => {
+  if (!rawUrl) return undefined;
+
+  try {
+    const url = new URL(rawUrl, requestOrigin);
+    if (!allowedOrigins.has(url.origin)) return undefined;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+};
+
 export async function POST(request: NextRequest) {
   const apiKeyId = readFirstEnv(
     'COINBASE_CDP_API_KEY_ID',
@@ -89,10 +117,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const allowedRedirectOrigins = getAllowedRedirectOrigins(request.nextUrl.origin);
+  const defaultRedirectUrl = new URL('/home', request.nextUrl.origin).toString();
   const redirectUrl =
-    coerceOptionalString(payload.redirectUrl) ||
-    readFirstEnv('COINBASE_ONRAMP_REDIRECT_URL') ||
-    new URL('/home', request.nextUrl.origin).toString();
+    normalizeRedirectUrl(
+      coerceOptionalString(payload.redirectUrl),
+      request.nextUrl.origin,
+      allowedRedirectOrigins
+    ) ||
+    normalizeRedirectUrl(
+      readFirstEnv('COINBASE_ONRAMP_REDIRECT_URL') || undefined,
+      request.nextUrl.origin,
+      allowedRedirectOrigins
+    ) ||
+    defaultRedirectUrl;
 
   const partnerUserRef = buildPartnerUserRef(coerceOptionalString(payload.partnerUserRef));
 

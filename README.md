@@ -47,6 +47,22 @@ $env:CAP_SERVER_URL="http://192.168.1.10:3000"
 npm run android:dev
 ```
 
+## Environment variables
+
+Client-side (exposed in the bundle):
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+- `NEXT_PUBLIC_PIMLICO_API_KEY` (or `NEXT_PUBLIC_PIMLICO_BUNDLER_URL`)
+
+Server-side only (keep these secret):
+
+- `SUPABASE_SERVICE_ROLE_KEY` (required for `/api/withdrawals`)
+- `SUPABASE_URL` (optional, falls back to `NEXT_PUBLIC_SUPABASE_URL`)
+- `PRIVY_APP_SECRET` (required for `/api/withdrawals`)
+- `PRIVY_APP_ID` (optional, falls back to `NEXT_PUBLIC_PRIVY_APP_ID`)
+- `MANUAL_WITHDRAWAL_WALLET` (optional, defaults to the operations wallet in code)
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More
