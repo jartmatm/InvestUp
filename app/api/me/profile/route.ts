@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
+import { getRoleChangeEligibility } from '@/utils/server/role-change-eligibility';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 
 export const runtime = 'nodejs';
@@ -140,6 +141,45 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient();
+    const requestedRole =
+      typeof updatePayload.role === 'string' ? updatePayload.role : null;
+    let currentRole: string | null = null;
+
+    if (requestedRole) {
+      const { data: currentUser, error: currentUserError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', verified.userId)
+        .maybeSingle();
+
+      if (currentUserError) {
+        return jsonNoStore(
+          { error: 'Could not verify the current user role.', details: currentUserError.message },
+          { status: 500 }
+        );
+      }
+
+      currentRole =
+        typeof (currentUser as { role?: unknown } | null)?.role === 'string'
+          ? ((currentUser as { role?: string | null }).role ?? null)
+          : null;
+    }
+
+    if (requestedRole && requestedRole !== currentRole) {
+      const eligibility = await getRoleChangeEligibility(verified.userId, supabase);
+      if (!eligibility.canChangeRole) {
+        return jsonNoStore(
+          {
+            error: 'Role change blocked.',
+            details:
+              eligibility.message ??
+              'You can only change roles when your account has no investments and no published projects.',
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const { data, error: upsertError } = await supabase
       .from('users')
       .upsert(updatePayload, { onConflict: 'id' })

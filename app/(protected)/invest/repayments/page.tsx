@@ -6,12 +6,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
-import {
-  detectInvestmentsSchema,
-  loadLegacyInvestmentsForProjects,
-} from '@/lib/supabase-ledger-compat';
 import { useInvestApp } from '@/lib/investapp-context';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
@@ -141,7 +137,6 @@ export default function RepaymentsPage() {
       }
 
       setLoading(true);
-      const investmentSchema = await detectInvestmentsSchema(supabase);
       const { data: projectData } = await supabase
         .from('projects')
         .select('id,title,business_name,interest_rate,term_months')
@@ -154,64 +149,39 @@ export default function RepaymentsPage() {
       );
       const ownedProjectIds = Array.from(projectMap.keys());
 
-      let investments: InvestmentRow[] = [];
-
-      if (investmentSchema === 'legacy') {
-        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForProjects(
-          supabase,
-          ownedProjectIds
-        );
-
-        if (legacyError) {
-          setCards([]);
-          setLoading(false);
-          return;
+      const { data: investmentData, error: investmentError } = await fetchCurrentUserInvestments(
+        getAccessToken,
+        {
+          scope: 'entrepreneur',
+          statuses: 'submitted,confirmed',
         }
+      );
 
-        investments = legacyData
-          .filter((item) => item.investor_user_id)
-          .map((item) => ({
-            id: item.id,
-            created_at: item.created_at,
-            project_id: item.project_id,
-            investor_user_id: item.investor_user_id,
-            from_wallet: item.from_wallet,
-            amount: item.amount,
-            amount_usdc: item.amount,
-            interest_rate_ea: Number(projectMap.get(item.project_id)?.interest_rate ?? 0),
-            term_months: Number(projectMap.get(item.project_id)?.term_months ?? 0),
-            projected_total_usdc: calculateInvestmentProjection({
+      if (investmentError) {
+        setCards([]);
+        setLoading(false);
+        return;
+      }
+
+      const investments = ((investmentData ?? []) as InvestmentRow[])
+        .filter((item) => (ownedProjectIds.length > 0 ? ownedProjectIds.includes(item.project_id) : true))
+        .map((item) => ({
+          ...item,
+          project_title:
+            item.project_title ||
+            projectMap.get(item.project_id)?.business_name ||
+            projectMap.get(item.project_id)?.title ||
+            null,
+          interest_rate_ea: item.interest_rate_ea ?? Number(projectMap.get(item.project_id)?.interest_rate ?? 0),
+          term_months: item.term_months ?? Number(projectMap.get(item.project_id)?.term_months ?? 0),
+          projected_total_usdc:
+            item.projected_total_usdc ??
+            calculateInvestmentProjection({
               amountUsdc: Number(item.amount ?? 0),
               interestRateEa: Number(projectMap.get(item.project_id)?.interest_rate ?? 0),
               termMonths: Number(projectMap.get(item.project_id)?.term_months ?? 0),
             }).projectedTotalUsdc,
-            project_title:
-              projectMap.get(item.project_id)?.business_name ||
-              projectMap.get(item.project_id)?.title ||
-              null,
-            status: item.status,
-          }));
-      } else {
-        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('investments')
-            .select(`id,created_at,project_id,investor_user_id,from_wallet,${amountColumn},interest_rate_ea,term_months,projected_total_usdc,project_title,status`)
-            .eq('entrepreneur_user_id', user.id)
-            .in('status', ['submitted', 'confirmed'])
-            .order('created_at', { ascending: false })
-        );
-
-        if (error) {
-          setCards([]);
-          setLoading(false);
-          return;
-        }
-
-        investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
-          ...item,
-          amount: getAmountValue(item),
         }));
-      }
 
       const investorIds = Array.from(
         new Set(investments.map((investment) => investment.investor_user_id).filter(Boolean))
@@ -255,7 +225,7 @@ export default function RepaymentsPage() {
     };
 
     void loadCards();
-  }, [rolSeleccionado, supabase, user?.id]);
+  }, [getAccessToken, rolSeleccionado, supabase, user?.id]);
 
   return (
     <PageFrame title="Repayments" subtitle="Review each investor and launch the payment flow">

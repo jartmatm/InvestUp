@@ -13,14 +13,10 @@ import {
   getNextRepaymentDate,
 } from '@/lib/investor-overview';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
-import {
-  detectInvestmentsSchema,
-  loadLegacyInvestmentsForInvestor,
-} from '@/lib/supabase-ledger-compat';
 import { getWithdrawProfileReadiness } from '@/lib/profile-completeness';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
@@ -435,61 +431,25 @@ export default function HomePage() {
       }
 
       setLoadingActiveInvestments(true);
-      const investmentSchema = await detectInvestmentsSchema(supabase);
-      let investments: ActiveInvestmentRow[] = [];
+      const { data, error } = await fetchCurrentUserInvestments(getAccessToken, {
+        scope: 'investor',
+        statuses: 'submitted,confirmed',
+        limit: 5,
+      });
 
-      if (investmentSchema === 'legacy') {
-        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForInvestor(
-          supabase,
-          user.id
-        );
-
-        if (legacyError) {
-          console.error('Error loading active investments:', legacyError.message);
-          setActiveInvestments([]);
-          setLoadingActiveInvestments(false);
-          return;
-        }
-
-        investments = legacyData.slice(0, 5).map((item) => ({
-          id: item.id,
-          created_at: item.created_at,
-          project_id: item.project_id,
-          project_title: null,
-          amount: item.amount,
-          interest_rate_ea: null,
-          term_months: null,
-          projected_return_usdc: null,
-          projected_total_usdc: null,
-          status: item.status,
-        }));
-      } else {
-        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('investments')
-            .select(
-              `id,created_at,project_id,project_title,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-            )
-            .eq('investor_user_id', user.id)
-            .in('status', ['submitted', 'confirmed'])
-            .order('created_at', { ascending: false })
-            .limit(5)
-        );
-
-        if (error) {
-          console.error('Error loading active investments:', error.message);
-          setActiveInvestments([]);
-          setLoadingActiveInvestments(false);
-          return;
-        }
-
-        investments = ((data ?? []) as RawActiveInvestmentRow[])
-          .filter((item) => item.id)
-          .map((item) => ({
-            ...item,
-            amount: getAmountValue(item),
-          })) as ActiveInvestmentRow[];
+      if (error) {
+        console.error('Error loading active investments:', error);
+        setActiveInvestments([]);
+        setLoadingActiveInvestments(false);
+        return;
       }
+
+      const investments = ((data ?? []) as RawActiveInvestmentRow[])
+        .filter((item) => item.id)
+        .map((item) => ({
+          ...item,
+          amount: item.amount ?? item.amount_usdc ?? null,
+        })) as ActiveInvestmentRow[];
 
       const projectIds = Array.from(
         new Set(investments.map((investment) => investment.project_id).filter(Boolean))
@@ -589,7 +549,7 @@ export default function HomePage() {
     loadActiveInvestments();
     const interval = window.setInterval(loadActiveInvestments, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
+  }, [getAccessToken, rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
 
   useEffect(() => {
     const loadTransactions = async () => {

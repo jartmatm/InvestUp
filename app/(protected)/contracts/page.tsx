@@ -13,6 +13,7 @@ import {
 } from '@/lib/investment-contract';
 import { normalizePaymentScheduleRecord } from '@/lib/payment-schedule';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type ProjectRow = {
@@ -142,15 +143,12 @@ export default function ContractPage() {
       setLoading(true);
       setStatus('');
 
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from('payment_schedule')
-        .select(
-          'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan,metadata'
-        )
-        .eq('credit_id', creditId)
-        .maybeSingle();
+      const { data: scheduleData, error: scheduleError } = await fetchCurrentUserPaymentSchedule(
+        getAccessToken,
+        { creditId }
+      );
 
-      if (scheduleError || !scheduleData) {
+      if (scheduleError || !scheduleData?.length) {
         setStatus('Could not load this contract right now.');
         setSnapshot(null);
         setContractSource('');
@@ -159,20 +157,8 @@ export default function ContractPage() {
       }
 
       const scheduleRecord = normalizePaymentScheduleRecord(
-        scheduleData as Record<string, unknown>
+        scheduleData[0] as Record<string, unknown>
       );
-
-      if (
-        user?.id &&
-        scheduleRecord.investor_user_id !== user.id &&
-        scheduleRecord.entrepreneur_user_id !== user.id
-      ) {
-        setStatus('You do not have access to this contract.');
-        setSnapshot(null);
-        setContractSource('');
-        setLoading(false);
-        return;
-      }
 
       const normalizedProjectId = normalizeProjectId(scheduleRecord.project_id);
       const participantIds = [
@@ -237,7 +223,7 @@ export default function ContractPage() {
     };
 
     void loadContract();
-  }, [creditId, supabase, user?.id]);
+  }, [creditId, getAccessToken, supabase, user?.id]);
 
   return (
     <PageFrame title="Smart contract" subtitle="Generated contract and payment plan">

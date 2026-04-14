@@ -13,12 +13,8 @@ import {
   type InvestmentHealth,
 } from '@/lib/investor-overview';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
-import {
-  detectInvestmentsSchema,
-  loadLegacyInvestmentsForInvestor,
-} from '@/lib/supabase-ledger-compat';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
@@ -184,59 +180,19 @@ export default function InvestorPortfolioDashboard() {
 
       setLoading(true);
       setStatus('');
+      const { data, error } = await fetchCurrentUserInvestments(getAccessToken, {
+        scope: 'investor',
+        statuses: 'submitted,confirmed',
+      });
 
-      const investmentSchema = await detectInvestmentsSchema(supabase);
-      let investments: InvestmentRow[] = [];
-
-      if (investmentSchema === 'legacy') {
-        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForInvestor(
-          supabase,
-          user.id
-        );
-
-        if (legacyError) {
-          setStatus('Could not load your investments right now. Please try again in a moment.');
-          setItems([]);
-          setLoading(false);
-          return;
-        }
-
-        investments = legacyData.map((item) => ({
-          id: item.id,
-          created_at: item.created_at,
-          project_id: item.project_id,
-          amount: item.amount,
-          amount_usdc: item.amount,
-          interest_rate_ea: null,
-          term_months: null,
-          projected_return_usdc: null,
-          projected_total_usdc: null,
-          status: item.status,
-        }));
-      } else {
-        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('investments')
-            .select(
-              `id,created_at,project_id,${amountColumn},interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-            )
-            .eq('investor_user_id', user.id)
-            .in('status', ['submitted', 'confirmed'])
-            .order('created_at', { ascending: false })
-        );
-
-        if (error) {
-          setStatus('Could not load your investments right now. Please try again in a moment.');
-          setItems([]);
-          setLoading(false);
-          return;
-        }
-
-        investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
-          ...item,
-          amount: getAmountValue(item),
-        }));
+      if (error) {
+        setStatus('Could not load your investments right now. Please try again in a moment.');
+        setItems([]);
+        setLoading(false);
+        return;
       }
+
+      const investments = (data ?? []) as InvestmentRow[];
 
       const projectIds = Array.from(new Set(investments.map((item) => item.project_id).filter(Boolean)));
 
@@ -314,7 +270,7 @@ export default function InvestorPortfolioDashboard() {
     };
 
     void loadDashboard();
-  }, [supabase, user?.id]);
+  }, [getAccessToken, supabase, user?.id]);
 
   const totalPortfolio = useMemo(
     () => items.reduce((sum, item) => sum + item.amountInvested, 0),

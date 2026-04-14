@@ -13,12 +13,9 @@ import {
   normalizePaymentScheduleRecord,
   type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
-import {
-  detectInvestmentsSchema,
-  loadLegacyInvestmentsForProjects,
-} from '@/lib/supabase-ledger-compat';
 import { getProjectStatusLabel, getProjectStatusTone } from '@/lib/project-status';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
+import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type EntrepreneurProjectRow = {
@@ -318,67 +315,35 @@ export default function EntrepreneurFeedDashboard() {
       const scheduleInstallments = Number(
         currentProject.installment_count ?? currentProject.term_months ?? 1
       );
-      const investmentSchema = await detectInvestmentsSchema(supabase);
-      let investments: InvestmentRow[] = [];
-
-      if (investmentSchema === 'legacy') {
-        const { data: legacyData, error: legacyError } = await loadLegacyInvestmentsForProjects(
-          supabase,
-          [projectId]
-        );
-
-        if (legacyError) {
-          setStatus('Could not load your investor summary right now.');
-          setSummaryItems([]);
-          setLoading(false);
-          return;
+      const { data: investmentData, error: investmentError } = await fetchCurrentUserInvestments(
+        getAccessToken,
+        {
+          scope: 'entrepreneur',
+          projectId,
+          statuses: 'submitted,confirmed',
         }
+      );
 
-        investments = legacyData
-          .filter((item) => item.investor_user_id)
-          .map((item) => ({
-            id: item.id,
-            created_at: item.created_at,
-            project_id: item.project_id,
-            investor_user_id: item.investor_user_id,
-            from_wallet: item.from_wallet,
-            amount: item.amount,
-            amount_usdc: item.amount,
-            interest_rate_ea: Number(currentProject.interest_rate ?? 0),
-            term_months: scheduleInstallments,
-            projected_total_usdc: calculateInvestmentProjection({
-              amountUsdc: Number(item.amount ?? 0),
-              interestRateEa: Number(currentProject.interest_rate ?? 0),
-              termMonths: scheduleInstallments,
-            }).projectedTotalUsdc,
-            status: item.status,
-          }));
-      } else {
-        const normalizedProjectId = Number.isFinite(Number(projectId)) ? Number(projectId) : projectId;
-        const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-          supabase
-            .from('investments')
-            .select(
-              `id,created_at,project_id,investor_user_id,from_wallet,${amountColumn},interest_rate_ea,term_months,projected_total_usdc,status`
-            )
-            .eq('project_id', normalizedProjectId)
-            .in('status', ['submitted', 'confirmed'])
-            .order('created_at', { ascending: false })
-        );
-
-        if (error) {
-          setStatus('Could not load your investor summary right now.');
-          setSummaryItems([]);
-          setLoading(false);
-          return;
-        }
-
-        investments = ((data ?? []) as InvestmentRow[]).map((item) => ({
-          ...item,
-          project_id: String(item.project_id),
-          amount: getAmountValue(item),
-        }));
+      if (investmentError) {
+        setStatus('Could not load your investor summary right now.');
+        setSummaryItems([]);
+        setLoading(false);
+        return;
       }
+
+      const investments = ((investmentData ?? []) as InvestmentRow[]).map((item) => ({
+        ...item,
+        project_id: String(item.project_id),
+        interest_rate_ea: item.interest_rate_ea ?? Number(currentProject.interest_rate ?? 0),
+        term_months: item.term_months ?? scheduleInstallments,
+        projected_total_usdc:
+          item.projected_total_usdc ??
+          calculateInvestmentProjection({
+            amountUsdc: Number(item.amount ?? 0),
+            interestRateEa: Number(currentProject.interest_rate ?? 0),
+            termMonths: scheduleInstallments,
+          }).projectedTotalUsdc,
+      }));
 
       const investorIds = Array.from(
         new Set(investments.map((investment) => investment.investor_user_id).filter(Boolean))
@@ -400,22 +365,12 @@ export default function EntrepreneurFeedDashboard() {
 
       const nextScheduleByInvestor = new Map<string, PaymentScheduleRecord>();
       let groupedSchedules: PaymentScheduleGroup[] = [];
-      const normalizedScheduleProjectId = Number.isFinite(Number(projectId))
-        ? Number(projectId)
-        : projectId;
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from('payment_schedule')
-        .select(
-          'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan'
-        )
-        .eq('project_id', normalizedScheduleProjectId)
-        .order('next_due_date', { ascending: true, nullsFirst: false });
+      const { data: scheduleData, error: scheduleError } = await fetchCurrentUserPaymentSchedule(
+        getAccessToken,
+        { projectId }
+      );
 
-      if (
-        scheduleError &&
-        !scheduleError.message.toLowerCase().includes('payment_schedule') &&
-        !scheduleError.message.toLowerCase().includes('schema cache')
-      ) {
+      if (scheduleError) {
         setStatus('Could not load your payment schedule right now.');
       }
 
@@ -519,7 +474,7 @@ export default function EntrepreneurFeedDashboard() {
     };
 
     void loadDashboard();
-  }, [supabase, user?.id]);
+  }, [getAccessToken, supabase, user?.id]);
 
   const targetAmount = Number(project?.amount_requested ?? 0);
   const raisedAmount = Number(project?.amount_received ?? 0);

@@ -299,6 +299,26 @@ export default function PortfolioPage() {
     }
   }, [loadMyProjects, rolSeleccionado]);
 
+  const loadOwnedProjectState = useCallback(
+    async (projectId: string) => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id,status,amount_received')
+        .eq('id', projectId)
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      return data as Pick<ProjectRow, 'id' | 'status' | 'amount_received'> | null;
+    },
+    [supabase, user?.id]
+  );
+
   const onChangeForm = (key: keyof PublishForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -403,48 +423,63 @@ export default function PortfolioPage() {
 
   const deletePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
-    if (!canDeleteProject(project)) {
-      setStatus('A listing with financing in progress cannot be deleted.');
-      return;
-    }
-    const confirmed = window.confirm('Do you want to delete this listing?');
-    if (!confirmed) return;
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', project.id)
-      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+    try {
+      const latestProject = await loadOwnedProjectState(project.id);
+      if (!latestProject || !canDeleteProject(latestProject)) {
+        setStatus('A listing with financing in progress cannot be deleted.');
+        await loadMyProjects();
+        return;
+      }
 
-    if (error) {
-      setStatus(`Could not delete the listing: ${error.message}`);
-      return;
+      const confirmed = window.confirm('Do you want to delete this listing?');
+      if (!confirmed) return;
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', project.id)
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+      if (error) {
+        setStatus(`Could not delete the listing: ${error.message}`);
+        return;
+      }
+      setStatus('Listing deleted.');
+      await loadMyProjects();
+    } catch (error) {
+      setStatus(`Could not verify the latest project state: ${getErrorMessage(error)}`);
     }
-    setStatus('Listing deleted.');
-    await loadMyProjects();
   };
 
   const togglePausePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
 
-    if (!canPauseProject(project)) {
-      setStatus('Listings with financing in progress cannot be paused.');
-      return;
+    try {
+      const latestProject = await loadOwnedProjectState(project.id);
+      const effectiveProject = latestProject ?? project;
+      if (!canPauseProject(effectiveProject) && effectiveProject.status !== 'paused') {
+        setStatus('Listings with financing in progress cannot be paused.');
+        await loadMyProjects();
+        return;
+      }
+
+      const nextStatus: ProjectStatus =
+        effectiveProject.status === 'paused' ? 'published' : 'paused';
+      const { error } = await supabase
+        .from('projects')
+        .update({ status: nextStatus })
+        .eq('id', project.id)
+        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+
+      if (error) {
+        setStatus(`Could not update the listing: ${error.message}`);
+        return;
+      }
+
+      setStatus(nextStatus === 'paused' ? 'Listing paused.' : 'Listing resumed.');
+      await loadMyProjects();
+    } catch (error) {
+      setStatus(`Could not verify the latest project state: ${getErrorMessage(error)}`);
     }
-
-    const nextStatus: ProjectStatus = project.status === 'paused' ? 'published' : 'paused';
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: nextStatus })
-      .eq('id', project.id)
-      .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
-
-    if (error) {
-      setStatus(`Could not update the listing: ${error.message}`);
-      return;
-    }
-
-    setStatus(nextStatus === 'paused' ? 'Listing paused.' : 'Listing resumed.');
-    await loadMyProjects();
   };
 
   const publishProject = async () => {
@@ -882,6 +917,5 @@ export default function PortfolioPage() {
     </PageFrame>
   );
 }
-
 
 

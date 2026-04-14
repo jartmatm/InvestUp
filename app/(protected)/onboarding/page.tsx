@@ -22,6 +22,8 @@ export default function OnboardingPage() {
   const { faseApp, guardarRol, rolSeleccionado } = useInvestApp();
   const [rol, setRol] = useState<'inversor' | 'emprendedor' | null>(rolSeleccionado);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
+  const [savingRole, setSavingRole] = useState(false);
+  const [status, setStatus] = useState('');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [stage, setStage] = useState<OnboardingStage>('slides');
   const touchStartX = useRef<number | null>(null);
@@ -189,7 +191,7 @@ export default function OnboardingPage() {
           <div className="mt-6 space-y-3">
             <button
               type="button"
-              disabled={!rol || !acceptsTerms}
+              disabled={!rol || !acceptsTerms || savingRole}
               className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(107,57,244,0.22)] transition hover:bg-[#5c2ff0] disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
               onClick={async () => {
                 if (!rol) return;
@@ -197,10 +199,22 @@ export default function OnboardingPage() {
                   router.push('/login');
                   return;
                 }
-                await guardarRol(rol);
+                setSavingRole(true);
+                setStatus('');
+                try {
+                  await guardarRol(rol);
+                } catch (error) {
+                  setStatus(
+                    error instanceof Error
+                      ? error.message
+                      : 'We could not finish updating your role.'
+                  );
+                } finally {
+                  setSavingRole(false);
+                }
               }}
             >
-              Continue
+              {savingRole ? 'Saving...' : 'Continue'}
             </button>
 
             <button
@@ -211,6 +225,8 @@ export default function OnboardingPage() {
               Back to onboarding
             </button>
           </div>
+
+          {status ? <p className="mt-4 text-center text-sm text-rose-600">{status}</p> : null}
         </section>
       </main>
     );

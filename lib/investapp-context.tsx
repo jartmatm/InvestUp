@@ -39,15 +39,12 @@ import {
   type PendingInvestment,
 } from '@/lib/pending-investment';
 import { getNextProjectStatusAfterFunding, HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
-import {
-  detectInvestmentsSchema,
-  generateLegacyRowIds,
-} from '@/lib/supabase-ledger-compat';
-import { runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { createCurrentUserInvestment } from '@/utils/client/current-user-investments';
 import {
   createCurrentUserTransaction,
   fetchCurrentUserTransactions,
 } from '@/utils/client/current-user-transactions';
+import { createCurrentUserRepayment } from '@/utils/client/current-user-repayments';
 import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
@@ -467,34 +464,6 @@ const buildTransactionNotificationInput = (
   };
 };
 
-const asTextId = (value: string | number | null | undefined) => {
-  if (value == null) return null;
-  const text = String(value).trim();
-  return text.length > 0 ? text : null;
-};
-
-const asNumericId = (value: string | number | null | undefined) => {
-  if (value == null) return null;
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
-};
-
-const buildUniqueIdCandidates = (
-  ...values: Array<string | number | null | undefined>
-): Array<string | number | null> => {
-  const seen = new Set<string>();
-  const result: Array<string | number | null> = [];
-
-  values.forEach((value) => {
-    const key = value == null ? '__null__' : `${typeof value}:${String(value)}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    result.push(value ?? null);
-  });
-
-  return result;
-};
-
 export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const { login, logout, authenticated, user, ready, getAccessToken, connectOrCreateWallet } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
@@ -526,7 +495,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     expiresAt: 0,
     maxFeePerGas: null,
   });
-  const investmentSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
   const seenTransactionNotificationKeysRef = useRef<Set<string>>(new Set());
   const bootstrappedTransactionNotificationsRef = useRef(false);
 
@@ -587,16 +555,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       global: { fetch: authedFetch },
     });
   }, [getAccessToken]);
-
-  const getInvestmentSchema = useCallback(async () => {
-    if (investmentSchemaRef.current !== 'unknown') {
-      return investmentSchemaRef.current;
-    }
-
-    const schema = await detectInvestmentsSchema(supabase);
-    investmentSchemaRef.current = schema;
-    return schema;
-  }, [supabase]);
 
   const loadTransactionsForNotifications = useCallback(async () => {
     if (!user?.id) {
@@ -808,74 +766,36 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           interestRateEa: Number(pendingInvestment.interestRateEa ?? 0),
           termMonths: Number(pendingInvestment.termMonths ?? 0),
         });
-        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
-        const investmentSchema = await getInvestmentSchema();
-        const { error } =
-          investmentSchema === 'legacy'
-            ? await runWithAmountColumnFallback((amountColumn) => {
-                const legacyProjectId = Number(pendingInvestment.projectId);
-                if (!Number.isFinite(legacyProjectId)) {
-                  throw new Error(
-                    `Legacy investments table expects a numeric project_id, but received "${pendingInvestment.projectId}".`
-                  );
-                }
-                const legacyTransactionId =
-                  transactionId && Number.isFinite(Number(transactionId))
-                    ? Number(transactionId)
-                    : null;
-                const legacyIds = generateLegacyRowIds();
-                return supabase
-                  .from('investments')
-                  .insert({
-                    id: legacyIds.id,
-                    uuid: legacyIds.uuid,
-                    investor_id: user.id,
-                    project_id: legacyProjectId,
-                    transaction_id: legacyTransactionId,
-                    status: 'confirmed',
-                    [amountColumn]: normalizedAmountValue,
-                  })
-                  .select('id')
-                  .maybeSingle();
-              })
-            : await runWithAmountColumnFallback((amountColumn) =>
-                supabase
-                  .from('investments')
-                  .insert({
-                    transaction_id: transactionId ?? null,
-                    investor_user_id: user.id,
-                    entrepreneur_user_id: pendingInvestment.entrepreneurUserId || null,
-                    project_id: pendingInvestment.projectId,
-                    project_title: pendingInvestment.projectTitle,
-                    tx_hash: txHash,
-                    from_wallet: smartWalletAddress,
-                    to_wallet: toWallet,
-                    interest_rate_ea: Number(pendingInvestment.interestRateEa ?? 0),
-                    term_months: Number(pendingInvestment.termMonths ?? 0),
-                    projected_return_usdc: projection.projectedReturnUsdc,
-                    projected_total_usdc: projection.projectedTotalUsdc,
-                    status: 'confirmed',
-                    metadata: {
-                      app: 'investapp-web',
-                      currency: pendingInvestment.currency,
-                      entrepreneur_name: pendingInvestment.entrepreneurName,
-                      created_from: 'project-investment-flow',
-                    },
-                    [amountColumn]: normalizedAmountValue,
-                  })
-                  .select('id')
-                  .maybeSingle()
-              );
-        if (error && !error.message?.toLowerCase().includes('duplicate')) {
-          throw error;
+        const normalizedAmountValue = Number.isFinite(amountValue)
+          ? Number(amountValue.toFixed(6))
+          : 0;
+        const { error } = await createCurrentUserInvestment(getAccessToken, {
+          txHash,
+          transactionId: transactionId ?? null,
+          amountUsdc: String(normalizedAmountValue),
+          fromWallet: smartWalletAddress,
+          toWallet,
+          projectId: pendingInvestment.projectId,
+          projectTitle: pendingInvestment.projectTitle,
+          entrepreneurUserId: pendingInvestment.entrepreneurUserId || null,
+          entrepreneurName: pendingInvestment.entrepreneurName,
+          currency: pendingInvestment.currency,
+          interestRateEa: Number(pendingInvestment.interestRateEa ?? 0),
+          termMonths: Number(pendingInvestment.termMonths ?? 0),
+          projectedReturnUsdc: projection.projectedReturnUsdc,
+          projectedTotalUsdc: projection.projectedTotalUsdc,
+        });
+
+        if (error) {
+          throw new Error(error);
         }
-        return !error;
+        return true;
       } catch (error: any) {
         console.error('Error saving investment to Supabase:', error?.message ?? error);
         return false;
       }
     },
-    [getInvestmentSchema, smartWalletAddress, supabase, user?.id]
+    [getAccessToken, smartWalletAddress, user?.id]
   );
 
   const registrarRepayment = useCallback(
@@ -891,87 +811,35 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       if (!user?.id || !smartWalletAddress) return false;
 
       try {
-        const amountValue = Number(amountUsdc);
         const receiver = walletTargets.find(
           (target) =>
             target.wallet_address &&
             target.wallet_address.toLowerCase() === toWallet.toLowerCase()
         );
 
-        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : 0;
-        const transactionIdCandidates = buildUniqueIdCandidates(
-          asTextId(transactionUuid),
-          asTextId(transactionId),
-          null
-        );
-        const projectIdCandidates = buildUniqueIdCandidates(
-          asTextId(projectId),
-          asNumericId(projectId),
-          null
-        );
-        const repaymentStatusCandidates = ['paid', 'pending', null] as const;
+        const { error } = await createCurrentUserRepayment(getAccessToken, {
+          txHash,
+          transactionId: transactionId ?? null,
+          transactionUuid: transactionUuid ?? null,
+          amountUsdc,
+          fromWallet: smartWalletAddress,
+          toWallet,
+          projectId: projectId ?? null,
+          investorUserId: investorUserId ?? receiver?.id ?? null,
+          receiverEmail: receiver?.email ?? null,
+        });
 
-        let saved = false;
-        let lastError: unknown = null;
-
-        for (const repaymentStatus of repaymentStatusCandidates) {
-          for (const projectCandidate of projectIdCandidates) {
-            for (const transactionCandidate of transactionIdCandidates) {
-              const { error } = await runWithAmountColumnFallback((amountColumn) => {
-                const payload: Record<string, unknown> = {
-                  entrepreneur_user_id: user.id,
-                  investor_user_id: investorUserId ?? receiver?.id ?? null,
-                  tx_hash: txHash,
-                  from_wallet: smartWalletAddress,
-                  to_wallet: toWallet,
-                  [amountColumn]: normalizedAmountValue,
-                  metadata: {
-                    app: 'investapp-web',
-                    currency: 'USDC',
-                    receiver_email: receiver?.email ?? null,
-                    created_from: 'direct-repayment-flow',
-                  },
-                };
-
-                if (repaymentStatus !== null) {
-                  payload.status = repaymentStatus;
-                }
-                if (projectCandidate !== null) {
-                  payload.project_id = projectCandidate;
-                }
-                if (transactionCandidate !== null) {
-                  payload.transaction_id = transactionCandidate;
-                }
-
-                return supabase.from('repayments').insert(payload).select('id').maybeSingle();
-              });
-
-              if (!error || error.message?.toLowerCase().includes('duplicate')) {
-                saved = true;
-                lastError = null;
-                break;
-              }
-
-              lastError = error;
-            }
-
-            if (saved) break;
-          }
-
-          if (saved) break;
+        if (error) {
+          throw new Error(error);
         }
 
-        if (!saved && lastError) {
-          throw lastError;
-        }
-
-        return saved;
+        return true;
       } catch (error: any) {
         console.error('Error saving repayment to Supabase:', error?.message ?? error);
         return false;
       }
     },
-    [smartWalletAddress, supabase, user?.id, walletTargets]
+    [getAccessToken, smartWalletAddress, user?.id, walletTargets]
   );
 
   const actualizarMontoRecaudadoProyecto = useCallback(
@@ -1081,8 +949,9 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         setRolSeleccionado(rolFrontend);
         setFaseApp('dashboard');
       } catch (error: any) {
-        console.error('Error saving role:', error?.message ?? error);
-        alert('We could not finish creating your account. Please try again.');
+        const message = error?.message ?? 'We could not finish updating your role.';
+        console.error('Error saving role:', message);
+        throw new Error(message);
       }
     },
     [

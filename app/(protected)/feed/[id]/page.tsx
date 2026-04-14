@@ -17,6 +17,7 @@ import {
   isProjectPubliclyVisible,
 } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
+import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
 import {
   getMinimumInvestmentValue,
   runWithMinimumInvestmentFallback,
@@ -199,21 +200,10 @@ export default function FeedDetailPage() {
       }
 
       setScheduleLoading(true);
-      const normalizedProjectId = Number.isFinite(Number(projectId)) ? Number(projectId) : projectId;
-      const { data, error } = await supabase
-        .from('payment_schedule')
-        .select(
-          'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan'
-        )
-        .eq('project_id', normalizedProjectId)
-        .eq('investor_user_id', user.id)
-        .order('next_due_date', { ascending: true, nullsFirst: false });
+      const { data, error } = await fetchCurrentUserPaymentSchedule(getAccessToken, { projectId });
 
       if (error) {
-        const errorText = error.message.toLowerCase();
-        if (!errorText.includes('payment_schedule') && !errorText.includes('schema cache')) {
-          setStatus((previous) => previous || 'Could not load the payment schedule for this venture.');
-        }
+        setStatus((previous) => previous || 'Could not load the payment schedule for this venture.');
         setScheduleGroups([]);
         setScheduleLoading(false);
         return;
@@ -224,18 +214,20 @@ export default function FeedDetailPage() {
       );
 
       setScheduleGroups(
-        normalizedRecords.map((record) => ({
+        normalizedRecords
+          .filter((record) => record.investor_user_id === user.id)
+          .map((record) => ({
           creditId: record.credit_id,
           nextDueDate: record.next_due_date,
           installmentCount: record.installment_count,
           status: record.status,
-        }))
+          }))
       );
       setScheduleLoading(false);
     };
 
     void loadPaymentSchedule();
-  }, [projectId, rolSeleccionado, supabase, user?.id]);
+  }, [getAccessToken, projectId, rolSeleccionado, supabase, user?.id]);
 
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
   const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);

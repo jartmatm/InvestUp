@@ -10,6 +10,10 @@ import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
 import {
+  fetchCurrentUserRoleChangeEligibility,
+  type CurrentUserRoleChangeEligibility,
+} from '@/utils/client/current-user-role-change-eligibility';
+import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
 } from '@/utils/client/current-user-profile';
@@ -62,6 +66,12 @@ const mapDbRoleToFront = (role: string): 'inversor' | 'emprendedor' | null => {
   return null;
 };
 
+const mapFrontRoleToDb = (role: 'inversor' | 'emprendedor' | null): 'investor' | 'entrepreneur' | '' => {
+  if (role === 'inversor') return 'investor';
+  if (role === 'emprendedor') return 'entrepreneur';
+  return '';
+};
+
 function Field({ label, children }: FieldProps) {
   return (
     <div className="px-4 py-4">
@@ -74,10 +84,14 @@ function Field({ label, children }: FieldProps) {
 export default function PersonalDataPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, smartWalletAddress, guardarRol, pushNotification } = useInvestApp();
+  const { faseApp, smartWalletAddress, guardarRol, pushNotification, rolSeleccionado } =
+    useInvestApp();
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [availableColumns, setAvailableColumns] = useState<Set<string>>(new Set());
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingRoleEligibility, setLoadingRoleEligibility] = useState(true);
+  const [roleEligibility, setRoleEligibility] =
+    useState<CurrentUserRoleChangeEligibility | null>(null);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -141,6 +155,29 @@ export default function PersonalDataPage() {
     loadProfile();
   }, [getAccessToken, user?.id, user?.email?.address]);
 
+  useEffect(() => {
+    const loadRoleEligibility = async () => {
+      if (!user?.id) {
+        setRoleEligibility(null);
+        setLoadingRoleEligibility(false);
+        return;
+      }
+
+      setLoadingRoleEligibility(true);
+      const { data, error } = await fetchCurrentUserRoleChangeEligibility(getAccessToken);
+      if (error) {
+        setRoleEligibility(null);
+        setLoadingRoleEligibility(false);
+        return;
+      }
+
+      setRoleEligibility(data);
+      setLoadingRoleEligibility(false);
+    };
+
+    void loadRoleEligibility();
+  }, [getAccessToken, user?.id]);
+
   const canEditEmail = useMemo(() => availableColumns.has('email') || availableColumns.size === 0, [availableColumns]);
   const hasAnyExtendedField = useMemo(
     () =>
@@ -174,6 +211,24 @@ export default function PersonalDataPage() {
     if (form.role === 'entrepreneur') return 'Entrepreneur';
     return 'Profile';
   }, [form.role]);
+
+  const currentDbRole = useMemo(
+    () => mapFrontRoleToDb(rolSeleccionado),
+    [rolSeleccionado]
+  );
+
+  const requestedFrontRole = useMemo(
+    () => (form.role ? mapDbRoleToFront(form.role) : null),
+    [form.role]
+  );
+
+  const isRoleChangeRequested = Boolean(
+    requestedFrontRole && rolSeleccionado && requestedFrontRole !== rolSeleccionado
+  );
+
+  const isRoleSelectionLocked = Boolean(
+    rolSeleccionado && roleEligibility && !roleEligibility.canChangeRole
+  );
 
   const updateForm = (key: keyof ProfileForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -217,7 +272,7 @@ export default function PersonalDataPage() {
     };
     const selectedCountry = COUNTRY_OPTIONS.find((item) => item.code === form.country);
 
-    if (form.role) payload.role = form.role;
+    if (form.role && !isRoleChangeRequested) payload.role = form.role;
     if (availableColumns.has('name')) payload.name = form.name || null;
     if (availableColumns.has('surname')) payload.surname = form.surname || null;
     if (availableColumns.has('phone_number')) payload.phone_number = form.phone_number || null;
@@ -248,9 +303,26 @@ export default function PersonalDataPage() {
       return;
     }
 
-    const mappedRole = mapDbRoleToFront(form.role);
-    if (mappedRole) {
-      await guardarRol(mappedRole);
+    if (isRoleChangeRequested && requestedFrontRole) {
+      if (roleEligibility && !roleEligibility.canChangeRole) {
+        setForm((prev) => ({ ...prev, role: currentDbRole }));
+        setStatus(`Profile updated, but ${roleEligibility.message ?? 'the role cannot be changed right now.'}`);
+        setSaving(false);
+        return;
+      }
+
+      try {
+        await guardarRol(requestedFrontRole);
+      } catch (caughtError) {
+        const message =
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'the role could not be changed right now.';
+        setForm((prev) => ({ ...prev, role: currentDbRole }));
+        setStatus(`Profile updated, but ${message}`);
+        setSaving(false);
+        return;
+      }
     }
 
     if (typeof window !== 'undefined') {
@@ -279,6 +351,11 @@ export default function PersonalDataPage() {
       );
     } else {
       setStatus('Profile updated successfully.');
+    }
+
+    const { data: refreshedEligibility } = await fetchCurrentUserRoleChangeEligibility(getAccessToken);
+    if (refreshedEligibility) {
+      setRoleEligibility(refreshedEligibility);
     }
 
     setSaving(false);
@@ -373,12 +450,23 @@ export default function PersonalDataPage() {
             <select
               value={form.role}
               onChange={(event) => updateForm('role', event.target.value)}
+              disabled={loadingRoleEligibility || isRoleSelectionLocked}
               className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
             >
               <option value="">Role</option>
               <option value="investor">Investor profile</option>
               <option value="entrepreneur">Entrepreneur profile</option>
             </select>
+            {roleEligibility?.canChangeRole === false ? (
+              <p className="mt-2 text-xs text-amber-700">
+                {roleEligibility.message ??
+                  'You can only change roles when your account has no investments and no published projects.'}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-500">
+                You can switch roles only when your account has no investments and no active publication.
+              </p>
+            )}
           </Field>
         </div>
 
