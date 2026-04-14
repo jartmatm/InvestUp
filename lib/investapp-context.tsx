@@ -41,11 +41,19 @@ import {
 import { getNextProjectStatusAfterFunding, HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import {
   detectInvestmentsSchema,
-  detectTransactionsSchema,
   generateLegacyRowIds,
-  loadLegacyTransactionsForUser,
 } from '@/lib/supabase-ledger-compat';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import {
+  createCurrentUserTransaction,
+  fetchCurrentUserTransactions,
+} from '@/utils/client/current-user-transactions';
+import {
+  fetchCurrentUserProfile,
+  patchCurrentUserProfile,
+} from '@/utils/client/current-user-profile';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -83,20 +91,7 @@ type ReceiptData = {
   receiverWallet: string;
 };
 
-type StoredTransaction = {
-  id: string;
-  uuid?: string | null;
-  created_at: string;
-  movement_type?: MovementType;
-  type?: MovementType;
-  status: string;
-  tx_hash: string | null;
-  from_wallet: string | null;
-  to_wallet: string | null;
-  meta?: Record<string, unknown> | null;
-  amount?: number | null;
-  amount_usdc?: number | null;
-};
+type StoredTransaction = CurrentUserTransaction;
 
 type RegisterTransactionArgs = {
   txHash: string;
@@ -531,7 +526,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     expiresAt: 0,
     maxFeePerGas: null,
   });
-  const transactionSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
   const investmentSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
   const seenTransactionNotificationKeysRef = useRef<Set<string>>(new Set());
   const bootstrappedTransactionNotificationsRef = useRef(false);
@@ -594,16 +588,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     });
   }, [getAccessToken]);
 
-  const getTransactionSchema = useCallback(async () => {
-    if (transactionSchemaRef.current !== 'unknown') {
-      return transactionSchemaRef.current;
-    }
-
-    const schema = await detectTransactionsSchema(supabase);
-    transactionSchemaRef.current = schema;
-    return schema;
-  }, [supabase]);
-
   const getInvestmentSchema = useCallback(async () => {
     if (investmentSchemaRef.current !== 'unknown') {
       return investmentSchemaRef.current;
@@ -615,69 +599,30 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   }, [supabase]);
 
   const loadTransactionsForNotifications = useCallback(async () => {
-    if (!user?.id && !smartWalletAddress) {
+    if (!user?.id) {
       return [] as NotificationTrackedTransaction[];
     }
 
-    const transactionSchema = await getTransactionSchema();
-
-    if (transactionSchema === 'legacy') {
-      if (!user?.id) return [] as NotificationTrackedTransaction[];
-
-      const { data, error } = await loadLegacyTransactionsForUser(supabase, user.id, 40);
-      if (error) {
-        console.error('Error loading notification transactions:', error.message);
-        return [] as NotificationTrackedTransaction[];
-      }
-
-      return data.map((transaction) => ({
-        id: transaction.id,
-        created_at: transaction.created_at,
-        movement_type: transaction.movement_type as NotificationTrackedTransaction['movement_type'],
-        status: transaction.status,
-        from_wallet: transaction.from_wallet,
-        to_wallet: transaction.to_wallet,
-        tx_hash: transaction.tx_hash,
-        amount: transaction.amount,
-      }));
-    }
-
-    const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
-      let query = supabase
-        .from('transactions')
-        .select(`id,created_at,movement_type,status,from_wallet,to_wallet,tx_hash,${amountColumn}`)
-        .order('created_at', { ascending: false })
-        .limit(40);
-
-      if (user?.id) {
-        query = query.eq('user_id', user.id);
-      }
-
-      if (smartWalletAddress) {
-        query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
-      }
-
-      return query;
+    const { data, error } = await fetchCurrentUserTransactions(getAccessToken, {
+      limit: 40,
+      wallet: smartWalletAddress ?? undefined,
     });
-
     if (error) {
-      console.error('Error loading notification transactions:', error.message);
+      console.error('Error loading notification transactions:', error);
       return [] as NotificationTrackedTransaction[];
     }
 
-    return ((data ?? []) as StoredTransaction[])
-      .filter((transaction) => transaction.id)
-      .map((transaction) => ({
-        id: transaction.id,
-        created_at: transaction.created_at,
-        movement_type: (transaction.movement_type ?? transaction.type ?? 'transfer') as NotificationTrackedTransaction['movement_type'],
-        status: transaction.status,
-        from_wallet: transaction.from_wallet,
-        to_wallet: transaction.to_wallet,
-        tx_hash: transaction.tx_hash,
-        amount: getAmountValue(transaction),
-      }));
-  }, [getTransactionSchema, smartWalletAddress, supabase, user?.id]);
+    return (data ?? []).map((transaction) => ({
+      id: transaction.id,
+      created_at: transaction.created_at,
+      movement_type: transaction.movement_type as NotificationTrackedTransaction['movement_type'],
+      status: transaction.status,
+      from_wallet: transaction.from_wallet,
+      to_wallet: transaction.to_wallet,
+      tx_hash: transaction.tx_hash,
+      amount: transaction.amount,
+    }));
+  }, [getAccessToken, smartWalletAddress, user?.id]);
 
   const userAlias = user?.email?.address?.split('@')[0] ?? 'user';
   const transferLabel = rolSeleccionado === 'emprendedor' ? 'Repayment' : 'Transfer';
@@ -786,88 +731,23 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       if (!user?.id || !smartWalletAddress) return null;
 
       try {
-        const amountValue = Number(amountUsdc);
-        let storedTransaction: StoredTransaction | null = null;
-        const normalizedAmountValue = Number.isFinite(amountValue) ? Number(amountValue.toFixed(6)) : null;
-        const transactionSchema = await getTransactionSchema();
         const persistedStatus = status === 'completed' ? 'confirmed' : status;
-        const insertResult =
-          transactionSchema === 'legacy'
-            ? await runWithAmountColumnFallback((amountColumn) => {
-                const legacyIds = generateLegacyRowIds();
-                return supabase
-                  .from('transactions')
-                  .insert({
-                    id: legacyIds.id,
-                    uuid: legacyIds.uuid,
-                    user_id: user.id,
-                    type: movementType,
-                    status: persistedStatus,
-                    currency: 'USDC',
-                    tx_hash: txHash,
-                    meta: {
-                      app: 'investapp-web',
-                      role: mapRoleToDB(rolSeleccionado),
-                      chain: 'polygon',
-                      from_wallet: smartWalletAddress,
-                      to_wallet: toWallet,
-                      ...metadata,
-                    },
-                    [amountColumn]: normalizedAmountValue,
-                  })
-                  .select(`id,uuid,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
-                  .maybeSingle();
-              })
-            : await runWithAmountColumnFallback((amountColumn) =>
-                supabase
-                  .from('transactions')
-                  .insert({
-                    user_id: user.id,
-                    role: mapRoleToDB(rolSeleccionado),
-                    movement_type: movementType,
-                    status: persistedStatus,
-                    chain: 'polygon',
-                    tx_hash: txHash,
-                    from_wallet: smartWalletAddress,
-                    to_wallet: toWallet,
-                    metadata: {
-                      app: 'investapp-web',
-                      currency: 'USDC',
-                      ...metadata,
-                    },
-                    [amountColumn]: normalizedAmountValue,
-                  })
-                  .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc`)
-                  .maybeSingle()
-              );
-        const { data, error } = insertResult;
+        const { data: storedTransaction, error } = await createCurrentUserTransaction(
+          getAccessToken,
+          {
+            txHash,
+            fromWallet: smartWalletAddress,
+            toWallet,
+            amountUsdc,
+            movementType,
+            status: persistedStatus,
+            role: mapRoleToDB(rolSeleccionado),
+            metadata,
+          }
+        );
 
-        if (error) {
-          const duplicate = error.message?.toLowerCase().includes('duplicate');
-          if (!duplicate) throw error;
-
-          const existingResult =
-            transactionSchema === 'legacy'
-              ? await runWithAmountColumnFallback((amountColumn) =>
-                  supabase
-                    .from('transactions')
-                    .select(`id,uuid,created_at,type,status,tx_hash,meta,${amountColumn},amount_usdc`)
-                    .eq('tx_hash', txHash)
-                    .maybeSingle()
-                )
-              : await runWithAmountColumnFallback((amountColumn) =>
-                  supabase
-                    .from('transactions')
-                    .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc`)
-                    .eq('tx_hash', txHash)
-                    .maybeSingle()
-                );
-          const { data: existingData, error: existingError } = existingResult;
-
-          if (existingError) throw existingError;
-          storedTransaction = (existingData ?? null) as StoredTransaction | null;
-        } else {
-          storedTransaction = (data ?? null) as StoredTransaction | null;
+        if (error || !storedTransaction) {
+          throw new Error(error ?? 'The transaction could not be saved.');
         }
 
         const receiver = walletTargets.find(
@@ -878,30 +758,20 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         const senderName = userAlias || user.email?.address || 'Sender';
         const resolvedReceiverName =
           receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Recipient';
-        const normalizedAmount = Number(getAmountValue(storedTransaction as Record<string, unknown>) ?? amountUsdc);
-        const metaObject =
-          storedTransaction?.meta && typeof storedTransaction.meta === 'object'
-            ? storedTransaction.meta
-            : null;
+        const normalizedAmount = Number(storedTransaction.amount ?? amountUsdc);
 
         setLastReceipt({
-          uuid: String(storedTransaction?.uuid ?? storedTransaction?.id ?? txHash ?? ''),
-          type: (storedTransaction?.movement_type ?? storedTransaction?.type ?? movementType) as MovementType,
+          uuid: String(storedTransaction.uuid ?? storedTransaction.id ?? txHash ?? ''),
+          type: (storedTransaction.movement_type ?? movementType) as MovementType,
           amount: Number.isFinite(normalizedAmount) ? normalizedAmount.toFixed(2) : amountUsdc,
           currency: 'USDC',
-          status: getReceiptStatus(String(storedTransaction?.status ?? persistedStatus)),
-          txHash: String(storedTransaction?.tx_hash ?? txHash),
-          createdAt: String(storedTransaction?.created_at ?? new Date().toISOString()),
+          status: getReceiptStatus(String(storedTransaction.status ?? persistedStatus)),
+          txHash: String(storedTransaction.tx_hash ?? txHash),
+          createdAt: String(storedTransaction.created_at ?? new Date().toISOString()),
           senderName,
-          senderWallet:
-            (typeof metaObject?.from_wallet === 'string' ? metaObject.from_wallet : null) ??
-            storedTransaction?.from_wallet ??
-            smartWalletAddress,
+          senderWallet: storedTransaction.from_wallet ?? smartWalletAddress,
           receiverName: resolvedReceiverName,
-          receiverWallet:
-            (typeof metaObject?.to_wallet === 'string' ? metaObject.to_wallet : null) ??
-            storedTransaction?.to_wallet ??
-            toWallet,
+          receiverWallet: storedTransaction.to_wallet ?? toWallet,
         });
 
         return storedTransaction;
@@ -911,10 +781,9 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [
-      getTransactionSchema,
+      getAccessToken,
       rolSeleccionado,
       smartWalletAddress,
-      supabase,
       user?.email,
       user?.id,
       userAlias,
@@ -1200,15 +1069,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       if (!rolParaDB) return;
 
       try {
-        const { error } = await supabase.from('users').upsert(
-          {
-            id: user.id,
-            email: user.email?.address ?? null,
-            role: rolParaDB,
-            wallet_address: smartWalletAddress ?? null,
-          },
-          { onConflict: 'id' }
-        );
+        const { error } = await patchCurrentUserProfile(getAccessToken, {
+          email: user.email?.address ?? null,
+          role: rolParaDB,
+          wallet_address: smartWalletAddress ?? null,
+        });
         if (error) throw error;
 
         localStorage.setItem(getRolKey(user.id), rolFrontend);
@@ -1221,10 +1086,10 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }
     },
     [
+      getAccessToken,
       getOnboardingDoneKey,
       getRolKey,
       smartWalletAddress,
-      supabase,
       user,
     ]
   );
@@ -1238,13 +1103,15 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     const roleTarget = rolSeleccionado === 'inversor' ? 'entrepreneur' : 'investor';
     setLoadingWallets(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id,email,name,surname,avatar_url,country,role,wallet_address')
-        .eq('role', roleTarget)
-        .not('wallet_address', 'is', null)
-        .neq('id', user.id)
-        .order('email', { ascending: true });
+      const { data, error } = await runUserDirectoryQuery(supabase, (source) =>
+        supabase
+          .from(source)
+          .select('id,name,surname,avatar_url,country,role,wallet_address')
+          .eq('role', roleTarget)
+          .not('wallet_address', 'is', null)
+          .neq('id', user.id)
+          .order('name', { ascending: true, nullsFirst: false })
+      );
 
       if (error) throw error;
       setWalletTargets((data ?? []) as UserWalletTarget[]);
@@ -1684,14 +1551,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         (localStorage.getItem(getOnboardingDoneKey(user.id)) ??
           localStorage.getItem(getLegacyOnboardingDoneKey(user.id))) === '1';
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('role,wallet_address')
-        .eq('id', user.id)
-        .maybeSingle();
+      const { data, error } = await fetchCurrentUserProfile<{
+        role?: string | null;
+        wallet_address?: string | null;
+      } | null>(getAccessToken);
 
       if (error) {
-        console.error('Error loading user record:', error.message);
+        console.error('Error loading user record:', error);
         if (onboardingDone && rolLocalValido) {
           setRolSeleccionado(rolLocalValido);
           setFaseApp('dashboard');
@@ -1708,14 +1574,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
       if (data && (walletNeedsUpdate || roleNeedsBackfill)) {
         const payload: any = {
-          id: user.id,
           email: user.email?.address ?? null,
           wallet_address: smartWalletAddress ?? data?.wallet_address ?? null,
         };
         if (data?.role) payload.role = data.role;
         if (!data?.role && rolLocalDB) payload.role = rolLocalDB;
-        const { error: upsertError } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
-        if (upsertError) console.error('Error syncing user:', upsertError.message);
+        const { error: upsertError } = await patchCurrentUserProfile(getAccessToken, payload);
+        if (upsertError) console.error('Error syncing user:', upsertError);
       }
 
       if (data?.role) {
@@ -1743,11 +1608,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     authenticated,
     getLegacyOnboardingDoneKey,
     getLegacyRolKey,
+    getAccessToken,
     getOnboardingDoneKey,
     getRolKey,
     ready,
     smartWalletAddress,
-    supabase,
     user,
   ]);
 

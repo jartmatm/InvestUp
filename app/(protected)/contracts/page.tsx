@@ -13,6 +13,7 @@ import {
 } from '@/lib/investment-contract';
 import { normalizePaymentScheduleRecord } from '@/lib/payment-schedule';
 import { useInvestApp } from '@/lib/investapp-context';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type ProjectRow = {
   id: string | number;
@@ -26,7 +27,6 @@ type ProjectRow = {
 
 type UserProfile = {
   id: string;
-  email: string | null;
   name: string | null;
   surname: string | null;
   avatar_url: string | null;
@@ -45,7 +45,7 @@ const SUPABASE_ANON_KEY =
 const nameFromProfile = (profile: UserProfile | undefined, fallback: string) => {
   const fullName = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (fullName) return fullName;
-  if (profile?.email) return profile.email.split('@')[0];
+  if (profile?.wallet_address) return `${profile.wallet_address.slice(0, 6)}...`;
   return fallback;
 };
 
@@ -186,10 +186,12 @@ export default function ContractPage() {
           .eq('id', normalizedProjectId)
           .maybeSingle(),
         participantIds.length > 0
-          ? supabase
-              .from('users')
-              .select('id,email,name,surname,avatar_url,country,wallet_address')
-              .in('id', participantIds)
+          ? runUserDirectoryQuery(supabase, (source) =>
+              supabase
+                .from(source)
+                .select('id,name,surname,avatar_url,country,wallet_address')
+                .in('id', participantIds)
+            )
           : Promise.resolve({ data: [], error: null }),
       ]);
 

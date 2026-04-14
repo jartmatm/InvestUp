@@ -7,11 +7,13 @@ import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import { clearPendingInvestment, getPendingInvestment, type PendingInvestment } from '@/lib/pending-investment';
+import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type WalletTarget = {
   id: string;
-  email: string | null;
   name: string | null;
   surname: string | null;
   avatar_url: string | null;
@@ -27,10 +29,7 @@ type RecentWallet = {
   walletAddress: string;
 };
 
-type TxRow = {
-  from_wallet: string | null;
-  to_wallet: string | null;
-};
+type TxRow = Pick<CurrentUserTransaction, 'from_wallet' | 'to_wallet'>;
 
 type SectionProps = {
   title: string;
@@ -48,7 +47,7 @@ const SUPABASE_ANON_KEY =
 const nameFrom = (target: Partial<WalletTarget> | null | undefined) => {
   const full = `${target?.name ?? ''} ${target?.surname ?? ''}`.trim();
   if (full) return full;
-  if (target?.email) return target.email.split('@')[0];
+  if (target?.wallet_address) return `${target.wallet_address.slice(0, 6)}...`;
   return 'Wallet user';
 };
 
@@ -191,26 +190,19 @@ export default function WalletTransferPage() {
 
   useEffect(() => {
     const loadRecentWallets = async () => {
-      if (!smartWalletAddress) {
+      if (!user?.id || !smartWalletAddress) {
         setRecentWallets([]);
+        setLoadingRecentWallets(false);
         return;
       }
 
       setLoadingRecentWallets(true);
       try {
-        let query = supabase
-          .from('transactions')
-          .select('from_wallet,to_wallet')
-          .or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`)
-          .order('created_at', { ascending: false })
-          .limit(24);
-
-        if (user?.id) {
-          query = query.eq('user_id', user.id);
-        }
-
-        const { data, error } = await query;
-        if (error) throw error;
+        const { data, error } = await fetchCurrentUserTransactions(getAccessToken, {
+          limit: 24,
+          wallet: smartWalletAddress,
+        });
+        if (error) throw new Error(error);
 
         const orderedAddresses: string[] = [];
         const seen = new Set<string>();
@@ -226,10 +218,12 @@ export default function WalletTransferPage() {
 
         const { data: profilesData } =
           orderedAddresses.length > 0
-            ? await supabase
-                .from('users')
-                .select('id,email,name,surname,avatar_url,country,role,wallet_address')
-                .in('wallet_address', orderedAddresses.slice(0, 6))
+            ? await runUserDirectoryQuery(supabase, (source) =>
+                supabase
+                  .from(source)
+                  .select('id,name,surname,avatar_url,country,role,wallet_address')
+                  .in('wallet_address', orderedAddresses.slice(0, 6))
+              )
             : { data: [] };
         const profileMap = new Map(
           ((profilesData ?? []) as WalletTarget[])
@@ -263,7 +257,7 @@ export default function WalletTransferPage() {
     };
 
     void loadRecentWallets();
-  }, [mappedTargets, smartWalletAddress, supabase, user?.id]);
+  }, [getAccessToken, mappedTargets, smartWalletAddress, supabase, user?.id]);
 
   const suggestions = [100, 200, 250, 300, 350, 400];
   const amountNumber = Number(monto);

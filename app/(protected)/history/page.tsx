@@ -3,48 +3,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient, type PostgrestError, type SupabaseClient } from '@supabase/supabase-js';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
-import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
-import {
-  detectTransactionsSchema,
-  loadLegacyTransactionsForUser,
-} from '@/lib/supabase-ledger-compat';
+import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
+import type {
+  CurrentUserTransaction,
+  TransactionMovementType,
+  TransactionStatus,
+} from '@/utils/transactions/current-user';
 
-type TransactionMovementType = 'investment' | 'repayment' | 'transfer' | 'buy' | 'withdrawal';
-type TransactionStatus = 'submitted' | 'confirmed' | 'failed';
 type TransactionDirection = 'incoming' | 'outgoing' | 'neutral';
 type MovementFilter = 'all' | TransactionMovementType;
 type StatusFilter = 'all' | TransactionStatus;
 type DirectionFilter = 'all' | Exclude<TransactionDirection, 'neutral'>;
 type SortFilter = 'latest' | 'oldest' | 'highest' | 'lowest';
 
-type TransactionRow = {
-  id: string;
-  created_at: string;
-  movement_type: TransactionMovementType;
-  status: TransactionStatus;
-  from_wallet: string | null;
-  to_wallet: string | null;
-  tx_hash: string | null;
-  amount: number | null;
-};
-
-type RawTransactionRow = Omit<TransactionRow, 'amount'> & {
-  amount?: number | null;
-  amount_usdc?: number | null;
-};
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+type TransactionRow = CurrentUserTransaction;
 
 const movementTypeOptions: Array<{ value: MovementFilter; label: string }> = [
   { value: 'all', label: 'All types' },
@@ -175,81 +151,6 @@ const getDirectionLabel = (direction: TransactionDirection) => {
 const sumTransactionAmounts = (transactions: TransactionRow[]) =>
   transactions.reduce((sum, transaction) => sum + Number(transaction.amount ?? 0), 0);
 
-async function loadTransactionsForHistory({
-  supabase,
-  userId,
-  smartWalletAddress,
-  limit,
-}: {
-  supabase: SupabaseClient;
-  userId?: string | null;
-  smartWalletAddress?: string | null;
-  limit: number;
-}): Promise<{ data: TransactionRow[]; error: PostgrestError | null }> {
-  if (!userId && !smartWalletAddress) {
-    return { data: [], error: null };
-  }
-
-  const transactionSchema = await detectTransactionsSchema(supabase);
-
-  if (transactionSchema === 'legacy') {
-    if (!userId) {
-      return { data: [], error: null };
-    }
-
-    const { data, error } = await loadLegacyTransactionsForUser(supabase, userId, limit);
-    if (error) {
-      return { data: [], error };
-    }
-
-    return {
-      data: data.map((transaction) => ({
-        id: transaction.id,
-        created_at: transaction.created_at,
-        movement_type: transaction.movement_type as TransactionMovementType,
-        status: transaction.status,
-        from_wallet: transaction.from_wallet,
-        to_wallet: transaction.to_wallet,
-        tx_hash: transaction.tx_hash,
-        amount: transaction.amount,
-      })),
-      error: null,
-    };
-  }
-
-  const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
-    let query = supabase
-      .from('transactions')
-      .select(`id,created_at,movement_type,status,from_wallet,to_wallet,tx_hash,${amountColumn}`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
-
-    if (smartWalletAddress) {
-      query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
-    }
-
-    return query;
-  });
-
-  if (error) {
-    return { data: [], error };
-  }
-
-  return {
-    data: ((data ?? []) as RawTransactionRow[])
-      .filter((transaction) => transaction.id)
-      .map((transaction) => ({
-        ...transaction,
-        amount: getAmountValue(transaction),
-      })) as TransactionRow[],
-    error: null,
-  };
-}
-
 export default function HistoryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -264,36 +165,6 @@ export default function HistoryPage() {
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('all');
   const [sortBy, setSortBy] = useState<SortFilter>('latest');
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -305,24 +176,29 @@ export default function HistoryPage() {
 
   useEffect(() => {
     const run = async () => {
+      if (!user?.id) {
+        setTransactions([]);
+        setLoading(false);
+        setStatusMessage('');
+        return;
+      }
+
       setLoading(true);
       setStatusMessage('');
 
-      const { data, error } = await loadTransactionsForHistory({
-        supabase,
-        userId: user?.id,
-        smartWalletAddress,
+      const { data, error } = await fetchCurrentUserTransactions(getAccessToken, {
         limit: 200,
+        wallet: smartWalletAddress ?? undefined,
       });
 
       if (error) {
         setTransactions([]);
-        setStatusMessage(`Could not load your transaction history: ${error.message}`);
+        setStatusMessage(`Could not load your transaction history: ${error}`);
         setLoading(false);
         return;
       }
 
-      setTransactions(data);
+      setTransactions(data ?? []);
       setLoading(false);
     };
 
@@ -332,7 +208,7 @@ export default function HistoryPage() {
     }, HOME_REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
+  }, [getAccessToken, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
   const normalizedSearchQuery = useMemo(() => normalizeSearchQuery(searchQuery), [searchQuery]);
 

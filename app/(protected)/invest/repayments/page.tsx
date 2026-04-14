@@ -12,6 +12,7 @@ import {
 } from '@/lib/supabase-ledger-compat';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
   id: string;
@@ -30,7 +31,6 @@ type InvestmentRow = {
 
 type InvestorProfile = {
   id: string;
-  email: string | null;
   name: string | null;
   surname: string | null;
   avatar_url: string | null;
@@ -78,7 +78,7 @@ const themes = [
 const nameFrom = (profile: InvestorProfile | undefined) => {
   const full = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (full) return full;
-  if (profile?.email) return profile.email.split('@')[0];
+  if (profile?.wallet_address) return `${profile.wallet_address.slice(0, 6)}...`;
   return 'Investor';
 };
 
@@ -219,10 +219,12 @@ export default function RepaymentsPage() {
 
       const profileMap = new Map<string, InvestorProfile>();
       if (investorIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from('users')
-          .select('id,email,name,surname,avatar_url,country,wallet_address')
-          .in('id', investorIds);
+        const { data: profilesData } = await runUserDirectoryQuery(supabase, (source) =>
+          supabase
+            .from(source)
+            .select('id,name,surname,avatar_url,country,wallet_address')
+            .in('id', investorIds)
+        );
         ((profilesData ?? []) as InvestorProfile[]).forEach((profile) => {
           profileMap.set(profile.id, profile);
         });

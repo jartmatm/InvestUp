@@ -15,15 +15,17 @@ import {
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
   detectInvestmentsSchema,
-  detectTransactionsSchema,
   loadLegacyInvestmentsForInvestor,
-  loadLegacyTransactionsForUser,
 } from '@/lib/supabase-ledger-compat';
 import { getWithdrawProfileReadiness } from '@/lib/profile-completeness';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
+import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 function IconEye({ hidden }: { hidden: boolean }) {
   return hidden ? (
@@ -148,15 +150,7 @@ type LastProject = {
   interest_rate: number | null;
 };
 
-type TransactionRow = {
-  id: string;
-  created_at: string;
-  movement_type: 'investment' | 'repayment' | 'transfer' | 'buy' | 'withdrawal';
-  status: 'submitted' | 'confirmed' | 'failed';
-  from_wallet: string | null;
-  to_wallet: string | null;
-  amount: number | null;
-};
+type TransactionRow = CurrentUserTransaction;
 
 type ActiveInvestmentRow = {
   id: string;
@@ -169,12 +163,6 @@ type ActiveInvestmentRow = {
   projected_return_usdc: number | null;
   projected_total_usdc: number | null;
   status: 'submitted' | 'confirmed' | 'failed';
-};
-
-type RawTransactionRow = Omit<TransactionRow, 'amount'> & {
-  amount?: number | null;
-  amount_usdc?: number | null;
-  tx_hash?: string | null;
 };
 
 type RawActiveInvestmentRow = Omit<ActiveInvestmentRow, 'amount'> & {
@@ -206,7 +194,6 @@ type OwnerSummary = {
   id: string;
   name: string | null;
   surname: string | null;
-  email: string | null;
 };
 
 type SearchProjectRow = {
@@ -228,7 +215,6 @@ type SearchUserRow = {
   id: string;
   name: string | null;
   surname: string | null;
-  email: string | null;
   avatar_url: string | null;
   wallet_address: string | null;
   role: string | null;
@@ -345,7 +331,7 @@ const shortenIdentifier = (value: string | null | undefined, size = 6) => {
 const getUserDisplayName = (user: SearchUserRow) => {
   const fullName = `${user.name ?? ''} ${user.surname ?? ''}`.trim();
   if (fullName) return fullName;
-  if (user.email) return user.email.split('@')[0];
+  if (user.wallet_address) return shortenIdentifier(user.wallet_address, 5);
   return shortenIdentifier(user.id, 8) || 'User';
 };
 
@@ -537,10 +523,10 @@ export default function HomePage() {
       ) as string[];
       const ownerMap = new Map<string, OwnerSummary>();
       if (ownerIds.length > 0) {
-        const { data: ownersData, error: ownersError } = await supabase
-          .from('users')
-          .select('id,name,surname,email')
-          .in('id', ownerIds);
+        const { data: ownersData, error: ownersError } = await runUserDirectoryQuery(
+          supabase,
+          (source) => supabase.from(source).select('id,name,surname').in('id', ownerIds)
+        );
 
         if (ownersError) {
           console.error('Error loading investment owners:', ownersError.message);
@@ -585,7 +571,6 @@ export default function HomePage() {
             const owner = ownerId ? ownerMap.get(ownerId) : undefined;
             const fullName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
             if (fullName) return fullName;
-            if (owner?.email) return owner.email.split('@')[0];
             return 'Business owner';
           })(),
           nextRepaymentLabel: formatNextRepaymentDate(
@@ -608,83 +593,33 @@ export default function HomePage() {
 
   useEffect(() => {
     const loadTransactions = async () => {
-      if (!user?.id && !smartWalletAddress) {
+      if (!user?.id) {
         setTransactions([]);
+        setLoadingTransactions(false);
         return;
       }
 
       setLoadingTransactions(true);
-      const transactionSchema = await detectTransactionsSchema(supabase);
-
-      if (transactionSchema === 'legacy' && user?.id) {
-        const { data: legacyData, error: legacyError } = await loadLegacyTransactionsForUser(
-          supabase,
-          user.id,
-          12
-        );
-
-        if (legacyError) {
-          console.error('Error loading transactions:', legacyError.message);
-          setTransactions([]);
-          setLoadingTransactions(false);
-          return;
-        }
-
-        setTransactions(
-          legacyData.map((item) => ({
-            id: item.id,
-            created_at: item.created_at,
-            movement_type: item.movement_type as TransactionRow['movement_type'],
-            status: item.status,
-            from_wallet: item.from_wallet,
-            to_wallet: item.to_wallet,
-            amount: item.amount,
-          }))
-        );
-        setLoadingTransactions(false);
-        return;
-      }
-
-      const { data, error } = await runWithAmountColumnFallback((amountColumn) => {
-        let query = supabase
-          .from('transactions')
-          .select(`id,created_at,movement_type,status,from_wallet,to_wallet,${amountColumn}`)
-          .order('created_at', { ascending: false })
-          .limit(12);
-
-        if (user?.id) {
-          query = query.eq('user_id', user.id);
-        }
-
-        if (smartWalletAddress) {
-          query = query.or(`from_wallet.eq.${smartWalletAddress},to_wallet.eq.${smartWalletAddress}`);
-        }
-
-        return query;
+      const { data, error } = await fetchCurrentUserTransactions(getAccessToken, {
+        limit: 12,
+        wallet: smartWalletAddress ?? undefined,
       });
 
       if (error) {
-        console.error('Error loading transactions:', error.message);
+        console.error('Error loading transactions:', error);
         setTransactions([]);
         setLoadingTransactions(false);
         return;
       }
 
-      setTransactions(
-        ((data ?? []) as RawTransactionRow[])
-          .filter((item) => item.id)
-          .map((item) => ({
-            ...item,
-            amount: getAmountValue(item),
-          })) as TransactionRow[]
-      );
+      setTransactions(data ?? []);
       setLoadingTransactions(false);
     };
 
     loadTransactions();
     const interval = window.setInterval(loadTransactions, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [supabase, user?.id, smartWalletAddress, lastReceipt?.txHash]);
+  }, [getAccessToken, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
   useEffect(() => {
     if (!showSearch) return;
@@ -738,19 +673,20 @@ export default function HomePage() {
             .or(projectFilters.join(','))
             .order('created_at', { ascending: false })
             .limit(6),
-          supabase
-            .from('users')
-            .select('id,name,surname,email,avatar_url,wallet_address,role')
-            .or(
-              [
-                `name.ilike.${wildcardTerm}`,
-                `surname.ilike.${wildcardTerm}`,
-                `email.ilike.${wildcardTerm}`,
-                `id.ilike.${wildcardTerm}`,
-                `wallet_address.ilike.${wildcardTerm}`,
-              ].join(',')
-            )
-            .limit(6),
+          runUserDirectoryQuery(supabase, (source) =>
+            supabase
+              .from(source)
+              .select('id,name,surname,avatar_url,wallet_address,role')
+              .or(
+                [
+                  `name.ilike.${wildcardTerm}`,
+                  `surname.ilike.${wildcardTerm}`,
+                  `id.ilike.${wildcardTerm}`,
+                  `wallet_address.ilike.${wildcardTerm}`,
+                ].join(',')
+              )
+              .limit(6)
+          ),
         ]);
 
         if (projectsResponse.error) {
@@ -816,58 +752,22 @@ export default function HomePage() {
 
         let transactionMatches: SearchTransactionResult[] = [];
         if (user?.id) {
-          const transactionSchema = await detectTransactionsSchema(supabase);
+          const { data, error } = await fetchCurrentUserTransactions(getAccessToken, {
+            limit: 4,
+            search: searchTerm,
+          });
 
-          if (transactionSchema === 'legacy') {
-            const { data, error } = await supabase
-              .from('transactions')
-              .select('id,created_at,user_id,type,status,tx_hash,amount,amount_usdc')
-              .eq('user_id', user.id)
-              .or(`tx_hash.ilike.${wildcardTerm},id.ilike.${wildcardTerm}`)
-              .order('created_at', { ascending: false })
-              .limit(4);
-
-            if (error) {
-              throw error;
-            }
-
-            transactionMatches = ((data ?? []) as Array<{
-              id: string | number;
-              created_at: string;
-              type: string | null;
-              tx_hash: string | null;
-              amount?: number | null;
-              amount_usdc?: number | null;
-            }>).map((entry) => ({
-              id: String(entry.id),
-              txHash: entry.tx_hash ?? null,
-              createdAt: entry.created_at,
-              movementType: entry.type ?? 'transfer',
-              amount: getAmountValue(entry),
-            }));
-          } else {
-            const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-              supabase
-                .from('transactions')
-                .select(`id,created_at,movement_type,tx_hash,${amountColumn},amount_usdc`)
-                .eq('user_id', user.id)
-                .or(`tx_hash.ilike.${wildcardTerm},id.ilike.${wildcardTerm}`)
-                .order('created_at', { ascending: false })
-                .limit(4)
-            );
-
-            if (error) {
-              throw error;
-            }
-
-            transactionMatches = ((data ?? []) as RawTransactionRow[]).map((entry) => ({
-              id: String(entry.id),
-              txHash: 'tx_hash' in entry ? (entry as RawTransactionRow & { tx_hash?: string | null }).tx_hash ?? null : null,
-              createdAt: entry.created_at,
-              movementType: entry.movement_type ?? 'transfer',
-              amount: getAmountValue(entry),
-            }));
+          if (error) {
+            throw new Error(error);
           }
+
+          transactionMatches = (data ?? []).map((entry) => ({
+            id: String(entry.id),
+            txHash: entry.tx_hash ?? null,
+            createdAt: entry.created_at,
+            movementType: entry.movement_type ?? 'transfer',
+            amount: entry.amount,
+          }));
         }
 
         if (isCancelled) return;
@@ -890,7 +790,6 @@ export default function HomePage() {
             displayName: getUserDisplayName(entry),
             subtitle:
               entry.wallet_address ??
-              entry.email ??
               shortenIdentifier(entry.id, 10) ??
               'User profile',
             avatarUrl: entry.avatar_url ?? null,
@@ -916,7 +815,7 @@ export default function HomePage() {
       isCancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [searchQuery, showSearch, supabase, user?.id]);
+  }, [getAccessToken, searchQuery, showSearch, supabase, user?.id]);
 
   const handleTopUpClick = async () => {
     if (openingTopUp) return;
@@ -940,7 +839,9 @@ export default function HomePage() {
     setCheckingWithdrawRequirements(true);
 
     try {
-      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const { data, error } = await fetchCurrentUserProfile<Record<string, unknown> | null>(
+        getAccessToken
+      );
 
       if (error) {
         setMissingWithdrawProfileFields([]);

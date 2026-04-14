@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
+import {
+  fetchCurrentUserProfile,
+  patchCurrentUserProfile,
+} from '@/utils/client/current-user-profile';
 
 type BankMethod = 'bank' | 'breve';
 type AccountType = 'ahorros' | 'corriente' | '';
@@ -23,14 +26,6 @@ type BankDetailsForm = {
   phoneNumber: string;
   breveKey: string;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const BANK_OPTIONS = [
   'Bancolombia',
@@ -92,36 +87,6 @@ export default function BankAccountPage() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -137,10 +102,12 @@ export default function BankAccountPage() {
       setLoadingDetails(true);
       setStatus('');
 
-      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const { data, error } = await fetchCurrentUserProfile<Record<string, unknown> | null>(
+        getAccessToken
+      );
 
       if (error) {
-        setStatus(`Could not load your bank details: ${error.message}`);
+        setStatus(`Could not load your bank details: ${error}`);
         setLoadingDetails(false);
         return;
       }
@@ -177,7 +144,7 @@ export default function BankAccountPage() {
     };
 
     void loadBankDetails();
-  }, [supabase, user?.id]);
+  }, [getAccessToken, user?.id]);
 
   const isBankMethod = form.method === 'bank';
   const canSave = isBankMethod
@@ -222,18 +189,14 @@ export default function BankAccountPage() {
       saved_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from('users').upsert(
-      {
-        id: user.id,
-        email: user.email?.address ?? null,
-        Bank_details: bankDetailsPayload,
-      },
-      { onConflict: 'id' }
-    );
+    const { error } = await patchCurrentUserProfile(getAccessToken, {
+      email: user.email?.address ?? null,
+      Bank_details: bankDetailsPayload,
+    });
 
     if (error) {
       setStatus(
-        `Could not save Bank_details in Supabase. Make sure the column exists: ${error.message}`
+        `Could not save Bank_details in Supabase. Make sure the column exists: ${error}`
       );
       setSaving(false);
       return;

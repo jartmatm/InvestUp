@@ -1,21 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
+import {
+  fetchCurrentUserProfile,
+  patchCurrentUserProfile,
+} from '@/utils/client/current-user-profile';
 
 type SocialForm = {
   facebook: string;
@@ -62,43 +57,6 @@ export default function SocialMediaPage() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-
-      if (!token) {
-        return run(baseHeaders);
-      }
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-
-      if (response.ok) return response;
-
-      const raw = await response.clone().text();
-      const lower = raw.toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        lower.includes('no suitable key') ||
-        lower.includes('wrong key type') ||
-        lower.includes('invalid jwt');
-
-      if (!shouldFallback) return response;
-
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -110,7 +68,9 @@ export default function SocialMediaPage() {
       setLoadingProfile(true);
       setStatus('');
 
-      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const { data, error } = await fetchCurrentUserProfile<Record<string, unknown> | null>(
+        getAccessToken
+      );
 
       if (error) {
         setStatus('Could not load your profile from Supabase.');
@@ -148,7 +108,7 @@ export default function SocialMediaPage() {
     };
 
     loadProfile();
-  }, [supabase, user?.id]);
+  }, [getAccessToken, user?.id]);
 
   const updateForm = (key: keyof SocialForm, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -188,9 +148,9 @@ export default function SocialMediaPage() {
       payload.metadata = { ...profileData, social_media: socialPayload };
     }
 
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
+    const { error } = await patchCurrentUserProfile(getAccessToken, payload);
     if (error) {
-      setStatus(`Could not save to Supabase: ${error.message}`);
+      setStatus(`Could not save to Supabase: ${error}`);
       setSaving(false);
       return;
     }

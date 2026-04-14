@@ -1,14 +1,14 @@
 ﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import {
   clearLegacyGlobalProfileSummaryCache,
   PROFILE_SUMMARY_UPDATED_EVENTS,
   readProfileSummaryCache,
   writeProfileSummaryCache,
 } from '@/lib/profile-summary-cache';
+import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 
 type ProfileSummary = {
   avatarUrl: string;
@@ -23,13 +23,6 @@ type ProfileBlob = {
   avatar_url?: string;
 } | null;
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 const parseProfileBlob = (value: unknown): ProfileBlob => {
   if (!value) return null;
   if (typeof value === 'string') {
@@ -61,43 +54,6 @@ export function useUserProfileSummary(): ProfileSummary {
   const [email, setEmail] = useState(user?.email?.address ?? '');
   const [loading, setLoading] = useState(true);
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-
-      if (!token) {
-        return run(baseHeaders);
-      }
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-
-      if (response.ok) return response;
-
-      const raw = await response.clone().text();
-      const lower = raw.toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        lower.includes('no suitable key') ||
-        lower.includes('wrong key type') ||
-        lower.includes('invalid jwt');
-
-      if (!shouldFallback) return response;
-
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -125,7 +81,7 @@ export function useUserProfileSummary(): ProfileSummary {
     setLoading(true);
 
     try {
-      const { data } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const { data } = await fetchCurrentUserProfile<Record<string, unknown> | null>(getAccessToken);
       const profileData = parseProfileBlob(data?.profile_data ?? data?.metadata ?? null);
       const emailValue = pickFirstFilledString(data?.email, user.email?.address);
       const nameValue = pickFirstFilledString(data?.name, profileData?.name);
@@ -151,7 +107,7 @@ export function useUserProfileSummary(): ProfileSummary {
     } finally {
       setLoading(false);
     }
-  }, [supabase, user?.email?.address, user?.id]);
+  }, [getAccessToken, user?.email?.address, user?.id]);
 
   useEffect(() => {
     let retryShort: number | undefined;

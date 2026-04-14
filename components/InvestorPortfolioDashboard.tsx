@@ -19,6 +19,7 @@ import {
 } from '@/lib/supabase-ledger-compat';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import { useInvestApp } from '@/lib/investapp-context';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
   id: string;
@@ -48,7 +49,6 @@ type OwnerRow = {
   id: string;
   name: string | null;
   surname: string | null;
-  email: string | null;
 };
 
 type PortfolioItem = {
@@ -92,7 +92,6 @@ const normalizePhotos = (value: unknown) =>
 const ownerNameFrom = (owner: OwnerRow | undefined) => {
   const full = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
   if (full) return full;
-  if (owner?.email) return owner.email.split('@')[0];
   return 'Business owner';
 };
 
@@ -267,10 +266,9 @@ export default function InvestorPortfolioDashboard() {
       ) as string[];
       const ownerMap = new Map<string, OwnerRow>();
       if (ownerIds.length > 0) {
-        const { data: ownersData } = await supabase
-          .from('users')
-          .select('id,name,surname,email')
-          .in('id', ownerIds);
+        const { data: ownersData } = await runUserDirectoryQuery(supabase, (source) =>
+          supabase.from(source).select('id,name,surname').in('id', ownerIds)
+        );
         ((ownersData ?? []) as OwnerRow[]).forEach((owner) => ownerMap.set(owner.id, owner));
       }
 

@@ -25,6 +25,7 @@ import {
   getMinimumInvestmentValue,
   runWithMinimumInvestmentFallback,
 } from '@/lib/supabase-minimum-investment';
+import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 
 type ProjectRow = {
   id: string;
@@ -251,12 +252,14 @@ export default function PortfolioPage() {
   useEffect(() => {
     const preloadCountry = async () => {
       if (!user?.id || rolSeleccionado !== 'emprendedor') return;
-      const { data } = await supabase.from('users').select('country').eq('id', user.id).maybeSingle();
+      const { data } = await fetchCurrentUserProfile<{ country?: string | null } | null>(
+        getAccessToken
+      );
       const normalized = normalizeCountryCode((data?.country as string | null) ?? '');
       if (normalized) setForm((prev) => ({ ...prev, country: normalized }));
     };
     preloadCountry();
-  }, [rolSeleccionado, supabase, user?.id]);
+  }, [getAccessToken, rolSeleccionado, user?.id]);
 
   const loadMyProjects = useCallback(async () => {
     if (!user?.id) return;
@@ -879,7 +882,6 @@ export default function PortfolioPage() {
     </PageFrame>
   );
 }
-
 
 
 

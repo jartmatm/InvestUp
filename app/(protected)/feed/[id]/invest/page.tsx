@@ -15,6 +15,7 @@ import {
   getMinimumInvestmentValue,
   runWithMinimumInvestmentFallback,
 } from '@/lib/supabase-minimum-investment';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type ProjectInvestmentDetail = {
   id: string;
@@ -39,7 +40,6 @@ type ProjectInvestmentDetail = {
 type OwnerProfile = {
   name: string | null;
   surname: string | null;
-  email: string | null;
   wallet_address: string | null;
 };
 
@@ -165,11 +165,13 @@ export default function ProjectInvestPage() {
       setProject(normalizedProject);
 
       if (normalizedProject?.owner_user_id) {
-        const { data: ownerData } = await supabase
-          .from('users')
-          .select('name,surname,email,wallet_address')
-          .eq('id', normalizedProject.owner_user_id)
-          .maybeSingle();
+        const { data: ownerData } = await runUserDirectoryQuery(supabase, (source) =>
+          supabase
+            .from(source)
+            .select('name,surname,wallet_address')
+            .eq('id', normalizedProject.owner_user_id)
+            .maybeSingle()
+        );
         setOwner((ownerData ?? null) as OwnerProfile | null);
       } else {
         setOwner(null);
@@ -217,7 +219,7 @@ export default function ProjectInvestPage() {
   const entrepreneurName = (() => {
     const ownerName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
     if (ownerName) return ownerName;
-    if (owner?.email) return owner.email.split('@')[0];
+    if (owner?.wallet_address) return `${owner.wallet_address.slice(0, 6)}...`;
     if (project?.business_name) return project.business_name;
     return 'Entrepreneur';
   })();

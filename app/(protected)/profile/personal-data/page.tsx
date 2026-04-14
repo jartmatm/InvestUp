@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
+import {
+  fetchCurrentUserProfile,
+  patchCurrentUserProfile,
+} from '@/utils/client/current-user-profile';
 
 type ProfileForm = {
   id: string;
@@ -30,14 +33,6 @@ type FieldProps = {
   label: string;
   children: ReactNode;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const REGION_NAMES = new Intl.DisplayNames(['es', 'en'], { type: 'region' });
 const COUNTRY_OPTIONS: CountryOption[] = getCountries()
@@ -86,43 +81,6 @@ export default function PersonalDataPage() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-
-      if (!token) {
-        return run(baseHeaders);
-      }
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-
-      if (response.ok) return response;
-
-      const raw = await response.clone().text();
-      const lower = raw.toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        lower.includes('no suitable key') ||
-        lower.includes('wrong key type') ||
-        lower.includes('invalid jwt');
-
-      if (!shouldFallback) return response;
-
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -134,7 +92,9 @@ export default function PersonalDataPage() {
       setLoadingProfile(true);
       setStatus('');
 
-      const { data, error } = await supabase.from('users').select('*').eq('id', user.id).maybeSingle();
+      const { data, error } = await fetchCurrentUserProfile<Record<string, unknown> | null>(
+        getAccessToken
+      );
 
       if (error) {
         setStatus('Could not load your profile from Supabase.');
@@ -179,7 +139,7 @@ export default function PersonalDataPage() {
     };
 
     loadProfile();
-  }, [supabase, user?.id, user?.email?.address]);
+  }, [getAccessToken, user?.id, user?.email?.address]);
 
   const canEditEmail = useMemo(() => availableColumns.has('email') || availableColumns.size === 0, [availableColumns]);
   const hasAnyExtendedField = useMemo(
@@ -281,9 +241,9 @@ export default function PersonalDataPage() {
     if (availableColumns.has('profile_data')) payload.profile_data = profileData;
     if (availableColumns.has('metadata')) payload.metadata = profileData;
 
-    const { error } = await supabase.from('users').upsert(payload, { onConflict: 'id' });
+    const { error } = await patchCurrentUserProfile(getAccessToken, payload);
     if (error) {
-      setStatus(`Could not save to Supabase: ${error.message}`);
+      setStatus(`Could not save to Supabase: ${error}`);
       setSaving(false);
       return;
     }
