@@ -91,7 +91,7 @@ function Avatar({ avatarUrl, label }: { avatarUrl?: string | null; label: string
 export default function WalletTransferPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, getAccessToken } = usePrivy();
+  const { user, getAccessToken, connectOrCreateWallet } = usePrivy();
   const { avatarUrl, displayName } = useUserProfileSummary();
   const {
     faseApp,
@@ -267,7 +267,7 @@ export default function WalletTransferPage() {
 
   const suggestions = [100, 200, 250, 300, 350, 400];
   const amountNumber = Number(monto);
-  const canSubmit = Boolean(walletDestino && Number(monto) > 0);
+  const canSubmit = Boolean(walletDestino && Number(monto) > 0 && smartWalletAddress);
   const submitLabel = pendingInvestment ? 'Confirm transfer' : transferMode === 'repayment' ? 'Send repayment' : 'Send';
   const helper = pendingInvestment
     ? 'Review the investment details and confirm the transfer to the entrepreneur.'
@@ -337,12 +337,30 @@ export default function WalletTransferPage() {
           </div>
         </Section>
 
-        <Section title="From">
+        <Section
+          title="From"
+          rightSlot={
+            !smartWalletAddress ? (
+              <button
+                type="button"
+                onClick={() => connectOrCreateWallet()}
+                className="rounded-full border border-primary/20 px-3 py-1 text-xs font-semibold text-primary"
+              >
+                Set up wallet
+              </button>
+            ) : null
+          }
+        >
           <div className="flex items-center gap-3 px-4 py-4">
             <Avatar avatarUrl={avatarUrl} label={displayName} />
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-800">{displayName}</p>
-              <p className="truncate text-xs text-gray-500">{smartWalletAddress ?? 'Wallet not available'}</p>
+              <p className="truncate text-xs text-gray-500">{smartWalletAddress ?? 'Smart wallet not ready yet'}</p>
+              {!smartWalletAddress ? (
+                <p className="mt-2 text-xs text-gray-500">
+                  Finish setting up your wallet to send USDC (Privy will create your embedded wallet and smart wallet).
+                </p>
+              ) : null}
             </div>
           </div>
         </Section>

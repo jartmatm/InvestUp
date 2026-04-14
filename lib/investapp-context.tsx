@@ -9,7 +9,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useFundWallet, usePrivy } from '@privy-io/react-auth';
+import {
+  getEmbeddedConnectedWallet,
+  useFundWallet,
+  useModalStatus,
+  usePrivy,
+  useWallets,
+} from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
 import { polygon } from 'viem/chains';
@@ -495,11 +501,15 @@ const buildUniqueIdCandidates = (
 };
 
 export function InvestAppProvider({ children }: { children: React.ReactNode }) {
-  const { login, logout, authenticated, user, ready, getAccessToken } = usePrivy();
+  const { login, logout, authenticated, user, ready, getAccessToken, connectOrCreateWallet } = usePrivy();
+  const { wallets, ready: walletsReady } = useWallets();
+  const { isOpen: isPrivyModalOpen } = useModalStatus();
   const { fundWallet } = useFundWallet();
   const { client } = useSmartWallets();
   const managedWalletAddress = useMemo(() => getManagedWalletAddressFromUser(user), [user]);
   const smartWalletAddress = client?.account?.address ?? managedWalletAddress;
+  const embeddedConnectedWallet = useMemo(() => getEmbeddedConnectedWallet(wallets), [wallets]);
+  const hasPromptedWalletSetupRef = useRef(false);
 
   const [faseApp, setFaseApp] = useState<FaseApp>('loading');
   const [rolSeleccionado, setRolSeleccionado] = useState<FrontRole | null>(null);
@@ -525,6 +535,27 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const investmentSchemaRef = useRef<'unknown' | 'modern' | 'legacy'>('unknown');
   const seenTransactionNotificationKeysRef = useRef<Set<string>>(new Set());
   const bootstrappedTransactionNotificationsRef = useRef(false);
+
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
+    if (smartWalletAddress) return;
+    if (!walletsReady) return;
+    if (isPrivyModalOpen) return;
+    if (hasPromptedWalletSetupRef.current) return;
+    if (embeddedConnectedWallet) return;
+
+    hasPromptedWalletSetupRef.current = true;
+    connectOrCreateWallet();
+  }, [
+    authenticated,
+    connectOrCreateWallet,
+    embeddedConnectedWallet,
+    isPrivyModalOpen,
+    ready,
+    smartWalletAddress,
+    user,
+    walletsReady,
+  ]);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
