@@ -13,7 +13,13 @@ import {
 } from '@/lib/investment-contract';
 import { normalizePaymentScheduleRecord } from '@/lib/payment-schedule';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
+import { fetchProjectById } from '@/utils/client/projects';
 import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
+import type {
+  InternalAccountBalance,
+  InternalLedgerEntry,
+} from '@/utils/internal-ledger/types';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type ProjectRow = {
@@ -86,6 +92,35 @@ const formatDate = (value: string | null) => {
 const normalizeProjectId = (value: string) =>
   Number.isFinite(Number(value)) ? Number(value) : value;
 
+const balanceCards: Array<{
+  key: keyof Pick<
+    InternalAccountBalance,
+    'available_balance' | 'withdrawable_balance' | 'invested_balance' | 'pending_balance'
+  >;
+  label: string;
+}> = [
+  { key: 'available_balance', label: 'Available balance' },
+  { key: 'withdrawable_balance', label: 'Withdrawable balance' },
+  { key: 'invested_balance', label: 'Invested balance' },
+  { key: 'pending_balance', label: 'Pending balance' },
+];
+
+const formatDeltaSummary = (entry: InternalLedgerEntry, currentUserId: string | null) => {
+  if (!currentUserId) return 'No balance delta available.';
+  const delta = entry.balance_deltas?.[currentUserId];
+  if (!delta) return 'No direct balance delta for this user.';
+
+  const parts = Object.entries(delta)
+    .filter(([, value]) => Number(value ?? 0) !== 0)
+    .map(([key, value]) => {
+      const amount = Number(value ?? 0);
+      const sign = amount >= 0 ? '+' : '';
+      return `${key.replace(/_/g, ' ')}: ${sign}${amount.toFixed(2)}`;
+    });
+
+  return parts.length > 0 ? parts.join(' · ') : 'No direct balance delta for this user.';
+};
+
 export default function ContractPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -95,6 +130,8 @@ export default function ContractPage() {
   const [status, setStatus] = useState('');
   const [snapshot, setSnapshot] = useState<InvestmentContractSnapshot | null>(null);
   const [contractSource, setContractSource] = useState('');
+  const [ledgerBalance, setLedgerBalance] = useState<InternalAccountBalance | null>(null);
+  const [ledgerEntries, setLedgerEntries] = useState<InternalLedgerEntry[]>([]);
 
   const creditId = searchParams.get('credit') ?? '';
 
@@ -165,12 +202,8 @@ export default function ContractPage() {
         scheduleRecord.investor_user_id,
         scheduleRecord.entrepreneur_user_id,
       ].filter((value): value is string => Boolean(value));
-      const [{ data: projectData }, { data: usersData }] = await Promise.all([
-        supabase
-          .from('projects')
-          .select('id,title,business_name,description,currency,owner_user_id,owner_wallet')
-          .eq('id', normalizedProjectId)
-          .maybeSingle(),
+      const [{ data: projectData }, { data: usersData }, ledgerResponse] = await Promise.all([
+        fetchProjectById(String(normalizedProjectId), getAccessToken),
         participantIds.length > 0
           ? runUserDirectoryQuery(supabase, (source) =>
               supabase
@@ -179,6 +212,7 @@ export default function ContractPage() {
                 .in('id', participantIds)
             )
           : Promise.resolve({ data: [], error: null }),
+        fetchCurrentUserInternalLedger(getAccessToken, { creditId, limit: 12 }),
       ]);
 
       const project = (projectData as ProjectRow | null) ?? null;
@@ -219,6 +253,8 @@ export default function ContractPage() {
 
       setSnapshot(contractSnapshot);
       setContractSource(buildInvestmentContractSource(contractSnapshot));
+      setLedgerBalance(ledgerResponse.data?.balance ?? null);
+      setLedgerEntries(ledgerResponse.data?.entries ?? []);
       setLoading(false);
     };
 
@@ -226,8 +262,8 @@ export default function ContractPage() {
   }, [creditId, getAccessToken, supabase, user?.id]);
 
   return (
-    <PageFrame title="Smart contract" subtitle="Generated contract and payment plan">
-      {loading ? <p className="text-sm text-slate-500">Loading contract...</p> : null}
+    <PageFrame title="Contract ledger" subtitle="Backend contract and internal audit trail">
+      {loading ? <p className="text-sm text-slate-500">Loading contract ledger...</p> : null}
       {status ? <p className="text-sm text-slate-500">{status}</p> : null}
 
       {!loading && snapshot ? (
@@ -238,8 +274,8 @@ export default function ContractPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Contract overview</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-900">{snapshot.contractTitle}</h2>
                 <p className="mt-2 text-sm text-slate-500">
-                  Draft contract generated from Supabase records. This organizes the venture agreement
-                  in-app, but it is not an audited or deployed on-chain contract yet.
+                  This agreement now lives as a backend contract backed by the internal ledger, so
+                  we can audit balances and participant movements directly in-app.
                 </p>
               </div>
 
@@ -263,6 +299,31 @@ export default function ContractPage() {
               </span>
             </div>
           </section>
+
+          {ledgerBalance ? (
+            <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Internal balances</h3>
+                <p className="text-sm text-slate-500">
+                  Snapshot of your current backend ledger buckets for this contract flow.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {balanceCards.map((card) => (
+                  <div
+                    key={card.key}
+                    className="rounded-[24px] border border-white/25 bg-white/35 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                  >
+                    <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{card.label}</p>
+                    <p className="mt-2 text-lg font-semibold text-slate-900">
+                      {formatMoney(Number(ledgerBalance[card.key] ?? 0), ledgerBalance.currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
@@ -312,9 +373,10 @@ export default function ContractPage() {
           <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Generated Solidity</h3>
+                <h3 className="text-lg font-semibold text-slate-900">Backend contract manifest</h3>
                 <p className="text-sm text-slate-500">
-                  Adapted from your loan template and hydrated with the current venture data.
+                  Live payload rendered from internal contract state, participant profiles, and the
+                  amortization schedule stored by the backend.
                 </p>
               </div>
               <span className="rounded-full border border-white/20 bg-white/35 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -333,7 +395,7 @@ export default function ContractPage() {
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Amortization table</h3>
               <p className="text-sm text-slate-500">
-                Month-by-month schedule generated from the compact payment plan stored in Supabase.
+                Month-by-month schedule generated from the backend contract state.
               </p>
             </div>
 
@@ -341,6 +403,43 @@ export default function ContractPage() {
               <PaymentScheduleTable rows={snapshot.paymentRows} currency={snapshot.currency} />
             </div>
           </section>
+
+          {ledgerEntries.length > 0 ? (
+            <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Audit trail</h3>
+                <p className="text-sm text-slate-500">
+                  Every row below is an internal ledger posting related to this contract.
+                </p>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {ledgerEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="rounded-[24px] border border-white/25 bg-white/35 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold capitalize text-slate-900">
+                          {entry.entry_type}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {formatDate(entry.created_at)} · {entry.reference_type} {entry.reference_id}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-white/20 bg-white/60 px-3 py-1 text-xs font-semibold text-slate-700">
+                        {formatMoney(entry.amount, entry.currency)}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-600">
+                      {formatDeltaSummary(entry, user?.id ?? null)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       ) : null}
     </PageFrame>

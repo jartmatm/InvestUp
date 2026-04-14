@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { syncInternalLedgerForUsers } from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import type { CreateCurrentUserRepaymentPayload } from '@/utils/client/current-user-repayments';
@@ -173,6 +174,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    await syncInternalLedgerForUsers([verified.userId, asTextId(payload.investorUserId)]);
 
     return jsonNoStore({ data: { id: savedId } }, { status: 200 });
   } catch (caughtError) {

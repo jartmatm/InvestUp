@@ -8,6 +8,7 @@ import PageFrame from '@/components/PageFrame';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
@@ -137,10 +138,7 @@ export default function RepaymentsPage() {
       }
 
       setLoading(true);
-      const { data: projectData } = await supabase
-        .from('projects')
-        .select('id,title,business_name,interest_rate,term_months')
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      const { data: projectData } = await fetchCurrentUserProjects(getAccessToken);
       const projectMap = new Map(
         ((projectData ?? []) as ProjectRow[]).map((project) => [
           String(project.id),

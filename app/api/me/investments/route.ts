@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
+import { getNextProjectStatusAfterFunding } from '@/lib/project-status';
 import {
   detectInvestmentsSchema,
   generateLegacyRowIds,
   loadLegacyInvestmentsForInvestor,
   loadLegacyInvestmentsForProjects,
 } from '@/lib/supabase-ledger-compat';
+import { syncInternalLedgerForUsers } from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import type {
@@ -214,6 +216,57 @@ async function fetchExistingModernInvestment(
   }
 
   return normalizeModernInvestment(data as ModernInvestmentRow);
+}
+
+async function syncProjectFundingState(projectId: string) {
+  const supabase = getSupabaseAdminClient();
+  const normalizedProjectId = normalizeProjectFilter(projectId);
+  const { data: projectData, error: projectError } = await supabase
+    .from('projects')
+    .select('amount_received,status')
+    .eq('id', normalizedProjectId)
+    .maybeSingle();
+
+  if (projectError || !projectData) {
+    if (projectError) {
+      console.error('Could not load project funding state:', projectError.message);
+    }
+    return;
+  }
+
+  const { data: investmentRows, error: investmentsError } = await runWithAmountColumnFallback(
+    (amountColumn) =>
+      supabase
+        .from('investments')
+        .select(`${amountColumn},amount_usdc,status`)
+        .eq('project_id', normalizedProjectId)
+        .in('status', ['submitted', 'confirmed'])
+  );
+
+  if (investmentsError) {
+    console.error('Could not recompute project funding total:', investmentsError.message);
+    return;
+  }
+
+  const nextRaised = Number(
+    ((investmentRows ?? []) as Array<Record<string, unknown>>)
+      .reduce((total, row) => total + Number(getAmountValue(row) ?? 0), 0)
+      .toFixed(2)
+  );
+
+  const nextStatus = getNextProjectStatusAfterFunding(
+    (projectData as { status?: string | null } | null)?.status,
+    nextRaised
+  );
+
+  const { error: updateError } = await supabase
+    .from('projects')
+    .update({ amount_received: nextRaised, status: nextStatus })
+    .eq('id', normalizedProjectId);
+
+  if (updateError) {
+    console.error('Could not update project funding state:', updateError.message);
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -492,10 +545,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return jsonNoStore(
-      { data: normalizeModernInvestment(data as ModernInvestmentRow) },
-      { status: 200 }
-    );
+    const normalizedInvestment = normalizeModernInvestment(data as ModernInvestmentRow);
+    await syncProjectFundingState(projectId);
+    await syncInternalLedgerForUsers([verified.userId, entrepreneurUserId]);
+
+    return jsonNoStore({ data: normalizedInvestment }, { status: 200 });
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Investment write failed.', details: message }, { status: 500 });

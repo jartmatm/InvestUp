@@ -4,9 +4,6 @@ import {
   type PaymentScheduleRow,
 } from '@/lib/payment-schedule';
 
-export const POLYGON_USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
-const USDC_DECIMALS = 1_000_000;
-
 type ContractParty = {
   displayName: string;
   walletAddress: string | null;
@@ -33,14 +30,6 @@ export type InvestmentContractSnapshot = {
   borrower: ContractParty;
   paymentRows: PaymentScheduleRow[];
 };
-
-const toScaledUsdc = (value: number) => Math.round(Math.max(0, value) * USDC_DECIMALS);
-
-const sanitizeAddress = (value: string | null | undefined) =>
-  value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value : 'address(0)';
-
-const escapeSolidityString = (value: string) =>
-  value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, ' ');
 
 const buildHexChunk = (seed: number, input: string) => {
   let hash = seed >>> 0;
@@ -127,72 +116,49 @@ export const buildInvestmentContractSnapshot = ({
 };
 
 export const buildInvestmentContractSource = (snapshot: InvestmentContractSnapshot) => {
-  const principalScaled = toScaledUsdc(snapshot.principal);
-  const monthlyPaymentScaled = toScaledUsdc(snapshot.monthlyPayment);
-  const lenderAddress = sanitizeAddress(snapshot.lender.walletAddress);
-  const borrowerAddress = sanitizeAddress(snapshot.borrower.walletAddress);
-  const statusLabel = snapshot.status;
-
-  return `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-/*
- * Draft contract generated from Supabase for InvestApp.
- * Credit ID: ${escapeSolidityString(snapshot.creditId)}
- * Venture: ${escapeSolidityString(snapshot.contractTitle)}
- * Lender: ${escapeSolidityString(snapshot.lender.displayName)}
- * Borrower: ${escapeSolidityString(snapshot.borrower.displayName)}
- * Principal: ${snapshot.principal.toFixed(2)} ${snapshot.currency}
- * Fixed monthly payment: ${snapshot.monthlyPayment.toFixed(2)} ${snapshot.currency}
- * Installments: ${snapshot.totalInstallments}
- * Legal terms hash: ${snapshot.legalTermsHash}
- */
-
-contract InvestAppLoan {
-    address public lender = ${lenderAddress};
-    address public borrower = ${borrowerAddress};
-    IERC20 public token = IERC20(${POLYGON_USDC_ADDRESS});
-
-    uint256 public principal = ${principalScaled};
-    uint256 public monthlyPayment = ${monthlyPaymentScaled};
-    uint256 public totalInstallments = ${snapshot.totalInstallments};
-    uint256 public installmentsPaid = ${snapshot.installmentsPaid};
-    uint256 public lastPaymentDate = 0;
-
-    string public creditId = "${escapeSolidityString(snapshot.creditId)}";
-    string public legalTermsHash = "${snapshot.legalTermsHash}";
-
-    enum LoanStatus { Pending, Active, Paid, Defaulted }
-    LoanStatus public status = LoanStatus.${statusLabel};
-
-    function fundLoan() external {
-        require(msg.sender == lender, "Only the investor can fund");
-        require(status == LoanStatus.Pending, "Already funded");
-
-        token.transferFrom(lender, address(this), principal);
-        status = LoanStatus.Active;
-    }
-
-    function withdrawPrincipal() external {
-        require(msg.sender == borrower, "Only the entrepreneur can withdraw");
-        require(status == LoanStatus.Active, "Loan is not active");
-
-        token.transfer(borrower, principal);
-    }
-
-    function payInstallment() external {
-        require(status == LoanStatus.Active, "Loan is not active");
-        require(installmentsPaid < totalInstallments, "Loan already repaid");
-
-        token.transferFrom(borrower, lender, monthlyPayment);
-        installmentsPaid++;
-        lastPaymentDate = block.timestamp;
-
-        if (installmentsPaid == totalInstallments) {
-            status = LoanStatus.Paid;
-        }
-    }
-}`;
+  return JSON.stringify(
+    {
+      contract_engine: 'backend_internal_ledger',
+      contract_type: 'venture_credit_agreement',
+      credit_id: snapshot.creditId,
+      legal_terms_hash: snapshot.legalTermsHash,
+      status: snapshot.status,
+      venture: {
+        title: snapshot.contractTitle,
+        summary: snapshot.contractSummary,
+        project_id: snapshot.projectId,
+      },
+      currency: snapshot.currency,
+      economics: {
+        principal: Number(snapshot.principal.toFixed(2)),
+        monthly_payment: Number(snapshot.monthlyPayment.toFixed(2)),
+        annual_interest_rate: Number(snapshot.annualInterestRate.toFixed(4)),
+        monthly_interest_rate: Number(snapshot.monthlyInterestRate.toFixed(6)),
+        total_installments: snapshot.totalInstallments,
+        installments_paid: snapshot.installmentsPaid,
+        next_due_date: snapshot.nextDueDate,
+      },
+      parties: {
+        investor: snapshot.lender,
+        entrepreneur: snapshot.borrower,
+      },
+      settlement_model: {
+        type: 'internal_ledger',
+        source_of_truth: 'backend_contracts',
+        audit_trail: 'internal_ledger_entries',
+      },
+      payment_plan: snapshot.paymentRows.map((row) => ({
+        installment_number: row.installment_number,
+        due_date: row.due_date,
+        fixed_payment: Number(row.fixed_payment.toFixed(2)),
+        interest_amount: Number(row.interest_amount.toFixed(2)),
+        principal_amount: Number(row.principal_amount.toFixed(2)),
+        ending_balance: Number(row.ending_balance.toFixed(2)),
+        status: row.status,
+        tx_hash: row.tx_hash,
+      })),
+    },
+    null,
+    2
+  );
 };

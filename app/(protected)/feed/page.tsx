@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
@@ -15,6 +14,7 @@ import {
 } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
+import { fetchProjects } from '@/utils/client/projects';
 
 type FeedProject = {
   id: string;
@@ -34,14 +34,6 @@ type FeedProject = {
   publication_end_date: string | null;
   photo_urls: string[] | null;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 function IconTarget() {
   return (
@@ -113,7 +105,7 @@ const normalizePhotos = (value: unknown): string[] => {
 
 export default function FeedPage() {
   const router = useRouter();
-  const { user, getAccessToken } = usePrivy();
+  const { user } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,35 +114,6 @@ export default function FeedPage() {
   const [wishlist, setWishlist] = useState<string[]>([]);
   const [showCategories, setShowCategories] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -172,16 +135,10 @@ export default function FeedPage() {
 
       setLoading(true);
       setStatus('');
-      const { data, error } = await supabase
-        .from('projects')
-        .select(
-          'id,title,description,sector,owner_user_id,status,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,photo_urls'
-        )
-        .in('status', ACTIVE_PROJECT_STATUSES)
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchProjects({ limit: 48 });
 
       if (error) {
-        setStatus(`Could not load the feed: ${error.message}`);
+        setStatus(`Could not load the feed: ${error}`);
         setLoading(false);
         return;
       }
@@ -196,7 +153,7 @@ export default function FeedPage() {
     };
 
     loadFeed();
-  }, [rolSeleccionado, supabase]);
+  }, [rolSeleccionado]);
 
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(

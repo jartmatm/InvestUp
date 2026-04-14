@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import { getCountries } from 'libphonenumber-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
@@ -21,10 +20,14 @@ import {
   type ProjectStatus,
 } from '@/lib/project-status';
 import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
+import { getMinimumInvestmentValue } from '@/lib/supabase-minimum-investment';
 import {
-  getMinimumInvestmentValue,
-  runWithMinimumInvestmentFallback,
-} from '@/lib/supabase-minimum-investment';
+  createCurrentUserProject,
+  deleteCurrentUserProject,
+  fetchCurrentUserProject,
+  fetchCurrentUserProjects,
+  updateCurrentUserProject,
+} from '@/utils/client/current-user-projects';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 
 type ProjectRow = {
@@ -75,14 +78,6 @@ type PublishForm = {
   installmentCount: string;
   interestRateEa: string;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
 const COUNTRY_OPTIONS = getCountries()
@@ -214,36 +209,6 @@ export default function PortfolioPage() {
     return CITY_OPTIONS_BY_COUNTRY[form.country] ?? ['Other city'];
   }, [form.country]);
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -264,23 +229,10 @@ export default function PortfolioPage() {
   const loadMyProjects = useCallback(async () => {
     if (!user?.id) return;
     setLoadingProjects(true);
-    const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
-      const selectFields: string = includeMinimumInvestment
-        ? 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,publication_end_date,photo_urls,video_url,created_at'
-        : 'id,owner_user_id,owner_id,status,title,business_name,sector,legal_representative,nit,opening_date,address,phone,city,country,description,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,publication_end_date,photo_urls,video_url,created_at';
-
-      return supabase
-        .from('projects')
-        .select(selectFields)
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-        .order('created_at', { ascending: false }) as unknown as PromiseLike<{
-        data: ProjectRow[];
-        error: PostgrestError | null;
-      }>;
-    });
+    const { data, error } = await fetchCurrentUserProjects(getAccessToken);
 
     if (error) {
-      setStatus(`Could not load your projects: ${error.message}`);
+      setStatus(`Could not load your projects: ${error}`);
       setLoadingProjects(false);
       return;
     }
@@ -291,11 +243,11 @@ export default function PortfolioPage() {
       }))
     );
     setLoadingProjects(false);
-  }, [supabase, user?.id]);
+  }, [getAccessToken, user?.id]);
 
   useEffect(() => {
     if (rolSeleccionado === 'emprendedor') {
-      loadMyProjects();
+      void loadMyProjects();
     }
   }, [loadMyProjects, rolSeleccionado]);
 
@@ -303,20 +255,14 @@ export default function PortfolioPage() {
     async (projectId: string) => {
       if (!user?.id) return null;
 
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id,status,amount_received')
-        .eq('id', projectId)
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-        .maybeSingle();
-
+      const { data, error } = await fetchCurrentUserProject(getAccessToken, projectId);
       if (error) {
-        throw error;
+        throw new Error(error);
       }
 
       return data as Pick<ProjectRow, 'id' | 'status' | 'amount_received'> | null;
     },
-    [supabase, user?.id]
+    [getAccessToken, user?.id]
   );
 
   const onChangeForm = (key: keyof PublishForm, value: string) => {
@@ -433,14 +379,10 @@ export default function PortfolioPage() {
 
       const confirmed = window.confirm('Do you want to delete this listing?');
       if (!confirmed) return;
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', project.id)
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      const { error } = await deleteCurrentUserProject(getAccessToken, project.id);
 
       if (error) {
-        setStatus(`Could not delete the listing: ${error.message}`);
+        setStatus(`Could not delete the listing: ${error}`);
         return;
       }
       setStatus('Listing deleted.');
@@ -464,14 +406,12 @@ export default function PortfolioPage() {
 
       const nextStatus: ProjectStatus =
         effectiveProject.status === 'paused' ? 'published' : 'paused';
-      const { error } = await supabase
-        .from('projects')
-        .update({ status: nextStatus })
-        .eq('id', project.id)
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
+      const { error } = await updateCurrentUserProject(getAccessToken, project.id, {
+        status: nextStatus,
+      });
 
       if (error) {
-        setStatus(`Could not update the listing: ${error.message}`);
+        setStatus(`Could not update the listing: ${error}`);
         return;
       }
 
@@ -539,15 +479,7 @@ export default function PortfolioPage() {
     setSavingProject(true);
     setStatus('');
 
-    const existingProject = editingProjectId
-      ? myProjects.find((project) => project.id === editingProjectId) ?? null
-      : null;
-    const nextAmountReceived = existingProject?.amount_received ?? 0;
-    const nextStatus = getNextProjectStatusAfterFunding(existingProject?.status, nextAmountReceived);
-
     const payload = {
-      owner_id: user.id,
-      owner_user_id: user.id,
       owner_wallet: smartWalletAddress ?? null,
       title: form.title,
       business_name: form.businessName,
@@ -562,60 +494,23 @@ export default function PortfolioPage() {
       description: form.description,
       amount_requested: Number(form.amountRequested),
       minimum_investment: Number(form.minimumInvestment),
-      amount_received: nextAmountReceived,
       currency: form.currency,
-      term_months: installmentCount,
       installment_count: installmentCount,
       publication_end_date: form.publicationEndDate,
       interest_rate: Number(form.interestRateEa),
-      status: nextStatus,
       photo_urls: projectPhotos,
       video_url: projectVideo || null,
       metadata: {
         submitted_from: 'portfolio_page',
-        publication_date: existingProject?.created_at ?? new Date().toISOString(),
         publication_end_date: form.publicationEndDate,
       },
     };
-    const payloadWithoutMinimumInvestment = { ...payload };
-    delete (payloadWithoutMinimumInvestment as { minimum_investment?: number }).minimum_investment;
+    const { error } = editingProjectId
+      ? await updateCurrentUserProject(getAccessToken, editingProjectId, payload)
+      : await createCurrentUserProject(getAccessToken, payload);
 
-    let opError: { message?: string } | null = null;
-    if (editingProjectId) {
-      let result = await supabase
-        .from('projects')
-        .update(payload)
-        .eq('id', editingProjectId)
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
-      if (result.error?.message?.toLowerCase().includes('minimum_investment')) {
-        result = await supabase
-          .from('projects')
-          .update(payloadWithoutMinimumInvestment)
-          .eq('id', editingProjectId)
-          .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`);
-      }
-      opError = result.error;
-    } else {
-      let firstTry = await supabase.from('projects').insert({
-        ...payload,
-        status: 'published',
-      });
-      if (firstTry.error?.message?.toLowerCase().includes('minimum_investment')) {
-        firstTry = await supabase.from('projects').insert({
-          ...payloadWithoutMinimumInvestment,
-          status: 'published',
-        });
-      }
-      opError = firstTry.error;
-
-      if (opError?.message?.includes('invalid input value for enum project_status')) {
-        const thirdTry = await supabase.from('projects').insert(payload);
-        opError = thirdTry.error;
-      }
-    }
-
-    if (opError) {
-      setStatus(`Could not publish the project: ${opError.message}`);
+    if (error) {
+      setStatus(`Could not publish the project: ${error}`);
       setSavingProject(false);
       return;
     }
@@ -917,5 +812,3 @@ export default function PortfolioPage() {
     </PageFrame>
   );
 }
-
-

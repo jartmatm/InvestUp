@@ -3,6 +3,7 @@ import {
   normalizePaymentScheduleRecord,
   type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
+import { syncInternalContractsForUser } from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 
@@ -31,6 +32,9 @@ const compareDueDate = (left: PaymentScheduleRecord, right: PaymentScheduleRecor
   const rightTime = right.next_due_date ? new Date(right.next_due_date).getTime() : Number.MAX_SAFE_INTEGER;
   return leftTime - rightTime;
 };
+
+const isMissingRelationError = (error: { code?: string | null; message?: string | null } | null) =>
+  error?.code === '42P01' || error?.message?.toLowerCase().includes('does not exist') || false;
 
 async function verifyRequest(request: NextRequest) {
   const accessToken = extractBearerToken(request.headers.get('authorization'));
@@ -64,6 +68,61 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient();
+    await syncInternalContractsForUser(verified.userId);
+
+    const loadFromInternalContracts = async () => {
+      if (creditId) {
+        const { data, error: queryError } = await supabase
+          .from('internal_contracts')
+          .select(PAYMENT_SCHEDULE_SELECT)
+          .eq('credit_id', creditId)
+          .maybeSingle();
+
+        if (queryError) {
+          if (isMissingRelationError(queryError)) return null;
+          throw new Error(queryError.message);
+        }
+
+        if (!data) {
+          return [];
+        }
+
+        const record = normalizePaymentScheduleRecord(data as Record<string, unknown>);
+        if (
+          record.investor_user_id !== verified.userId &&
+          record.entrepreneur_user_id !== verified.userId
+        ) {
+          return [];
+        }
+
+        return [record];
+      }
+
+      let query = supabase
+        .from('internal_contracts')
+        .select(PAYMENT_SCHEDULE_SELECT)
+        .or(`investor_user_id.eq.${verified.userId},entrepreneur_user_id.eq.${verified.userId}`)
+        .order('next_due_date', { ascending: true, nullsFirst: false });
+
+      if (projectId) {
+        query = query.eq('project_id', projectId);
+      }
+
+      const { data, error: queryError } = await query;
+      if (queryError) {
+        if (isMissingRelationError(queryError)) return null;
+        throw new Error(queryError.message);
+      }
+
+      return ((data ?? []) as Array<Record<string, unknown>>)
+        .map(normalizePaymentScheduleRecord)
+        .sort(compareDueDate);
+    };
+
+    const internalContracts = await loadFromInternalContracts();
+    if (internalContracts) {
+      return jsonNoStore({ data: internalContracts }, { status: 200 });
+    }
 
     if (creditId) {
       const { data, error: queryError } = await supabase

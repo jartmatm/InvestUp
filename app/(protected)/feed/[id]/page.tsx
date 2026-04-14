@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient, type PostgrestError } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -12,16 +12,12 @@ import {
   normalizePaymentScheduleRecord,
 } from '@/lib/payment-schedule';
 import {
-  ACTIVE_PROJECT_STATUSES,
   getProjectRepaymentTermMonths,
   isProjectPubliclyVisible,
 } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
-import {
-  getMinimumInvestmentValue,
-  runWithMinimumInvestmentFallback,
-} from '@/lib/supabase-minimum-investment';
+import { fetchProjectById } from '@/utils/client/projects';
 
 type ProjectDetail = {
   id: string;
@@ -143,24 +139,10 @@ export default function FeedDetailPage() {
       }
       setLoading(true);
       setStatus('');
-      const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
-        const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,sector,business_name,amount_requested,minimum_investment,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,status,photo_urls,video_url,owner_user_id,owner_wallet'
-          : 'id,title,description,sector,business_name,amount_requested,amount_received,currency,term_months,installment_count,interest_rate,city,country,publication_end_date,status,photo_urls,video_url,owner_user_id,owner_wallet';
-
-        return supabase
-          .from('projects')
-          .select(selectFields)
-          .eq('id', projectId)
-          .in('status', ACTIVE_PROJECT_STATUSES)
-          .maybeSingle() as unknown as PromiseLike<{
-          data: ProjectDetail | null;
-          error: PostgrestError | null;
-        }>;
-      });
+      const { data, error } = await fetchProjectById(projectId, getAccessToken);
 
       if (error) {
-        setStatus(`Could not load the listing: ${error.message}`);
+        setStatus(`Could not load the listing: ${error}`);
         setLoading(false);
         return;
       }
@@ -168,7 +150,6 @@ export default function FeedDetailPage() {
       const normalizedProject = data
         ? ({
             ...(data as ProjectDetail),
-            minimum_investment: getMinimumInvestmentValue(data as Record<string, unknown>),
             photo_urls: normalizePhotos((data as ProjectDetail).photo_urls),
           } as ProjectDetail)
         : null;
@@ -410,7 +391,7 @@ export default function FeedDetailPage() {
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Contract</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Open the generated smart contract and review the full amortization plan on a
+                  Open the backend contract ledger and review the full amortization plan on a
                   dedicated page.
                 </p>
               </div>

@@ -16,6 +16,7 @@ import {
 import { getProjectStatusLabel, getProjectStatusTone } from '@/lib/project-status';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type EntrepreneurProjectRow = {
@@ -282,15 +283,10 @@ export default function EntrepreneurFeedDashboard() {
       setLoading(true);
       setStatus('');
 
-      const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .select(
-          'id,title,business_name,amount_requested,amount_received,currency,interest_rate,term_months,installment_count,publication_end_date,status'
-        )
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: projectData, error: projectError } = await fetchCurrentUserProjects(
+        getAccessToken,
+        { limit: 1 }
+      );
 
       if (projectError) {
         setStatus('Could not load your venture dashboard right now.');
@@ -301,7 +297,7 @@ export default function EntrepreneurFeedDashboard() {
         return;
       }
 
-      const currentProject = (projectData as EntrepreneurProjectRow | null) ?? null;
+      const currentProject = ((projectData ?? [])[0] as EntrepreneurProjectRow | undefined) ?? null;
       setProject(currentProject);
 
       if (!currentProject) {
@@ -634,8 +630,8 @@ export default function EntrepreneurFeedDashboard() {
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Contracts</h3>
               <p className="text-sm text-slate-500">
-                Open each investment contract in its own page to review the generated smart
-                contract and full amortization table.
+                Open each investment contract to review the backend ledger agreement and the full
+                amortization table.
               </p>
             </div>
 

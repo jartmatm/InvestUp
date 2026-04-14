@@ -16,8 +16,12 @@ import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getWithdrawProfileReadiness } from '@/lib/profile-completeness';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
+import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
+import { fetchProjects } from '@/utils/client/projects';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
+import type { InternalAccountBalance } from '@/utils/internal-ledger/types';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
@@ -351,6 +355,7 @@ export default function HomePage() {
   const [loadingProject, setLoadingProject] = useState(false);
   const [activeInvestments, setActiveInvestments] = useState<HomeActiveInvestment[]>([]);
   const [loadingActiveInvestments, setLoadingActiveInvestments] = useState(false);
+  const [internalBalance, setInternalBalance] = useState<InternalAccountBalance | null>(null);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [openingTopUp, setOpeningTopUp] = useState(false);
@@ -407,14 +412,8 @@ export default function HomePage() {
         return;
       }
       setLoadingProject(true);
-      const { data } = await supabase
-        .from('projects')
-        .select('id,title,amount_requested,amount_received,currency,photo_urls,created_at,interest_rate')
-        .or(`owner_user_id.eq.${user.id},owner_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      setLastProject((data ?? [])[0] ?? null);
+      const { data } = await fetchCurrentUserProjects(getAccessToken, { limit: 1 });
+      setLastProject(((data ?? [])[0] as LastProject | undefined) ?? null);
       setLoadingProject(false);
     };
 
@@ -457,18 +456,16 @@ export default function HomePage() {
 
       const projectMap = new Map<string, ProjectFundingSummary>();
       if (projectIds.length > 0) {
-        const normalizedProjectIds = projectIds
-          .map((projectId) => {
-            const numericValue = Number(projectId);
-            return Number.isFinite(numericValue) ? numericValue : projectId;
-          });
-        const { data: projectsData, error: projectsError } = await supabase
-          .from('projects')
-          .select('id,title,business_name,owner_user_id,amount_requested,amount_received,currency,photo_urls,interest_rate,term_months,installment_count')
-          .in('id', normalizedProjectIds);
+        const { data: projectsData, error: projectsError } = await fetchProjects(
+          {
+            ids: projectIds.join(','),
+            limit: projectIds.length,
+          },
+          getAccessToken
+        );
 
         if (projectsError) {
-          console.error('Error loading invested projects:', projectsError.message);
+          console.error('Error loading invested projects:', projectsError);
         } else {
           ((projectsData ?? []) as ProjectFundingSummary[]).forEach((project) => {
             projectMap.set(String(project.id), { ...project, id: String(project.id) });
@@ -552,6 +549,27 @@ export default function HomePage() {
   }, [getAccessToken, rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
 
   useEffect(() => {
+    const loadInternalBalance = async () => {
+      if (!user?.id) {
+        setInternalBalance(null);
+        return;
+      }
+
+      const { data, error } = await fetchCurrentUserInternalLedger(getAccessToken, { limit: 8 });
+      if (error) {
+        console.error('Error loading internal ledger balance:', error);
+        return;
+      }
+
+      setInternalBalance(data?.balance ?? null);
+    };
+
+    void loadInternalBalance();
+    const interval = window.setInterval(loadInternalBalance, HOME_REFRESH_INTERVAL_MS);
+    return () => window.clearInterval(interval);
+  }, [getAccessToken, user?.id, lastReceipt?.txHash]);
+
+  useEffect(() => {
     const loadTransactions = async () => {
       if (!user?.id) {
         setTransactions([]);
@@ -598,41 +616,20 @@ export default function HomePage() {
     const timeout = window.setTimeout(async () => {
       const searchTerm = sanitizeSearchFragment(normalizedQuery);
       const wildcardTerm = `%${searchTerm.replace(/\s+/g, '%')}%`;
-      const exactProjectId = /^\d+$/.test(searchTerm) ? Number(searchTerm) : null;
-      const exactUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-        searchTerm
-      )
-        ? searchTerm
-        : null;
 
       setSearching(true);
       setSearchError(null);
 
       try {
-        const projectFilters = [
-          `title.ilike.${wildcardTerm}`,
-          `business_name.ilike.${wildcardTerm}`,
-          `owner_user_id.ilike.${wildcardTerm}`,
-          `owner_id.ilike.${wildcardTerm}`,
-        ];
-
-        if (exactProjectId !== null) {
-          projectFilters.push(`id.eq.${exactProjectId}`);
-        }
-
-        if (exactUuid) {
-          projectFilters.push(`uuid.eq.${exactUuid}`);
-        }
-
         const [projectsResponse, usersResponse] = await Promise.all([
-          supabase
-            .from('projects')
-            .select(
-              'id,uuid,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
-            )
-            .or(projectFilters.join(','))
-            .order('created_at', { ascending: false })
-            .limit(6),
+          fetchProjects(
+            {
+              search: searchTerm,
+              includeOwnedHidden: true,
+              limit: 6,
+            },
+            getAccessToken
+          ),
           runUserDirectoryQuery(supabase, (source) =>
             supabase
               .from(source)
@@ -650,7 +647,7 @@ export default function HomePage() {
         ]);
 
         if (projectsResponse.error) {
-          throw projectsResponse.error;
+          throw new Error(projectsResponse.error);
         }
 
         if (usersResponse.error) {
@@ -673,33 +670,24 @@ export default function HomePage() {
         const userProjectMap = new Map<string, string>();
 
         if (userIds.length > 0) {
-          const [ownerUserProjects, ownerIdProjects] = await Promise.all([
-            supabase
-              .from('projects')
-              .select(
-                'id,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
-              )
-              .in('owner_user_id', userIds)
-              .order('created_at', { ascending: false }),
-            supabase
-              .from('projects')
-              .select(
-                'id,title,business_name,owner_user_id,owner_id,amount_requested,amount_received,currency,photo_urls,status,publication_end_date'
-              )
-              .in('owner_id', userIds)
-              .order('created_at', { ascending: false }),
-          ]);
+          const { data: ownerProjects, error: ownerProjectsError } = await fetchProjects(
+            {
+              ownerIds: userIds.join(','),
+              limit: Math.max(6, userIds.length * 2),
+            },
+            getAccessToken
+          );
 
-          const candidateProjects = [
-            ...(((ownerUserProjects.data ?? []) as SearchProjectRow[]).map((project) => ({
+          if (ownerProjectsError) {
+            throw new Error(ownerProjectsError);
+          }
+
+          const candidateProjects = ((ownerProjects ?? []) as SearchProjectRow[])
+            .map((project) => ({
               ...project,
               id: String(project.id),
-            }))),
-            ...(((ownerIdProjects.data ?? []) as SearchProjectRow[]).map((project) => ({
-              ...project,
-              id: String(project.id),
-            }))),
-          ].filter((project) => isProjectPubliclyVisible(project));
+            }))
+            .filter((project) => isProjectPubliclyVisible(project));
 
           candidateProjects.forEach((project) => {
             [project.owner_user_id, project.owner_id].filter(Boolean).forEach((ownerId) => {
@@ -861,6 +849,9 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
+  const availableBalanceLabel = internalBalance
+    ? Number(internalBalance.available_balance ?? 0).toFixed(2)
+    : balanceUSDC;
 
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => void handleTopUpClick() },
@@ -1125,9 +1116,11 @@ export default function HomePage() {
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-white/70">Available</p>
+            <p className="text-sm text-white/70">
+              {internalBalance ? 'Internal available' : 'Available'}
+            </p>
             <h2 className="mt-1 text-3xl font-bold">
-              {showBalance ? `$${balanceUSDC}` : 'XXXX.XX'}{' '}
+              {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
               <span className="text-lg font-semibold text-white/80">USD</span>
             </h2>
           </div>
@@ -1146,6 +1139,12 @@ export default function HomePage() {
             <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
             <span className="text-[#40C4AA]/60">&middot;</span>
             <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+            {internalBalance ? (
+              <>
+                <span className="text-[#40C4AA]/60">&middot;</span>
+                <span>{`Pending: ${formatMoney(internalBalance.pending_balance, 'USD')}`}</span>
+              </>
+            ) : null}
           </div>
         ) : (
           <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
@@ -1154,6 +1153,12 @@ export default function HomePage() {
             <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
             <span className="text-[#40C4AA]/60">&middot;</span>
             <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
+            {internalBalance ? (
+              <>
+                <span className="text-[#40C4AA]/60">&middot;</span>
+                <span>{`Invested: ${formatMoney(internalBalance.invested_balance, 'USD')}`}</span>
+              </>
+            ) : null}
           </div>
         )}
       </div>

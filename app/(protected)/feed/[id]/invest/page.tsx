@@ -3,18 +3,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient, type PostgrestError } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { setPendingInvestment } from '@/lib/pending-investment';
-import { ACTIVE_PROJECT_STATUSES, isProjectPubliclyVisible } from '@/lib/project-status';
+import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
-import {
-  getMinimumInvestmentValue,
-  runWithMinimumInvestmentFallback,
-} from '@/lib/supabase-minimum-investment';
+import { fetchProjectById } from '@/utils/client/projects';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type ProjectInvestmentDetail = {
@@ -125,24 +122,10 @@ export default function ProjectInvestPage() {
       setLoading(true);
       setStatus('');
 
-      const { data, error } = await runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
-        const selectFields: string = includeMinimumInvestment
-          ? 'id,title,description,business_name,sector,amount_requested,minimum_investment,currency,term_months,installment_count,interest_rate,status,owner_user_id,owner_wallet,city,country,photo_urls'
-          : 'id,title,description,business_name,sector,amount_requested,currency,term_months,installment_count,interest_rate,status,owner_user_id,owner_wallet,city,country,photo_urls';
-
-        return supabase
-          .from('projects')
-          .select(selectFields)
-          .eq('id', projectId)
-          .in('status', ACTIVE_PROJECT_STATUSES)
-          .maybeSingle() as unknown as PromiseLike<{
-          data: ProjectInvestmentDetail | null;
-          error: PostgrestError | null;
-        }>;
-      });
+      const { data, error } = await fetchProjectById(projectId, getAccessToken);
 
       if (error) {
-        setStatus(`Could not load the project: ${error.message}`);
+        setStatus(`Could not load the project: ${error}`);
         setLoading(false);
         return;
       }
@@ -150,7 +133,6 @@ export default function ProjectInvestPage() {
       const normalizedProject = data
         ? ({
             ...(data as ProjectInvestmentDetail),
-            minimum_investment: getMinimumInvestmentValue(data as Record<string, unknown>),
             photo_urls: normalizePhotos((data as ProjectInvestmentDetail).photo_urls),
           } as ProjectInvestmentDetail)
         : null;

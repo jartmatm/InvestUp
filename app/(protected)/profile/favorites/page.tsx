@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { readWishlist } from '@/lib/wishlist-storage';
+import { fetchProjects } from '@/utils/client/projects';
 
 type FavoriteProject = {
   id: string | number;
@@ -21,14 +21,6 @@ type FavoriteProject = {
   interest_rate: number | null;
   photo_urls: string[];
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const normalizePhotos = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -46,40 +38,11 @@ const formatAmount = (amount: number | null) => {
 
 export default function FavoritesPage() {
   const router = useRouter();
-  const { user, getAccessToken } = usePrivy();
+  const { user } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FavoriteProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -116,11 +79,10 @@ export default function FavoritesPage() {
         .filter((id) => Number.isFinite(id));
       const idsForQuery = numericIds.length > 0 ? numericIds : wishlist;
 
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id,title,description,sector,city,country,amount_requested,interest_rate,photo_urls')
-        .in('id', idsForQuery)
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchProjects({
+        ids: idsForQuery.join(','),
+        limit: idsForQuery.length,
+      });
 
       if (error) {
         setStatus('Could not load your favorite ventures.');
@@ -147,7 +109,7 @@ export default function FavoritesPage() {
     };
 
     void loadFavorites();
-  }, [rolSeleccionado, supabase, user?.id]);
+  }, [rolSeleccionado, user?.id]);
 
   return (
     <PageFrame title="Favorites" subtitle="Your saved ventures in one place">

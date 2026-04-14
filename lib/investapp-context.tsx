@@ -38,7 +38,7 @@ import {
   getPendingInvestment,
   type PendingInvestment,
 } from '@/lib/pending-investment';
-import { getNextProjectStatusAfterFunding, HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
+import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { createCurrentUserInvestment } from '@/utils/client/current-user-investments';
 import {
   createCurrentUserTransaction,
@@ -842,38 +842,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     [getAccessToken, smartWalletAddress, user?.id, walletTargets]
   );
 
-  const actualizarMontoRecaudadoProyecto = useCallback(
-    async (projectId: string, amountUsdc: number) => {
-      if (!projectId || !Number.isFinite(amountUsdc) || amountUsdc <= 0) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('amount_received,status')
-          .eq('id', projectId)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        const currentRaised = Number((data as { amount_received?: number | null } | null)?.amount_received ?? 0);
-        const nextRaised = Number((currentRaised + amountUsdc).toFixed(2));
-        const nextStatus = getNextProjectStatusAfterFunding(
-          (data as { status?: string | null } | null)?.status,
-          nextRaised
-        );
-        const { error: updateError } = await supabase
-          .from('projects')
-          .update({ amount_received: nextRaised, status: nextStatus })
-          .eq('id', projectId);
-
-        if (updateError) throw updateError;
-      } catch (error: any) {
-        console.error('Error updating project raised amount:', error?.message ?? error);
-      }
-    },
-    [supabase]
-  );
-
   const getCachedUsdcQuote = useCallback(async () => {
     const pimlicoClient = await getPimlicoClient();
     if (!pimlicoClient) {
@@ -1186,19 +1154,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (pendingInvestment) {
-          const investmentSaved = await registrarInversion({
+          await registrarInversion({
             pendingInvestment,
             txHash,
             transactionId: transactionRow?.id ?? null,
             amountUsdc: enviadoFmt,
             toWallet: destino,
           });
-          if (investmentSaved) {
-            await actualizarMontoRecaudadoProyecto(
-              pendingInvestment.projectId,
-              Number(enviadoFmt)
-            );
-          }
           clearPendingInvestment(user?.id);
         } else if (movementType === 'repayment') {
           await registrarRepayment({
@@ -1228,7 +1190,6 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     },
     [
       actualizarSaldos,
-      actualizarMontoRecaudadoProyecto,
       client,
       getCachedMaxFeePerGas,
       getCachedUsdcQuote,

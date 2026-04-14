@@ -15,6 +15,7 @@ import {
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
+import { fetchProjects } from '@/utils/client/projects';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 
 type InvestmentRow = {
@@ -198,14 +199,10 @@ export default function InvestorPortfolioDashboard() {
 
       const projectMap = new Map<string, ProjectRow>();
       if (projectIds.length > 0) {
-        const normalizedProjectIds = projectIds.map((projectId) => {
-          const numericValue = Number(projectId);
-          return Number.isFinite(numericValue) ? numericValue : projectId;
+        const { data: projectsData } = await fetchProjects({
+          ids: projectIds.join(','),
+          limit: projectIds.length,
         });
-        const { data: projectsData } = await supabase
-          .from('projects')
-          .select('id,title,business_name,photo_urls,owner_user_id,interest_rate,term_months,installment_count')
-          .in('id', normalizedProjectIds);
         ((projectsData ?? []) as ProjectRow[]).forEach((project) => {
           projectMap.set(String(project.id), {
             ...project,
