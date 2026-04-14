@@ -849,9 +849,7 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
-  const availableBalanceLabel = internalBalance
-    ? Number(internalBalance.available_balance ?? 0).toFixed(2)
-    : balanceUSDC;
+  const availableBalanceLabel = balanceUSDC;
 
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => void handleTopUpClick() },
@@ -1116,9 +1114,7 @@ export default function HomePage() {
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm text-white/70">
-              {internalBalance ? 'Internal available' : 'Available'}
-            </p>
+            <p className="text-sm text-white/70">Available</p>
             <h2 className="mt-1 text-3xl font-bold">
               {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
               <span className="text-lg font-semibold text-white/80">USD</span>
@@ -1143,6 +1139,12 @@ export default function HomePage() {
               <>
                 <span className="text-[#40C4AA]/60">&middot;</span>
                 <span>{`Pending: ${formatMoney(internalBalance.pending_balance, 'USD')}`}</span>
+                {internalBalance.locked_balance > 0 ? (
+                  <>
+                    <span className="text-[#40C4AA]/60">&middot;</span>
+                    <span>{`Locked: ${formatMoney(internalBalance.locked_balance, 'USD')}`}</span>
+                  </>
+                ) : null}
               </>
             ) : null}
           </div>
@@ -1157,6 +1159,12 @@ export default function HomePage() {
               <>
                 <span className="text-[#40C4AA]/60">&middot;</span>
                 <span>{`Invested: ${formatMoney(internalBalance.invested_balance, 'USD')}`}</span>
+                {internalBalance.locked_balance > 0 ? (
+                  <>
+                    <span className="text-[#40C4AA]/60">&middot;</span>
+                    <span>{`Locked: ${formatMoney(internalBalance.locked_balance, 'USD')}`}</span>
+                  </>
+                ) : null}
               </>
             ) : null}
           </div>
