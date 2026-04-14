@@ -287,6 +287,8 @@ const mapRoleToDB = (role: FrontRole | null | undefined): 'investor' | 'entrepre
 type PrivyLinkedAccountLike = {
   type?: string;
   address?: string;
+  chainType?: string;
+  walletClientType?: string;
 };
 
 const getManagedWalletAddressFromUser = (
@@ -310,6 +312,27 @@ const getManagedWalletAddressFromUser = (
   if (smartWallet?.address) return smartWallet.address;
 
   return undefined;
+};
+
+const getEmbeddedWalletAddressFromUser = (
+  user:
+    | {
+        linkedAccounts?: PrivyLinkedAccountLike[];
+      }
+    | null
+    | undefined
+) => {
+  const linkedAccounts = user?.linkedAccounts ?? [];
+
+  const embeddedWallet = linkedAccounts.find(
+    (account) =>
+      account.type === 'wallet' &&
+      account.walletClientType === 'privy' &&
+      typeof account.address === 'string' &&
+      (account.chainType === 'ethereum' || !account.chainType)
+  );
+
+  return embeddedWallet?.address;
 };
 
 const normalizePendingInvestment = (
@@ -465,12 +488,13 @@ const buildTransactionNotificationInput = (
 };
 
 export function InvestAppProvider({ children }: { children: React.ReactNode }) {
-  const { login, logout, authenticated, user, ready, getAccessToken, connectOrCreateWallet } = usePrivy();
+  const { login, logout, authenticated, user, ready, getAccessToken, createWallet } = usePrivy();
   const { wallets, ready: walletsReady } = useWallets();
   const { isOpen: isPrivyModalOpen } = useModalStatus();
   const { fundWallet } = useFundWallet();
   const { client } = useSmartWallets();
   const managedWalletAddress = useMemo(() => getManagedWalletAddressFromUser(user), [user]);
+  const embeddedWalletAddress = useMemo(() => getEmbeddedWalletAddressFromUser(user), [user]);
   const smartWalletAddress = client?.account?.address ?? managedWalletAddress;
   const embeddedConnectedWallet = useMemo(() => getEmbeddedConnectedWallet(wallets), [wallets]);
   const hasPromptedWalletSetupRef = useRef(false);
@@ -499,19 +523,34 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const bootstrappedTransactionNotificationsRef = useRef(false);
 
   useEffect(() => {
+    hasPromptedWalletSetupRef.current = false;
+  }, [authenticated, user?.id]);
+
+  useEffect(() => {
+    if (smartWalletAddress) {
+      hasPromptedWalletSetupRef.current = false;
+    }
+  }, [smartWalletAddress]);
+
+  useEffect(() => {
     if (!ready || !authenticated || !user) return;
     if (smartWalletAddress) return;
     if (!walletsReady) return;
     if (isPrivyModalOpen) return;
     if (hasPromptedWalletSetupRef.current) return;
-    if (embeddedConnectedWallet) return;
+    if (embeddedConnectedWallet || embeddedWalletAddress) return;
 
     hasPromptedWalletSetupRef.current = true;
-    connectOrCreateWallet();
+
+    void createWallet().catch((error) => {
+      hasPromptedWalletSetupRef.current = false;
+      console.error('Error creating embedded wallet during bootstrap:', error);
+    });
   }, [
     authenticated,
-    connectOrCreateWallet,
+    createWallet,
     embeddedConnectedWallet,
+    embeddedWalletAddress,
     isPrivyModalOpen,
     ready,
     smartWalletAddress,

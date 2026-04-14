@@ -59,6 +59,27 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
+const hasEmbeddedPrivyWallet = (
+  user:
+    | {
+        linkedAccounts?: Array<{
+          type?: string;
+          walletClientType?: string;
+          chainType?: string;
+          address?: string;
+        }>;
+      }
+    | null
+    | undefined
+) =>
+  (user?.linkedAccounts ?? []).some(
+    (account) =>
+      account.type === 'wallet' &&
+      account.walletClientType === 'privy' &&
+      typeof account.address === 'string' &&
+      (account.chainType === 'ethereum' || !account.chainType)
+  );
+
 function Section({ title, rightSlot, children }: SectionProps) {
   return (
     <div className="space-y-2">
@@ -90,7 +111,7 @@ function Avatar({ avatarUrl, label }: { avatarUrl?: string | null; label: string
 export default function WalletTransferPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, getAccessToken, connectOrCreateWallet } = usePrivy();
+  const { user, getAccessToken, createWallet } = usePrivy();
   const { avatarUrl, displayName } = useUserProfileSummary();
   const {
     faseApp,
@@ -115,6 +136,8 @@ export default function WalletTransferPage() {
   const [monto, setMonto] = useState('200.00');
   const [recentWallets, setRecentWallets] = useState<RecentWallet[]>([]);
   const [loadingRecentWallets, setLoadingRecentWallets] = useState(false);
+  const [settingUpWallet, setSettingUpWallet] = useState(false);
+  const alreadyHasEmbeddedWallet = useMemo(() => hasEmbeddedPrivyWallet(user), [user]);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -269,6 +292,20 @@ export default function WalletTransferPage() {
       ? 'Choose an investor wallet and confirm the repayment.'
       : 'Enter a wallet manually or pick one of your recent wallets.';
 
+  const handleSetUpWallet = async () => {
+    if (settingUpWallet || alreadyHasEmbeddedWallet) return;
+
+    setSettingUpWallet(true);
+    try {
+      await createWallet();
+    } catch (error) {
+      console.error('Error creating embedded wallet from transfer page:', error);
+      alert('We could not finish setting up your wallet yet. Please try again in a moment.');
+    } finally {
+      setSettingUpWallet(false);
+    }
+  };
+
   return (
     <PageFrame
       title={pendingInvestment ? 'Investment transfer' : transferMode === 'repayment' ? 'Send repayment' : 'Send to a Wallet'}
@@ -334,13 +371,14 @@ export default function WalletTransferPage() {
         <Section
           title="From"
           rightSlot={
-            !smartWalletAddress ? (
+            !smartWalletAddress && !alreadyHasEmbeddedWallet ? (
               <button
                 type="button"
-                onClick={() => connectOrCreateWallet()}
+                onClick={() => void handleSetUpWallet()}
+                disabled={settingUpWallet}
                 className="rounded-full border border-primary/20 px-3 py-1 text-xs font-semibold text-primary"
               >
-                Set up wallet
+                {settingUpWallet ? 'Setting up...' : 'Set up wallet'}
               </button>
             ) : null
           }
@@ -352,7 +390,9 @@ export default function WalletTransferPage() {
               <p className="truncate text-xs text-gray-500">{smartWalletAddress ?? 'Smart wallet not ready yet'}</p>
               {!smartWalletAddress ? (
                 <p className="mt-2 text-xs text-gray-500">
-                  Finish setting up your wallet to send USDC (Privy will create your embedded wallet and smart wallet).
+                  {alreadyHasEmbeddedWallet
+                    ? 'Your embedded wallet already exists. We are waiting for the smart wallet session to finish syncing.'
+                    : 'Finish setting up your wallet to send USDC (Privy will create your embedded wallet and smart wallet).'}
                 </p>
               ) : null}
             </div>
