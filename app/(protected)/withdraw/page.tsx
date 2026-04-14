@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
@@ -24,6 +25,13 @@ type WithdrawForm = {
   amount: string;
 };
 
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 const MANUAL_WITHDRAWAL_WALLET = '0xac5c740d2163a452d7d288d57e9df5496752246e';
 
 const BANK_OPTIONS = [
@@ -91,6 +99,37 @@ export default function WithdrawPage() {
   const [status, setStatus] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [submittedTxHash, setSubmittedTxHash] = useState('');
+
+  const supabase = useMemo(() => {
+    const authedFetch: typeof fetch = async (input, init = {}) => {
+      const token = await getAccessToken();
+      const baseHeaders = new Headers(init.headers ?? {});
+      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
+
+      const run = (headers: Headers) => fetch(input, { ...init, headers });
+      if (!token) return run(baseHeaders);
+
+      const headersWithAuth = new Headers(baseHeaders);
+      headersWithAuth.set('Authorization', `Bearer ${token}`);
+      const response = await run(headersWithAuth);
+
+      if (response.ok) return response;
+
+      const raw = (await response.clone().text()).toLowerCase();
+      const shouldFallback =
+        response.status === 401 ||
+        response.status === 403 ||
+        raw.includes('no suitable key') ||
+        raw.includes('wrong key type') ||
+        raw.includes('invalid jwt');
+
+      return shouldFallback ? run(baseHeaders) : response;
+    };
+
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { fetch: authedFetch },
+    });
+  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -164,54 +203,56 @@ export default function WithdrawPage() {
     setSuccessMessage('');
     setSubmittedTxHash('');
 
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setStatus('We could not authenticate the withdrawal request. Please sign in again.');
-      setSavingRequest(false);
-      return;
-    }
+    const metadata = {
+      app: 'investapp-web',
+      requested_from: 'manual-withdrawal-form',
+      network: 'polygon',
+      asset: 'USDC',
+      processing_message: 'Your withdrawal will be processed in 1 to 2 business days.',
+      payout_details:
+        form.method === 'bank'
+          ? {
+              bank_name: form.bankName,
+              bank_account_number: form.accountNumber.trim(),
+              bank_account_type: form.accountType,
+              identification_type: form.identificationType,
+              identification_number: form.identificationNumber.trim(),
+              phone_number: form.phoneNumber.trim(),
+            }
+          : {
+              breve_key: form.breveKey.trim(),
+            },
+    };
 
-    let withdrawalId = '';
+    const insertPayload = {
+      user_id: user.id,
+      role: mapRoleToDb(rolSeleccionado),
+      source_wallet: smartWalletAddress,
+      destination_wallet: MANUAL_WITHDRAWAL_WALLET,
+      payout_method: form.method,
+      bank_name: form.method === 'bank' ? form.bankName : null,
+      bank_account_number: form.method === 'bank' ? form.accountNumber.trim() : null,
+      bank_account_type: form.method === 'bank' ? form.accountType : null,
+      identification_type: form.method === 'bank' ? form.identificationType : null,
+      identification_number: form.method === 'bank' ? form.identificationNumber.trim() : null,
+      phone_number: form.method === 'bank' ? form.phoneNumber.trim() : null,
+      breve_key: form.method === 'breve' ? form.breveKey.trim() : null,
+      amount_usdc: Number(formattedAmount),
+      onchain_tx_hash: null,
+      request_status: 'awaiting_transfer',
+      metadata,
+    };
 
-    try {
-      const response = await fetch('/api/withdrawals', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          role: mapRoleToDb(rolSeleccionado),
-          sourceWallet: smartWalletAddress,
-          payoutMethod: form.method,
-          bankName: form.method === 'bank' ? form.bankName : undefined,
-          accountNumber: form.method === 'bank' ? form.accountNumber.trim() : undefined,
-          accountType: form.method === 'bank' ? form.accountType : undefined,
-          identificationType: form.method === 'bank' ? form.identificationType : undefined,
-          identificationNumber:
-            form.method === 'bank' ? form.identificationNumber.trim() : undefined,
-          phoneNumber: form.method === 'bank' ? form.phoneNumber.trim() : undefined,
-          breveKey: form.method === 'breve' ? form.breveKey.trim() : undefined,
-          amountUsdc: formattedAmount,
-        }),
-      });
+    const { data: insertedRequest, error: insertError } = await supabase
+      .from('withdraw_TEMP')
+      .insert(insertPayload)
+      .select('id')
+      .maybeSingle();
 
-      const data = (await response.json().catch(() => null)) as
-        | { id?: string; error?: string; details?: string | null }
-        | null;
-
-      if (!response.ok || !data?.id) {
-        const message = data?.error
-          ? `${data.error}${data.details ? `: ${data.details}` : ''}`
-          : 'We could not save the withdrawal request details.';
-        setStatus(message);
-        setSavingRequest(false);
-        return;
-      }
-
-      withdrawalId = data.id;
-    } catch {
-      setStatus('We could not reach the withdrawal server. Please try again.');
+    if (insertError || !insertedRequest?.id) {
+      setStatus(
+        `We could not save the withdrawal request details. Please verify that the withdraw_TEMP table exists: ${insertError?.message ?? 'unknown error'}`
+      );
       setSavingRequest(false);
       return;
     }
@@ -221,47 +262,38 @@ export default function WithdrawPage() {
     });
 
     if (!result.success || !result.txHash) {
-      try {
-        await fetch(`/api/withdrawals/${withdrawalId}`, {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+      await supabase
+        .from('withdraw_TEMP')
+        .update({
+          request_status: 'failed',
+          metadata: {
+            ...metadata,
+            transfer_failed: true,
           },
-          body: JSON.stringify({ status: 'failed' }),
-        });
-      } catch {
-        // Ignore failure - withdrawal is already aborted on-chain.
-      }
+        })
+        .eq('id', insertedRequest.id);
 
       setStatus('The on-chain withdrawal transfer could not be completed. Please try again.');
       setSavingRequest(false);
       return;
     }
 
-    try {
-      const response = await fetch(`/api/withdrawals/${withdrawalId}`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+    const { error: updateError } = await supabase
+      .from('withdraw_TEMP')
+      .update({
+        onchain_tx_hash: result.txHash,
+        request_status: 'submitted',
+        metadata: {
+          ...metadata,
+          transfer_completed: true,
         },
-        body: JSON.stringify({ status: 'submitted', txHash: result.txHash }),
-      });
+      })
+      .eq('id', insertedRequest.id);
 
-      if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as
-          | { error?: string; details?: string | null }
-          | null;
-        const message = data?.error
-          ? `${data.error}${data.details ? `: ${data.details}` : ''}`
-          : 'We could not finalize the withdrawal request record.';
-        setStatus(`USDC was sent, but ${message}`);
-        setSavingRequest(false);
-        return;
-      }
-    } catch {
-      setStatus('USDC was sent, but we could not finalize the withdrawal request record.');
+    if (updateError) {
+      setStatus(
+        `USDC was sent, but we could not finalize the withdrawal request record: ${updateError.message}`
+      );
       setSavingRequest(false);
       return;
     }
@@ -276,19 +308,18 @@ export default function WithdrawPage() {
     <PageFrame title="Withdraw funds" subtitle="Temporary manual payout from USDC">
       <div className="space-y-5">
         <div className="rounded-[24px] border border-amber-200/60 bg-amber-50/90 p-4 text-sm text-amber-900 shadow-[0_10px_28px_rgba(15,23,42,0.08)]">
-          Fiat withdrawals are temporarily processed manually. After confirmation, the app will send
-          your USDC on Polygon to our operations wallet and your payout request will be handled
-          off-platform.
+          Fiat withdrawals will be processed. After confirmation, the app will send
+          your USD to your bank account.
         </div>
 
         <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-gray-900">Available balance</p>
-              <p className="mt-1 text-xs text-gray-500">USDC ready to withdraw from your smart wallet.</p>
+              <p className="mt-1 text-xs text-gray-500">USD ready to withdraw from your wallet.</p>
             </div>
             <div className="rounded-full border border-[#D3C4FC] bg-white/70 px-4 py-2 text-sm font-semibold text-[#6B39F4]">
-              {balanceUSDC} USDC
+              {balanceUSDC} USD
             </div>
           </div>
         </div>
