@@ -1135,18 +1135,6 @@ export default function HomePage() {
             <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
             <span className="text-[#40C4AA]/60">&middot;</span>
             <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
-            {internalBalance ? (
-              <>
-                <span className="text-[#40C4AA]/60">&middot;</span>
-                <span>{`Pending: ${formatMoney(internalBalance.pending_balance, 'USD')}`}</span>
-                {internalBalance.locked_balance > 0 ? (
-                  <>
-                    <span className="text-[#40C4AA]/60">&middot;</span>
-                    <span>{`Locked: ${formatMoney(internalBalance.locked_balance, 'USD')}`}</span>
-                  </>
-                ) : null}
-              </>
-            ) : null}
           </div>
         ) : (
           <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
@@ -1155,18 +1143,6 @@ export default function HomePage() {
             <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
             <span className="text-[#40C4AA]/60">&middot;</span>
             <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
-            {internalBalance ? (
-              <>
-                <span className="text-[#40C4AA]/60">&middot;</span>
-                <span>{`Invested: ${formatMoney(internalBalance.invested_balance, 'USD')}`}</span>
-                {internalBalance.locked_balance > 0 ? (
-                  <>
-                    <span className="text-[#40C4AA]/60">&middot;</span>
-                    <span>{`Locked: ${formatMoney(internalBalance.locked_balance, 'USD')}`}</span>
-                  </>
-                ) : null}
-              </>
-            ) : null}
           </div>
         )}
       </div>
