@@ -177,33 +177,42 @@ export default function BankAccountPage() {
     setSaving(true);
     setStatus('');
 
-    const bankDetailsPayload = {
-      method: form.method,
-      bankName: form.method === 'bank' ? form.bankName : null,
-      accountNumber: form.method === 'bank' ? form.accountNumber.trim() : null,
-      accountType: form.method === 'bank' ? form.accountType : null,
-      identificationType: form.method === 'bank' ? form.identificationType : null,
-      identificationNumber: form.method === 'bank' ? form.identificationNumber.trim() : null,
-      phoneNumber: form.method === 'bank' ? form.phoneNumber.trim() : null,
-      breveKey: form.method === 'breve' ? form.breveKey.trim() : null,
-      saved_at: new Date().toISOString(),
-    };
+    try {
+      const bankDetailsPayload = {
+        method: form.method,
+        bankName: form.method === 'bank' ? form.bankName : null,
+        accountNumber: form.method === 'bank' ? form.accountNumber.trim() : null,
+        accountType: form.method === 'bank' ? form.accountType : null,
+        identificationType: form.method === 'bank' ? form.identificationType : null,
+        identificationNumber: form.method === 'bank' ? form.identificationNumber.trim() : null,
+        phoneNumber: form.method === 'bank' ? form.phoneNumber.trim() : null,
+        breveKey: form.method === 'breve' ? form.breveKey.trim() : null,
+        saved_at: new Date().toISOString(),
+      };
 
-    const { error } = await patchCurrentUserProfile(getAccessToken, {
-      email: user.email?.address ?? null,
-      Bank_details: bankDetailsPayload,
-    });
+      const { error } = await patchCurrentUserProfile(getAccessToken, {
+        email: user.email?.address ?? null,
+        Bank_details: bankDetailsPayload,
+      });
 
-    if (error) {
-      setStatus(
-        `Could not save Bank_details in Supabase. Make sure the column exists: ${error}`
-      );
+      if (error) {
+        setStatus(
+          `Could not save Bank_details in Supabase. Make sure the column exists: ${error}`
+        );
+        return;
+      }
+
+      setStatus('Bank details saved successfully.');
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unknown error while saving bank details.';
+      console.error('Unexpected error saving bank details:', caughtError);
+      setStatus(`Bank details saved, but the screen could not finish refreshing: ${message}`);
+    } finally {
       setSaving(false);
-      return;
     }
-
-    setStatus('Bank details saved successfully.');
-    setSaving(false);
   };
 
   return (

@@ -119,44 +119,53 @@ export default function SocialMediaPage() {
     setSaving(true);
     setStatus('');
 
-    const payload: Record<string, unknown> = {
-      id: user.id,
-    };
+    try {
+      const payload: Record<string, unknown> = {
+        id: user.id,
+      };
 
-    if (availableColumns.has('social_facebook')) payload.social_facebook = form.facebook || null;
-    if (availableColumns.has('social_instagram')) payload.social_instagram = form.instagram || null;
-    if (availableColumns.has('social_x')) payload.social_x = form.x || null;
-    if (availableColumns.has('social_tiktok')) payload.social_tiktok = form.tiktok || null;
-    if (availableColumns.has('social_linkedin')) payload.social_linkedin = form.linkedin || null;
-    if (availableColumns.has('social_youtube')) payload.social_youtube = form.youtube || null;
-    if (availableColumns.has('social_website')) payload.social_website = form.website || null;
+      if (availableColumns.has('social_facebook')) payload.social_facebook = form.facebook || null;
+      if (availableColumns.has('social_instagram')) payload.social_instagram = form.instagram || null;
+      if (availableColumns.has('social_x')) payload.social_x = form.x || null;
+      if (availableColumns.has('social_tiktok')) payload.social_tiktok = form.tiktok || null;
+      if (availableColumns.has('social_linkedin')) payload.social_linkedin = form.linkedin || null;
+      if (availableColumns.has('social_youtube')) payload.social_youtube = form.youtube || null;
+      if (availableColumns.has('social_website')) payload.social_website = form.website || null;
 
-    const socialPayload = {
-      facebook: form.facebook || null,
-      instagram: form.instagram || null,
-      x: form.x || null,
-      tiktok: form.tiktok || null,
-      linkedin: form.linkedin || null,
-      youtube: form.youtube || null,
-      website: form.website || null,
-    };
+      const socialPayload = {
+        facebook: form.facebook || null,
+        instagram: form.instagram || null,
+        x: form.x || null,
+        tiktok: form.tiktok || null,
+        linkedin: form.linkedin || null,
+        youtube: form.youtube || null,
+        website: form.website || null,
+      };
 
-    if (availableColumns.has('profile_data')) {
-      payload.profile_data = { ...profileData, social_media: socialPayload };
-    }
-    if (availableColumns.has('metadata')) {
-      payload.metadata = { ...profileData, social_media: socialPayload };
-    }
+      if (availableColumns.has('profile_data')) {
+        payload.profile_data = { ...profileData, social_media: socialPayload };
+      }
+      if (availableColumns.has('metadata')) {
+        payload.metadata = { ...profileData, social_media: socialPayload };
+      }
 
-    const { error } = await patchCurrentUserProfile(getAccessToken, payload);
-    if (error) {
-      setStatus(`Could not save to Supabase: ${error}`);
+      const { error } = await patchCurrentUserProfile(getAccessToken, payload);
+      if (error) {
+        setStatus(`Could not save to Supabase: ${error}`);
+        return;
+      }
+
+      setStatus('Social media updated successfully.');
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Unknown error while saving social media.';
+      console.error('Unexpected error saving social media:', caughtError);
+      setStatus(`Social media updated, but the screen could not finish refreshing: ${message}`);
+    } finally {
       setSaving(false);
-      return;
     }
-
-    setStatus('Social media updated successfully.');
-    setSaving(false);
   };
 
   return (

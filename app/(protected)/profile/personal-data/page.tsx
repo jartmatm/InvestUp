@@ -265,100 +265,122 @@ export default function PersonalDataPage() {
     setSaving(true);
     setStatus('');
 
-    const payload: Record<string, unknown> = {
-      id: user.id,
-      email: canEditEmail ? form.email || null : user.email?.address ?? null,
-      wallet_address: smartWalletAddress ?? null,
-    };
-    const selectedCountry = COUNTRY_OPTIONS.find((item) => item.code === form.country);
+    try {
+      const payload: Record<string, unknown> = {
+        id: user.id,
+        email: canEditEmail ? form.email || null : user.email?.address ?? null,
+        wallet_address: smartWalletAddress ?? null,
+      };
+      const selectedCountry = COUNTRY_OPTIONS.find((item) => item.code === form.country);
 
-    if (form.role && !isRoleChangeRequested) payload.role = form.role;
-    if (availableColumns.has('name')) payload.name = form.name || null;
-    if (availableColumns.has('surname')) payload.surname = form.surname || null;
-    if (availableColumns.has('phone_number')) payload.phone_number = form.phone_number || null;
-    if (availableColumns.has('country')) {
-      payload.country = selectedCountry?.name ?? form.country ?? null;
-    }
-    if (availableColumns.has('gender')) payload.gender = form.gender || null;
-    if (availableColumns.has('address')) payload.address = form.address || null;
-    if (availableColumns.has('avatar_url')) payload.avatar_url = form.avatar_url || null;
+      if (form.role && !isRoleChangeRequested) payload.role = form.role;
+      if (availableColumns.has('name')) payload.name = form.name || null;
+      if (availableColumns.has('surname')) payload.surname = form.surname || null;
+      if (availableColumns.has('phone_number')) payload.phone_number = form.phone_number || null;
+      if (availableColumns.has('country')) {
+        payload.country = selectedCountry?.name ?? form.country ?? null;
+      }
+      if (availableColumns.has('gender')) payload.gender = form.gender || null;
+      if (availableColumns.has('address')) payload.address = form.address || null;
+      if (availableColumns.has('avatar_url')) payload.avatar_url = form.avatar_url || null;
 
-    const profileData = {
-      name: form.name || null,
-      surname: form.surname || null,
-      phone_number: form.phone_number || null,
-      country: selectedCountry?.name ?? form.country ?? null,
-      gender: form.gender || null,
-      address: form.address || null,
-      avatar_url: form.avatar_url || null,
-    };
+      const profileData = {
+        name: form.name || null,
+        surname: form.surname || null,
+        phone_number: form.phone_number || null,
+        country: selectedCountry?.name ?? form.country ?? null,
+        gender: form.gender || null,
+        address: form.address || null,
+        avatar_url: form.avatar_url || null,
+      };
 
-    if (availableColumns.has('profile_data')) payload.profile_data = profileData;
-    if (availableColumns.has('metadata')) payload.metadata = profileData;
+      if (availableColumns.has('profile_data')) payload.profile_data = profileData;
+      if (availableColumns.has('metadata')) payload.metadata = profileData;
 
-    const { error } = await patchCurrentUserProfile(getAccessToken, payload);
-    if (error) {
-      setStatus(`Could not save to Supabase: ${error}`);
-      setSaving(false);
-      return;
-    }
-
-    if (isRoleChangeRequested && requestedFrontRole) {
-      if (roleEligibility && !roleEligibility.canChangeRole) {
-        setForm((prev) => ({ ...prev, role: currentDbRole }));
-        setStatus(`Profile updated, but ${roleEligibility.message ?? 'the role cannot be changed right now.'}`);
-        setSaving(false);
+      const { error } = await patchCurrentUserProfile(getAccessToken, payload);
+      if (error) {
+        setStatus(`Could not save to Supabase: ${error}`);
         return;
+      }
+
+      if (isRoleChangeRequested && requestedFrontRole) {
+        if (roleEligibility && !roleEligibility.canChangeRole) {
+          setForm((prev) => ({ ...prev, role: currentDbRole }));
+          setStatus(
+            `Profile updated, but ${roleEligibility.message ?? 'the role cannot be changed right now.'}`
+          );
+          return;
+        }
+
+        try {
+          await guardarRol(requestedFrontRole);
+        } catch (caughtError) {
+          const message =
+            caughtError instanceof Error
+              ? caughtError.message
+              : 'the role could not be changed right now.';
+          setForm((prev) => ({ ...prev, role: currentDbRole }));
+          setStatus(`Profile updated, but ${message}`);
+          return;
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        const nextEmail = form.email || user.email?.address || '';
+        const nextDisplayName =
+          `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
+
+        try {
+          if (user.id) {
+            writeProfileSummaryCache(user.id, {
+              avatarUrl: form.avatar_url,
+              displayName: nextDisplayName,
+              email: nextEmail,
+            });
+          }
+        } catch (caughtError) {
+          console.error('Error caching profile summary locally:', caughtError);
+        }
+
+        window.dispatchEvent(new Event('investapp-profile-updated'));
       }
 
       try {
-        await guardarRol(requestedFrontRole);
-      } catch (caughtError) {
-        const message =
-          caughtError instanceof Error
-            ? caughtError.message
-            : 'the role could not be changed right now.';
-        setForm((prev) => ({ ...prev, role: currentDbRole }));
-        setStatus(`Profile updated, but ${message}`);
-        setSaving(false);
-        return;
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const nextEmail = form.email || user.email?.address || '';
-      const nextDisplayName = `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
-      if (user.id) {
-        writeProfileSummaryCache(user.id, {
-          avatarUrl: form.avatar_url,
-          displayName: nextDisplayName,
-          email: nextEmail,
+        pushNotification({
+          kind: 'profile_update',
+          title: 'Profile updated',
+          body: 'Your personal information and account preferences were updated successfully.',
+          actionHref: '/profile/personal-data',
         });
+      } catch (caughtError) {
+        console.error('Error pushing profile notification:', caughtError);
       }
-      window.dispatchEvent(new Event('investapp-profile-updated'));
+
+      if (!hasAnyExtendedField) {
+        setStatus(
+          'Basic save completed. To store extended fields (name, surname, phone, country, gender, address, avatar), add the matching columns in users or profile_data/metadata.'
+        );
+      } else {
+        setStatus('Profile updated successfully.');
+      }
+
+      void fetchCurrentUserRoleChangeEligibility(getAccessToken)
+        .then(({ data }) => {
+          if (data) {
+            setRoleEligibility(data);
+          }
+        })
+        .catch((caughtError) => {
+          console.error('Error refreshing role eligibility after profile save:', caughtError);
+        });
+    } catch (caughtError) {
+      const message =
+        caughtError instanceof Error ? caughtError.message : 'Unknown error while saving profile.';
+      console.error('Unexpected error saving profile:', caughtError);
+      setStatus(`Profile updated, but the screen could not finish refreshing: ${message}`);
+    } finally {
+      setSaving(false);
     }
-
-    pushNotification({
-      kind: 'profile_update',
-      title: 'Profile updated',
-      body: 'Your personal information and account preferences were updated successfully.',
-      actionHref: '/profile/personal-data',
-    });
-
-    if (!hasAnyExtendedField) {
-      setStatus(
-        'Basic save completed. To store extended fields (name, surname, phone, country, gender, address, avatar), add the matching columns in users or profile_data/metadata.'
-      );
-    } else {
-      setStatus('Profile updated successfully.');
-    }
-
-    const { data: refreshedEligibility } = await fetchCurrentUserRoleChangeEligibility(getAccessToken);
-    if (refreshedEligibility) {
-      setRoleEligibility(refreshedEligibility);
-    }
-
-    setSaving(false);
   };
 
   return (
