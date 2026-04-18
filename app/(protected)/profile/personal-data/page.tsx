@@ -14,9 +14,20 @@ import {
   type CurrentUserRoleChangeEligibility,
 } from '@/utils/client/current-user-role-change-eligibility';
 import {
+  fetchCurrentUserKycSummary,
+  uploadCurrentUserKycDocument,
+} from '@/utils/client/current-user-kyc';
+import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
 } from '@/utils/client/current-user-profile';
+import {
+  KYC_ALLOWED_DOCUMENT_ACCEPT,
+  formatKycLevelLimit,
+  getKycLevelBadgeLabel,
+  type CurrentUserKycSummary,
+  type KycDocumentType,
+} from '@/utils/kyc/shared';
 
 type ProfileForm = {
   id: string;
@@ -92,6 +103,10 @@ export default function PersonalDataPage() {
   const [loadingRoleEligibility, setLoadingRoleEligibility] = useState(true);
   const [roleEligibility, setRoleEligibility] =
     useState<CurrentUserRoleChangeEligibility | null>(null);
+  const [kycSummary, setKycSummary] = useState<CurrentUserKycSummary | null>(null);
+  const [loadingKyc, setLoadingKyc] = useState(true);
+  const [uploadingDocument, setUploadingDocument] = useState<KycDocumentType | null>(null);
+  const [kycStatus, setKycStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -178,6 +193,31 @@ export default function PersonalDataPage() {
     void loadRoleEligibility();
   }, [getAccessToken, user?.id]);
 
+  const refreshKycSummary = async (requestedAmountUsd?: number) => {
+    if (!user?.id) {
+      setKycSummary(null);
+      setLoadingKyc(false);
+      return null;
+    }
+
+    setLoadingKyc(true);
+    const { data, error } = await fetchCurrentUserKycSummary(getAccessToken, requestedAmountUsd);
+    if (error) {
+      setKycStatus(`Could not load KYC compliance status: ${error}`);
+      setLoadingKyc(false);
+      return null;
+    }
+
+    setKycStatus('');
+    setKycSummary(data);
+    setLoadingKyc(false);
+    return data;
+  };
+
+  useEffect(() => {
+    void refreshKycSummary();
+  }, [getAccessToken, user?.id]);
+
   const canEditEmail = useMemo(() => availableColumns.has('email') || availableColumns.size === 0, [availableColumns]);
   const hasAnyExtendedField = useMemo(
     () =>
@@ -211,6 +251,21 @@ export default function PersonalDataPage() {
     if (form.role === 'entrepreneur') return 'Entrepreneur';
     return 'Profile';
   }, [form.role]);
+
+  const kycBadgeLabel = useMemo(
+    () => getKycLevelBadgeLabel(kycSummary?.approvedLevel ?? 0),
+    [kycSummary?.approvedLevel]
+  );
+
+  const kycLimitLabel = useMemo(
+    () => formatKycLevelLimit(kycSummary?.currentLevelLimitUsd ?? 0),
+    [kycSummary?.currentLevelLimitUsd]
+  );
+
+  const kycBadgeClassName =
+    (kycSummary?.approvedLevel ?? 0) > 0
+      ? 'border-[#9FE3BE] bg-[#E8F9F1] text-[#14845A]'
+      : 'border-amber-200 bg-amber-50 text-amber-800';
 
   const currentDbRole = useMemo(
     () => mapFrontRoleToDb(rolSeleccionado),
@@ -258,6 +313,26 @@ export default function PersonalDataPage() {
       const sanitized = value.replace(/^\+\d+\s*/, '');
       return { ...prev, phone_number: `${option.dialCode} ${sanitized}`.trimEnd() };
     });
+  };
+
+  const uploadKycDocument = async (documentType: KycDocumentType, file: File | null) => {
+    if (!file) return;
+
+    setUploadingDocument(documentType);
+    setKycStatus('');
+
+    try {
+      const { error } = await uploadCurrentUserKycDocument(getAccessToken, documentType, file);
+      if (error) {
+        setKycStatus(error);
+        return;
+      }
+
+      setKycStatus('KYC document uploaded successfully.');
+      await refreshKycSummary();
+    } finally {
+      setUploadingDocument(null);
+    }
   };
 
   const saveProfile = async () => {
@@ -373,6 +448,8 @@ export default function PersonalDataPage() {
         .catch((caughtError) => {
           console.error('Error refreshing role eligibility after profile save:', caughtError);
         });
+
+      void refreshKycSummary();
     } catch (caughtError) {
       const message =
         caughtError instanceof Error ? caughtError.message : 'Unknown error while saving profile.';
@@ -405,7 +482,12 @@ export default function PersonalDataPage() {
               onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
             />
           </label>
-          <h2 className="mt-3 text-lg font-semibold text-gray-900">{displayName}</h2>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <h2 className="text-lg font-semibold text-gray-900">{displayName}</h2>
+            <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${kycBadgeClassName}`}>
+              {kycBadgeLabel}
+            </span>
+          </div>
           <p className="text-sm text-gray-500">{displayEmail}</p>
           <span className="mt-2 inline-block rounded-full border border-white/25 bg-white/20 px-2 py-1 text-xs text-purple-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             {roleBadge}
@@ -413,6 +495,101 @@ export default function PersonalDataPage() {
         </div>
 
         {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
+
+        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#14845A]">
+                Compliance KYC
+              </p>
+              <h3 className="mt-2 text-lg font-semibold text-gray-900">
+                {loadingKyc ? 'Loading compliance status...' : `Current level: ${kycBadgeLabel}`}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-gray-600">
+                {kycSummary?.exempt
+                  ? 'This user is exempt from KYC movement limits.'
+                  : `Current movement: ${kycSummary?.movementUsd?.toFixed(2) ?? '0.00'} USD. ${kycLimitLabel}.`}
+              </p>
+              {kycSummary?.nextLevel ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  Next target: Lvl {kycSummary.nextLevel}{' '}
+                  {kycSummary.nextLevelLimitUsd == null
+                    ? '(no limit)'
+                    : `(up to ${kycSummary.nextLevelLimitUsd.toFixed(0)} USD)`}
+                </p>
+              ) : null}
+            </div>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${kycBadgeClassName}`}>
+              {kycBadgeLabel}
+            </span>
+          </div>
+
+          {!kycSummary?.exempt && kycSummary?.missingForCurrentLevel?.length ? (
+            <div className="mt-4 rounded-[20px] border border-amber-200/70 bg-amber-50/80 px-4 py-4 text-sm text-amber-900">
+              Missing to keep your current movement unlocked: {kycSummary.missingForCurrentLevel.join(', ')}.
+            </div>
+          ) : null}
+
+          <div className="mt-4 grid gap-3">
+            {([
+              {
+                type: 'identity_document',
+                title: 'Identity document',
+                description: 'Required for Lvl 4. Upload passport, national ID, or equivalent.',
+              },
+              {
+                type: 'proof_of_residence',
+                title: 'Proof of residence',
+                description: 'Required for Lvl 4. Upload a recent bill or residence certificate.',
+              },
+            ] as const).map((item) => {
+              const documentSummary = kycSummary?.documents[item.type];
+              const isUploading = uploadingDocument === item.type;
+
+              return (
+                <label
+                  key={item.type}
+                  className="block cursor-pointer rounded-[20px] border border-white/25 bg-white/50 px-4 py-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{item.title}</p>
+                      <p className="mt-1 text-xs text-gray-500">{item.description}</p>
+                    </div>
+                    <span className="rounded-full border border-white/30 bg-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B39F4]">
+                      {documentSummary?.status ?? 'missing'}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-xs text-gray-500">
+                      {documentSummary?.fileName
+                        ? `Latest file: ${documentSummary.fileName}`
+                        : 'No file uploaded yet.'}
+                    </div>
+                    <span className="rounded-full bg-[#6B39F4] px-3 py-2 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(107,57,244,0.22)]">
+                      {isUploading ? 'Uploading...' : 'Upload file'}
+                    </span>
+                  </div>
+
+                  <input
+                    type="file"
+                    accept={KYC_ALLOWED_DOCUMENT_ACCEPT}
+                    className="sr-only"
+                    disabled={isUploading}
+                    onChange={(event) => {
+                      const selectedFile = event.target.files?.[0] ?? null;
+                      void uploadKycDocument(item.type, selectedFile);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+
+          {kycStatus ? <p className="mt-4 text-xs text-slate-500">{kycStatus}</p> : null}
+        </div>
 
         <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Field label="ID">

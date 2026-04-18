@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import Button from '@/components/Button';
 import Input from '@/components/Input';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
+import {
+  formatKycLevelLimit,
+  getKycLevelBadgeLabel,
+  type CurrentUserKycSummary,
+} from '@/utils/kyc/shared';
 
 type WithdrawalMethod = 'bank' | 'breve';
 type AccountType = 'ahorros' | 'corriente' | '';
@@ -25,13 +30,6 @@ type WithdrawForm = {
   amount: string;
 };
 
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 const MANUAL_WITHDRAWAL_WALLET = '0xac5c740d2163a452d7d288d57e9df5496752246e';
 
 const BANK_OPTIONS = [
@@ -99,42 +97,56 @@ export default function WithdrawPage() {
   const [status, setStatus] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [submittedTxHash, setSubmittedTxHash] = useState('');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
+  const [kycSummary, setKycSummary] = useState<CurrentUserKycSummary | null>(null);
+  const [loadingKyc, setLoadingKyc] = useState(true);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
+
+  const fetchWithAccessToken = async (input: RequestInfo | URL, init?: RequestInit) => {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      throw new Error('Missing Privy access token.');
+    }
+
+    const headers = new Headers(init?.headers ?? {});
+    headers.set('Authorization', `Bearer ${accessToken}`);
+    if (init?.body && !headers.has('Content-Type')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    return fetch(input, {
+      ...init,
+      headers,
+      cache: 'no-store',
+    });
+  };
+
+  const refreshKycSummary = async (requestedAmountUsd?: number) => {
+    if (!user?.id) {
+      setKycSummary(null);
+      setLoadingKyc(false);
+      return null;
+    }
+
+    setLoadingKyc(true);
+    const { data, error } = await fetchCurrentUserKycSummary(getAccessToken, requestedAmountUsd);
+    if (error) {
+      setLoadingKyc(false);
+      setStatus(`Could not verify your KYC status: ${error}`);
+      return null;
+    }
+
+    setKycSummary(data);
+    setLoadingKyc(false);
+    return data;
+  };
+
+  useEffect(() => {
+    void refreshKycSummary();
+  }, [getAccessToken, user?.id]);
 
   const balanceNumber = Number(balanceUSDC);
   const formattedAmount = formatAmountForSubmit(form.amount);
@@ -155,6 +167,14 @@ export default function WithdrawPage() {
             form.phoneNumber.trim()
         )
       : Boolean(form.breveKey.trim()));
+  const kycBadgeLabel = getKycLevelBadgeLabel(kycSummary?.approvedLevel ?? 0);
+  const kycLimitLabel = formatKycLevelLimit(kycSummary?.currentLevelLimitUsd ?? 0);
+  const withdrawDisabled =
+    !canSubmit ||
+    savingRequest ||
+    loadingTx ||
+    loadingKyc ||
+    Boolean(kycSummary && !kycSummary.canAccessWithdraw);
 
   const updateForm = <K extends keyof WithdrawForm>(key: K, value: WithdrawForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -203,97 +223,85 @@ export default function WithdrawPage() {
     setSuccessMessage('');
     setSubmittedTxHash('');
 
-    const metadata = {
-      app: 'investapp-web',
-      requested_from: 'manual-withdrawal-form',
-      network: 'polygon',
-      asset: 'USDC',
-      processing_message: 'Your withdrawal will be processed in 1 to 2 business days.',
-      payout_details:
-        form.method === 'bank'
-          ? {
-              bank_name: form.bankName,
-              bank_account_number: form.accountNumber.trim(),
-              bank_account_type: form.accountType,
-              identification_type: form.identificationType,
-              identification_number: form.identificationNumber.trim(),
-              phone_number: form.phoneNumber.trim(),
-            }
-          : {
-              breve_key: form.breveKey.trim(),
-            },
-    };
+    const nextKycSummary = await refreshKycSummary(amountNumber);
+    if (!nextKycSummary) {
+      setSavingRequest(false);
+      return;
+    }
 
-    const insertPayload = {
-      user_id: user.id,
-      role: mapRoleToDb(rolSeleccionado),
-      source_wallet: smartWalletAddress,
-      destination_wallet: MANUAL_WITHDRAWAL_WALLET,
-      payout_method: form.method,
-      bank_name: form.method === 'bank' ? form.bankName : null,
-      bank_account_number: form.method === 'bank' ? form.accountNumber.trim() : null,
-      bank_account_type: form.method === 'bank' ? form.accountType : null,
-      identification_type: form.method === 'bank' ? form.identificationType : null,
-      identification_number: form.method === 'bank' ? form.identificationNumber.trim() : null,
-      phone_number: form.method === 'bank' ? form.phoneNumber.trim() : null,
-      breve_key: form.method === 'breve' ? form.breveKey.trim() : null,
-      amount_usdc: Number(formattedAmount),
-      onchain_tx_hash: null,
-      request_status: 'awaiting_transfer',
-      metadata,
-    };
-
-    const { data: insertedRequest, error: insertError } = await supabase
-      .from('withdraw_TEMP')
-      .insert(insertPayload)
-      .select('id')
-      .maybeSingle();
-
-    if (insertError || !insertedRequest?.id) {
+    if (!nextKycSummary.canWithdrawRequestedAmount) {
       setStatus(
-        `We could not save the withdrawal request details. Please verify that the withdraw_TEMP table exists: ${insertError?.message ?? 'unknown error'}`
+        nextKycSummary.blockingReason ??
+          `This withdrawal requires ${getKycLevelBadgeLabel(
+            nextKycSummary.requiredLevelForRequestedAmount
+          )}.`
       );
       setSavingRequest(false);
       return;
     }
 
+    const createResponse = await fetchWithAccessToken('/api/withdrawals', {
+      method: 'POST',
+      body: JSON.stringify({
+        payoutMethod: form.method,
+        sourceWallet: smartWalletAddress,
+        amountUsdc: formattedAmount,
+        role: mapRoleToDb(rolSeleccionado),
+        bankName: form.method === 'bank' ? form.bankName : null,
+        accountNumber: form.method === 'bank' ? form.accountNumber.trim() : null,
+        accountType: form.method === 'bank' ? form.accountType : null,
+        identificationType: form.method === 'bank' ? form.identificationType : null,
+        identificationNumber: form.method === 'bank' ? form.identificationNumber.trim() : null,
+        phoneNumber: form.method === 'bank' ? form.phoneNumber.trim() : null,
+        breveKey: form.method === 'breve' ? form.breveKey.trim() : null,
+      }),
+    });
+
+    const createJson = (await createResponse.json().catch(() => null)) as
+      | { id?: string; error?: string; details?: string | null }
+      | null;
+
+    if (!createResponse.ok || !createJson?.id) {
+      const baseMessage = createJson?.error ?? 'We could not create the withdrawal request.';
+      setStatus(createJson?.details ? `${baseMessage}: ${createJson.details}` : baseMessage);
+      setSavingRequest(false);
+      return;
+    }
+
+    const withdrawalId = createJson.id;
     const result = await enviarUSDC(MANUAL_WITHDRAWAL_WALLET, formattedAmount, {
       movementType: 'withdrawal',
     });
 
     if (!result.success || !result.txHash) {
-      await supabase
-        .from('withdraw_TEMP')
-        .update({
-          request_status: 'failed',
-          metadata: {
-            ...metadata,
-            transfer_failed: true,
-          },
-        })
-        .eq('id', insertedRequest.id);
+      await fetchWithAccessToken(`/api/withdrawals/${withdrawalId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: 'failed',
+        }),
+      }).catch(() => null);
 
       setStatus('The on-chain withdrawal transfer could not be completed. Please try again.');
       setSavingRequest(false);
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from('withdraw_TEMP')
-      .update({
-        onchain_tx_hash: result.txHash,
-        request_status: 'submitted',
-        metadata: {
-          ...metadata,
-          transfer_completed: true,
-        },
-      })
-      .eq('id', insertedRequest.id);
+    const updateResponse = await fetchWithAccessToken(`/api/withdrawals/${withdrawalId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'submitted',
+        txHash: result.txHash,
+      }),
+    });
 
-    if (updateError) {
-      setStatus(
-        `USDC was sent, but we could not finalize the withdrawal request record: ${updateError.message}`
-      );
+    const updateJson = (await updateResponse.json().catch(() => null)) as
+      | { error?: string; details?: string | null }
+      | null;
+
+    if (!updateResponse.ok) {
+      const baseMessage =
+        updateJson?.error ?? 'USDC was sent, but we could not finalize the withdrawal request.';
+      setStatus(updateJson?.details ? `${baseMessage}: ${updateJson.details}` : baseMessage);
       setSavingRequest(false);
       return;
     }
@@ -301,6 +309,7 @@ export default function WithdrawPage() {
     setSubmittedTxHash(result.txHash);
     setSuccessMessage('Your withdrawal will be processed in 1 to 2 business days.');
     setForm((prev) => ({ ...emptyForm, method: prev.method }));
+    void refreshKycSummary();
     setSavingRequest(false);
   };
 
@@ -322,6 +331,38 @@ export default function WithdrawPage() {
               {balanceUSDC} USD
             </div>
           </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">KYC compliance</p>
+              <p className="mt-1 text-xs text-gray-500">
+                {loadingKyc
+                  ? 'Checking your compliance limits...'
+                  : kycSummary?.exempt
+                    ? 'This account is exempt from KYC withdrawal limits.'
+                    : `Movement: ${kycSummary?.movementUsd?.toFixed(2) ?? '0.00'} USD · ${kycLimitLabel}.`}
+              </p>
+              {kycSummary?.nextLevel ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  Next level: Lvl {kycSummary.nextLevel}{' '}
+                  {kycSummary.nextLevelLimitUsd == null
+                    ? '(no limit)'
+                    : `(up to ${kycSummary.nextLevelLimitUsd.toFixed(0)} USD)`}
+                </p>
+              ) : null}
+            </div>
+            <span className="rounded-full border border-[#9FE3BE] bg-[#E8F9F1] px-3 py-1 text-xs font-semibold text-[#14845A]">
+              {kycBadgeLabel}
+            </span>
+          </div>
+
+          {!loadingKyc && kycSummary?.missingForCurrentLevel?.length ? (
+            <div className="mt-3 rounded-[18px] border border-amber-200/70 bg-amber-50/85 px-4 py-3 text-sm text-amber-900">
+              Missing to unlock withdrawals: {kycSummary.missingForCurrentLevel.join(', ')}.
+            </div>
+          ) : null}
         </div>
 
         <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
@@ -454,7 +495,7 @@ export default function WithdrawPage() {
         <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <Button
             onClick={handleSubmit}
-            disabled={!canSubmit || savingRequest || loadingTx}
+            disabled={withdrawDisabled}
             className="!rounded-full !bg-[#6B39F4] !py-4 !text-base !text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] hover:!bg-[#5B31CF]"
           >
             {savingRequest || loadingTx ? 'Processing withdrawal...' : 'Confirm withdrawal'}

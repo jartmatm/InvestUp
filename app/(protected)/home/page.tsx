@@ -13,17 +13,17 @@ import {
   getNextRepaymentDate,
 } from '@/lib/investor-overview';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
-import { getWithdrawProfileReadiness } from '@/lib/profile-completeness';
 import { useInvestApp } from '@/lib/investapp-context';
 import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
 import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
+import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import type { InternalAccountBalance } from '@/utils/internal-ledger/types';
+import { getKycLevelBadgeLabel } from '@/utils/kyc/shared';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
-import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
@@ -368,6 +368,7 @@ export default function HomePage() {
   const [searchTransactions, setSearchTransactions] = useState<SearchTransactionResult[]>([]);
   const [showWithdrawProfilePrompt, setShowWithdrawProfilePrompt] = useState(false);
   const [missingWithdrawProfileFields, setMissingWithdrawProfileFields] = useState<string[]>([]);
+  const [withdrawKycLevelLabel, setWithdrawKycLevelLabel] = useState('');
   const [checkingWithdrawRequirements, setCheckingWithdrawRequirements] = useState(false);
 
   const supabase = useMemo(() => {
@@ -787,37 +788,25 @@ export default function HomePage() {
     setCheckingWithdrawRequirements(true);
 
     try {
-      const { data, error } = await fetchCurrentUserProfile<Record<string, unknown> | null>(
-        getAccessToken
-      );
+      const { data, error } = await fetchCurrentUserKycSummary(getAccessToken);
 
-      if (error) {
+      if (error || !data) {
+        setWithdrawKycLevelLabel('');
         setMissingWithdrawProfileFields([]);
         setShowWithdrawProfilePrompt(true);
         return;
       }
 
-      const fallbackRole =
-        rolSeleccionado === 'inversor'
-          ? 'investor'
-          : rolSeleccionado === 'emprendedor'
-            ? 'entrepreneur'
-            : '';
+      setWithdrawKycLevelLabel(getKycLevelBadgeLabel(data.approvedLevel));
 
-      const readiness = getWithdrawProfileReadiness({
-        record: (data as Record<string, unknown> | null) ?? null,
-        fallbackEmail: user.email?.address ?? '',
-        fallbackRole,
-      });
-
-      if (readiness.isComplete) {
+      if (data.canAccessWithdraw) {
         setShowWithdrawProfilePrompt(false);
         setMissingWithdrawProfileFields([]);
         router.push('/withdraw');
         return;
       }
 
-      setMissingWithdrawProfileFields(readiness.missingFields);
+      setMissingWithdrawProfileFields(data.missingForCurrentLevel);
       setShowWithdrawProfilePrompt(true);
     } finally {
       setCheckingWithdrawRequirements(false);
@@ -1382,12 +1371,17 @@ export default function HomePage() {
                   Withdraw locked
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">
-                  Complete your profile first
+                  Complete your KYC level first
                 </h3>
                 <p className="mt-2 text-sm text-[#666D80]">
-                  Before making any withdrawal, you need to complete all your personal data,
-                  including your profile photo.
+                  Before making a withdrawal, your account must satisfy the required KYC
+                  compliance tier for its movement volume.
                 </p>
+                {withdrawKycLevelLabel ? (
+                  <p className="mt-2 inline-flex rounded-full border border-[#9FE3BE] bg-[#E8F9F1] px-2.5 py-1 text-xs font-semibold text-[#14845A]">
+                    {withdrawKycLevelLabel}
+                  </p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -1402,7 +1396,7 @@ export default function HomePage() {
             {missingWithdrawProfileFields.length > 0 ? (
               <div className="mt-5 rounded-[20px] border border-[#F6B7C3] bg-[#FFF1F3] px-4 py-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#DF1C41]">
-                  Missing fields
+                  Missing requirements
                 </p>
                 <p className="mt-2 text-sm text-[#7A2033]">
                   {missingWithdrawProfileFields.join(', ')}
@@ -1410,8 +1404,8 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="mt-5 rounded-[20px] border border-[#F6B7C3] bg-[#FFF1F3] px-4 py-4 text-sm text-[#7A2033]">
-                We could not verify your profile information right now, so please review your
-                personal data before requesting a withdrawal.
+                We could not verify your KYC status right now, so please review your personal data
+                and compliance documents before requesting a withdrawal.
               </div>
             )}
 
@@ -1424,7 +1418,7 @@ export default function HomePage() {
                 }}
                 className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-4 text-sm font-semibold text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] transition hover:bg-[#5B31CF]"
               >
-                Go to Personal Data
+                Review Personal Data
               </button>
               <button
                 type="button"

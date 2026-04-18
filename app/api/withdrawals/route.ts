@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
+import { getCurrentUserKycSummary } from '@/utils/server/kyc-compliance';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 
 export const runtime = 'nodejs';
@@ -155,6 +156,29 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient();
+    const kycSummary = await getCurrentUserKycSummary({
+      supabase,
+      userId: verified.userId,
+      requestedAmountUsd: amountUsdc,
+    });
+
+    if (!kycSummary.canWithdrawRequestedAmount) {
+      return jsonNoStore(
+        {
+          error: 'Withdrawal blocked by KYC compliance.',
+          details:
+            kycSummary.blockingReason ??
+            `Your account must complete Lvl ${kycSummary.requiredLevelForRequestedAmount} before withdrawing this amount.`,
+          data: kycSummary,
+        },
+        { status: 409 }
+      );
+    }
+
+    metadata.kyc_level = kycSummary.approvedLevel;
+    metadata.kyc_required_level = kycSummary.requiredLevelForRequestedAmount;
+    metadata.kyc_projected_movement_usd = kycSummary.projectedMovementUsd;
+
     const { data, error } = await supabase
       .from('withdraw_TEMP')
       .insert(insertPayload)
@@ -174,4 +198,3 @@ export async function POST(request: NextRequest) {
     return jsonNoStore({ error: 'Withdrawal request failed.', details: message }, { status: 500 });
   }
 }
-
