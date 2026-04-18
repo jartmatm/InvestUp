@@ -16,7 +16,7 @@ export default function Button({
   variant = "primary",
 }: ButtonProps) {
   const base =
-    "w-full px-4 py-2 rounded-lg font-medium transition active:scale-[0.98] text-sm disabled:cursor-not-allowed disabled:opacity-50";
+    "w-full rounded-lg px-4 py-2.5 text-sm font-semibold tracking-[-0.02em] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50";
   const variants = {
     primary: "bg-primary text-white hover:bg-primary-light",
     secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300",

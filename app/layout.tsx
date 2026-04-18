@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { AppThemeProvider } from "@/lib/app-theme";
+import type { Metadata } from 'next';
+import './globals.css';
+import { AppThemeProvider } from '@/lib/app-theme';
 
 export const metadata: Metadata = {
-  title: "InvestApp",
-  description: "Plataforma fintech para inversiones y repayments descentralizados",
+  title: 'InvestApp',
+  description: 'Plataforma fintech para inversiones y repayments descentralizados',
 };
 
 export default function RootLayout({
