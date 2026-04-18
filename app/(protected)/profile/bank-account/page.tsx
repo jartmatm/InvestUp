@@ -78,6 +78,9 @@ const readBankDetails = (value: unknown): Partial<BankDetailsForm> | null => {
   return null;
 };
 
+const selectClassName =
+  'w-full rounded-[18px] border border-white/35 bg-white/70 px-4 py-3 text-sm font-medium tracking-[-0.02em] text-gray-900 outline-none shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur-md transition focus:ring-2 focus:ring-primary/20';
+
 export default function BankAccountPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -216,14 +219,69 @@ export default function BankAccountPage() {
   };
 
   return (
-    <PageFrame title="Bank Account" subtitle="Store your bank or Breve details for future payouts">
+    <PageFrame
+      title="Bank Account"
+      subtitle="Store your payout destination for compliant withdrawal flows"
+      showBackButton
+      backHref="/profile"
+    >
       <div className="space-y-5">
-        <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 text-sm text-gray-600 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          These payout details are saved in your user profile so you do not need to type them again
-          for future withdrawal flows.
+        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(145deg,rgba(107,57,244,0.16),rgba(255,255,255,0.86),rgba(76,110,245,0.12))] p-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
+                Payout setup
+              </p>
+              <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
+                Configure where withdrawals should land
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-600">
+                Save your preferred payout destination once and reuse it in future withdrawal
+                flows without typing everything again.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:min-w-[220px]">
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Selected method
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">
+                  {form.method === 'bank' ? 'Bank account' : 'Breve key'}
+                </p>
+              </div>
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Security
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">
+                  Used only for payout processing
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Saved destination
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              The selected payout details remain in your profile for faster future withdrawals.
+            </p>
+          </div>
+          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Requirement
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Complete every required field for the method you choose before saving.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-[24px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <p className="text-sm font-semibold text-gray-900">Payout method</p>
           <p className="mt-1 text-xs text-gray-500">Choose between a bank account or Breve.</p>
 
@@ -241,8 +299,8 @@ export default function BankAccountPage() {
                   onClick={() => updateForm('method', option.value)}
                   className={`rounded-[20px] border px-4 py-4 text-left transition ${
                     active
-                      ? 'border-[#6B39F4] bg-[#6B39F4] text-white'
-                      : 'border-white/25 bg-white/40 text-gray-800'
+                      ? 'border-[#6B39F4] bg-[#6B39F4] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)]'
+                      : 'border-white/25 bg-white/50 text-gray-800 hover:bg-white/70'
                   }`}
                 >
                   <p className="text-sm font-semibold">{option.title}</p>
@@ -256,13 +314,13 @@ export default function BankAccountPage() {
         </div>
 
         {isBankMethod ? (
-          <div className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <p className="text-sm font-semibold text-gray-900">Bank details</p>
 
             <select
               value={form.bankName}
               onChange={(event) => updateForm('bankName', event.target.value)}
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
+              className={selectClassName}
             >
               <option value="">Select a bank or wallet</option>
               {BANK_OPTIONS.map((bank) => (
@@ -281,7 +339,7 @@ export default function BankAccountPage() {
             <select
               value={form.accountType}
               onChange={(event) => updateForm('accountType', event.target.value as AccountType)}
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
+              className={selectClassName}
             >
               <option value="">Account type</option>
               <option value="ahorros">Ahorros</option>
@@ -293,7 +351,7 @@ export default function BankAccountPage() {
               onChange={(event) =>
                 updateForm('identificationType', event.target.value as IdentificationType)
               }
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
+              className={selectClassName}
             >
               <option value="">Identification type</option>
               <option value="cc">CC</option>
@@ -317,8 +375,11 @@ export default function BankAccountPage() {
             />
           </div>
         ) : (
-          <div className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
+          <div className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <p className="text-sm font-semibold text-gray-900">Breve details</p>
+            <p className="text-xs leading-relaxed text-gray-500">
+              Use a single identifier when your payout flow is handled through Breve.
+            </p>
             <Input
               value={form.breveKey}
               onChange={(value) => updateForm('breveKey', value)}

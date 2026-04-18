@@ -39,9 +39,11 @@ const emptyForm: SocialForm = {
 
 function Field({ label, children }: FieldProps) {
   return (
-    <div className="px-4 py-4">
-      <p className="text-xs text-gray-500">{label}</p>
-      <div className="mt-1">{children}</div>
+    <div className="px-5 py-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+        {label}
+      </p>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
@@ -56,6 +58,7 @@ export default function SocialMediaPage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const connectedProfiles = Object.values(form).filter((value) => value.trim()).length;
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -169,40 +172,133 @@ export default function SocialMediaPage() {
   };
 
   return (
-    <PageFrame title="Social Media" subtitle="Save your social profiles">
+    <PageFrame
+      title="Social Media"
+      subtitle="Show the public channels that validate your profile"
+      showBackButton
+      backHref="/profile"
+    >
       <div className="space-y-6">
-        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">Social profiles</p>
-          <h2 className="mt-2 text-lg font-semibold text-gray-900">Keep your public presence up to date</h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-600">
-            Add your links so investors, founders, and partners can verify your presence across the web.
-          </p>
+        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(145deg,rgba(107,57,244,0.16),rgba(255,255,255,0.86),rgba(76,110,245,0.12))] px-5 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
+                Social profiles
+              </p>
+              <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
+                Keep your public presence up to date
+              </h2>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-600">
+                Add the channels that help investors, founders, and partners verify your identity
+                and credibility across the web.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:min-w-[220px]">
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Connected
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">
+                  {connectedProfiles} profile{connectedProfiles === 1 ? '' : 's'} linked
+                </p>
+              </div>
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Visibility
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">
+                  Public trust signals ready
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Best practice
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Use public URLs or handles that are actively maintained so counterparties can verify
+              your identity faster.
+            </p>
+          </div>
+          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Recommended
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              Prioritize LinkedIn, website, and one active social network to strengthen your
+              profile without overwhelming the page.
+            </p>
+          </div>
         </div>
 
         {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
 
-        <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <Field label="Facebook">
-            <Input value={form.facebook} onChange={(value) => updateForm('facebook', value)} placeholder="Facebook URL" />
-          </Field>
-          <Field label="Instagram">
-            <Input value={form.instagram} onChange={(value) => updateForm('instagram', value)} placeholder="Instagram handle" />
-          </Field>
-          <Field label="X (Twitter)">
-            <Input value={form.x} onChange={(value) => updateForm('x', value)} placeholder="X handle" />
-          </Field>
-          <Field label="TikTok">
-            <Input value={form.tiktok} onChange={(value) => updateForm('tiktok', value)} placeholder="TikTok handle" />
-          </Field>
-          <Field label="LinkedIn">
-            <Input value={form.linkedin} onChange={(value) => updateForm('linkedin', value)} placeholder="LinkedIn URL" />
-          </Field>
-          <Field label="YouTube">
-            <Input value={form.youtube} onChange={(value) => updateForm('youtube', value)} placeholder="YouTube channel" />
-          </Field>
-          <Field label="Website">
-            <Input value={form.website} onChange={(value) => updateForm('website', value)} placeholder="https://" />
-          </Field>
+        <div className="rounded-[28px] border border-white/30 bg-white/20 shadow-[0_14px_34px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <div className="border-b border-white/20 px-5 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Public channels
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-gray-900">
+              Channels visible from your profile
+            </h3>
+          </div>
+
+          <div className="divide-y divide-white/20 overflow-hidden">
+            <Field label="Facebook">
+              <Input
+                value={form.facebook}
+                onChange={(value) => updateForm('facebook', value)}
+                placeholder="Facebook URL"
+              />
+            </Field>
+            <Field label="Instagram">
+              <Input
+                value={form.instagram}
+                onChange={(value) => updateForm('instagram', value)}
+                placeholder="Instagram handle"
+              />
+            </Field>
+            <Field label="X (Twitter)">
+              <Input
+                value={form.x}
+                onChange={(value) => updateForm('x', value)}
+                placeholder="X handle"
+              />
+            </Field>
+            <Field label="TikTok">
+              <Input
+                value={form.tiktok}
+                onChange={(value) => updateForm('tiktok', value)}
+                placeholder="TikTok handle"
+              />
+            </Field>
+            <Field label="LinkedIn">
+              <Input
+                value={form.linkedin}
+                onChange={(value) => updateForm('linkedin', value)}
+                placeholder="LinkedIn URL"
+              />
+            </Field>
+            <Field label="YouTube">
+              <Input
+                value={form.youtube}
+                onChange={(value) => updateForm('youtube', value)}
+                placeholder="YouTube channel"
+              />
+            </Field>
+            <Field label="Website">
+              <Input
+                value={form.website}
+                onChange={(value) => updateForm('website', value)}
+                placeholder="https://"
+              />
+            </Field>
+          </div>
         </div>
 
         <Button

@@ -76,11 +76,18 @@ export default function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <PageFrame title="FAQ" subtitle="Frequently asked questions">
+    <PageFrame
+      title="FAQ"
+      subtitle="Clear answers about wallets, investments, custody, and platform usage"
+      showBackButton
+      backHref="/profile"
+    >
       <div className="space-y-6">
-        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">FAQ</p>
-          <h2 className="mt-2 text-lg font-semibold text-gray-900">Quick answers before you invest</h2>
+        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(140deg,rgba(74,108,247,0.12),rgba(255,255,255,0.84),rgba(107,57,244,0.12))] px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">FAQ</p>
+          <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
+            Quick answers before you move capital
+          </h2>
           <p className="mt-2 text-sm leading-relaxed text-gray-600">
             Review the most common questions about custody, wallets, returns, legal responsibility, and how
             InvestApp works before making a move.
@@ -93,14 +100,18 @@ export default function FaqPage() {
             return (
               <div
                 key={item.question}
-                className="rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
+                className={`rounded-[24px] border shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md transition ${
+                  open
+                    ? 'border-[#6B39F4]/25 bg-[linear-gradient(135deg,rgba(107,57,244,0.10),rgba(255,255,255,0.72))]'
+                    : 'border-white/25 bg-white/20'
+                }`}
               >
                 <button
                   type="button"
                   onClick={() => setOpenIndex(open ? null : index)}
                   className="flex w-full items-center justify-between px-4 py-4 text-left"
                 >
-                  <span className="text-sm font-semibold text-gray-900">{item.question}</span>
+                  <span className="pr-4 text-sm font-semibold text-gray-900">{item.question}</span>
                   <Chevron open={open} />
                 </button>
                 {open ? (

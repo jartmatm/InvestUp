@@ -85,12 +85,17 @@ const mapFrontRoleToDb = (role: 'inversor' | 'emprendedor' | null): 'investor' |
 
 function Field({ label, children }: FieldProps) {
   return (
-    <div className="px-4 py-4">
-      <p className="text-xs text-gray-500">{label}</p>
-      <div className="mt-1">{children}</div>
+    <div className="px-5 py-5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+        {label}
+      </p>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
+
+const selectClassName =
+  'w-full rounded-[18px] border border-white/35 bg-white/70 px-4 py-3 text-sm font-medium tracking-[-0.02em] text-gray-900 outline-none shadow-[0_10px_28px_rgba(15,23,42,0.06)] backdrop-blur-md transition focus:ring-2 focus:ring-primary/20';
 
 export default function PersonalDataPage() {
   const router = useRouter();
@@ -461,42 +466,80 @@ export default function PersonalDataPage() {
   };
 
   return (
-    <PageFrame title="Personal Data" subtitle="Update your personal information">
+    <PageFrame
+      title="Personal Data"
+      subtitle="Update your identity, compliance details, and account profile"
+      showBackButton
+      backHref="/profile"
+    >
       <div className="space-y-6">
-        <div className="flex flex-col items-center">
-          <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            {form.avatar_url ? (
-              <img src={form.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-xl font-semibold text-gray-600">
-                {displayName.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <span className="absolute bottom-0 left-0 right-0 bg-black/50 py-1 text-center text-[10px] font-semibold text-white">
-              Change
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-            <h2 className="text-lg font-semibold text-gray-900">{displayName}</h2>
-            <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${kycBadgeClassName}`}>
-              {kycBadgeLabel}
-            </span>
+        <div className="rounded-[30px] border border-white/30 bg-[linear-gradient(145deg,rgba(107,57,244,0.16),rgba(255,255,255,0.86),rgba(76,110,245,0.12))] p-5 shadow-[0_18px_42px_rgba(15,23,42,0.12)] backdrop-blur-md">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <label className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/40 bg-white/70 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+                {form.avatar_url ? (
+                  <img src={form.avatar_url} alt="Avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-semibold text-gray-700">
+                    {displayName.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+                <span className="absolute bottom-0 left-0 right-0 bg-black/55 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                  Change
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">
+                  Profile identity
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <h2 className="text-[1.45rem] font-semibold text-gray-900">{displayName}</h2>
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${kycBadgeClassName}`}
+                  >
+                    {kycBadgeLabel}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-gray-500">{displayEmail}</p>
+                <span className="mt-3 inline-flex rounded-full border border-white/35 bg-white/70 px-3 py-1.5 text-xs font-semibold text-[#6B39F4] shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                  {roleBadge}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:min-w-[230px]">
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Current limit
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">{kycLimitLabel}</p>
+              </div>
+              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
+                  Role control
+                </p>
+                <p className="mt-2 text-sm font-semibold text-gray-900">
+                  {loadingRoleEligibility
+                    ? 'Checking permissions...'
+                    : isRoleSelectionLocked
+                      ? 'Role locked by activity'
+                      : 'Role can be updated'}
+                </p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-gray-500">{displayEmail}</p>
-          <span className="mt-2 inline-block rounded-full border border-white/25 bg-white/20 px-2 py-1 text-xs text-purple-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            {roleBadge}
-          </span>
         </div>
 
         {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
 
-        <div className="rounded-2xl border border-white/25 bg-white/20 px-5 py-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(145deg,rgba(20,132,90,0.10),rgba(255,255,255,0.84),rgba(107,57,244,0.08))] px-5 py-5 shadow-[0_14px_34px_rgba(15,23,42,0.10)] backdrop-blur-md">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#14845A]">
@@ -530,7 +573,7 @@ export default function PersonalDataPage() {
             </div>
           ) : null}
 
-          <div className="mt-4 grid gap-3">
+          <div className="mt-5 grid gap-3">
             {([
               {
                 type: 'identity_document',
@@ -549,14 +592,14 @@ export default function PersonalDataPage() {
               return (
                 <label
                   key={item.type}
-                  className="block cursor-pointer rounded-[20px] border border-white/25 bg-white/50 px-4 py-4"
+                  className="block cursor-pointer rounded-[22px] border border-white/35 bg-white/72 px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] transition hover:bg-white/80"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{item.title}</p>
                       <p className="mt-1 text-xs text-gray-500">{item.description}</p>
                     </div>
-                    <span className="rounded-full border border-white/30 bg-white/70 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B39F4]">
+                    <span className="rounded-full border border-white/30 bg-white/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6B39F4]">
                       {documentSummary?.status ?? 'missing'}
                     </span>
                   </div>
@@ -591,82 +634,109 @@ export default function PersonalDataPage() {
           {kycStatus ? <p className="mt-4 text-xs text-slate-500">{kycStatus}</p> : null}
         </div>
 
-        <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <Field label="ID">
-            <Input value={form.id} readOnly placeholder="ID" />
-          </Field>
-          <Field label="First name">
-            <Input value={form.name} onChange={(value) => updateForm('name', value)} placeholder="Name" />
-          </Field>
-          <Field label="Last name">
-            <Input value={form.surname} onChange={(value) => updateForm('surname', value)} placeholder="Surname" />
-          </Field>
-          <Field label="Email">
-            <Input
-              value={form.email}
-              onChange={(value) => updateForm('email', value)}
-              readOnly={!canEditEmail}
-              placeholder="Email"
-            />
-          </Field>
-          <Field label="Gender">
-            <select
-              value={form.gender}
-              onChange={(event) => updateForm('gender', event.target.value)}
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="prefer no say">Prefer not to say</option>
-            </select>
-          </Field>
-          <Field label="Country">
-            <select
-              value={form.country}
-              onChange={(event) => onCountryChange(event.target.value)}
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Country</option>
-              {COUNTRY_OPTIONS.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.name} ({option.dialCode})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Address">
-            <Input value={form.address} onChange={(value) => updateForm('address', value)} placeholder="Address" />
-          </Field>
-          <Field label="Phone">
-            <Input
-              value={form.phone_number}
-              onChange={(value) => updateForm('phone_number', value)}
-              placeholder="Phone number"
-            />
-          </Field>
-          <Field label="Role">
-            <select
-              value={form.role}
-              onChange={(event) => updateForm('role', event.target.value)}
-              disabled={loadingRoleEligibility || isRoleSelectionLocked}
-              className="w-full rounded-lg border border-white/25 bg-white/20 px-4 py-2 text-sm text-gray-900 outline-none shadow-[0_8px_24px_rgba(15,23,42,0.06)] backdrop-blur-md focus:ring-2 focus:ring-primary/20"
-            >
-              <option value="">Role</option>
-              <option value="investor">Investor profile</option>
-              <option value="entrepreneur">Entrepreneur profile</option>
-            </select>
-            {roleEligibility?.canChangeRole === false ? (
-              <p className="mt-2 text-xs text-amber-700">
-                {roleEligibility.message ??
-                  'You can only change roles when your account has no investments and no published projects.'}
-              </p>
-            ) : (
-              <p className="mt-2 text-xs text-slate-500">
-                You can switch roles only when your account has no investments and no active publication.
-              </p>
-            )}
-          </Field>
+        <div className="rounded-[28px] border border-white/30 bg-white/20 shadow-[0_14px_34px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <div className="border-b border-white/20 px-5 py-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+              Personal record
+            </p>
+            <h3 className="mt-2 text-lg font-semibold text-gray-900">
+              Maintain an accurate investor profile
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-gray-600">
+              These details power your KYC level, role permissions, and transaction eligibility.
+            </p>
+          </div>
+
+          <div className="divide-y divide-white/20 overflow-hidden">
+            <Field label="ID">
+              <Input value={form.id} readOnly placeholder="ID" />
+            </Field>
+            <Field label="First name">
+              <Input
+                value={form.name}
+                onChange={(value) => updateForm('name', value)}
+                placeholder="Name"
+              />
+            </Field>
+            <Field label="Last name">
+              <Input
+                value={form.surname}
+                onChange={(value) => updateForm('surname', value)}
+                placeholder="Surname"
+              />
+            </Field>
+            <Field label="Email">
+              <Input
+                value={form.email}
+                onChange={(value) => updateForm('email', value)}
+                readOnly={!canEditEmail}
+                placeholder="Email"
+              />
+            </Field>
+            <Field label="Gender">
+              <select
+                value={form.gender}
+                onChange={(event) => updateForm('gender', event.target.value)}
+                className={selectClassName}
+              >
+                <option value="">Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="prefer no say">Prefer not to say</option>
+              </select>
+            </Field>
+            <Field label="Country">
+              <select
+                value={form.country}
+                onChange={(event) => onCountryChange(event.target.value)}
+                className={selectClassName}
+              >
+                <option value="">Country</option>
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.name} ({option.dialCode})
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Address">
+              <Input
+                value={form.address}
+                onChange={(value) => updateForm('address', value)}
+                placeholder="Address"
+              />
+            </Field>
+            <Field label="Phone">
+              <Input
+                value={form.phone_number}
+                onChange={(value) => updateForm('phone_number', value)}
+                placeholder="Phone number"
+              />
+            </Field>
+            <Field label="Role">
+              <select
+                value={form.role}
+                onChange={(event) => updateForm('role', event.target.value)}
+                disabled={loadingRoleEligibility || isRoleSelectionLocked}
+                className={selectClassName}
+              >
+                <option value="">Role</option>
+                <option value="investor">Investor profile</option>
+                <option value="entrepreneur">Entrepreneur profile</option>
+              </select>
+              {roleEligibility?.canChangeRole === false ? (
+                <p className="mt-2 text-xs text-amber-700">
+                  {roleEligibility.message ??
+                    'You can only change roles when your account has no investments and no published projects.'}
+                </p>
+              ) : (
+                <p className="mt-2 text-xs text-slate-500">
+                  You can switch roles only when your account has no investments and no active
+                  publication.
+                </p>
+              )}
+            </Field>
+          </div>
         </div>
 
         <Button

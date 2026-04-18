@@ -61,14 +61,34 @@ const POLICY_SECTIONS = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <PageFrame title="Privacy Policy" subtitle="How we handle your data">
+    <PageFrame
+      title="Privacy Policy"
+      subtitle="How InvestApp handles identity, wallet information, and off-chain data"
+      showBackButton
+      backHref="/profile"
+    >
       <div className="space-y-6">
+        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(140deg,rgba(74,108,247,0.12),rgba(255,255,255,0.84),rgba(107,57,244,0.10))] px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)] backdrop-blur-md">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
+            Legal
+          </p>
+          <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
+            Privacy by design, with blockchain transparency in mind
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-gray-600">
+            This page explains what we collect, what we do not collect, and how blockchain activity
+            differs from editable off-chain data.
+          </p>
+        </div>
+
         {POLICY_SECTIONS.map((section) => (
           <div
             key={section.title}
-            className="space-y-2 rounded-2xl border border-white/25 bg-white/20 px-4 py-4 text-sm text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
+            className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 text-sm text-gray-700 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md"
           >
-            <h2 className="text-base font-semibold text-gray-900">{section.title}</h2>
+            <h2 className="text-base font-semibold tracking-[-0.02em] text-gray-900">
+              {section.title}
+            </h2>
             {section.body.map((paragraph) => (
               <p key={paragraph} className="leading-relaxed">
                 {paragraph}
