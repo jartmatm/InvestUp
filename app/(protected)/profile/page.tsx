@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import PageFrame from '@/components/PageFrame';
+import BottomNav from '@/components/BottomNav';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -23,6 +23,44 @@ function IconChevronRight({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function IconMenu() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 7H17" />
+      <path d="M10 12H17" />
+      <path d="M13 17H17" />
+      <path d="M7 7H7.01" />
+      <path d="M7 12H7.01" />
+      <path d="M7 17H7.01" />
+    </svg>
+  );
+}
+
+function IconEditProfile() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
     </svg>
   );
 }
@@ -153,38 +191,62 @@ function IconLogout() {
 
 function Section({ title, children }: SectionProps) {
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-      <div className="divide-y divide-white/20 overflow-hidden rounded-xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        {children}
+    <section className="space-y-3">
+      <h2 className="px-1 text-[0.84rem] font-semibold tracking-[-0.025em] text-[#737D91]">
+        {title}
+      </h2>
+      <div className="rounded-[28px] border border-white/85 bg-white/88 p-2 shadow-[0_18px_44px_rgba(34,42,70,0.07)] ring-1 ring-[#EEF0F8]/70 backdrop-blur-xl">
+        <div className="space-y-1.5">{children}</div>
       </div>
-    </div>
+    </section>
   );
 }
 
 function SettingItem({ label, value, danger, onClick, icon }: SettingItemProps) {
-  const baseClasses = `flex w-full items-center justify-between px-4 py-4 text-left transition ${
-    danger ? 'font-semibold text-red-500' : 'text-gray-800'
+  const baseClasses = `group flex min-h-[64px] w-full cursor-pointer items-center justify-between rounded-[22px] px-3.5 py-3 text-left transition duration-200 active:scale-[0.995] ${
+    danger
+      ? 'bg-[#FFF6F7] text-[#E5484D] hover:bg-[#FFEFF1]'
+      : 'text-[#20283A] hover:bg-[#F8F7FF]'
   }`;
 
   const content = (
     <>
-      <div className="flex items-center gap-3">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/30 ${danger ? 'text-red-500' : 'text-[#1A1B25]'}`}>
+      <div className="flex min-w-0 items-center gap-3.5">
+        <span
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.84)] ${
+            danger
+              ? 'border-[#FFE1E4] bg-[#FFF1F3] text-[#EF4444] shadow-[0_12px_24px_rgba(239,68,68,0.08)]'
+              : 'border-[#EEE9FF] bg-[#F4F0FF] text-[#6B4EFF] shadow-[0_12px_24px_rgba(107,78,255,0.10)]'
+          }`}
+        >
           {icon}
         </span>
-        <div>
-          <p className="text-sm">{label}</p>
-          {value ? <p className="text-xs text-gray-500">{value}</p> : null}
+        <div className="min-w-0">
+          <p
+            className={`truncate text-[0.95rem] font-semibold tracking-[-0.03em] ${
+              danger ? 'text-[#E5484D]' : 'text-[#20283A]'
+            }`}
+          >
+            {label}
+          </p>
+          {value ? (
+            <p className="mt-0.5 truncate text-[0.78rem] font-medium tracking-[-0.015em] text-[#7A8497]">
+              {value}
+            </p>
+          ) : null}
         </div>
       </div>
-      <IconChevronRight className="h-4 w-4 text-gray-400" />
+      <IconChevronRight
+        className={`h-4 w-4 shrink-0 transition group-hover:translate-x-0.5 ${
+          danger ? 'text-[#D6A2A7]' : 'text-[#AAB2C1]'
+        }`}
+      />
     </>
   );
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={`${baseClasses} hover:bg-white/10`}>
+      <button type="button" onClick={onClick} className={baseClasses}>
         {content}
       </button>
     );
@@ -199,19 +261,6 @@ export default function ProfilePage() {
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const languageLabel = 'English (US)';
   const safeName = displayName || 'User';
-  const avatarNode = (
-    <div className="h-20 w-20 overflow-hidden rounded-full border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-      {avatarUrl ? (
-        <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-      ) : loading ? (
-        <div className="h-full w-full animate-pulse bg-white/30" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-base font-semibold text-gray-600">
-          {safeName.slice(0, 1).toUpperCase()}
-        </div>
-      )}
-    </div>
-  );
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -219,45 +268,146 @@ export default function ProfilePage() {
   }, [faseApp, router]);
 
   return (
-    <PageFrame
-      title="Profile"
-      subtitle="Account settings"
-      topSlot={avatarNode}
-      headerAlign="center"
-    >
-      <div className="space-y-6">
-        <Section title="Account">
-          <SettingItem icon={<IconPersonalData />} label="Personal Data" onClick={() => router.push('/profile/personal-data')} />
-          <SettingItem icon={<IconSocialMedia />} label="Social Media" onClick={() => router.push('/profile/social-media')} />
-          <SettingItem icon={<IconReferralCode />} label="Referral Code" onClick={() => router.push('/profile/referral-code')} />
-        </Section>
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+      <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
-        <Section title="Transactions">
-          <SettingItem
-            icon={<IconBankAccount />}
-            label="Bank Account"
-            onClick={() => router.push('/profile/bank-account')}
-          />
-          {rolSeleccionado === 'inversor' ? (
+      <div className="relative mx-auto w-full max-w-xl px-5 pb-8 pt-10 sm:px-6">
+        <header className="mb-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-0.5 text-[2rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
+            <span>Invest</span>
+            <span className="text-[#6B39F4]">App</span>
+            <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
+          </div>
+
+          <button
+            type="button"
+            aria-label="Open profile menu"
+            onClick={() => router.push('/profile/settings')}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/86 text-[#6B39F4] shadow-[0_18px_36px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            <IconMenu />
+          </button>
+        </header>
+
+        <section className="relative mb-7 overflow-hidden rounded-[34px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,247,255,0.88)_100%)] px-6 py-8 text-center shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl">
+          <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-white/70 blur-3xl" />
+          <div className="pointer-events-none absolute left-1/2 top-9 h-28 w-28 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-2xl" />
+
+          <button
+            type="button"
+            aria-label="Edit profile photo"
+            onClick={() => router.push('/profile/personal-data')}
+            className="relative mx-auto block rounded-full transition hover:scale-[1.02]"
+          >
+            <span className="block h-[88px] w-[88px] overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]">
+              {avatarUrl ? (
+                <span
+                  className="block h-full w-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${avatarUrl})` }}
+                />
+              ) : loading ? (
+                <span className="block h-full w-full animate-pulse bg-[#ECE7FF]" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#6B39F4]">
+                  {safeName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </span>
+            <span className="absolute bottom-1 right-0 flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_28px_rgba(107,57,244,0.32)]">
+              <IconEditProfile />
+            </span>
+          </button>
+
+          <p className="mt-5 text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#8A93A6]">
+            INVESTAPP
+          </p>
+          <h1 className="mt-1 text-[2.05rem] font-semibold tracking-[-0.06em] text-[#1D2538]">
+            Profile
+          </h1>
+          <p className="mt-1 text-[1rem] font-medium tracking-[-0.025em] text-[#7A8497]">
+            Account settings
+          </p>
+        </section>
+
+        <div className="space-y-6">
+          <Section title="Account">
             <SettingItem
-              icon={<IconFavorites />}
-              label="Favorites"
-              onClick={() => router.push('/profile/favorites')}
+              icon={<IconPersonalData />}
+              label="Personal Data"
+              onClick={() => router.push('/profile/personal-data')}
             />
-          ) : null}
-        </Section>
+            <SettingItem
+              icon={<IconSocialMedia />}
+              label="Social Media"
+              onClick={() => router.push('/profile/social-media')}
+            />
+            <SettingItem
+              icon={<IconReferralCode />}
+              label="Referral Code"
+              onClick={() => router.push('/profile/referral-code')}
+            />
+          </Section>
 
-        <Section title="Preferences">
-          <SettingItem icon={<IconSettings />} label="Settings" onClick={() => router.push('/profile/settings')} />
-          <SettingItem icon={<IconLanguage />} label="Language" value={languageLabel} onClick={() => router.push('/profile/language')} />
-          <SettingItem icon={<IconHelpCenter />} label="Help Center" onClick={() => router.push('/profile/help-center')} />
-          <SettingItem icon={<IconFaq />} label="FAQ" onClick={() => router.push('/profile/faq')} />
-          <SettingItem icon={<IconPrivacyPolicy />} label="Privacy Policy" onClick={() => router.push('/profile/privacy-policy')} />
-          <SettingItem icon={<IconTerms />} label="Terms & Conditions" onClick={() => router.push('/profile/terms-conditions')} />
-          <SettingItem icon={<IconAboutApp />} label="About App" onClick={() => router.push('/profile/about')} />
-          <SettingItem icon={<IconLogout />} label="Log out" danger onClick={logoutApp} />
-        </Section>
+          <Section title="Transactions">
+            <SettingItem
+              icon={<IconBankAccount />}
+              label="Bank Account"
+              onClick={() => router.push('/profile/bank-account')}
+            />
+            {rolSeleccionado === 'inversor' ? (
+              <SettingItem
+                icon={<IconFavorites />}
+                label="Favorites"
+                onClick={() => router.push('/profile/favorites')}
+              />
+            ) : null}
+          </Section>
+
+          <Section title="Preferences">
+            <SettingItem
+              icon={<IconSettings />}
+              label="Settings"
+              onClick={() => router.push('/profile/settings')}
+            />
+            <SettingItem
+              icon={<IconLanguage />}
+              label="Language"
+              value={languageLabel}
+              onClick={() => router.push('/profile/language')}
+            />
+            <SettingItem
+              icon={<IconHelpCenter />}
+              label="Help Center"
+              onClick={() => router.push('/profile/help-center')}
+            />
+            <SettingItem icon={<IconFaq />} label="FAQ" onClick={() => router.push('/profile/faq')} />
+            <SettingItem
+              icon={<IconPrivacyPolicy />}
+              label="Privacy Policy"
+              onClick={() => router.push('/profile/privacy-policy')}
+            />
+            <SettingItem
+              icon={<IconTerms />}
+              label="Terms & Conditions"
+              onClick={() => router.push('/profile/terms-conditions')}
+            />
+            <SettingItem
+              icon={<IconAboutApp />}
+              label="About App"
+              onClick={() => router.push('/profile/about')}
+            />
+            <SettingItem
+              icon={<IconLogout />}
+              label="Log out"
+              danger
+              onClick={logoutApp}
+            />
+          </Section>
+        </div>
       </div>
-    </PageFrame>
+
+      <BottomNav />
+    </main>
   );
 }
