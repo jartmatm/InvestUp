@@ -488,7 +488,7 @@ export default function WalletTransferPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.08),transparent_36%),linear-gradient(180deg,#F8F8FD_0%,#F5F6FB_100%)] pb-44 text-[#0F172A]">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.08),transparent_36%),linear-gradient(180deg,#F8F8FD_0%,#F5F6FB_100%)] pb-32 text-[#0F172A]">
       <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
         <header className="mb-7 flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -722,24 +722,22 @@ export default function WalletTransferPage() {
               })}
             </div>
           </section>
-        </div>
-      </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-[6.15rem] z-[70]">
-        <div className="mx-auto w-full max-w-xl px-4 sm:px-5">
-          <button
-            type="button"
-            onClick={() => void handleSubmit()}
-            disabled={!canSubmit || loadingTx}
-            className={`pointer-events-auto flex w-full items-center justify-center gap-2 rounded-[20px] px-5 py-4 text-[1.02rem] font-semibold tracking-[-0.03em] text-white shadow-[0_22px_46px_rgba(107,57,244,0.34)] transition ${
-              !canSubmit || loadingTx
-                ? 'bg-[linear-gradient(135deg,rgba(124,92,255,0.45)_0%,rgba(91,72,255,0.45)_100%)]'
-                : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] hover:-translate-y-0.5'
-            }`}
-          >
-            <PaperPlaneIcon />
-            {loadingTx ? 'Processing...' : 'Send'}
-          </button>
+          <section className="pt-1">
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={!canSubmit || loadingTx}
+              className={`flex w-full items-center justify-center gap-2 rounded-[20px] px-5 py-4 text-[1.02rem] font-semibold tracking-[-0.03em] text-white shadow-[0_22px_46px_rgba(107,57,244,0.34)] transition ${
+                !canSubmit || loadingTx
+                  ? 'bg-[linear-gradient(135deg,rgba(124,92,255,0.45)_0%,rgba(91,72,255,0.45)_100%)]'
+                  : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] hover:-translate-y-0.5'
+              }`}
+            >
+              <PaperPlaneIcon />
+              {loadingTx ? 'Processing...' : 'Send'}
+            </button>
+          </section>
         </div>
       </div>
 
