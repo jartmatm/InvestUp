@@ -38,7 +38,7 @@ export default function InvestorWalletCard({
     <button
       type="button"
       onClick={onClick}
-      className="relative h-[186px] w-[300px] overflow-hidden rounded-[24px] p-4 text-left text-white shadow-[0_18px_38px_rgba(15,23,42,0.18)]"
+      className="relative h-[186px] w-full overflow-hidden rounded-[26px] p-4 text-left text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5"
       style={{ backgroundImage: getInvestmentCardBackground(investmentId) }}
     >
       <div className="absolute inset-0 opacity-25">
@@ -62,13 +62,16 @@ export default function InvestorWalletCard({
           <div className="relative h-12 w-12 shrink-0">
             <div className="absolute inset-[-8px] rounded-full bg-white/35 blur-xl" />
             <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
-            {thumbnailUrl ? (
-              <img src={thumbnailUrl} alt={businessName} className="h-full w-full object-cover" />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white">
-                {initialsFrom(businessName)}
-              </div>
-            )}
+              {thumbnailUrl ? (
+                <span
+                  className="block h-full w-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${thumbnailUrl})` }}
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white">
+                  {initialsFrom(businessName)}
+                </div>
+              )}
             </div>
           </div>
         </div>

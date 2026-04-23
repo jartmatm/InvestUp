@@ -78,6 +78,27 @@ function IconBell() {
   );
 }
 
+function IconMenu() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M7 7H17" />
+      <path d="M10 12H17" />
+      <path d="M13 17H17" />
+      <path d="M7 7H7.01" />
+      <path d="M7 12H7.01" />
+      <path d="M7 17H7.01" />
+    </svg>
+  );
+}
+
 function IconPlus() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none">
@@ -421,7 +442,7 @@ export default function HomePage() {
     loadLastProject();
     const interval = window.setInterval(loadLastProject, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
+  }, [getAccessToken, rolSeleccionado, user?.id, lastReceipt?.txHash]);
 
   useEffect(() => {
     const loadActiveInvestments = async () => {
@@ -839,6 +860,7 @@ export default function HomePage() {
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
   const availableBalanceLabel = balanceUSDC;
+  const balanceCurrencyLabel = internalBalance?.currency ?? 'USD';
 
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => void handleTopUpClick() },
@@ -848,70 +870,99 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-transparent">
-      <div className="mx-auto w-full max-w-[375px] rounded-[30px] border border-white/25 bg-white/20 px-6 pb-32 pt-8 backdrop-blur-md shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20 backdrop-blur-md">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-              ) : loadingProfileSummary ? (
-                <div className="h-full w-full animate-pulse bg-white/30" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
-                  {displayName.slice(0, 1).toUpperCase()}
-                </div>
-              )}
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+      <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
+
+      <div className="relative mx-auto w-full max-w-xl px-4 pb-8 pt-10 sm:px-5">
+        <header className="mb-6 flex items-center justify-between gap-4 px-1">
+          <div className="flex items-center gap-0.5 text-[2rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
+            <span>Invest</span>
+            <span className="text-[#6B39F4]">App</span>
+            <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
+          </div>
+
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => router.push('/profile/settings')}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/86 text-[#6B39F4] shadow-[0_18px_36px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            <IconMenu />
+          </button>
+        </header>
+
+        <section className="mb-6 rounded-[32px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_14px_30px_rgba(31,38,64,0.12)] ring-1 ring-[#DFD8FF]">
+                {avatarUrl ? (
+                  <span
+                    className="block h-full w-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${avatarUrl})` }}
+                  />
+                ) : loadingProfileSummary ? (
+                  <div className="h-full w-full animate-pulse bg-[#ECE7FF]" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
+                    {displayName.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-[2px] border-white bg-[#6B39F4]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[1rem] font-medium tracking-[-0.03em] text-[#7A8497]">
+                  Hello, {roleLabel}
+                </p>
+                <h1 className="truncate text-[1.35rem] font-semibold tracking-[-0.055em] text-[#11182F]">
+                  {displayName}
+                </h1>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-[#818898]">Hello, {roleLabel}</p>
-              <h1 className="text-xl font-semibold text-[#0F172A]">{displayName}</h1>
+            <div className="flex shrink-0 items-center gap-2.5">
+              <button
+                type="button"
+                aria-label="Search"
+                onClick={() => {
+                  if (showSearch) {
+                    setShowSearch(false);
+                    setSearchQuery('');
+                    setSearchError(null);
+                    setSearchProjects([]);
+                    setSearchUsers([]);
+                    setSearchTransactions([]);
+                    setSearching(false);
+                    return;
+                  }
+                  setShowSearch(true);
+                }}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-[#EEF0F8] bg-white/90 text-[#11182F] shadow-[0_12px_26px_rgba(31,38,64,0.08)] transition hover:-translate-y-0.5 hover:text-[#6B39F4]"
+              >
+                <IconSearch />
+              </button>
+              <button
+                type="button"
+                aria-label="Notifications"
+                onClick={() => router.push('/notifications')}
+                className={`relative flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-xl shadow-[0_12px_26px_rgba(31,38,64,0.08)] transition hover:-translate-y-0.5 ${
+                  notificationsEnabled
+                    ? 'border-[#EEF0F8] bg-white/90 text-[#11182F] hover:text-[#6B39F4]'
+                    : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
+                }`}
+              >
+                <IconBell />
+                {unreadNotificationsCount > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B39F4] px-1 text-[10px] font-semibold text-white">
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                  </span>
+                ) : null}
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Search"
-              onClick={() => {
-                if (showSearch) {
-                  setShowSearch(false);
-                  setSearchQuery('');
-                  setSearchError(null);
-                  setSearchProjects([]);
-                  setSearchUsers([]);
-                  setSearchTransactions([]);
-                  setSearching(false);
-                  return;
-                }
-                setShowSearch(true);
-              }}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#0F172A] shadow-sm"
-            >
-              <IconSearch />
-            </button>
-            <button
-              type="button"
-              aria-label="Notifications"
-              onClick={() => router.push('/notifications')}
-              className={`relative flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-md shadow-sm ${
-                notificationsEnabled
-                  ? 'border-white/25 bg-white/20 text-[#0F172A]'
-                  : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
-              }`}
-            >
-              <IconBell />
-              {unreadNotificationsCount > 0 ? (
-                <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B39F4] px-1 text-[10px] font-semibold text-white">
-                  {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-                </span>
-              ) : null}
-            </button>
-          </div>
-        </div>
 
         {showSearch ? (
           <div className="mb-6 space-y-3">
-            <div className="flex items-center gap-3 rounded-[22px] border border-white/25 bg-white/20 px-4 py-3 backdrop-blur-md shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+            <div className="flex items-center gap-3 rounded-[24px] border border-[#EEF0F8] bg-white/86 px-4 py-3 shadow-[0_14px_30px_rgba(31,38,64,0.07)] backdrop-blur-xl">
               <span className="text-[#818898]">
                 <IconSearch />
               </span>
@@ -934,7 +985,7 @@ export default function HomePage() {
               ) : null}
             </div>
 
-            <div className="max-h-[360px] overflow-y-auto rounded-[22px] border border-white/25 bg-white/20 p-4 backdrop-blur-md shadow-[0_10px_28px_rgba(15,23,42,0.08)]">
+            <div className="max-h-[360px] overflow-y-auto rounded-[24px] border border-[#EEF0F8] bg-white/90 p-4 shadow-[0_18px_38px_rgba(31,38,64,0.08)] backdrop-blur-xl">
               {trimmedSearchQuery.length < 2 ? (
                 <p className="text-sm text-[#818898]">
                   Start typing to search ventures, people, wallet addresses, DIDs, project IDs, or
@@ -968,10 +1019,9 @@ export default function HomePage() {
                             className="flex w-full items-center gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
                           >
                             {project.imageUrl ? (
-                              <img
-                                src={project.imageUrl}
-                                alt={project.title}
-                                className="h-12 w-12 rounded-[14px] object-cover"
+                              <span
+                                className="h-12 w-12 shrink-0 rounded-[14px] bg-cover bg-center"
+                                style={{ backgroundImage: `url(${project.imageUrl})` }}
                               />
                             ) : (
                               <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#EEF2FF] text-xs font-semibold text-[#6B39F4]">
@@ -1008,10 +1058,9 @@ export default function HomePage() {
                               className="flex w-full items-center gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
                             >
                               {entry.avatarUrl ? (
-                                <img
-                                  src={entry.avatarUrl}
-                                  alt={entry.displayName}
-                                  className="h-11 w-11 rounded-full object-cover"
+                                <span
+                                  className="h-11 w-11 shrink-0 rounded-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${entry.avatarUrl})` }}
                                 />
                               ) : (
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#6B39F4]">
@@ -1032,10 +1081,9 @@ export default function HomePage() {
                               className="flex items-center gap-3 rounded-[18px] border border-white/30 bg-white/60 px-3 py-3"
                             >
                               {entry.avatarUrl ? (
-                                <img
-                                  src={entry.avatarUrl}
-                                  alt={entry.displayName}
-                                  className="h-11 w-11 rounded-full object-cover"
+                                <span
+                                  className="h-11 w-11 shrink-0 rounded-full bg-cover bg-center"
+                                  style={{ backgroundImage: `url(${entry.avatarUrl})` }}
                                 />
                               ) : (
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#EEF2FF] text-sm font-semibold text-[#6B39F4]">
@@ -1097,266 +1145,280 @@ export default function HomePage() {
           </div>
         ) : null}
 
-      <div
-        className="mb-6 rounded-[18px] bg-[#6B39F4] bg-cover bg-center p-6 text-white shadow-[0_20px_40px_rgba(107,57,244,0.25)]"
-        style={{ backgroundImage: "url('/assets/slide1.jpg')" }}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-white/70">Available</p>
-            <h2 className="mt-1 text-3xl font-bold">
-              {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
-              <span className="text-lg font-semibold text-white/80">USD</span>
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowBalance((prev) => !prev)}
-            className="rounded-full bg-white/20 p-2 text-white"
-            aria-label={showBalance ? 'Hide balance' : 'Show balance'}
-          >
-            <IconEye hidden={!showBalance} />
-          </button>
-        </div>
+          <div className="relative mb-6 overflow-hidden rounded-[28px] bg-[linear-gradient(135deg,#5E2CFF_0%,#4B27F0_52%,#334EFF_100%)] p-6 text-white shadow-[0_26px_56px_rgba(91,72,255,0.30)]">
+            <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-white/16 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-[-4.5rem] left-[-3.5rem] h-44 w-44 rounded-full bg-[#9CF3E5]/12 blur-3xl" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_30%,rgba(255,255,255,0.18),transparent_20%),linear-gradient(120deg,transparent_35%,rgba(255,255,255,0.10)_50%,transparent_68%)]" />
 
-        {rolSeleccionado === 'emprendedor' ? (
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
-            <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
-            <span className="text-[#40C4AA]/60">&middot;</span>
-            <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
-          </div>
-        ) : (
-          <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFEFA] px-3 py-1 text-xs font-semibold text-[#40C4AA]">
-            <span>{`Active: ${activeInvestments.length}`}</span>
-            <span className="text-[#40C4AA]/60">&middot;</span>
-            <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
-            <span className="text-[#40C4AA]/60">&middot;</span>
-            <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-8 grid grid-cols-4 gap-4 text-center">
-        {actions.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            onClick={action.onClick}
-            className="flex flex-col items-center gap-2"
-          >
-            <div className="flex h-[60px] w-[60px] items-center justify-center rounded-full border border-white/25 bg-white/20 backdrop-blur-md text-[#6B39F4] shadow-sm">
-              {action.icon}
-            </div>
-            <p className="text-[11px] font-semibold text-[#666D80]">{action.label}</p>
-          </button>
-        ))}
-      </div>
-
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-semibold text-[#0F172A]">{sectionTitle}</h2>
-        <button
-          type="button"
-          onClick={() => router.push(sectionActionHref)}
-          className="text-sm font-semibold text-[#6B39F4]"
-        >
-          {sectionActionLabel}
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        {rolSeleccionado === 'inversor' ? (
-          loadingActiveInvestments ? (
-            <div className="rounded-[16px] border border-white/25 bg-white/20 p-5 text-sm text-[#818898] backdrop-blur-md">
-              Loading your active investments...
-            </div>
-          ) : activeInvestments.length > 0 ? (
-            <div className="overflow-hidden rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <div className="mb-3 flex justify-end">
-                <span className="text-xs text-[#818898]">Swipe to review</span>
+            <div className="relative flex items-start justify-between">
+              <div>
+                <p className="text-[1rem] font-medium tracking-[-0.03em] text-white/76">
+                  Available
+                </p>
+                <h2 className="mt-2 text-[2.65rem] font-semibold leading-none tracking-[-0.07em]">
+                  {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
+                  <span className="align-baseline text-[1.35rem] font-semibold tracking-[-0.04em] text-white/78">
+                    {balanceCurrencyLabel}
+                  </span>
+                </h2>
               </div>
-              <div className="flex justify-center overflow-hidden pb-2">
-                <div className="flex items-stretch px-3">
-                  {activeInvestments.slice(0, 5).map((investment, index) => {
-                    const project = investment.project;
-                    const projectTitle =
-                      project?.business_name || project?.title || investment.project_title || 'Business';
-                    const tone = getInvestmentHealthMeta(
-                      getInvestmentHealth(
-                        getNextRepaymentDate(investment.created_at, investment.term_months)
-                      )
-                    );
-                    const nextRepaymentDate = getNextRepaymentDate(
-                      investment.created_at,
-                      investment.term_months
-                    );
-                    const statusClassName =
-                      tone.label === 'Up to date'
-                        ? 'border-[#40C4AA]/35 text-[#1A8E78]'
-                        : tone.label === 'Due soon'
-                          ? 'border-[#FFBE4C]/35 text-[#C77C00]'
-                          : 'border-[#DF1C41]/25 text-[#DF1C41]';
-
-                    return (
-                      <div
-                        key={investment.id}
-                        className="relative shrink-0"
-                        style={{
-                          marginLeft: index === 0 ? 0 : -148,
-                          zIndex: activeInvestments.length - index,
-                        }}
-                      >
-                        <InvestorWalletCard
-                          statusLabel={tone.label}
-                          statusClassName={statusClassName}
-                          businessName={projectTitle}
-                          thumbnailUrl={project?.photo_urls?.[0] ?? null}
-                          investmentId={investment.id}
-                          ownerName={investment.ownerName}
-                          nextRepayment={formatInvestmentCardDate(nextRepaymentDate)}
-                          amountLabel={formatInvestmentCardAmount(investment.amount ?? 0)}
-                          onClick={() => router.push(`/feed/${investment.project_id}`)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
-              You do not have active investments yet.
-            </div>
-          )
-        ) : (
-          <>
-            {loadingProject ? (
-              <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
-                Loading your latest listing...
-              </div>
-            ) : lastProject ? (
               <button
                 type="button"
-                onClick={() => router.push(`/feed/${lastProject.id}`)}
-                className="w-full overflow-hidden rounded-[16px] border border-white/25 bg-white/20 text-left shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white/25"
+                onClick={() => setShowBalance((prev) => !prev)}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl transition hover:bg-white/24"
+                aria-label={showBalance ? 'Hide balance' : 'Show balance'}
               >
-                {lastProject.photo_urls?.[0] ? (
-                  <img
-                    src={lastProject.photo_urls[0]}
-                    alt={lastProject.title}
-                    className="h-32 w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-32 w-full items-center justify-center border border-white/25 bg-white/20 backdrop-blur-md text-xs text-[#818898]">
-                    No image
-                  </div>
-                )}
-                <div className="p-4">
-                  <p className="text-sm font-semibold text-[#0F172A]">{lastProject.title}</p>
-                  <p className="mt-1 text-xs text-[#818898]">
-                    {`Raised ${formatMoney(lastProject.amount_received ?? 0, lastProject.currency ?? 'USD')} of ${formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD')}`}
-                  </p>
-                  <div className="mt-3 h-2 rounded-full bg-slate-200/80">
-                    <div className="h-2 rounded-full bg-[#6B39F4]" style={{ width: `${fundingProgress}%` }} />
-                  </div>
-                  <p className="mt-2 text-[11px] font-semibold text-[#6B39F4]">
-                    {lastProject.interest_rate ? `${lastProject.interest_rate}% interest` : 'Interest pending'}
-                  </p>
-                  <div className="mt-3 flex items-center justify-between">
-                    <p className="text-[11px] text-[#818898]">Open venture details</p>
-                    <span className="rounded-full border border-[#D3C4FC] px-3 py-1 text-[11px] font-semibold text-[#6B39F4]">
-                      Details
-                    </span>
-                  </div>
-                </div>
+                <IconEye hidden={!showBalance} />
               </button>
+            </div>
+
+            {rolSeleccionado === 'emprendedor' ? (
+              <div className="relative mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-2.5 text-[0.82rem] font-semibold tracking-[-0.02em] text-[#35A994] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
+                <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
+                <span className="text-[#35A994]/45">&middot;</span>
+                <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+              </div>
             ) : (
-              <div className="rounded-[16px] border border-white/25 bg-white/20 backdrop-blur-md p-5 text-sm text-[#818898]">
-                Your listings will appear here once they are active.
+              <div className="relative mt-6 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-2.5 text-[0.82rem] font-semibold tracking-[-0.02em] text-[#35A994] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
+                <span>{`Active: ${activeInvestments.length}`}</span>
+                <span className="text-[#35A994]/45">&middot;</span>
+                <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
+                <span className="text-[#35A994]/45">&middot;</span>
+                <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
               </div>
             )}
-          </>
-        )}
+          </div>
 
-        {rolSeleccionado === 'inversor' ? (
-          <button
-            type="button"
-            onClick={() => router.push('/feed')}
-            className="w-full rounded-[16px] border-2 border-dashed border-[#D3C4FC] py-4 text-sm font-semibold text-[#6B39F4]"
-          >
-            + Invest in a new venture
-          </button>
-        ) : null}
-      </div>
+          <div className="grid grid-cols-4 items-start gap-2 text-center">
+            {actions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                onClick={action.onClick}
+                className="group flex flex-col items-center gap-3 rounded-[22px] py-2 transition active:scale-[0.98]"
+              >
+                <div className="flex h-[66px] w-[66px] items-center justify-center rounded-full border border-white/85 bg-[linear-gradient(180deg,#FFFFFF_0%,#F8F7FF_100%)] text-[#6B39F4] shadow-[0_18px_34px_rgba(31,38,64,0.08)] transition group-hover:-translate-y-0.5 group-hover:shadow-[0_22px_42px_rgba(107,57,244,0.14)]">
+                  {action.icon}
+                </div>
+                <p className="text-[0.78rem] font-semibold tracking-[-0.03em] text-[#727B8E]">
+                  {action.label}
+                </p>
+              </button>
+            ))}
+          </div>
+        </section>
 
-      <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[#0F172A]">Transactions</h2>
-          <button
-            type="button"
-            onClick={() => router.push('/history')}
-            className="text-sm font-semibold text-[#6B39F4]"
-          >
-            View all
-          </button>
-        </div>
+        <section className="mb-7 rounded-[32px] border border-white/85 bg-white/88 p-4 shadow-[0_22px_58px_rgba(31,38,64,0.08)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-[1.45rem] font-semibold tracking-[-0.06em] text-[#101828]">
+              {sectionTitle}
+            </h2>
+            <button
+              type="button"
+              onClick={() => router.push(sectionActionHref)}
+              className="text-[0.95rem] font-semibold tracking-[-0.03em] text-[#6B39F4] transition hover:text-[#4F27D8]"
+            >
+              {sectionActionLabel}
+            </button>
+          </div>
 
-        <div className="max-h-[280px] space-y-3 overflow-y-auto pr-1">
-          {loadingTransactions ? (
-            <div className="rounded-[18px] border border-white/25 bg-white/20 backdrop-blur-md px-4 py-5 text-sm text-[#818898]">
-              Loading transactions...
-            </div>
-          ) : null}
+          <div className="space-y-5">
+            {rolSeleccionado === 'inversor' ? (
+              loadingActiveInvestments ? (
+                <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
+                  Loading your active investments...
+                </div>
+              ) : activeInvestments.length > 0 ? (
+                <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7F8FD_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                  <div className="mb-3 flex justify-end px-1">
+                    <span className="text-[0.86rem] font-medium tracking-[-0.025em] text-[#8A93A6]">
+                      Swipe to review
+                    </span>
+                  </div>
+                  <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-1">
+                    {activeInvestments.slice(0, 5).map((investment) => {
+                      const project = investment.project;
+                      const projectTitle =
+                        project?.business_name || project?.title || investment.project_title || 'Business';
+                      const tone = getInvestmentHealthMeta(
+                        getInvestmentHealth(
+                          getNextRepaymentDate(investment.created_at, investment.term_months)
+                        )
+                      );
+                      const nextRepaymentDate = getNextRepaymentDate(
+                        investment.created_at,
+                        investment.term_months
+                      );
+                      const statusClassName =
+                        tone.label === 'Up to date'
+                          ? 'border-[#40C4AA]/35 text-[#1A8E78]'
+                          : tone.label === 'Due soon'
+                            ? 'border-[#FFBE4C]/35 text-[#C77C00]'
+                            : 'border-[#DF1C41]/25 text-[#DF1C41]';
 
-          {!loadingTransactions && transactions.length === 0 ? (
-            <div className="rounded-[18px] border border-white/25 bg-white/20 backdrop-blur-md px-4 py-5 text-sm text-[#818898]">
-              Your activity will appear here.
-            </div>
-          ) : null}
-
-          {!loadingTransactions
-            ? transactions.map((transaction) => {
-                const incoming = isIncomingTransaction(transaction, smartWalletAddress);
-                const amountColor = incoming ? 'text-[#40C4AA]' : 'text-[#E33A24]';
-                const amountPrefix = incoming ? '+' : '-';
-
-                return (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between rounded-[18px] border border-white/25 bg-white/20 px-4 py-3 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
+                      return (
+                        <div key={investment.id} className="min-w-full snap-center">
+                          <InvestorWalletCard
+                            statusLabel={tone.label}
+                            statusClassName={statusClassName}
+                            businessName={projectTitle}
+                            thumbnailUrl={project?.photo_urls?.[0] ?? null}
+                            investmentId={investment.id}
+                            ownerName={investment.ownerName}
+                            nextRepayment={formatInvestmentCardDate(nextRepaymentDate)}
+                            amountLabel={formatInvestmentCardAmount(investment.amount ?? 0)}
+                            onClick={() => router.push(`/feed/${investment.project_id}`)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
+                  You do not have active investments yet.
+                </div>
+              )
+            ) : (
+              <>
+                {loadingProject ? (
+                  <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
+                    Loading your latest listing...
+                  </div>
+                ) : lastProject ? (
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/feed/${lastProject.id}`)}
+                    className="w-full overflow-hidden rounded-[26px] border border-[#EEF0F8] bg-white/88 text-left shadow-[0_18px_42px_rgba(31,38,64,0.08)] transition hover:-translate-y-0.5 hover:bg-white"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-full border border-white/25 bg-white/20 backdrop-blur-md">
-                        {avatarUrl ? (
-                          <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-                        ) : loadingProfileSummary ? (
-                          <div className="h-full w-full animate-pulse bg-white/30" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
-                            {displayName.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
+                    {lastProject.photo_urls?.[0] ? (
+                      <span
+                        className="block h-36 w-full bg-cover bg-center"
+                        style={{ backgroundImage: `url(${lastProject.photo_urls[0]})` }}
+                      />
+                    ) : (
+                      <div className="flex h-36 w-full items-center justify-center bg-[#F4F0FF] text-xs text-[#818898]">
+                        No image
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-[#0F172A]">{displayName}</p>
-                        <p className="text-xs capitalize text-[#818898]">
-                          {getTransactionTypeLabel(transaction, smartWalletAddress)}
+                    )}
+                    <div className="p-4">
+                      <p className="text-[1rem] font-semibold tracking-[-0.035em] text-[#101828]">
+                        {lastProject.title}
+                      </p>
+                      <p className="mt-1 text-xs text-[#818898]">
+                        {`Raised ${formatMoney(lastProject.amount_received ?? 0, lastProject.currency ?? 'USD')} of ${formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD')}`}
+                      </p>
+                      <div className="mt-4 h-2 rounded-full bg-slate-200/80">
+                        <div className="h-2 rounded-full bg-[#6B39F4]" style={{ width: `${fundingProgress}%` }} />
+                      </div>
+                      <div className="mt-4 flex items-center justify-between">
+                        <p className="text-[11px] font-semibold text-[#6B39F4]">
+                          {lastProject.interest_rate ? `${lastProject.interest_rate}% interest` : 'Interest pending'}
+                        </p>
+                        <span className="rounded-full border border-[#D3C4FC] px-3 py-1 text-[11px] font-semibold text-[#6B39F4]">
+                          Details
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ) : (
+                  <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
+                    Your listings will appear here once they are active.
+                  </div>
+                )}
+              </>
+            )}
+
+            {rolSeleccionado === 'inversor' ? (
+              <button
+                type="button"
+                onClick={() => router.push('/feed')}
+                className="w-full rounded-[22px] border-2 border-dashed border-[#C9B8FF] bg-white/45 py-4 text-[1rem] font-semibold tracking-[-0.035em] text-[#6B39F4] transition hover:border-[#9B7CFF] hover:bg-[#F8F5FF] active:scale-[0.99]"
+              >
+                + Invest in a new venture
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between px-1">
+            <h2 className="text-[1.45rem] font-semibold tracking-[-0.06em] text-[#101828]">
+              Transactions
+            </h2>
+            <button
+              type="button"
+              onClick={() => router.push('/history')}
+              className="text-[0.95rem] font-semibold tracking-[-0.03em] text-[#6B39F4] transition hover:text-[#4F27D8]"
+            >
+              View all
+            </button>
+          </div>
+
+          <div className="max-h-[288px] space-y-3 overflow-y-auto pb-2">
+            {loadingTransactions ? (
+              <div className="rounded-[24px] border border-white/85 bg-white/88 px-4 py-5 text-sm text-[#818898] shadow-[0_16px_34px_rgba(31,38,64,0.06)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
+                Loading transactions...
+              </div>
+            ) : null}
+
+            {!loadingTransactions && transactions.length === 0 ? (
+              <div className="rounded-[24px] border border-white/85 bg-white/88 px-4 py-5 text-sm text-[#818898] shadow-[0_16px_34px_rgba(31,38,64,0.06)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
+                Your activity will appear here.
+              </div>
+            ) : null}
+
+            {!loadingTransactions
+              ? transactions.map((transaction) => {
+                  const incoming = isIncomingTransaction(transaction, smartWalletAddress);
+                  const amountColor = incoming ? 'text-[#24A979]' : 'text-[#E33A24]';
+                  const amountPrefix = incoming ? '+' : '-';
+
+                  return (
+                    <div
+                      key={transaction.id}
+                      className="flex items-center justify-between gap-4 rounded-[24px] border border-white/85 bg-white/88 px-4 py-3.5 shadow-[0_16px_34px_rgba(31,38,64,0.06)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl"
+                    >
+                      <div className="flex min-w-0 items-center gap-3.5">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-[2px] border-white bg-[#F4F0FF] shadow-[0_12px_24px_rgba(31,38,64,0.08)]">
+                          {avatarUrl ? (
+                            <span
+                              className="block h-full w-full bg-cover bg-center"
+                              style={{ backgroundImage: `url(${avatarUrl})` }}
+                            />
+                          ) : loadingProfileSummary ? (
+                            <div className="h-full w-full animate-pulse bg-[#ECE7FF]" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
+                              {displayName.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-[0.98rem] font-semibold tracking-[-0.035em] text-[#101828]">
+                            {displayName}
+                          </p>
+                          <p className="text-[0.84rem] capitalize tracking-[-0.025em] text-[#8A93A6]">
+                            {getTransactionTypeLabel(transaction, smartWalletAddress)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <p className={`text-[0.95rem] font-semibold tracking-[-0.035em] ${amountColor}`}>
+                          {amountPrefix}
+                          {formatTransactionAmount(transaction.amount)}
+                        </p>
+                        <p className="mt-1 text-[0.78rem] font-medium tracking-[-0.025em] text-[#8A93A6]">
+                          {formatTransactionDate(transaction.created_at)}
                         </p>
                       </div>
                     </div>
-
-                    <div className="text-right">
-                      <p className={`text-sm font-semibold ${amountColor}`}>
-                        {amountPrefix}
-                        {formatTransactionAmount(transaction.amount)}
-                      </p>
-                      <p className="text-xs text-[#818898]">{formatTransactionDate(transaction.created_at)}</p>
-                    </div>
-                  </div>
-                );
-              })
-            : null}
-        </div>
-      </div>
+                  );
+                })
+              : null}
+          </div>
+        </section>
 
       </div>
 
@@ -1431,6 +1493,6 @@ export default function HomePage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </main>
   );
 }
