@@ -510,11 +510,13 @@ function MockProjectCard({
   title,
   rate,
   palette,
+  imageSrc,
   flipped = false,
 }: {
   title: string;
   rate: string;
   palette: 'amber' | 'violet' | 'emerald' | 'blue';
+  imageSrc: string;
   flipped?: boolean;
 }) {
   const palettes = {
@@ -546,6 +548,14 @@ function MockProjectCard({
               palettes[palette]
             )}
           >
+            <Image
+              src={imageSrc}
+              alt={title}
+              fill
+              sizes="(max-width: 480px) 33vw, 160px"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.06)_0%,rgba(15,23,42,0.28)_100%)]" />
             <div className="absolute left-3 top-3 h-6 w-14 rounded-full bg-white/14 blur-sm" />
             <div className="absolute -bottom-5 right-2 h-16 w-16 rounded-full bg-white/18 blur-2xl" />
             <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-md">
@@ -580,20 +590,28 @@ function MockProjectCard({
                     : 'from-[#1D4ED8] via-[#2563EB] to-[#93C5FD]'
             )}
           >
+            <Image
+              src={imageSrc}
+              alt={title}
+              fill
+              sizes="(max-width: 480px) 33vw, 160px"
+              className="object-cover opacity-28"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.28)_0%,rgba(15,23,42,0.52)_100%)]" />
             <div className="absolute -right-5 -top-4 h-20 w-20 rounded-full bg-white/16 blur-2xl" />
-            <div className="flex items-center justify-between">
+            <div className="relative flex items-center justify-between">
               <FloatingBadge tone="emerald" className="border-0 bg-white/16 text-white">
                 Live
               </FloatingBadge>
               <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/68">{rate}</p>
             </div>
-            <div>
+            <div className="relative">
               <p className="line-clamp-2 text-[13px] font-semibold leading-5">{title}</p>
               <p className="mt-2 text-[11px] leading-4 text-white/72">
                 Funding window open with curated venture metrics and clear repayment terms.
               </p>
             </div>
-            <div className="flex items-center justify-between text-[10px] text-white/72">
+            <div className="relative flex items-center justify-between text-[10px] text-white/72">
               <span>Polygon</span>
               <span>Verified</span>
             </div>
@@ -849,7 +867,15 @@ function WalletScene() {
               <p className="mt-3 text-base font-semibold">Empanadas Play</p>
               <p className="mt-1 text-[10px] uppercase tracking-[0.34em] text-white/45">MANU ALIN VPROJECT</p>
             </div>
-            <div className="h-14 w-14 rounded-[18px] bg-[linear-gradient(135deg,#F59E0B_0%,#FDBA74_100%)] shadow-[0_12px_28px_rgba(245,158,11,0.28)]" />
+            <div className="relative h-14 w-14 overflow-hidden rounded-[18px] shadow-[0_12px_28px_rgba(245,158,11,0.28)]">
+              <Image
+                src="/onboarding/empanadas.jpeg"
+                alt="Empanadas Play"
+                fill
+                sizes="56px"
+                className="object-cover"
+              />
+            </div>
           </div>
 
           <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-white/72">
@@ -891,7 +917,7 @@ function WithdrawScene() {
           </div>
         </div>
 
-        <div className="mt-3 rounded-[22px] border border-amber-200/80 bg-[linear-gradient(180deg,rgba(255,251,235,0.96)_0%,rgba(255,247,237,0.92)_100%)] p-3 text-amber-700 shadow-[0_10px_24px_rgba(245,158,11,0.08)]">
+        <div className="mt-3 rounded-[22px] border border-emerald-200/80 bg-[linear-gradient(180deg,rgba(236,253,245,0.96)_0%,rgba(240,253,244,0.92)_100%)] p-3 text-emerald-700 shadow-[0_10px_24px_rgba(16,185,129,0.08)]">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
               <IconShield />
@@ -1008,41 +1034,49 @@ function MarketplaceScene() {
       title: 'Pequeno negocio de empanadas en cuadrra play',
       rate: '16% EA',
       palette: 'amber' as const,
+      imageSrc: '/onboarding/empanadas.jpeg',
     },
     {
       title: 'Plataforma educativa online para habilidades digitales',
       rate: '18% EA',
       palette: 'violet' as const,
+      imageSrc: '/onboarding/plataforma_educativa.jpg',
     },
     {
       title: 'Restaurante saludable con ingredientes locales',
       rate: '15% EA',
       palette: 'emerald' as const,
+      imageSrc: '/onboarding/restaurante.webp',
     },
     {
       title: 'Tienda sostenible de moda urbana',
       rate: '17% EA',
       palette: 'blue' as const,
+      imageSrc: '/onboarding/tienda_moda.jpeg',
     },
     {
-      title: 'Clinica preventiva con tecnologia para barrios emergentes',
+      title: 'Richmond Flowers para eventos y suscripciones locales',
       rate: '14% EA',
       palette: 'emerald' as const,
+      imageSrc: '/onboarding/floristeria.jpeg',
     },
     {
       title: 'Marketplace B2B para suministro de comercios locales',
       rate: '19% EA',
       palette: 'violet' as const,
+      imageSrc: '/onboarding/marketplace_b2b.jpg',
     },
     {
       title: 'Cadena de cafeterias compactas para zonas financieras',
       rate: '13% EA',
       palette: 'amber' as const,
+      imageSrc: '/onboarding/empanadas.jpeg',
     },
     {
       title: 'Plataforma logística para entregas urbanas sostenibles',
       rate: '20% EA',
       palette: 'blue' as const,
+      imageSrc: '/onboarding/marketplace_b2b.jpg',
     },
   ];
 
@@ -1123,6 +1157,7 @@ function MarketplaceScene() {
                 title={card.title}
                 rate={card.rate}
                 palette={card.palette}
+                imageSrc={card.imageSrc}
                 flipped={marketplacePhase === 'flip' && [1, 4, 6].includes(index)}
               />
             ))}
@@ -1143,7 +1178,15 @@ function DashboardScene() {
         className="rounded-[30px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_36%),linear-gradient(180deg,#2A1A6C_0%,#171C3B_100%)] p-3.5 text-white shadow-[0_24px_54px_rgba(29,32,86,0.34)]"
       >
         <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/[0.06] p-3 backdrop-blur-md">
-          <div className="h-16 w-16 rounded-[18px] bg-[linear-gradient(135deg,#B45309_0%,#F59E0B_100%)] shadow-[0_12px_28px_rgba(245,158,11,0.28)]" />
+          <div className="relative h-16 w-16 overflow-hidden rounded-[18px] shadow-[0_12px_28px_rgba(245,158,11,0.28)]">
+            <Image
+              src="/onboarding/floristeria.jpeg"
+              alt="Richmond Flowers"
+              fill
+              sizes="64px"
+              className="object-cover"
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Venture dashboard</p>
             <p className="mt-1 truncate text-base font-semibold">Richmond Flowers</p>
@@ -1509,8 +1552,7 @@ export default function OnboardingPage() {
                     <div className="relative mt-6 flex items-end justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <div className="rounded-full bg-[#F3EFFF]/92 px-2.5 py-1 text-[10px] font-semibold text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.08)]">
-                          {String(currentSlide + 1).padStart(2, '0')} /{' '}
-                          {String(ONBOARDING_SLIDES.length).padStart(2, '0')}
+                          {currentSlide + 1}/{ONBOARDING_SLIDES.length}
                         </div>
                         <div className="flex items-center gap-1.5 rounded-full border border-white/60 bg-white/34 px-2.5 py-2 backdrop-blur-xl">
                           {ONBOARDING_SLIDES.map((slide, index) => (
