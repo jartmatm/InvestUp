@@ -7,7 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
-import { getProjectRepaymentTermMonths, isProjectPubliclyVisible } from '@/lib/project-status';
+import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
 import { fetchProjects } from '@/utils/client/projects';
@@ -20,6 +20,7 @@ type FeedProject = {
   owner_user_id: string | null;
   status: string | null;
   amount_requested: number | null;
+  minimum_investment: number | null;
   amount_received: number | null;
   currency: string | null;
   term_months: number | null;
@@ -120,35 +121,6 @@ function IconHeart({ filled }: { filled?: boolean }) {
       strokeWidth="2"
     >
       <path d="M12 21s-6.7-4.3-9.2-7.6C1 11.5 1.2 8.4 3.4 6.7c2-1.6 4.9-1.2 6.6.8l2 2.3 2-2.3c1.7-2 4.6-2.4 6.6-.8 2.2 1.7 2.4 4.8.6 6.7C18.7 16.7 12 21 12 21z" />
-    </svg>
-  );
-}
-
-function IconTarget() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 8v4l2 2" />
-    </svg>
-  );
-}
-
-function IconClock() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v6l4 2" />
-    </svg>
-  );
-}
-
-function IconPercent() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M5 19L19 5" />
-      <circle cx="7" cy="7" r="2" />
-      <circle cx="17" cy="17" r="2" />
     </svg>
   );
 }
@@ -561,10 +533,11 @@ export default function FeedPage() {
                   const isWishlisted = wishlist.includes(project.id);
                   const amountLabel = formatAmount(project.amount_requested, project.currency);
                   const raisedLabel = formatAmount(project.amount_received, project.currency);
-                  const repaymentTerm = getProjectRepaymentTermMonths(project);
-                  const termLabel = repaymentTerm ? `${repaymentTerm} months` : '--';
+                  const minimumInvestmentLabel = formatAmount(
+                    project.minimum_investment,
+                    project.currency
+                  );
                   const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : 'Rate pending';
-                  const progress = calculateProgress(project.amount_received, project.amount_requested);
                   const isOwnProject = Boolean(
                     user?.id && project.owner_user_id && project.owner_user_id === user.id
                   );
@@ -646,92 +619,41 @@ export default function FeedPage() {
 
                         <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-3 text-white shadow-[0_24px_56px_rgba(18,24,42,0.24)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
                           <div className="pointer-events-none absolute inset-x-6 top-4 h-20 rounded-full bg-[#7C5CFF]/25 blur-3xl" />
-                          <div className="relative flex h-full flex-col">
-                            <div>
-                              <p className="line-clamp-2 text-[0.88rem] font-semibold leading-5 tracking-[-0.03em] text-white">
-                                {project.title}
+                          <div className="relative flex h-full flex-col items-center justify-center gap-2.5 text-center">
+                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                                Goal
                               </p>
-                              <p className="mt-1 text-[0.68rem] font-medium uppercase tracking-[0.18em] text-white/55">
-                                Investment overview
+                              <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
+                                {amountLabel}
                               </p>
                             </div>
 
-                            <div className="mt-3 grid grid-cols-1 gap-1.5">
-                              <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
-                                <div className="flex items-center gap-2 text-white/68">
-                                  <IconTarget />
-                                  <span className="text-[0.64rem] uppercase tracking-[0.18em]">Goal</span>
-                                </div>
-                                <p className="mt-1.5 text-[0.8rem] font-semibold tracking-[-0.03em] text-white">
-                                  {amountLabel}
-                                </p>
-                              </div>
-
-                              <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
-                                <div className="flex items-center gap-2 text-white/68">
-                                  <IconTarget />
-                                  <span className="text-[0.64rem] uppercase tracking-[0.18em]">Raised</span>
-                                </div>
-                                <p className="mt-1.5 text-[0.8rem] font-semibold tracking-[-0.03em] text-white">
-                                  {raisedLabel}
-                                </p>
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-1.5">
-                                <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
-                                  <div className="flex items-center gap-2 text-white/68">
-                                    <IconClock />
-                                    <span className="text-[0.64rem] uppercase tracking-[0.18em]">Term</span>
-                                  </div>
-                                  <p className="mt-1.5 text-[0.74rem] font-semibold tracking-[-0.02em] text-white">
-                                    {termLabel}
-                                  </p>
-                                </div>
-
-                                <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
-                                  <div className="flex items-center gap-2 text-white/68">
-                                    <IconPercent />
-                                    <span className="text-[0.64rem] uppercase tracking-[0.18em]">Rate</span>
-                                  </div>
-                                  <p className="mt-1.5 text-[0.74rem] font-semibold tracking-[-0.02em] text-white">
-                                    {rateLabel}
-                                  </p>
-                                </div>
-                              </div>
+                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                                Raised
+                              </p>
+                              <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
+                                {raisedLabel}
+                              </p>
                             </div>
 
-                            <div className="mt-3">
-                              <div className="flex items-center justify-between text-[0.64rem] font-medium text-white/65">
-                                <span>Funding progress</span>
-                                <span>{Math.round(progress)}%</span>
-                              </div>
-                              <div className="mt-2 h-2 rounded-full bg-white/12">
-                                <div
-                                  className="h-2 rounded-full bg-[linear-gradient(90deg,#7C5CFF_0%,#5B8CFF_55%,#55D6A6_100%)] shadow-[0_0_18px_rgba(124,92,255,0.55)]"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
+                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                                Minimum investment
+                              </p>
+                              <p className="mt-1.5 text-[0.88rem] font-semibold tracking-[-0.03em] text-white">
+                                {minimumInvestmentLabel}
+                              </p>
                             </div>
 
-                            <div className="mt-auto flex items-center gap-1.5 pt-3">
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  router.push(`/feed/${project.id}`);
-                                }}
-                                className="flex-1 rounded-full border border-white/18 bg-white/10 px-2.5 py-2.5 text-[0.68rem] font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-                              >
-                                Details
-                              </button>
-                              <button
-                                type="button"
-                                onClick={handleBackAction}
-                                className="flex-1 rounded-full bg-white px-2.5 py-2.5 text-[0.68rem] font-semibold text-[#162033] shadow-[0_12px_24px_rgba(255,255,255,0.18)] transition hover:scale-[1.01]"
-                              >
-                                {backActionLabel}
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={handleBackAction}
+                              className="mt-1 w-full rounded-full bg-[linear-gradient(135deg,#2BCA7B_0%,#19A864_100%)] px-3 py-3 text-[0.74rem] font-semibold text-white shadow-[0_18px_30px_rgba(25,168,100,0.28)] transition hover:scale-[1.01]"
+                            >
+                              {backActionLabel}
+                            </button>
                           </div>
                         </div>
                       </div>
