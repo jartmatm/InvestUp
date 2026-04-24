@@ -446,18 +446,40 @@ function MockIconTile({
   icon,
   label,
   className,
+  active = false,
 }: {
   icon: ReactNode;
   label: string;
   className?: string;
+  active?: boolean;
 }) {
   return (
-    <div className={cn('flex flex-col items-center gap-1.5 rounded-[18px] bg-white/78 px-2 py-2.5', className)}>
+    <motion.div
+      animate={
+        active
+          ? {
+              scale: [1, 1.08, 1],
+              y: [0, -3, 0],
+            }
+          : {
+              scale: 1,
+              y: 0,
+            }
+      }
+      transition={{
+        duration: active ? 0.72 : 0.24,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className={cn(
+        'flex flex-col items-center gap-1.5 rounded-[18px] bg-white/78 px-2 py-2.5 transform-gpu',
+        className
+      )}
+    >
       <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#E8E2FF] bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,239,255,0.94)_100%)] text-[#6B39F4] shadow-[0_10px_22px_rgba(107,57,244,0.12)]">
         {icon}
       </div>
       <p className="text-[10px] font-medium text-slate-500">{label}</p>
-    </div>
+    </motion.div>
   );
 }
 
@@ -487,10 +509,12 @@ function MockProjectCard({
   title,
   rate,
   palette,
+  flipped = false,
 }: {
   title: string;
   rate: string;
   palette: 'amber' | 'violet' | 'emerald' | 'blue';
+  flipped?: boolean;
 }) {
   const palettes = {
     amber:
@@ -504,30 +528,130 @@ function MockProjectCard({
   };
 
   return (
-    <div className="rounded-[20px] border border-white/80 bg-white/80 p-2.5 shadow-[0_16px_30px_rgba(15,23,42,0.07)]">
-      <div
-        className={cn(
-          'relative h-24 overflow-hidden rounded-[16px] bg-gradient-to-br after:absolute after:inset-0',
-          palettes[palette]
-        )}
+    <div className="relative h-[172px] [perspective:1200px]">
+      <motion.div
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
+        className="relative h-full w-full transform-gpu"
+        style={{ transformStyle: 'preserve-3d' }}
       >
-        <div className="absolute left-3 top-3 h-6 w-14 rounded-full bg-white/14 blur-sm" />
-        <div className="absolute -bottom-5 right-2 h-16 w-16 rounded-full bg-white/18 blur-2xl" />
-        <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-md">
-          <IconHeart />
+        <div
+          className="absolute inset-0 rounded-[20px] border border-white/80 bg-white/80 p-2.5 shadow-[0_16px_30px_rgba(15,23,42,0.07)]"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <div
+            className={cn(
+              'relative h-24 overflow-hidden rounded-[16px] bg-gradient-to-br after:absolute after:inset-0',
+              palettes[palette]
+            )}
+          >
+            <div className="absolute left-3 top-3 h-6 w-14 rounded-full bg-white/14 blur-sm" />
+            <div className="absolute -bottom-5 right-2 h-16 w-16 rounded-full bg-white/18 blur-2xl" />
+            <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-md">
+              <IconHeart />
+            </div>
+          </div>
+          <div className="mt-2.5 space-y-2">
+            <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-slate-800">{title}</p>
+            <div className="flex items-center justify-between gap-2">
+              <FloatingBadge tone="emerald" className="px-2 py-1 text-[10px]">
+                <IconTrendUp />
+                {rate}
+              </FloatingBadge>
+              <span className="text-[10px] text-slate-400">Interest rate</span>
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="mt-2.5 space-y-2">
-        <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-slate-800">{title}</p>
-        <div className="flex items-center justify-between gap-2">
-          <FloatingBadge tone="emerald" className="px-2 py-1 text-[10px]">
-            <IconTrendUp />
-            {rate}
-          </FloatingBadge>
-          <span className="text-[10px] text-slate-400">Interest rate</span>
+
+        <div
+          className="absolute inset-0 rounded-[20px] border border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(246,244,255,0.88)_100%)] p-3 shadow-[0_16px_30px_rgba(15,23,42,0.07)]"
+          style={{
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+          }}
+        >
+          <div
+            className={cn(
+              'relative flex h-full flex-col justify-between overflow-hidden rounded-[16px] bg-gradient-to-br p-3 text-white',
+              palette === 'amber'
+                ? 'from-[#6B3A12] via-[#C2410C] to-[#FDBA74]'
+                : palette === 'violet'
+                  ? 'from-[#312E81] via-[#5B21B6] to-[#A78BFA]'
+                  : palette === 'emerald'
+                    ? 'from-[#065F46] via-[#059669] to-[#6EE7B7]'
+                    : 'from-[#1D4ED8] via-[#2563EB] to-[#93C5FD]'
+            )}
+          >
+            <div className="absolute -right-5 -top-4 h-20 w-20 rounded-full bg-white/16 blur-2xl" />
+            <div className="flex items-center justify-between">
+              <FloatingBadge tone="emerald" className="border-0 bg-white/16 text-white">
+                Live
+              </FloatingBadge>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/68">{rate}</p>
+            </div>
+            <div>
+              <p className="line-clamp-2 text-[13px] font-semibold leading-5">{title}</p>
+              <p className="mt-2 text-[11px] leading-4 text-white/72">
+                Funding window open with curated venture metrics and clear repayment terms.
+              </p>
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-white/72">
+              <span>Polygon</span>
+              <span>Verified</span>
+            </div>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
+  );
+}
+
+function WithdrawalMethodCard({
+  icon,
+  title,
+  subtitle,
+  selected,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  selected: boolean;
+}) {
+  return (
+    <motion.div
+      animate={{
+        scale: selected ? [1, 1.035, 1.02] : 1,
+        y: selected ? -2 : 0,
+      }}
+      transition={{
+        duration: 0.55,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className={cn(
+        'rounded-[22px] p-3 shadow-[0_12px_24px_rgba(15,23,42,0.05)]',
+        selected
+          ? 'bg-[linear-gradient(135deg,#5B21B6_0%,#6B39F4_55%,#2E90FA_100%)] text-white shadow-[0_16px_34px_rgba(107,57,244,0.22)]'
+          : 'border border-white/85 bg-white/84 text-slate-600'
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div
+          className={cn(
+            'flex h-9 w-9 items-center justify-center rounded-full',
+            selected ? 'bg-white/14 text-white' : 'bg-[#F3EFFF] text-[#6B39F4]'
+          )}
+        >
+          {icon}
+        </div>
+        {selected ? (
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#6B39F4]">
+            <span className="text-[10px] font-bold">✓</span>
+          </div>
+        ) : null}
+      </div>
+      <p className={cn('mt-4 text-sm font-semibold', selected ? 'text-white' : 'text-slate-800')}>{title}</p>
+      <p className={cn('mt-1 text-[11px]', selected ? 'text-white/72' : 'text-slate-500')}>{subtitle}</p>
+    </motion.div>
   );
 }
 
@@ -605,6 +729,18 @@ function FundingGauge({ progress }: { progress: number }) {
 }
 
 function WalletScene() {
+  const [activeAction, setActiveAction] = useState(0);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setActiveAction((previous) => (previous + 1) % 4);
+    }, 760);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <SceneShell accentClass="bg-[#6B39F4]/18">
       <motion.div
@@ -655,10 +791,10 @@ function WalletScene() {
         </div>
 
         <div className="mt-3 grid grid-cols-4 gap-2.5">
-          <MockIconTile icon={<IconWallet />} label="Top up" />
-          <MockIconTile icon={<IconSend />} label="Send" />
-          <MockIconTile icon={<IconDownload />} label="Withdraw" />
-          <MockIconTile icon={<IconClock />} label="History" />
+          <MockIconTile icon={<IconWallet />} label="Top up" active={activeAction === 0} />
+          <MockIconTile icon={<IconSend />} label="Send" active={activeAction === 1} />
+          <MockIconTile icon={<IconDownload />} label="Withdraw" active={activeAction === 2} />
+          <MockIconTile icon={<IconClock />} label="History" active={activeAction === 3} />
         </div>
       </motion.div>
 
@@ -700,6 +836,18 @@ function WalletScene() {
 }
 
 function WithdrawScene() {
+  const [selectedMethod, setSelectedMethod] = useState<'bank' | 'breve'>('bank');
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setSelectedMethod((previous) => (previous === 'bank' ? 'breve' : 'bank'));
+    }, 2000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <SceneShell accentClass="bg-[#F59E0B]/16">
       <motion.div
@@ -738,26 +886,19 @@ function WithdrawScene() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-[22px] bg-[linear-gradient(135deg,#5B21B6_0%,#6B39F4_55%,#2E90FA_100%)] p-3 text-white shadow-[0_16px_34px_rgba(107,57,244,0.22)]">
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/14">
-                  <IconBank />
-                </div>
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[#6B39F4]">
-                  <span className="text-[10px] font-bold">✓</span>
-                </div>
-              </div>
-              <p className="mt-4 text-sm font-semibold">Bank</p>
-              <p className="mt-1 text-[11px] text-white/72">Manual bank payout</p>
-            </div>
+            <WithdrawalMethodCard
+              icon={<IconBank />}
+              title="Bank"
+              subtitle="Manual bank payout"
+              selected={selectedMethod === 'bank'}
+            />
 
-            <div className="rounded-[22px] border border-white/85 bg-white/84 p-3 text-slate-600 shadow-[0_12px_24px_rgba(15,23,42,0.05)]">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F3EFFF] text-[#6B39F4]">
-                <IconSend />
-              </div>
-              <p className="mt-4 text-sm font-semibold text-slate-800">Breve</p>
-              <p className="mt-1 text-[11px] text-slate-500">Single key payout</p>
-            </div>
+            <WithdrawalMethodCard
+              icon={<IconSend />}
+              title="Breve"
+              subtitle="Single key payout"
+              selected={selectedMethod === 'breve'}
+            />
           </div>
 
           <div className="grid gap-2">
@@ -800,6 +941,83 @@ function WithdrawScene() {
 }
 
 function MarketplaceScene() {
+  const [marketplacePhase, setMarketplacePhase] = useState<'scroll' | 'flip' | 'reset'>('scroll');
+
+  useEffect(() => {
+    let active = true;
+    const timers: number[] = [];
+
+    const runCycle = () => {
+      if (!active) return;
+      setMarketplacePhase('scroll');
+      timers.push(
+        window.setTimeout(() => {
+          if (active) setMarketplacePhase('flip');
+        }, 2000)
+      );
+      timers.push(
+        window.setTimeout(() => {
+          if (active) setMarketplacePhase('reset');
+        }, 4000)
+      );
+      timers.push(
+        window.setTimeout(() => {
+          if (active) runCycle();
+        }, 5600)
+      );
+    };
+
+    runCycle();
+
+    return () => {
+      active = false;
+      timers.forEach((timerId) => window.clearTimeout(timerId));
+    };
+  }, []);
+
+  const marketplaceCards = [
+    {
+      title: 'Pequeno negocio de empanadas en cuadrra play',
+      rate: '16% EA',
+      palette: 'amber' as const,
+    },
+    {
+      title: 'Plataforma educativa online para habilidades digitales',
+      rate: '18% EA',
+      palette: 'violet' as const,
+    },
+    {
+      title: 'Restaurante saludable con ingredientes locales',
+      rate: '15% EA',
+      palette: 'emerald' as const,
+    },
+    {
+      title: 'Tienda sostenible de moda urbana',
+      rate: '17% EA',
+      palette: 'blue' as const,
+    },
+    {
+      title: 'Clinica preventiva con tecnologia para barrios emergentes',
+      rate: '14% EA',
+      palette: 'emerald' as const,
+    },
+    {
+      title: 'Marketplace B2B para suministro de comercios locales',
+      rate: '19% EA',
+      palette: 'violet' as const,
+    },
+    {
+      title: 'Cadena de cafeterias compactas para zonas financieras',
+      rate: '13% EA',
+      palette: 'amber' as const,
+    },
+    {
+      title: 'Plataforma logística para entregas urbanas sostenibles',
+      rate: '20% EA',
+      palette: 'blue' as const,
+    },
+  ];
+
   return (
     <SceneShell accentClass="bg-[#34D399]/16">
       <motion.div
@@ -860,27 +1078,27 @@ function MarketplaceScene() {
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2.5">
-          <MockProjectCard
-            title="Pequeno negocio de empanadas en cuadrra play"
-            rate="16% EA"
-            palette="amber"
-          />
-          <MockProjectCard
-            title="Plataforma educativa online para habilidades digitales"
-            rate="18% EA"
-            palette="violet"
-          />
-          <MockProjectCard
-            title="Restaurante saludable con ingredientes locales"
-            rate="15% EA"
-            palette="emerald"
-          />
-          <MockProjectCard
-            title="Tienda sostenible de moda urbana"
-            rate="17% EA"
-            palette="blue"
-          />
+        <div className="mt-3 overflow-hidden rounded-[24px] border border-white/65 bg-white/28 p-1.5 backdrop-blur-sm">
+          <motion.div
+            animate={{
+              y: marketplacePhase === 'reset' ? 0 : -196,
+            }}
+            transition={{
+              duration: marketplacePhase === 'scroll' ? 2 : marketplacePhase === 'reset' ? 0.9 : 0.35,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="grid grid-cols-2 gap-2.5"
+          >
+            {marketplaceCards.map((card, index) => (
+              <MockProjectCard
+                key={`${card.title}-${index}`}
+                title={card.title}
+                rate={card.rate}
+                palette={card.palette}
+                flipped={marketplacePhase === 'flip' && [1, 4, 6].includes(index)}
+              />
+            ))}
+          </motion.div>
         </div>
       </motion.div>
     </SceneShell>
@@ -1233,73 +1451,78 @@ export default function OnboardingPage() {
                 transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
                 className="mt-4 flex min-h-0 flex-1 flex-col gap-4"
               >
-                {renderScene(activeSlide.id)}
+                <div className="min-h-0 flex-[0_0_52%]">{renderScene(activeSlide.id)}</div>
 
-                <div className={cn(SURFACE_CLASSNAME, 'p-5')}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6B39F4]/62">
-                        {activeSlide.eyebrow}
-                      </p>
-                      <h1 className="mt-2 text-[1.85rem] font-semibold tracking-tight text-slate-900">
-                        {activeSlide.title}
-                      </h1>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{activeSlide.description}</p>
-                    </div>
+                <div className="min-h-[236px] flex-[0_0_42%]">
+                  <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-[32px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.14)_100%)] p-5 shadow-[0_22px_54px_rgba(85,65,165,0.12)] ring-1 ring-white/35 backdrop-blur-[26px]">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.48),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(167,139,250,0.14),transparent_42%)]" />
+                    <div className="absolute inset-x-6 top-0 h-16 rounded-full bg-white/35 blur-3xl" />
 
-                    <button
-                      type="button"
-                      onClick={skipSlides}
-                      className="rounded-full border border-slate-200 bg-white/78 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-700"
-                    >
-                      Skip
-                    </button>
-                  </div>
-
-                  <div className="mt-5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-full bg-[#F3EFFF] px-2.5 py-1 text-[10px] font-semibold text-[#6B39F4]">
-                        {String(currentSlide + 1).padStart(2, '0')} /{' '}
-                        {String(ONBOARDING_SLIDES.length).padStart(2, '0')}
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div className="max-w-[78%]">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6B39F4]/62">
+                          {activeSlide.eyebrow}
+                        </p>
+                        <h1 className="mt-2 text-[1.85rem] font-semibold tracking-tight text-slate-900">
+                          {activeSlide.title}
+                        </h1>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{activeSlide.description}</p>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        {ONBOARDING_SLIDES.map((slide, index) => (
-                          <span
-                            key={slide.id}
-                            className={cn(
-                              'h-2 rounded-full transition-all duration-300',
-                              index === currentSlide ? 'w-7 bg-[#6B39F4]' : 'w-2 bg-[#D8DCEB]'
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {currentSlide > 0 ? (
-                        <button
-                          type="button"
-                          aria-label="Previous slide"
-                          onClick={goToPrevious}
-                          className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 transition hover:text-slate-700"
-                        >
-                          <IconArrowLeft />
-                        </button>
-                      ) : null}
 
                       <button
                         type="button"
-                        aria-label={
-                          currentSlide === ONBOARDING_SLIDES.length - 1
-                            ? 'Finish onboarding'
-                            : 'Next slide'
-                        }
-                        onClick={goToNext}
-                        className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#6B39F4_0%,#2563EB_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:scale-[1.01]"
+                        onClick={skipSlides}
+                        className="rounded-full border border-white/65 bg-white/42 px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
                       >
-                        <span>{currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Continue' : 'Next'}</span>
-                        <IconArrowRight />
+                        Skip
                       </button>
+                    </div>
+
+                    <div className="relative mt-6 flex items-end justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="rounded-full bg-[#F3EFFF]/92 px-2.5 py-1 text-[10px] font-semibold text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.08)]">
+                          {String(currentSlide + 1).padStart(2, '0')} /{' '}
+                          {String(ONBOARDING_SLIDES.length).padStart(2, '0')}
+                        </div>
+                        <div className="flex items-center gap-1.5 rounded-full border border-white/60 bg-white/34 px-2.5 py-2 backdrop-blur-xl">
+                          {ONBOARDING_SLIDES.map((slide, index) => (
+                            <span
+                              key={slide.id}
+                              className={cn(
+                                'h-2 rounded-full transition-all duration-300',
+                                index === currentSlide ? 'w-7 bg-[#6B39F4]' : 'w-2 bg-[#D8DCEB]'
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {currentSlide > 0 ? (
+                          <button
+                            type="button"
+                            aria-label="Previous slide"
+                            onClick={goToPrevious}
+                            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/65 bg-white/42 text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
+                          >
+                            <IconArrowLeft />
+                          </button>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          aria-label={
+                            currentSlide === ONBOARDING_SLIDES.length - 1
+                              ? 'Finish onboarding'
+                              : 'Next slide'
+                          }
+                          onClick={goToNext}
+                          className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#6B39F4_0%,#2563EB_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:scale-[1.01]"
+                        >
+                          <span>{currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Continue' : 'Next'}</span>
+                          <IconArrowRight />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
