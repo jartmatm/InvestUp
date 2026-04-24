@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useModalStatus, usePrivy } from '@privy-io/react-auth';
+import PrivyLoginBackground from '@/components/PrivyLoginBackground';
 
 export default function LoginClient() {
   const router = useRouter();
@@ -44,17 +45,13 @@ export default function LoginClient() {
   }
 
   return (
-    <div className="relative flex h-screen w-screen flex-col justify-center overflow-hidden px-8">
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/assets/fondo_home.jpg')" }}
-      />
-      <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px]" />
+    <div className="relative flex h-screen w-screen flex-col justify-center overflow-hidden px-6">
+      <PrivyLoginBackground />
 
-      <div className="relative rounded-[28px] border border-white/25 bg-white/15 p-8 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
+      <div className="relative mx-auto w-full max-w-sm rounded-[28px] border border-white/12 bg-white/[0.06] p-8 shadow-[0_18px_44px_rgba(2,6,23,0.36)] backdrop-blur-xl">
         <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/55 border-t-[#6C4CF1]" />
-          <p className="mt-6 text-sm font-medium text-slate-700">Opening secure login...</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/18 border-t-[#6C4DFF]" />
+          <p className="mt-6 text-sm font-medium text-slate-100/88">Opening secure login...</p>
         </div>
       </div>
     </div>
