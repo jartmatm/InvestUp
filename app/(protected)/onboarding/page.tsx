@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
@@ -550,16 +551,13 @@ function MockProjectCard({
             <div className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/20 text-white backdrop-blur-md">
               <IconHeart />
             </div>
-          </div>
-          <div className="mt-2.5 space-y-2">
-            <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-slate-800">{title}</p>
-            <div className="flex items-center justify-between gap-2">
-              <FloatingBadge tone="emerald" className="px-2 py-1 text-[10px]">
-                <IconTrendUp />
-                {rate}
-              </FloatingBadge>
-              <span className="text-[10px] text-slate-400">Interest rate</span>
+            <div className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/18 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+              <IconTrendUp />
+              {rate}
             </div>
+          </div>
+          <div className="mt-2.5">
+            <p className="line-clamp-2 text-[12px] font-semibold leading-4 text-slate-800">{title}</p>
           </div>
         </div>
 
@@ -679,6 +677,30 @@ function SceneShell({
 
 function FundingGauge({ progress }: { progress: number }) {
   const [startColor, endColor] = getGaugeColors(progress);
+  const [displayedProgress, setDisplayedProgress] = useState(0);
+
+  useEffect(() => {
+    let frameId = 0;
+    let startAt: number | null = null;
+    const duration = 1200;
+
+    const tick = (timestamp: number) => {
+      if (startAt === null) startAt = timestamp;
+      const elapsed = timestamp - startAt;
+      const ratio = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - ratio, 3);
+      setDisplayedProgress(progress * eased);
+      if (ratio < 1) {
+        frameId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [progress]);
 
   return (
     <div className="relative">
@@ -722,7 +744,7 @@ function FundingGauge({ progress }: { progress: number }) {
 
       <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
         <p className="text-[10px] uppercase tracking-[0.24em] text-white/55">Funding progress</p>
-        <p className="mt-2 text-[2rem] font-semibold tracking-tight text-white">{progress.toFixed(0)}%</p>
+        <p className="mt-2 text-[2rem] font-semibold tracking-tight text-white">{displayedProgress.toFixed(0)}%</p>
       </div>
     </div>
   );
@@ -751,12 +773,18 @@ function WalletScene() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2E90FA_0%,#6B39F4_100%)] text-sm font-semibold text-white shadow-[0_14px_28px_rgba(107,57,244,0.18)]">
-              JS
+            <div className="relative h-11 w-11 overflow-hidden rounded-full border border-white/70 shadow-[0_14px_28px_rgba(107,57,244,0.18)]">
+              <Image
+                src="/onboarding/julia-roberts-onboarding.jpeg"
+                alt="Julia Roberts"
+                fill
+                sizes="44px"
+                className="object-cover"
+              />
             </div>
             <div>
               <p className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Hello, investor</p>
-              <p className="text-sm font-semibold text-slate-900">Jessica Sanchez</p>
+              <p className="text-sm font-semibold text-slate-900">Julia Roberts</p>
             </div>
           </div>
 
@@ -775,7 +803,7 @@ function WalletScene() {
             <div>
               <p className="text-[10px] uppercase tracking-[0.24em] text-white/68">Available</p>
               <div className="mt-2 flex items-end gap-1">
-                <span className="text-[2rem] font-semibold tracking-tight">$3.03</span>
+                <span className="text-[2rem] font-semibold tracking-tight">$731.04</span>
                 <span className="pb-1 text-sm font-medium text-white/80">USD</span>
               </div>
             </div>
@@ -786,7 +814,7 @@ function WalletScene() {
           </div>
 
           <div className="mt-4 rounded-full border border-white/15 bg-white/14 px-3 py-2 text-[10px] font-semibold text-white/88 backdrop-blur-md">
-            Active: 1 • Avg rate: 25.0% • Earning: $95
+            Active: 17 • Avg rate: 18.3% • Earnings: $5.200
           </div>
         </div>
 
@@ -856,13 +884,11 @@ function WithdrawScene() {
         transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         className={cn(SURFACE_CLASSNAME, 'p-3.5')}
       >
-        <p className="text-[10px] uppercase tracking-[0.24em] text-[#6B39F4]/60">Temporary manual payout</p>
-        <div className="mt-1 flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[1.35rem] font-semibold tracking-tight text-slate-900">Withdraw funds</h3>
             <p className="mt-1 text-[12px] text-slate-500">Verified steps keep every payout safer and clearer.</p>
           </div>
-          <FloatingBadge tone="emerald">Lvl 3</FloatingBadge>
         </div>
 
         <div className="mt-3 rounded-[22px] border border-amber-200/80 bg-[linear-gradient(180deg,rgba(255,251,235,0.96)_0%,rgba(255,247,237,0.92)_100%)] p-3 text-amber-700 shadow-[0_10px_24px_rgba(245,158,11,0.08)]">
@@ -877,12 +903,14 @@ function WithdrawScene() {
         </div>
 
         <div className="mt-3 grid gap-2">
-          <div className="flex items-center justify-between rounded-[20px] border border-white/85 bg-white/82 px-3 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+          <div className="flex items-center justify-between gap-3 rounded-[20px] border border-white/85 bg-white/82 px-3 py-3 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
             <div>
               <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">Available balance</p>
               <p className="mt-1 text-[12px] font-medium text-slate-700">USD ready to withdraw from your wallet.</p>
             </div>
-            <FloatingBadge tone="violet">3.03 USD</FloatingBadge>
+            <div className="flex min-w-[134px] justify-center rounded-full border border-[#D9CCFF] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(245,239,255,0.96)_100%)] px-4 py-2 text-[11px] font-semibold text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.08)]">
+              $731.04 USD
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -1078,13 +1106,13 @@ function MarketplaceScene() {
           </div>
         </div>
 
-        <div className="mt-3 overflow-hidden rounded-[24px] border border-white/65 bg-white/28 p-1.5 backdrop-blur-sm">
+        <div className="mt-3 h-[378px] overflow-hidden rounded-[24px] border border-white/65 bg-white/28 p-1.5 backdrop-blur-sm">
           <motion.div
             animate={{
-              y: marketplacePhase === 'reset' ? 0 : -196,
+              y: marketplacePhase === 'reset' ? 0 : -362,
             }}
             transition={{
-              duration: marketplacePhase === 'scroll' ? 2 : marketplacePhase === 'reset' ? 0.9 : 0.35,
+              duration: marketplacePhase === 'scroll' ? 2 : marketplacePhase === 'reset' ? 1.15 : 0.5,
               ease: [0.22, 1, 0.36, 1],
             }}
             className="grid grid-cols-2 gap-2.5"
@@ -1118,7 +1146,7 @@ function DashboardScene() {
           <div className="h-16 w-16 rounded-[18px] bg-[linear-gradient(135deg,#B45309_0%,#F59E0B_100%)] shadow-[0_12px_28px_rgba(245,158,11,0.28)]" />
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.24em] text-white/45">Venture dashboard</p>
-            <p className="mt-1 truncate text-base font-semibold">Empanadas Play</p>
+            <p className="mt-1 truncate text-base font-semibold">Richmond Flowers</p>
             <p className="mt-1 text-[11px] text-white/65">Track fundraising and investor repayments.</p>
           </div>
           <div className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white/80">
@@ -1258,7 +1286,7 @@ export default function OnboardingPage() {
   };
 
   const skipSlides = () => {
-    completeSlides();
+    router.push('/login');
   };
 
   const handleTouchStart = (clientX: number) => {
@@ -1458,8 +1486,8 @@ export default function OnboardingPage() {
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.48),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(167,139,250,0.14),transparent_42%)]" />
                     <div className="absolute inset-x-6 top-0 h-16 rounded-full bg-white/35 blur-3xl" />
 
-                    <div className="relative flex items-start justify-between gap-4">
-                      <div className="max-w-[78%]">
+                    <div className="relative">
+                      <div className="mx-auto max-w-[84%] text-center">
                         <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#6B39F4]/62">
                           {activeSlide.eyebrow}
                         </p>
@@ -1472,7 +1500,7 @@ export default function OnboardingPage() {
                       <button
                         type="button"
                         onClick={skipSlides}
-                        className="rounded-full border border-white/65 bg-white/42 px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
+                        className="absolute right-0 top-0 rounded-full border border-white/65 bg-white/42 px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
                       >
                         Skip
                       </button>
