@@ -23,27 +23,6 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
-function MenuDotsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function ArrowLaunchIcon() {
   return (
     <svg
@@ -397,7 +376,7 @@ export default function InvestPage() {
     return (
       <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.10),transparent_36%),linear-gradient(180deg,#F7F8FC_0%,#F4F6FB_100%)] pb-36 text-[#0F172A]">
         <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
-          <header className="mb-7 flex items-start justify-between gap-4">
+          <header className="mb-7 flex items-start gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-0.5 text-[0.95rem] font-semibold tracking-[-0.03em] text-[#141B34]">
                 <span>Invest</span>
@@ -412,13 +391,6 @@ export default function InvestPage() {
               </p>
             </div>
 
-            <Link
-              href="/profile"
-              aria-label="Open profile"
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-500 shadow-[0_18px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl"
-            >
-              <MenuDotsIcon />
-            </Link>
           </header>
 
           <div className="animate-pulse rounded-[30px] bg-[linear-gradient(135deg,#7C69FF_0%,#5F4DFF_45%,#5641E7_100%)] px-5 pb-5 pt-5 shadow-[0_26px_60px_rgba(99,77,255,0.24)]">
@@ -437,7 +409,7 @@ export default function InvestPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.10),transparent_36%),linear-gradient(180deg,#F7F8FC_0%,#F4F6FB_100%)] pb-36 text-[#0F172A]">
       <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
-        <header className="mb-7 flex items-start justify-between gap-4">
+        <header className="mb-7 flex items-start gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-0.5 text-[0.95rem] font-semibold tracking-[-0.03em] text-[#141B34]">
               <span>Invest</span>
@@ -452,13 +424,6 @@ export default function InvestPage() {
             </p>
           </div>
 
-          <Link
-            href="/profile"
-            aria-label="Open profile"
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-500 shadow-[0_18px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl transition hover:text-[#6B39F4]"
-          >
-            <MenuDotsIcon />
-          </Link>
         </header>
 
         <div className="space-y-4">

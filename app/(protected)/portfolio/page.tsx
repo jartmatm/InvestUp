@@ -275,27 +275,6 @@ const getProgressAccentColor = (progress: number) => {
   return mixColors('#8CD95A', '#28C76F', (progress - 70) / 30);
 };
 
-function TopBarButton({
-  children,
-  onClick,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={ariaLabel}
-      className="flex h-12 w-12 items-center justify-center rounded-full border border-white/90 bg-white/88 text-[#6B39F4] shadow-[0_18px_34px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
-    >
-      {children}
-    </button>
-  );
-}
-
 function SectionSurface({
   children,
   className = '',
@@ -347,44 +326,6 @@ function StatusBadge({
     <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${className}`}>
       {children}
     </span>
-  );
-}
-
-function IconClose() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 6 12 12" />
-      <path d="M18 6 6 18" />
-    </svg>
-  );
-}
-
-function IconMenu() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
   );
 }
 
@@ -913,14 +854,6 @@ export default function PortfolioPage() {
   }
 
   const canCreateNewProject = myProjects.length === 0;
-  const handleClose = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-
-    router.push('/home');
-  };
 
   return (
     <>
@@ -930,31 +863,9 @@ export default function PortfolioPage() {
         <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          <header className="flex flex-col gap-5">
-            <div className="flex items-center justify-between gap-3">
-              <TopBarButton onClick={handleClose} ariaLabel="Close portfolio">
-                <IconClose />
-              </TopBarButton>
-
-              <div className="flex items-center gap-0.5 text-[1.7rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
-                <span>Invest</span>
-                <span className="text-[#6B39F4]">App</span>
-                <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
-              </div>
-
-              <TopBarButton
-                onClick={() => router.push('/profile/settings')}
-                ariaLabel="Open settings"
-              >
-                <IconMenu />
-              </TopBarButton>
-            </div>
-
+          <header className="flex flex-col gap-2">
             <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-                InvestApp
-              </p>
-              <h1 className="mt-1 text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
+              <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
                 Entrepreneur portfolio
               </h1>
               <p className="mt-1 text-sm leading-6 text-[#7B879C]">
@@ -1289,7 +1200,7 @@ export default function PortfolioPage() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         <MetricRow
                           icon={<IconSector />}
                           label="Sector"

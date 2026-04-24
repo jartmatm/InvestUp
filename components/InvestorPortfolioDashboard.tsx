@@ -218,27 +218,6 @@ const buildSmoothPath = (points: number[]) => {
   return path;
 };
 
-function MenuDotsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function ChevronRightIcon() {
   return (
     <svg
@@ -638,22 +617,25 @@ export default function InvestorPortfolioDashboard() {
     () => items.reduce((sum, item) => sum + item.projectedReturnUsdc, 0),
     [items]
   );
+  const [portfolioSnapshotTime] = useState(() => Date.now());
 
   const monthlyGrowth = useMemo(() => {
-    const now = Date.now();
     const last30 = items
-      .filter((item) => now - new Date(item.createdAt).getTime() <= 1000 * 60 * 60 * 24 * 30)
+      .filter(
+        (item) =>
+          portfolioSnapshotTime - new Date(item.createdAt).getTime() <= 1000 * 60 * 60 * 24 * 30
+      )
       .reduce((sum, item) => sum + item.amountInvested, 0);
     const previous30 = items
       .filter((item) => {
-        const diff = now - new Date(item.createdAt).getTime();
+        const diff = portfolioSnapshotTime - new Date(item.createdAt).getTime();
         return diff > 1000 * 60 * 60 * 24 * 30 && diff <= 1000 * 60 * 60 * 24 * 60;
       })
       .reduce((sum, item) => sum + item.amountInvested, 0);
 
     if (previous30 <= 0) return 0;
     return clamp(((last30 - previous30) / previous30) * 100, -99.9, 199.9);
-  }, [items]);
+  }, [items, portfolioSnapshotTime]);
 
   const sparklinePoints = useMemo(() => buildSparklineSeries(sortedItems), [sortedItems]);
 
@@ -673,7 +655,7 @@ export default function InvestorPortfolioDashboard() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.10),transparent_36%),linear-gradient(180deg,#F7F8FC_0%,#F4F6FB_100%)] pb-36 text-[#0F172A]">
       <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
-        <header className="mb-7 flex items-start justify-between gap-4">
+        <header className="mb-7 flex items-start gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-0.5 text-[0.95rem] font-semibold tracking-[-0.03em] text-[#141B34]">
               <span>Invest</span>
@@ -688,13 +670,6 @@ export default function InvestorPortfolioDashboard() {
             </p>
           </div>
 
-          <Link
-            href="/profile"
-            aria-label="Open profile"
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/80 text-slate-500 shadow-[0_18px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl transition hover:text-[#6B39F4]"
-          >
-            <MenuDotsIcon />
-          </Link>
         </header>
 
         {loading ? <DashboardSkeleton /> : null}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
@@ -89,27 +88,6 @@ const formatAmount = (value: string) => {
   const numberValue = Number(normalized);
   return Number.isNaN(numberValue) ? '' : numberValue.toFixed(2);
 };
-
-function MenuDotsIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.9"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
 
 function RefreshIcon() {
   return (
@@ -490,7 +468,7 @@ export default function WalletTransferPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.08),transparent_36%),linear-gradient(180deg,#F8F8FD_0%,#F5F6FB_100%)] pb-32 text-[#0F172A]">
       <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
-        <header className="mb-7 flex items-start justify-between gap-4">
+        <header className="mb-7 flex items-start gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-0.5 text-[0.95rem] font-semibold tracking-[-0.03em] text-[#141B34]">
               <span>Invest</span>
@@ -505,13 +483,6 @@ export default function WalletTransferPage() {
             </p>
           </div>
 
-          <Link
-            href="/profile"
-            aria-label="Open profile"
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/80 bg-white/82 text-slate-500 shadow-[0_18px_32px_rgba(15,23,42,0.08)] backdrop-blur-xl transition hover:text-[#6B39F4]"
-          >
-            <MenuDotsIcon />
-          </Link>
         </header>
 
         <div className="space-y-5">

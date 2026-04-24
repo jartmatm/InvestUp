@@ -27,27 +27,6 @@ function IconChevronRight({ className }: { className?: string }) {
   );
 }
 
-function IconMenu() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function IconEditProfile() {
   return (
     <svg
@@ -273,21 +252,12 @@ export default function ProfilePage() {
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
       <div className="relative mx-auto w-full max-w-xl px-5 pb-8 pt-10 sm:px-6">
-        <header className="mb-6 flex items-center justify-between gap-4">
+        <header className="mb-6 flex items-center gap-4">
           <div className="flex items-center gap-0.5 text-[2rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
             <span>Invest</span>
             <span className="text-[#6B39F4]">App</span>
             <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
           </div>
-
-          <button
-            type="button"
-            aria-label="Open profile menu"
-            onClick={() => router.push('/profile/settings')}
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/86 text-[#6B39F4] shadow-[0_18px_36px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
-          >
-            <IconMenu />
-          </button>
         </header>
 
         <section className="relative mb-7 overflow-hidden rounded-[34px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,247,255,0.88)_100%)] px-6 py-8 text-center shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl">

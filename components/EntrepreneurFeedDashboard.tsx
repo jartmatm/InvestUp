@@ -288,27 +288,6 @@ function Avatar({
   );
 }
 
-function IconMenu() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function IconWallet() {
   return (
     <svg
@@ -906,7 +885,7 @@ export default function EntrepreneurFeedDashboard() {
         <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-10">
-          <header className="flex items-start justify-between gap-4">
+          <header className="flex items-start gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-0.5 text-[1.9rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
                 <span>Invest</span>
@@ -924,14 +903,6 @@ export default function EntrepreneurFeedDashboard() {
               </p>
             </div>
 
-            <button
-              type="button"
-              aria-label="Open menu"
-              onClick={() => router.push('/profile/settings')}
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/86 text-[#6B39F4] shadow-[0_18px_36px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
-            >
-              <IconMenu />
-            </button>
           </header>
 
           {loading ? (

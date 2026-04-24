@@ -164,27 +164,6 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
-function IconMenu() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function IconDocument() {
   return (
     <svg
@@ -547,7 +526,7 @@ export default function HistoryPage() {
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
       <div className="relative mx-auto w-full max-w-xl px-4 pb-10 pt-10 sm:px-5">
-        <header className="mb-7 flex items-start justify-between gap-4 px-1">
+        <header className="mb-7 flex items-start gap-4 px-1">
           <div className="min-w-0">
             <div className="flex items-center gap-0.5 text-[2rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
               <span>Invest</span>
@@ -565,14 +544,6 @@ export default function HistoryPage() {
             </p>
           </div>
 
-          <button
-            type="button"
-            aria-label="Open menu"
-            onClick={() => router.push('/profile/settings')}
-            className="mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/86 text-[#6B39F4] shadow-[0_18px_36px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
-          >
-            <IconMenu />
-          </button>
         </header>
 
         <div className="space-y-4">

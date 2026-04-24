@@ -33,44 +33,6 @@ type FeedProject = {
 
 type SortKey = 'latest' | 'rate' | 'progress' | 'goal';
 
-function IconClose() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M18 6L6 18" />
-      <path d="M6 6l12 12" />
-    </svg>
-  );
-}
-
-function IconMenu() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M7 7H17" />
-      <path d="M10 12H17" />
-      <path d="M13 17H17" />
-      <path d="M7 7H7.01" />
-      <path d="M7 12H7.01" />
-      <path d="M7 17H7.01" />
-    </svg>
-  );
-}
-
 function IconBell() {
   return (
     <svg
@@ -428,28 +390,10 @@ export default function FeedPage() {
       ) : null}
 
       <div className="relative mx-auto flex h-screen w-full max-w-md flex-col px-4 pb-[116px] pt-4">
-        <header className="mb-4 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => router.push('/home')}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#1B2435] shadow-[0_18px_40px_rgba(31,41,72,0.10)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
-            aria-label="Close marketplace"
-          >
-            <IconClose />
-          </button>
-
+        <header className="mb-4 flex items-center justify-center">
           <p className="text-[0.92rem] font-semibold tracking-[-0.03em] text-[#2A3245]">
             investup.onrender.com
           </p>
-
-          <button
-            type="button"
-            onClick={() => router.push('/profile')}
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#6B39F4] shadow-[0_18px_40px_rgba(31,41,72,0.10)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
-            aria-label="Open menu"
-          >
-            <IconMenu />
-          </button>
         </header>
 
         <section className={`${SURFACE_CLASSNAME} relative z-20 flex min-h-0 flex-1 flex-col overflow-visible p-3.5`}>

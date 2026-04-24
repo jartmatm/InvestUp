@@ -783,7 +783,7 @@ export default function PersonalDataPage() {
 
   return (
     <>
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-[13.5rem] text-[#101828]">
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-28 top-72 h-64 w-64 rounded-full bg-[#B9A8FF]/14 blur-3xl" />
 
@@ -1133,6 +1133,23 @@ export default function PersonalDataPage() {
                   </span>
                 </div>
               </FieldShell>
+
+              {status ? (
+                <div className={`rounded-[22px] border px-4 py-3 text-sm leading-6 ${statusClassName}`}>
+                  {status}
+                </div>
+              ) : null}
+
+              <div className="rounded-[26px] border border-[#ECE8FF] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(246,244,255,0.98)_100%)] p-3 shadow-[0_18px_36px_rgba(31,38,64,0.08)]">
+                <button
+                  type="button"
+                  onClick={saveProfile}
+                  disabled={saving || loadingProfile}
+                  className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? 'Saving...' : 'Save changes'}
+                </button>
+              </div>
             </div>
           </Surface>
 
@@ -1143,27 +1160,6 @@ export default function PersonalDataPage() {
           ) : null}
         </div>
       </main>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-[5.75rem] z-20">
-        <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-col gap-3 px-4">
-          {status ? (
-            <div className={`rounded-[24px] border px-4 py-3 text-sm leading-6 shadow-[0_16px_34px_rgba(31,38,64,0.08)] backdrop-blur-xl ${statusClassName}`}>
-              {status}
-            </div>
-          ) : null}
-
-          <div className="rounded-[28px] border border-white/85 bg-white/88 p-3 shadow-[0_24px_60px_rgba(31,38,64,0.12)] backdrop-blur-2xl">
-            <button
-              type="button"
-              onClick={saveProfile}
-              disabled={saving || loadingProfile}
-              className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {saving ? 'Saving...' : 'Save changes'}
-            </button>
-          </div>
-        </div>
-      </div>
 
       <BottomNav />
     </>
