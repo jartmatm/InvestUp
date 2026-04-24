@@ -903,11 +903,11 @@ function WalletScene() {
 }
 
 function WithdrawScene() {
-  const [selectedMethod, setSelectedMethod] = useState<'bank' | 'breve'>('bank');
+  const [selectedMethod, setSelectedMethod] = useState<'bank' | 'Digital'>('bank');
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
-      setSelectedMethod((previous) => (previous === 'bank' ? 'breve' : 'bank'));
+      setSelectedMethod((previous) => (previous === 'bank' ? 'Digital' : 'bank'));
     }, 2000);
 
     return () => {
@@ -962,14 +962,14 @@ function WithdrawScene() {
 
             <WithdrawalMethodCard
               icon={<IconSend />}
-              title="Breve"
-              subtitle="Single key payout"
-              selected={selectedMethod === 'breve'}
+              title="Digital"
+              subtitle="Instant digital payout"
+              selected={selectedMethod === 'Digital'}
             />
           </div>
 
           <div className="grid gap-2">
-            <MockField icon={<IconBank />} label="Select bank" value="JPMorgan Chase" />
+            <MockField icon={<IconBank />} label="Select bank" value="Commonwealth Bank" />
             <MockField icon={<IconWallet />} label="Account number" value="**** 3307" />
             <MockField icon={<IconDownload />} label="Amount in USDC" value="100.00" />
           </div>
@@ -1044,49 +1044,49 @@ function MarketplaceScene() {
 
   const marketplaceCards = [
     {
-      title: 'Pequeno negocio de empanadas en cuadrra play',
+      title: 'Artisanal premium bakery',
       rate: '16% EA',
       palette: 'amber' as const,
       imageSrc: '/onboarding/empanadas.jpeg',
     },
     {
-      title: 'Plataforma educativa online para habilidades digitales',
+      title: 'Online education platform',
       rate: '18% EA',
       palette: 'violet' as const,
       imageSrc: '/onboarding/plataforma_educativa.jpg',
     },
     {
-      title: 'Restaurante saludable con ingredientes locales',
+      title: 'Healthy restaurant',
       rate: '15% EA',
       palette: 'emerald' as const,
       imageSrc: '/onboarding/restaurante.webp',
     },
     {
-      title: 'Tienda sostenible de moda urbana',
+      title: 'Sustainable streetwear shop',
       rate: '17% EA',
       palette: 'blue' as const,
       imageSrc: '/onboarding/tienda_moda.jpeg',
     },
     {
-      title: 'Richmond Flowers para eventos y suscripciones locales',
+      title: 'Richmond Flowers for events',
       rate: '14% EA',
       palette: 'emerald' as const,
       imageSrc: '/onboarding/floristeria.jpeg',
     },
     {
-      title: 'Marketplace B2B para suministro de comercios locales',
+      title: 'B2B supply marketplace',
       rate: '19% EA',
       palette: 'violet' as const,
       imageSrc: '/onboarding/marketplace_b2b.jpg',
     },
     {
-      title: 'Cadena de cafeterias compactas para zonas financieras',
+      title: 'Compact coffee shop chain',
       rate: '13% EA',
       palette: 'amber' as const,
       imageSrc: '/onboarding/empanadas.jpeg',
     },
     {
-      title: 'Plataforma logística para entregas urbanas sostenibles',
+      title: 'Logistics delivery platform',
       rate: '20% EA',
       palette: 'blue' as const,
       imageSrc: '/onboarding/marketplace_b2b.jpg',
@@ -1189,9 +1189,9 @@ function DashboardScene() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-[30px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_30%),linear-gradient(135deg,#4C1D95_0%,#6B39F4_48%,#2563EB_100%)] p-3.5 text-white shadow-[0_24px_54px_rgba(88,28,135,0.28)]"
+        className="rounded-[30px] border border-white/35 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.34),transparent_30%),linear-gradient(135deg,rgba(76,29,149,0.78)_0%,rgba(107,57,244,0.72)_48%,rgba(37,99,235,0.68)_100%)] p-3.5 text-white shadow-[0_24px_54px_rgba(88,28,135,0.22)] backdrop-blur-2xl"
       >
-        <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/[0.06] p-3 backdrop-blur-md">
+        <div className="flex items-center gap-3 rounded-[22px] border border-white/26 bg-[linear-gradient(180deg,rgba(255,255,255,0.2)_0%,rgba(255,255,255,0.1)_100%)] p-3 shadow-[0_18px_34px_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <div className="relative h-16 w-16 overflow-hidden rounded-[18px] shadow-[0_12px_28px_rgba(245,158,11,0.28)]">
             <Image
               src="/onboarding/floristeria.jpeg"
@@ -1211,7 +1211,7 @@ function DashboardScene() {
           </div>
         </div>
 
-        <div className="mt-3 rounded-[26px] border border-white/10 bg-white/[0.07] p-3 backdrop-blur-md">
+        <div className="mt-3 rounded-[26px] border border-white/24 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.1)_100%)] p-3 shadow-[0_18px_34px_rgba(255,255,255,0.08)] backdrop-blur-xl">
           <FundingGauge progress={72} />
 
           <div className="mt-1 flex items-center justify-between text-[11px] text-white/72">
@@ -1538,8 +1538,8 @@ export default function OnboardingPage() {
               >
                 <div className="min-h-0 flex-[0_0_52%]">{renderScene(activeSlide.id)}</div>
 
-                <div className="min-h-[236px] flex-[0_0_42%]">
-                  <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-[32px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.14)_100%)] p-5 shadow-[0_22px_54px_rgba(85,65,165,0.12)] ring-1 ring-white/35 backdrop-blur-[26px]">
+                <div className="min-h-[212px] flex-[0_0_37%]">
+                  <div className="relative flex h-full flex-col justify-between overflow-hidden rounded-[24px] border border-white/55 bg-[linear-gradient(180deg,rgba(255,255,255,0.34)_0%,rgba(255,255,255,0.14)_100%)] px-4 py-4 shadow-[0_22px_54px_rgba(85,65,165,0.12)] ring-1 ring-white/35 backdrop-blur-[26px]">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.48),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(167,139,250,0.14),transparent_42%)]" />
                     <div className="absolute inset-x-6 top-0 h-16 rounded-full bg-white/35 blur-3xl" />
 
@@ -1563,7 +1563,7 @@ export default function OnboardingPage() {
                       </button>
                     </div>
 
-                    <div className="relative mt-6 flex items-end justify-between gap-3">
+                    <div className="relative mt-4 flex items-end justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <div className="rounded-full bg-[#F3EFFF]/92 px-2.5 py-1 text-[10px] font-semibold text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.08)]">
                           {currentSlide + 1}/{ONBOARDING_SLIDES.length}
