@@ -3,9 +3,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import Button from '@/components/Button';
-import Input from '@/components/Input';
-import PageFrame from '@/components/PageFrame';
+import {
+  ProfileFieldShell,
+  ProfileInfoTile,
+  ProfileNotice,
+  ProfilePageShell,
+  ProfilePrimaryButton,
+  ProfileSurface,
+  profileControlClassName,
+} from '@/components/profile/ProfilePageShell';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   fetchCurrentUserProfile,
@@ -22,11 +28,6 @@ type SocialForm = {
   website: string;
 };
 
-type FieldProps = {
-  label: string;
-  children: ReactNode;
-};
-
 const emptyForm: SocialForm = {
   facebook: '',
   instagram: '',
@@ -37,16 +38,152 @@ const emptyForm: SocialForm = {
   website: '',
 };
 
-function Field({ label, children }: FieldProps) {
+const getStatusTone = (message: string) => {
+  if (/could not|error/i.test(message)) return 'danger' as const;
+  if (/updated|success/i.test(message)) return 'success' as const;
+  return 'neutral' as const;
+};
+
+function IconUsers() {
   return (
-    <div className="px-5 py-5">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-        {label}
-      </p>
-      <div className="mt-3">{children}</div>
-    </div>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-1A3.5 3.5 0 0 0 8 18.5V20" />
+      <circle cx="12" cy="9" r="3" />
+      <path d="M19 20v-1a2.8 2.8 0 0 0-2.3-2.8" />
+      <path d="M5 20v-1A2.8 2.8 0 0 1 7.3 16.2" />
+    </svg>
   );
 }
+
+function IconShield() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 3c2 1.4 4.1 2.4 6.7 3a1.2 1.2 0 0 1 .9 1.2c-.3 5.7-2.4 10.8-7.6 12.8-5.2-2-7.3-7.1-7.6-12.8A1.2 1.2 0 0 1 5.3 6C7.9 5.4 10 4.4 12 3Z" />
+      <path d="m9.4 12.3 1.8 1.8 3.8-4" />
+    </svg>
+  );
+}
+
+function IconCamera() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="7" width="16" height="11" rx="3" />
+      <path d="M9 7 10.2 5.5h3.6L15 7" />
+      <circle cx="12" cy="12.5" r="2.8" />
+    </svg>
+  );
+}
+
+function IconMessage() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 18.5 3.5 20V6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 18 17H8.5Z" />
+      <path d="M8 9.5h8" />
+      <path d="M8 12.5h6" />
+    </svg>
+  );
+}
+
+function IconPlay() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="5" width="16" height="14" rx="3" />
+      <path d="m10 9 5 3-5 3Z" />
+    </svg>
+  );
+}
+
+function IconBriefcase() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h11A2.5 2.5 0 0 1 20 8.5v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 15.5Z" />
+      <path d="M9 6V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v1" />
+      <path d="M4 11h16" />
+    </svg>
+  );
+}
+
+function IconGlobe() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M4 12h16" />
+      <path d="M12 4a12 12 0 0 1 0 16" />
+      <path d="M12 4a12 12 0 0 0 0 16" />
+    </svg>
+  );
+}
+
+const FIELD_CONFIG: Array<{
+  key: keyof SocialForm;
+  label: string;
+  placeholder: string;
+  icon: ReactNode;
+}> = [
+  { key: 'facebook', label: 'Facebook', placeholder: 'Facebook URL', icon: <IconUsers /> },
+  { key: 'instagram', label: 'Instagram', placeholder: 'Instagram handle', icon: <IconCamera /> },
+  { key: 'x', label: 'X (Twitter)', placeholder: 'X handle', icon: <IconMessage /> },
+  { key: 'tiktok', label: 'TikTok', placeholder: 'TikTok handle', icon: <IconPlay /> },
+  { key: 'linkedin', label: 'LinkedIn', placeholder: 'LinkedIn URL', icon: <IconBriefcase /> },
+  { key: 'youtube', label: 'YouTube', placeholder: 'YouTube channel', icon: <IconPlay /> },
+  { key: 'website', label: 'Website', placeholder: 'https://', icon: <IconGlobe /> },
+];
 
 export default function SocialMediaPage() {
   const router = useRouter();
@@ -110,7 +247,7 @@ export default function SocialMediaPage() {
       setLoadingProfile(false);
     };
 
-    loadProfile();
+    void loadProfile();
   }, [getAccessToken, user?.id]);
 
   const updateForm = (key: keyof SocialForm, value: string) => {
@@ -172,145 +309,82 @@ export default function SocialMediaPage() {
   };
 
   return (
-    <PageFrame
+    <ProfilePageShell
       title="Social Media"
-      subtitle="Show the public channels that validate your profile"
-      showBackButton
-      backHref="/profile"
+      subtitle="Show the public channels that validate your profile."
+      footer={
+        <>
+          {status ? <ProfileNotice tone={getStatusTone(status)}>{status}</ProfileNotice> : null}
+          <ProfileSurface className="p-3">
+            <ProfilePrimaryButton onClick={saveSocialMedia} disabled={saving || loadingProfile}>
+              {saving ? 'Saving...' : 'Save social media'}
+            </ProfilePrimaryButton>
+          </ProfileSurface>
+        </>
+      }
     >
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(145deg,rgba(107,57,244,0.16),rgba(255,255,255,0.86),rgba(76,110,245,0.12))] px-5 py-5 shadow-[0_16px_38px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
-                Social profiles
-              </p>
-              <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
-                Keep your public presence up to date
-              </h2>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-600">
-                Add the channels that help investors, founders, and partners verify your identity
-                and credibility across the web.
-              </p>
-            </div>
+      <ProfileSurface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
+              Social profiles
+            </p>
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
+              Keep your public presence up to date
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#7B879C]">
+              Add the channels that help investors, founders and partners verify your identity and credibility across the web.
+            </p>
+          </div>
 
-            <div className="grid gap-3 sm:min-w-[220px]">
-              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-                  Connected
-                </p>
-                <p className="mt-2 text-sm font-semibold text-gray-900">
-                  {connectedProfiles} profile{connectedProfiles === 1 ? '' : 's'} linked
-                </p>
-              </div>
-              <div className="rounded-[22px] border border-white/40 bg-white/72 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-                  Visibility
-                </p>
-                <p className="mt-2 text-sm font-semibold text-gray-900">
-                  Public trust signals ready
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-col gap-3">
+            <ProfileInfoTile
+              icon={<IconUsers />}
+              eyebrow="Connected"
+              title={`${connectedProfiles} profile${connectedProfiles === 1 ? '' : 's'} linked`}
+              description="Active public channels connected to your account."
+              tone="purple"
+            />
+            <ProfileInfoTile
+              icon={<IconShield />}
+              eyebrow="Visibility"
+              title="Public trust signals ready"
+              description="Prioritize LinkedIn, website and one active social network."
+              tone="green"
+            />
           </div>
         </div>
+      </ProfileSurface>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Best practice
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
-              Use public URLs or handles that are actively maintained so counterparties can verify
-              your identity faster.
-            </p>
-          </div>
-          <div className="rounded-[22px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Recommended
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-gray-600">
-              Prioritize LinkedIn, website, and one active social network to strengthen your
-              profile without overwhelming the page.
-            </p>
-          </div>
-        </div>
+      {loadingProfile ? (
+        <ProfileNotice>Loading your social media settings...</ProfileNotice>
+      ) : null}
 
-        {loadingProfile ? <p className="text-sm text-slate-500">Loading profile...</p> : null}
-
-        <div className="rounded-[28px] border border-white/30 bg-white/20 shadow-[0_14px_34px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <div className="border-b border-white/20 px-5 py-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
+      <ProfileSurface>
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
               Public channels
             </p>
-            <h3 className="mt-2 text-lg font-semibold text-gray-900">
+            <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
               Channels visible from your profile
             </h3>
           </div>
 
-          <div className="divide-y divide-white/20 overflow-hidden">
-            <Field label="Facebook">
-              <Input
-                value={form.facebook}
-                onChange={(value) => updateForm('facebook', value)}
-                placeholder="Facebook URL"
-              />
-            </Field>
-            <Field label="Instagram">
-              <Input
-                value={form.instagram}
-                onChange={(value) => updateForm('instagram', value)}
-                placeholder="Instagram handle"
-              />
-            </Field>
-            <Field label="X (Twitter)">
-              <Input
-                value={form.x}
-                onChange={(value) => updateForm('x', value)}
-                placeholder="X handle"
-              />
-            </Field>
-            <Field label="TikTok">
-              <Input
-                value={form.tiktok}
-                onChange={(value) => updateForm('tiktok', value)}
-                placeholder="TikTok handle"
-              />
-            </Field>
-            <Field label="LinkedIn">
-              <Input
-                value={form.linkedin}
-                onChange={(value) => updateForm('linkedin', value)}
-                placeholder="LinkedIn URL"
-              />
-            </Field>
-            <Field label="YouTube">
-              <Input
-                value={form.youtube}
-                onChange={(value) => updateForm('youtube', value)}
-                placeholder="YouTube channel"
-              />
-            </Field>
-            <Field label="Website">
-              <Input
-                value={form.website}
-                onChange={(value) => updateForm('website', value)}
-                placeholder="https://"
-              />
-            </Field>
+          <div className="flex flex-col gap-3">
+            {FIELD_CONFIG.map((field) => (
+              <ProfileFieldShell key={field.key} label={field.label} icon={field.icon}>
+                <input
+                  value={form[field.key]}
+                  onChange={(event) => updateForm(field.key, event.target.value)}
+                  placeholder={field.placeholder}
+                  className={profileControlClassName}
+                />
+              </ProfileFieldShell>
+            ))}
           </div>
         </div>
-
-        <Button
-          onClick={saveSocialMedia}
-          disabled={saving || loadingProfile}
-          className="rounded-xl py-4 text-base !bg-[#6B39F4] !text-white shadow-[0_18px_38px_rgba(107,57,244,0.24)] hover:!bg-[#5B31CF]"
-        >
-          {saving ? 'Saving...' : 'Save social media'}
-        </Button>
-
-        {status ? <p className="text-xs text-slate-500">{status}</p> : null}
-      </div>
-    </PageFrame>
+      </ProfileSurface>
+    </ProfilePageShell>
   );
 }

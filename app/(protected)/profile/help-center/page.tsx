@@ -1,77 +1,131 @@
 'use client';
 
-import PageFrame from '@/components/PageFrame';
+import {
+  ProfileInfoTile,
+  ProfilePageShell,
+  ProfileSurface,
+} from '@/components/profile/ProfilePageShell';
+
+function MailIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="3.5" y="5.5" width="17" height="13" rx="3" />
+      <path d="m5.5 8 6.5 4.75L18.5 8" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4.5l3 1.5" />
+    </svg>
+  );
+}
+
+function HelpIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 4.1 1.9c-.8.7-1.6 1.2-1.6 2.4" />
+      <path d="M12 16.5h.01" />
+    </svg>
+  );
+}
 
 export default function HelpCenterPage() {
   return (
-    <PageFrame
+    <ProfilePageShell
       title="Help Center"
-      subtitle="Get support quickly for account, wallet, and platform questions"
-      showBackButton
-      backHref="/profile"
+      subtitle="Get support quickly for account, wallet and platform questions."
     >
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(140deg,rgba(107,57,244,0.14),rgba(255,255,255,0.84),rgba(74,108,247,0.12))] px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">Support</p>
-          <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
-            We are here to help you move faster
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-600">
-            Start with the FAQ for quick answers, then contact support with the details of your
-            issue so the team can help with more context.
-          </p>
-        </div>
+      <ProfileSurface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
+              Support
+            </p>
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
+              We are here to help you move faster
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#7B879C]">
+              Start with the FAQ for quick answers, then contact support with the details of your issue so the team can help with more context.
+            </p>
+          </div>
 
-        <div className="rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 text-sm text-gray-700 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <p className="leading-relaxed">
-            If you need assistance, our team is here to help. Browse the FAQ for quick answers, or
-            reach out using the support options below.
-          </p>
+          <ProfileInfoTile
+            icon={<ClockIcon />}
+            eyebrow="Response window"
+            title="Within 24 to 48 hours"
+            description="Share your user email, wallet address and a short description so we can help faster."
+            tone="blue"
+          />
         </div>
+      </ProfileSurface>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+      <ProfileSurface>
+        <div className="flex flex-col gap-3">
           <a
             href="mailto:support@investapp.app"
-            className="rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white/30"
+            className="rounded-[26px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_16px_32px_rgba(31,38,64,0.05)] transition hover:-translate-y-0.5"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Email Support
-            </p>
-            <p className="mt-2 text-sm font-semibold text-gray-900">support@investapp.app</p>
-            <p className="mt-2 text-xs leading-relaxed text-gray-500">
-              Best for account issues, wallet access questions, or profile updates.
-            </p>
-            <p className="mt-4 text-xs font-semibold text-[#6B39F4]">Send email →</p>
-          </a>
-          <div className="rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              Response Window
-            </p>
-            <p className="mt-2 text-sm font-semibold text-gray-900">Within 24 to 48 hours</p>
-            <p className="mt-2 text-xs leading-relaxed text-gray-500">
-              Share your user email, wallet address, and a short description so we can help faster.
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Need self-service help first?</p>
-              <p className="mt-1 text-xs text-gray-500">
-                Review common answers before opening a support request.
-              </p>
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F5F1FF] text-[#6B39F4]">
+                <MailIcon />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
+                  Email support
+                </p>
+                <p className="mt-1 text-sm font-semibold text-[#1C2336]">support@investapp.app</p>
+                <p className="mt-2 text-xs leading-5 text-[#7B879C]">
+                  Best for account issues, wallet access questions or profile updates.
+                </p>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => window.location.assign('/profile/faq')}
-              className="rounded-full bg-[#6B39F4] px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_28px_rgba(107,57,244,0.22)] transition hover:bg-[#5B31CF]"
-            >
-              Open FAQ
-            </button>
-          </div>
+          </a>
+
+          <ProfileInfoTile
+            icon={<HelpIcon />}
+            eyebrow="Self-service"
+            title="Check common answers first"
+            description="Review common questions before opening a support request."
+            tone="purple"
+          />
+
+          <a
+            href="/profile/faq"
+            className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5"
+          >
+            Open FAQ
+          </a>
         </div>
-      </div>
-    </PageFrame>
+      </ProfileSurface>
+    </ProfilePageShell>
   );
 }

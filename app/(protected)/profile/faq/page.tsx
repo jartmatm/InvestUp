@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import PageFrame from '@/components/PageFrame';
+import { ProfilePageShell, ProfileSurface } from '@/components/profile/ProfilePageShell';
 
 const FAQS = [
   {
@@ -37,7 +37,7 @@ const FAQS = [
   {
     question: 'Can I withdraw my capital at any time?',
     answer:
-      'Liquidity depends on each investment\'s smart contract terms. Once a project generates returns or reaches maturity, funds are released automatically to your wallet and can be converted to local currency through off-ramp partners.',
+      "Liquidity depends on each investment's smart contract terms. Once a project generates returns or reaches maturity, funds are released automatically to your wallet and can be converted to local currency through off-ramp partners.",
   },
   {
     question: 'What happens if I lose access to my account?',
@@ -60,7 +60,7 @@ function Chevron({ open }: { open: boolean }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className={`h-4 w-4 transition ${open ? 'rotate-180 text-[#6B39F4]' : 'text-gray-400'}`}
+      className={`h-4 w-4 transition ${open ? 'rotate-180 text-[#6B39F4]' : 'text-[#98A2B3]'}`}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -72,58 +72,95 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
+function QuestionIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9.5 9.5a2.5 2.5 0 1 1 4.1 1.9c-.8.7-1.6 1.2-1.6 2.4" />
+      <path d="M12 16.5h.01" />
+    </svg>
+  );
+}
+
 export default function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <PageFrame
+    <ProfilePageShell
       title="FAQ"
-      subtitle="Clear answers about wallets, investments, custody, and platform usage"
-      showBackButton
-      backHref="/profile"
+      subtitle="Clear answers about wallets, investments, custody and platform usage."
     >
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(140deg,rgba(74,108,247,0.12),rgba(255,255,255,0.84),rgba(107,57,244,0.12))] px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">FAQ</p>
-          <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
-            Quick answers before you move capital
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-600">
-            Review the most common questions about custody, wallets, returns, legal responsibility, and how
-            InvestApp works before making a move.
-          </p>
-        </div>
+      <ProfileSurface className="bg-[linear-gradient(160deg,rgba(74,108,247,0.12)_0%,rgba(255,255,255,0.96)_46%,rgba(107,57,244,0.08)_100%)]">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
+              FAQ
+            </p>
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
+              Quick answers before you move capital
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[#7B879C]">
+              Review the most common questions about custody, wallets, returns, legal responsibility and how InvestApp works before making a move.
+            </p>
+          </div>
 
-        <div className="space-y-3">
-          {FAQS.map((item, index) => {
-            const open = openIndex === index;
-            return (
-              <div
-                key={item.question}
-                className={`rounded-[24px] border shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md transition ${
-                  open
-                    ? 'border-[#6B39F4]/25 bg-[linear-gradient(135deg,rgba(107,57,244,0.10),rgba(255,255,255,0.72))]'
-                    : 'border-white/25 bg-white/20'
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenIndex(open ? null : index)}
-                  className="flex w-full items-center justify-between px-4 py-4 text-left"
-                >
-                  <span className="pr-4 text-sm font-semibold text-gray-900">{item.question}</span>
-                  <Chevron open={open} />
-                </button>
-                {open ? (
-                  <div className="px-4 pb-4 text-sm leading-relaxed text-gray-600">
-                    {item.answer}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
+          <div className="flex items-center gap-3 rounded-[24px] border border-[#EBEEF7] bg-white/82 px-4 py-4 shadow-[0_16px_32px_rgba(31,38,64,0.05)]">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F5F1FF] text-[#6B39F4]">
+              <QuestionIcon />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[#1C2336]">{FAQS.length} common questions</p>
+              <p className="mt-1 text-xs leading-5 text-[#7B879C]">
+                Start here for quick clarity on how the platform works.
+              </p>
+            </div>
+          </div>
         </div>
+      </ProfileSurface>
+
+      <div className="flex flex-col gap-3">
+        {FAQS.map((item, index) => {
+          const open = openIndex === index;
+
+          return (
+            <ProfileSurface
+              key={item.question}
+              className={
+                open
+                  ? 'border-[#DDD3FF] bg-[linear-gradient(135deg,rgba(107,57,244,0.10),rgba(255,255,255,0.96))]'
+                  : 'bg-white/88'
+              }
+            >
+              <button
+                type="button"
+                onClick={() => setOpenIndex(open ? null : index)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#F5F1FF] text-[#6B39F4]">
+                    <QuestionIcon />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1C2336]">{item.question}</p>
+                    {open ? (
+                      <p className="mt-2 text-sm leading-6 text-[#667085]">{item.answer}</p>
+                    ) : null}
+                  </div>
+                </div>
+                <Chevron open={open} />
+              </button>
+            </ProfileSurface>
+          );
+        })}
       </div>
-    </PageFrame>
+    </ProfilePageShell>
   );
 }

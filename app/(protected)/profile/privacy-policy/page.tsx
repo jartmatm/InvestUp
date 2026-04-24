@@ -1,6 +1,6 @@
 'use client';
 
-import PageFrame from '@/components/PageFrame';
+import { ProfilePageShell, ProfileSurface } from '@/components/profile/ProfilePageShell';
 
 const POLICY_SECTIONS = [
   {
@@ -61,42 +61,42 @@ const POLICY_SECTIONS = [
 
 export default function PrivacyPolicyPage() {
   return (
-    <PageFrame
+    <ProfilePageShell
       title="Privacy Policy"
-      subtitle="How InvestApp handles identity, wallet information, and off-chain data"
-      showBackButton
-      backHref="/profile"
+      subtitle="How InvestApp handles identity, wallet information and off-chain data."
     >
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-white/30 bg-[linear-gradient(140deg,rgba(74,108,247,0.12),rgba(255,255,255,0.84),rgba(107,57,244,0.10))] px-5 py-5 shadow-[0_18px_42px_rgba(15,23,42,0.10)] backdrop-blur-md">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">
-            Legal
-          </p>
-          <h2 className="mt-3 text-[1.45rem] font-semibold text-gray-900">
-            Privacy by design, with blockchain transparency in mind
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-600">
-            This page explains what we collect, what we do not collect, and how blockchain activity
-            differs from editable off-chain data.
-          </p>
-        </div>
-
-        {POLICY_SECTIONS.map((section) => (
-          <div
-            key={section.title}
-            className="space-y-3 rounded-[24px] border border-white/25 bg-white/20 px-4 py-4 text-sm text-gray-700 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md"
-          >
-            <h2 className="text-base font-semibold tracking-[-0.02em] text-gray-900">
-              {section.title}
+      <ProfileSurface className="bg-[linear-gradient(160deg,rgba(74,108,247,0.12)_0%,rgba(255,255,255,0.96)_46%,rgba(107,57,244,0.08)_100%)]">
+        <div className="flex flex-col gap-3">
+          <div>
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
+              Legal
+            </p>
+            <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
+              Privacy by design, with blockchain transparency in mind
             </h2>
-            {section.body.map((paragraph) => (
-              <p key={paragraph} className="leading-relaxed">
-                {paragraph}
-              </p>
-            ))}
+            <p className="mt-2 text-sm leading-6 text-[#7B879C]">
+              This page explains what we collect, what we do not collect and how blockchain activity differs from editable off-chain data.
+            </p>
           </div>
+        </div>
+      </ProfileSurface>
+
+      <div className="flex flex-col gap-3">
+        {POLICY_SECTIONS.map((section) => (
+          <ProfileSurface key={section.title}>
+            <div className="flex flex-col gap-3 text-sm text-[#4B5565]">
+              <h2 className="text-base font-semibold tracking-[-0.02em] text-[#1C2336]">
+                {section.title}
+              </h2>
+              {section.body.map((paragraph) => (
+                <p key={paragraph} className="leading-6">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </ProfileSurface>
         ))}
       </div>
-    </PageFrame>
+    </ProfilePageShell>
   );
 }
