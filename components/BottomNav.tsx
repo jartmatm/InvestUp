@@ -70,11 +70,11 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 bg-transparent">
       <div className="mx-auto w-full max-w-xl px-4 pb-4">
-        <div className="relative rounded-[32px] border border-white/80 bg-white/88 px-3 pb-3 pt-4 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
+        <div className="relative rounded-[32px] border border-white/80 bg-white/88 px-3 pb-3 pt-3.5 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
           <Link
             href="/invest"
             aria-label="Send"
-            className={`absolute left-1/2 top-0 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_24px_42px_rgba(107,57,244,0.34)] transition ${
+            className={`absolute left-1/2 top-2 z-10 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_24px_42px_rgba(107,57,244,0.34)] transition ${
               pathname.startsWith('/invest') ? 'scale-[1.02]' : 'hover:scale-[1.02]'
             }`}
           >
@@ -88,7 +88,7 @@ export default function BottomNav() {
                 return (
                   <div
                     key={`nav-spacer-${index}`}
-                    className="flex h-[58px] w-full flex-col items-center justify-end"
+                    className="flex h-[72px] w-full flex-col items-center justify-end"
                     aria-hidden="true"
                   >
                     <span className="text-[11px] font-semibold tracking-[-0.02em] text-slate-400">
@@ -104,7 +104,7 @@ export default function BottomNav() {
                   key={item.href}
                   href={item.href}
                   aria-label={item.label}
-                  className={`flex min-h-[58px] w-full flex-col items-center justify-end gap-1 rounded-[20px] px-2 py-1.5 transition ${
+                  className={`flex min-h-[72px] w-full flex-col items-center justify-end gap-1 rounded-[20px] px-2 py-1.5 transition ${
                     active ? 'text-[#6B39F4]' : 'text-slate-400 hover:text-[#5A27E0]'
                   }`}
                 >
