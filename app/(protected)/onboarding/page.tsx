@@ -511,12 +511,14 @@ function MockProjectCard({
   rate,
   palette,
   imageSrc,
+  hideRateOnBack = false,
   flipped = false,
 }: {
   title: string;
   rate: string;
   palette: 'amber' | 'violet' | 'emerald' | 'blue';
   imageSrc: string;
+  hideRateOnBack?: boolean;
   flipped?: boolean;
 }) {
   const palettes = {
@@ -580,7 +582,7 @@ function MockProjectCard({
         >
           <div
             className={cn(
-              'relative flex h-full flex-col justify-between overflow-hidden rounded-[16px] bg-gradient-to-br p-3 text-white',
+              'relative flex h-full overflow-hidden rounded-[16px] bg-gradient-to-br p-3 text-white',
               palette === 'amber'
                 ? 'from-[#6B3A12] via-[#C2410C] to-[#FDBA74]'
                 : palette === 'violet'
@@ -599,22 +601,33 @@ function MockProjectCard({
             />
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.28)_0%,rgba(15,23,42,0.52)_100%)]" />
             <div className="absolute -right-5 -top-4 h-20 w-20 rounded-full bg-white/16 blur-2xl" />
-            <div className="relative flex items-center justify-between">
-              <FloatingBadge tone="emerald" className="border-0 bg-white/16 text-white">
-                Live
-              </FloatingBadge>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/68">{rate}</p>
-            </div>
-            <div className="relative">
-              <p className="line-clamp-2 text-[13px] font-semibold leading-5">{title}</p>
-              <p className="mt-2 text-[11px] leading-4 text-white/72">
-                Funding window open with curated venture metrics and clear repayment terms.
-              </p>
-            </div>
-            <div className="relative flex items-center justify-between text-[10px] text-white/72">
-              <span>Polygon</span>
-              <span>Verified</span>
-            </div>
+            {hideRateOnBack ? (
+              <div className="relative flex h-full flex-col justify-center">
+                <p className="line-clamp-2 text-[13px] font-semibold leading-5">{title}</p>
+                <p className="mt-2 text-[11px] leading-4 text-white/72">
+                  Funding window open with curated venture metrics and clear repayment terms.
+                </p>
+              </div>
+            ) : (
+              <div className="relative flex h-full flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <FloatingBadge tone="emerald" className="border-0 bg-white/16 text-white">
+                    Live
+                  </FloatingBadge>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-white/68">{rate}</p>
+                </div>
+                <div>
+                  <p className="line-clamp-2 text-[13px] font-semibold leading-5">{title}</p>
+                  <p className="mt-2 text-[11px] leading-4 text-white/72">
+                    Funding window open with curated venture metrics and clear repayment terms.
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-white/72">
+                  <span>Polygon</span>
+                  <span>Verified</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -858,14 +871,14 @@ function WalletScene() {
           <FloatingBadge tone="emerald">+25.0%</FloatingBadge>
         </div>
 
-        <div className="mt-3 rounded-[24px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_36%),linear-gradient(180deg,#1E293B_0%,#0F172A_100%)] p-3 text-white shadow-[0_18px_40px_rgba(15,23,42,0.26)]">
+        <div className="mt-3 rounded-[24px] border border-white/70 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.82),transparent_32%),linear-gradient(135deg,#FFFFFF_0%,#EEF2F7_45%,#DCE8FF_100%)] p-3 text-slate-800 shadow-[0_18px_40px_rgba(148,163,184,0.24)]">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <FloatingBadge tone="emerald" className="border-0 bg-emerald-300/15 text-emerald-200">
+              <FloatingBadge tone="emerald" className="border-0 bg-emerald-100 text-emerald-700">
                 Up to date
               </FloatingBadge>
               <p className="mt-3 text-base font-semibold">Empanadas Play</p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.34em] text-white/45">MANU ALIN VPROJECT</p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.34em] text-slate-400">MANU ALIN VPROJECT</p>
             </div>
             <div className="relative h-14 w-14 overflow-hidden rounded-[18px] shadow-[0_12px_28px_rgba(245,158,11,0.28)]">
               <Image
@@ -878,10 +891,10 @@ function WalletScene() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-white/72">
+          <div className="mt-4 flex items-center justify-between border-t border-slate-200/80 pt-3 text-[11px] text-slate-500">
             <span>Jairo Mateus</span>
             <span>03/04/29</span>
-            <span className="font-semibold text-white">100.00 USD</span>
+            <span className="font-semibold text-slate-800">100.00 USD</span>
           </div>
         </div>
       </motion.div>
@@ -1158,6 +1171,7 @@ function MarketplaceScene() {
                 rate={card.rate}
                 palette={card.palette}
                 imageSrc={card.imageSrc}
+                hideRateOnBack={card.title.includes('Richmond Flowers')}
                 flipped={marketplacePhase === 'flip' && [1, 4, 6].includes(index)}
               />
             ))}
@@ -1175,7 +1189,7 @@ function DashboardScene() {
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-        className="rounded-[30px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.12),transparent_36%),linear-gradient(180deg,#2A1A6C_0%,#171C3B_100%)] p-3.5 text-white shadow-[0_24px_54px_rgba(29,32,86,0.34)]"
+        className="rounded-[30px] bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_30%),linear-gradient(135deg,#4C1D95_0%,#6B39F4_48%,#2563EB_100%)] p-3.5 text-white shadow-[0_24px_54px_rgba(88,28,135,0.28)]"
       >
         <div className="flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/[0.06] p-3 backdrop-blur-md">
           <div className="relative h-16 w-16 overflow-hidden rounded-[18px] shadow-[0_12px_28px_rgba(245,158,11,0.28)]">
