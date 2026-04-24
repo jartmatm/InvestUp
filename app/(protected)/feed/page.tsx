@@ -71,6 +71,21 @@ function IconMenu() {
   );
 }
 
+function IconBell() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      <path d="M10 2H14M10 21.2361C10.5308 21.7111 11.2316 22 12 22C12.7684 22 13.4692 21.7111 14 21.2361M5.08493 18.5C4.27945 18.5 3.75557 17.7407 4.11579 17.0954L5.43842 14.7258C6.19069 13.3781 6.58234 11.892 6.58234 10.3852V9.76471C6.58234 8.11791 7.49804 6.6627 8.89823 5.78534C8.96478 5.74364 9.03243 5.70324 9.10113 5.6642C9.93938 5.1877 10.9337 4.91176 12 4.91176C13.0663 4.91176 14.0606 5.1877 14.8989 5.6642C14.9676 5.70324 15.0352 5.74364 15.1018 5.78534C16.502 6.6627 17.4177 8.11791 17.4177 9.76471V10.3852C17.4177 11.892 17.8093 13.3781 18.5616 14.7258L19.8842 17.0954C20.2444 17.7407 19.7205 18.5 18.9151 18.5H15H9H5.08493Z" />
+    </svg>
+  );
+}
+
 function IconSearch() {
   return (
     <svg
@@ -184,6 +199,16 @@ function IconSpark() {
   );
 }
 
+function InvestAppWordmark() {
+  return (
+    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
+      <span>Invest</span>
+      <span className="text-[#6B39F4]">App</span>
+      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
+    </div>
+  );
+}
+
 function formatAmount(amount: number | null, currency: string | null) {
   if (amount === null || amount === undefined) return 'No amount';
   const code = currency ?? 'USD';
@@ -211,7 +236,7 @@ const normalizePhotos = (value: unknown): string[] => {
 };
 
 const SURFACE_CLASSNAME =
-  'rounded-[30px] border border-white/85 bg-white/88 shadow-[0_22px_60px_rgba(20,28,55,0.08)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl';
+  'rounded-[30px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,248,255,0.94)_100%)] shadow-[0_24px_70px_rgba(20,28,55,0.08)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl';
 
 const SORT_OPTIONS: Array<{ id: SortKey; label: string }> = [
   { id: 'latest', label: 'Latest first' },
@@ -346,9 +371,6 @@ export default function FeedPage() {
     return next;
   }, [favoritesOnly, projects, searchQuery, selectedCategory, sortBy, wishlist]);
 
-  const selectedSortLabel =
-    SORT_OPTIONS.find((option) => option.id === sortBy)?.label ?? SORT_OPTIONS[0].label;
-
   const toggleFlip = (id: string) => {
     setFlippedId((previous) => (previous === id ? null : id));
   };
@@ -392,9 +414,9 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#F8FAFF_0%,#F4F6FB_48%,#EEF2FF_100%)] text-[#162033]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[300px] bg-[radial-gradient(circle_at_top_left,rgba(124,92,255,0.16),transparent_56%),radial-gradient(circle_at_top_right,rgba(67,120,255,0.12),transparent_42%)]" />
-      <div className="pointer-events-none absolute inset-x-8 top-24 h-48 rounded-full bg-[#C8BCFF]/20 blur-3xl" />
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.10),transparent_28%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_55%,#F7F8FC_100%)] text-[#162033]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[260px] bg-[radial-gradient(circle_at_top_left,rgba(124,92,255,0.12),transparent_52%),radial-gradient(circle_at_top_right,rgba(67,120,255,0.10),transparent_40%)]" />
+      <div className="pointer-events-none absolute inset-x-8 top-24 h-40 rounded-full bg-[#C8BCFF]/16 blur-3xl" />
 
       {showSortSelector ? (
         <button
@@ -406,61 +428,66 @@ export default function FeedPage() {
       ) : null}
 
       <div className="relative mx-auto flex h-screen w-full max-w-md flex-col px-4 pb-[116px] pt-4">
-        <header className="relative z-20 space-y-4 pb-4">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => router.push('/home')}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#1B2435] shadow-[0_18px_40px_rgba(31,41,72,0.12)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
-              aria-label="Close marketplace"
-            >
-              <IconClose />
-            </button>
+        <header className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.push('/home')}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#1B2435] shadow-[0_18px_40px_rgba(31,41,72,0.10)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
+            aria-label="Close marketplace"
+          >
+            <IconClose />
+          </button>
 
-            <p className="text-[0.88rem] font-semibold tracking-[-0.03em] text-[#2A3245]">
-              investapp.co
-            </p>
+          <p className="text-[0.92rem] font-semibold tracking-[-0.03em] text-[#2A3245]">
+            investup.onrender.com
+          </p>
 
-            <button
-              type="button"
-              onClick={() => router.push('/profile')}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#6B39F4] shadow-[0_18px_40px_rgba(31,41,72,0.12)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
-              aria-label="Open menu"
-            >
-              <IconMenu />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/profile')}
+            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/80 bg-white/90 text-[#6B39F4] shadow-[0_18px_40px_rgba(31,41,72,0.10)] ring-1 ring-[#EEF2FF] backdrop-blur-xl transition hover:scale-[1.01]"
+            aria-label="Open menu"
+          >
+            <IconMenu />
+          </button>
+        </header>
 
-          <div className="space-y-2 px-1">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-[#8D96AB]">
-              InvestApp
-            </p>
+        <section className={`${SURFACE_CLASSNAME} relative z-20 flex min-h-0 flex-1 flex-col overflow-visible p-3.5`}>
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-[2.05rem] font-semibold tracking-[-0.055em] text-[#111827]">
-                MarketPlace
+              <InvestAppWordmark />
+              <h1 className="mt-3 text-[2.05rem] font-semibold tracking-[-0.06em] text-[#111827]">
+                Ventures
               </h1>
-              <p className="mt-1 text-[0.92rem] leading-6 text-[#6E778B]">
+              <p className="mt-1 text-[0.84rem] leading-5 text-[#858EA2]">
                 Projects published by entrepreneurs
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => router.push('/notifications')}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition hover:scale-[1.01]"
+              aria-label="Notifications"
+            >
+              <IconBell />
+            </button>
           </div>
 
-          <div className={`${SURFACE_CLASSNAME} p-2.5`}>
-            <div className="flex items-center gap-3 rounded-[24px] border border-[#E8EDFA] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFCFF_100%)] px-4 py-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_30px_rgba(46,56,86,0.06)]">
-              <span className="text-[#8E98AD]">
-                <IconSearch />
-              </span>
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search ventures, entrepreneurs or keywords..."
-                className="h-7 w-full border-none bg-transparent text-[0.95rem] font-medium tracking-[-0.025em] text-[#162033] outline-none placeholder:text-[#9AA3B6]"
-                aria-label="Search ventures"
-              />
-            </div>
+          <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-[#EEF0F8] bg-[#FAF9FF] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <span className="text-[#9AA3B6]">
+              <IconSearch />
+            </span>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search ventures, entrepreneurs or keywords..."
+              className="h-6 w-full border-none bg-transparent text-[0.84rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
+              aria-label="Search ventures"
+            />
           </div>
 
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
             {categories.map((category) => {
               const active = category === selectedCategory;
 
@@ -469,10 +496,10 @@ export default function FeedPage() {
                   key={category}
                   type="button"
                   onClick={() => setSelectedCategory(category)}
-                  className={`shrink-0 rounded-full px-4 py-2.5 text-[0.76rem] font-semibold tracking-[-0.02em] transition ${
+                  className={`shrink-0 rounded-full px-3.5 py-2 text-[0.7rem] font-semibold tracking-[-0.01em] transition ${
                     active
-                      ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_18px_32px_rgba(107,57,244,0.28)]'
-                      : 'border border-white/75 bg-white/80 text-[#596277] shadow-[0_12px_28px_rgba(27,36,53,0.06)] backdrop-blur-xl'
+                      ? 'border border-[#CFC3FF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] text-[#6B39F4] shadow-[0_10px_22px_rgba(107,57,244,0.12)]'
+                      : 'border border-[#EEF1F8] bg-white text-[#596277] shadow-[0_8px_18px_rgba(27,36,53,0.04)]'
                   }`}
                 >
                   {category}
@@ -481,113 +508,96 @@ export default function FeedPage() {
             })}
           </div>
 
-          <div className={`${SURFACE_CLASSNAME} relative overflow-visible p-4`}>
-            <div className="flex items-start justify-between gap-3">
+          <div className="mt-5 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4EFFF] text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.10)]">
+                <IconSpark />
+              </span>
               <div>
-                <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[#101828]">
+                <p className="text-[0.94rem] font-semibold tracking-[-0.03em] text-[#101828]">
                   Suggested for you
                 </p>
-                <p className="mt-1 text-[0.8rem] text-[#7A8296]">Handpicked opportunities</p>
-              </div>
-
-              <div className="relative flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={openFilterSheet}
-                  className="flex h-10 items-center gap-2 rounded-full border border-[#E9E4FF] bg-[#F7F4FF] px-3 text-[0.72rem] font-semibold text-[#6736F3] shadow-[0_12px_24px_rgba(107,57,244,0.10)] transition hover:scale-[1.01]"
-                >
-                  <IconFilter />
-                  Filter
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFilterSheet(false);
-                    setShowSortSelector((previous) => !previous);
-                  }}
-                  className="flex h-10 items-center gap-2 rounded-full border border-[#E8ECF8] bg-white px-3 text-[0.72rem] font-semibold text-[#445067] shadow-[0_12px_24px_rgba(22,32,51,0.07)] transition hover:scale-[1.01]"
-                >
-                  <IconSort />
-                  Sort
-                </button>
-
-                {showSortSelector ? (
-                  <div className="absolute right-0 top-[calc(100%+10px)] z-40 w-[214px] rounded-[26px] border border-white/85 bg-white/96 p-2 shadow-[0_26px_70px_rgba(17,24,39,0.18)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl">
-                    {SORT_OPTIONS.map((option) => {
-                      const active = option.id === sortBy;
-
-                      return (
-                        <button
-                          key={option.id}
-                          type="button"
-                          onClick={() => {
-                            setSortBy(option.id);
-                            setShowSortSelector(false);
-                          }}
-                          className={`flex w-full items-center justify-between rounded-[20px] px-3 py-3 text-left text-[0.82rem] font-medium tracking-[-0.02em] transition ${
-                            active
-                              ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]'
-                              : 'text-[#3E475B] hover:bg-[#F7F7FE]'
-                          }`}
-                        >
-                          <span>{option.label}</span>
-                          {active ? <IconSpark /> : <IconChevronDown />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : null}
+                <p className="mt-0.5 text-[0.72rem] text-[#8A92A8]">Handpicked opportunities</p>
               </div>
             </div>
 
-            <div className="mt-4 flex items-center justify-between rounded-[24px] bg-[linear-gradient(135deg,rgba(107,57,244,0.08),rgba(66,120,255,0.05))] px-3.5 py-3">
-              <div>
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8B92A6]">
-                  Active results
-                </p>
-                <p className="mt-1 text-[1.1rem] font-semibold tracking-[-0.04em] text-[#111827]">
-                  {loading ? '--' : filteredProjects.length}
-                </p>
-              </div>
+            <div className="relative flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openFilterSheet}
+                className="flex h-9 items-center gap-1.5 rounded-full border border-[#E9E4FF] bg-white px-3 text-[0.68rem] font-semibold text-[#6736F3] shadow-[0_10px_20px_rgba(107,57,244,0.08)] transition hover:scale-[1.01]"
+              >
+                <IconFilter />
+                Filter
+              </button>
 
-              <div className="text-right">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#8B92A6]">
-                  Sort
-                </p>
-                <p className="mt-1 text-[0.83rem] font-medium text-[#4F5870]">{selectedSortLabel}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFilterSheet(false);
+                  setShowSortSelector((previous) => !previous);
+                }}
+                className="flex h-9 items-center gap-1.5 rounded-full border border-[#E8ECF8] bg-white px-3 text-[0.68rem] font-semibold text-[#445067] shadow-[0_10px_20px_rgba(22,32,51,0.06)] transition hover:scale-[1.01]"
+              >
+                <IconSort />
+                Sort
+              </button>
+
+              {showSortSelector ? (
+                <div className="absolute right-0 top-[calc(100%+10px)] z-40 w-[204px] rounded-[24px] border border-white/85 bg-white/96 p-2 shadow-[0_26px_70px_rgba(17,24,39,0.18)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl">
+                  {SORT_OPTIONS.map((option) => {
+                    const active = option.id === sortBy;
+
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => {
+                          setSortBy(option.id);
+                          setShowSortSelector(false);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-[0.78rem] font-medium tracking-[-0.02em] transition ${
+                          active
+                            ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]'
+                            : 'text-[#3E475B] hover:bg-[#F7F7FE]'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        {active ? <IconSpark /> : <IconChevronDown />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </div>
           </div>
-        </header>
 
-        <div className="min-h-0 flex-1">
-          <div className="h-full overflow-y-auto pb-6">
+          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-2 pr-1">
             {loading ? (
-              <div className="grid grid-cols-2 gap-4 pr-1">
+              <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={`feed-loading-${index}`}
-                    className="h-[270px] animate-pulse rounded-[28px] border border-white/80 bg-white/70 p-3 shadow-[0_20px_44px_rgba(18,27,48,0.06)]"
+                    className="h-[232px] animate-pulse rounded-[22px] border border-[#EEF1F7] bg-white p-2.5 shadow-[0_18px_36px_rgba(18,27,48,0.05)]"
                   >
-                    <div className="h-36 rounded-[22px] bg-[#EAEFFC]" />
-                    <div className="mt-4 h-5 rounded-full bg-[#EEF2FC]" />
-                    <div className="mt-2 h-5 w-3/4 rounded-full bg-[#EEF2FC]" />
-                    <div className="mt-5 h-8 w-24 rounded-full bg-[#E8F8EE]" />
+                    <div className="h-[112px] rounded-[16px] bg-[#EAEFFC]" />
+                    <div className="mt-3 h-4 rounded-full bg-[#EEF2FC]" />
+                    <div className="mt-2 h-4 w-4/5 rounded-full bg-[#EEF2FC]" />
+                    <div className="mt-4 h-7 w-20 rounded-full bg-[#E8F8EE]" />
                   </div>
                 ))}
               </div>
             ) : null}
 
             {!loading && status ? (
-              <div className={`${SURFACE_CLASSNAME} p-4`}>
+              <div className="rounded-[22px] border border-[#EEF1F7] bg-white p-4 shadow-[0_18px_36px_rgba(18,27,48,0.05)]">
                 <p className="text-sm font-semibold text-[#152033]">We couldn&apos;t load the marketplace.</p>
                 <p className="mt-1 text-sm leading-6 text-[#70798D]">{status}</p>
               </div>
             ) : null}
 
             {!loading && !status && filteredProjects.length === 0 ? (
-              <div className={`${SURFACE_CLASSNAME} p-5 text-center`}>
+              <div className="rounded-[22px] border border-[#EEF1F7] bg-white p-5 text-center shadow-[0_18px_36px_rgba(18,27,48,0.05)]">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(124,92,255,0.14),rgba(67,120,255,0.10))] text-[#6B39F4] shadow-[0_16px_30px_rgba(107,57,244,0.12)]">
                   <IconSearch />
                 </div>
@@ -601,7 +611,7 @@ export default function FeedPage() {
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="grid grid-cols-2 gap-4 pr-1">
+              <div className="grid grid-cols-2 gap-3">
                 {filteredProjects.map((project) => {
                   const isFlipped = flippedId === project.id;
                   const isWishlisted = wishlist.includes(project.id);
@@ -637,22 +647,22 @@ export default function FeedPage() {
                       className="cursor-pointer text-left [perspective:1400px]"
                     >
                       <div
-                        className={`relative h-[282px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                        className={`relative h-[232px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                           isFlipped ? '[transform:rotateY(180deg)]' : ''
                         }`}
                       >
-                        <div className="absolute inset-0 overflow-hidden rounded-[28px] border border-white/85 bg-white/86 shadow-[0_26px_60px_rgba(16,24,40,0.10)] ring-1 ring-[#EEF2FF]/75 backdrop-blur-2xl [backface-visibility:hidden]">
+                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
                           <div className="relative">
                             <ProjectPhotoCarousel
                               images={project.photo_urls}
                               alt={project.title}
-                              className="h-[168px] w-full"
-                              imageClassName="h-[168px] w-full object-cover"
-                              emptyClassName="flex h-[168px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]"
+                              className="h-[112px] w-full"
+                              imageClassName="h-[112px] w-full object-cover"
+                              emptyClassName="flex h-[112px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]"
                               stopPropagation
                             />
 
-                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(180deg,transparent_0%,rgba(17,24,39,0.55)_100%)]" />
+                            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.16)_100%)]" />
 
                             <button
                               type="button"
@@ -660,41 +670,41 @@ export default function FeedPage() {
                                 event.stopPropagation();
                                 toggleWishlist(project.id);
                               }}
-                              className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/35 bg-white/80 backdrop-blur-xl transition ${
+                              className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-[#5B4B3E]/70 backdrop-blur-xl transition ${
                                 isWishlisted
-                                  ? 'text-[#F0527A] shadow-[0_16px_30px_rgba(240,82,122,0.22)]'
-                                  : 'text-[#5A6478] shadow-[0_16px_30px_rgba(17,24,39,0.10)]'
+                                  ? 'text-[#FFD1DB] shadow-[0_12px_24px_rgba(17,24,39,0.18)]'
+                                  : 'text-white shadow-[0_12px_24px_rgba(17,24,39,0.14)]'
                               }`}
                               aria-label={isWishlisted ? 'Remove from favorites' : 'Add to favorites'}
                               aria-pressed={isWishlisted}
                             >
                               <IconHeart filled={isWishlisted} />
                             </button>
-
-                            <div className="absolute left-3 top-3 rounded-full border border-[#CFF5D8] bg-[#F2FFF6]/95 px-2.5 py-1 text-[0.62rem] font-semibold tracking-[-0.01em] text-[#16784A] shadow-[0_10px_24px_rgba(11,131,85,0.12)]">
-                              {rateLabel}
-                            </div>
                           </div>
 
-                          <div className="flex h-[calc(100%-168px)] flex-col justify-between p-3.5">
+                          <div className="flex h-[calc(100%-112px)] flex-col justify-between p-2.5">
                             <div>
-                              <p className="line-clamp-2 text-[0.98rem] font-semibold leading-5 tracking-[-0.03em] text-[#162033]">
+                              <p className="line-clamp-3 text-[0.92rem] font-semibold leading-[1.22] tracking-[-0.03em] text-[#162033]">
                                 {project.title}
                               </p>
                             </div>
 
-                            <div className="flex items-center justify-between gap-2 text-[0.68rem] font-medium text-[#8A92A8]">
-                              <span>Tap to flip</span>
-                              <span>{Math.round(progress)}% funded</span>
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2.5 py-1 text-[0.66rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">
+                                {rateLabel}
+                              </div>
+                              <span className="text-[0.62rem] font-medium text-[#B0B7C7]">
+                                Interest rate
+                              </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="absolute inset-0 overflow-hidden rounded-[28px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-3.5 text-white shadow-[0_28px_70px_rgba(18,24,42,0.28)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-3 text-white shadow-[0_24px_56px_rgba(18,24,42,0.24)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
                           <div className="pointer-events-none absolute inset-x-6 top-4 h-20 rounded-full bg-[#7C5CFF]/25 blur-3xl" />
                           <div className="relative flex h-full flex-col">
                             <div>
-                              <p className="line-clamp-2 text-[0.95rem] font-semibold leading-5 tracking-[-0.03em] text-white">
+                              <p className="line-clamp-2 text-[0.88rem] font-semibold leading-5 tracking-[-0.03em] text-white">
                                 {project.title}
                               </p>
                               <p className="mt-1 text-[0.68rem] font-medium uppercase tracking-[0.18em] text-white/55">
@@ -702,52 +712,52 @@ export default function FeedPage() {
                               </p>
                             </div>
 
-                            <div className="mt-4 grid grid-cols-1 gap-2">
-                              <div className="rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                            <div className="mt-3 grid grid-cols-1 gap-1.5">
+                              <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
                                 <div className="flex items-center gap-2 text-white/68">
                                   <IconTarget />
                                   <span className="text-[0.64rem] uppercase tracking-[0.18em]">Goal</span>
                                 </div>
-                                <p className="mt-2 text-[0.88rem] font-semibold tracking-[-0.03em] text-white">
+                                <p className="mt-1.5 text-[0.8rem] font-semibold tracking-[-0.03em] text-white">
                                   {amountLabel}
                                 </p>
                               </div>
 
-                              <div className="rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                              <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
                                 <div className="flex items-center gap-2 text-white/68">
                                   <IconTarget />
                                   <span className="text-[0.64rem] uppercase tracking-[0.18em]">Raised</span>
                                 </div>
-                                <p className="mt-2 text-[0.88rem] font-semibold tracking-[-0.03em] text-white">
+                                <p className="mt-1.5 text-[0.8rem] font-semibold tracking-[-0.03em] text-white">
                                   {raisedLabel}
                                 </p>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-2">
-                                <div className="rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
                                   <div className="flex items-center gap-2 text-white/68">
                                     <IconClock />
                                     <span className="text-[0.64rem] uppercase tracking-[0.18em]">Term</span>
                                   </div>
-                                  <p className="mt-2 text-[0.8rem] font-semibold tracking-[-0.02em] text-white">
+                                  <p className="mt-1.5 text-[0.74rem] font-semibold tracking-[-0.02em] text-white">
                                     {termLabel}
                                   </p>
                                 </div>
 
-                                <div className="rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
+                                <div className="rounded-[16px] border border-white/10 bg-white/8 px-2.5 py-2 backdrop-blur-md">
                                   <div className="flex items-center gap-2 text-white/68">
                                     <IconPercent />
                                     <span className="text-[0.64rem] uppercase tracking-[0.18em]">Rate</span>
                                   </div>
-                                  <p className="mt-2 text-[0.8rem] font-semibold tracking-[-0.02em] text-white">
+                                  <p className="mt-1.5 text-[0.74rem] font-semibold tracking-[-0.02em] text-white">
                                     {rateLabel}
                                   </p>
                                 </div>
                               </div>
                             </div>
 
-                            <div className="mt-4">
-                              <div className="flex items-center justify-between text-[0.68rem] font-medium text-white/65">
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between text-[0.64rem] font-medium text-white/65">
                                 <span>Funding progress</span>
                                 <span>{Math.round(progress)}%</span>
                               </div>
@@ -759,21 +769,21 @@ export default function FeedPage() {
                               </div>
                             </div>
 
-                            <div className="mt-auto flex items-center gap-2 pt-4">
+                            <div className="mt-auto flex items-center gap-1.5 pt-3">
                               <button
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   router.push(`/feed/${project.id}`);
                                 }}
-                                className="flex-1 rounded-full border border-white/18 bg-white/10 px-3 py-2.5 text-[0.72rem] font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                                className="flex-1 rounded-full border border-white/18 bg-white/10 px-2.5 py-2.5 text-[0.68rem] font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
                               >
                                 Details
                               </button>
                               <button
                                 type="button"
                                 onClick={handleBackAction}
-                                className="flex-1 rounded-full bg-white px-3 py-2.5 text-[0.72rem] font-semibold text-[#162033] shadow-[0_12px_24px_rgba(255,255,255,0.18)] transition hover:scale-[1.01]"
+                                className="flex-1 rounded-full bg-white px-2.5 py-2.5 text-[0.68rem] font-semibold text-[#162033] shadow-[0_12px_24px_rgba(255,255,255,0.18)] transition hover:scale-[1.01]"
                               >
                                 {backActionLabel}
                               </button>
@@ -787,7 +797,7 @@ export default function FeedPage() {
               </div>
             ) : null}
           </div>
-        </div>
+        </section>
       </div>
 
       {showFilterSheet ? (
