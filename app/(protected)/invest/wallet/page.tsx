@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -11,9 +10,12 @@ import {
   getPendingInvestment,
   type PendingInvestment,
 } from '@/lib/pending-investment';
+import {
+  fetchRecipientDirectory,
+  type RecipientDirectoryEntry,
+} from '@/utils/client/recipient-directory';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type WalletTarget = {
@@ -36,14 +38,6 @@ type RecentWallet = {
 };
 
 type TxRow = Pick<CurrentUserTransaction, 'from_wallet' | 'to_wallet'>;
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const suggestedValues = [100, 200, 250, 300, 350, 400];
 
@@ -281,32 +275,6 @@ export default function WalletTransferPage() {
   const [showAllWallets, setShowAllWallets] = useState(false);
   const alreadyHasEmbeddedWallet = useMemo(() => hasEmbeddedPrivyWallet(user), [user]);
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: authedFetch } });
-  }, [getAccessToken]);
-
   const mappedTargets = useMemo(
     () =>
       (walletTargets as WalletTarget[])
@@ -365,16 +333,17 @@ export default function WalletTransferPage() {
 
     let cancelled = false;
     const resolveRecipientEmail = async () => {
-      const { data } = await runUserDirectoryQuery(supabase, (source) =>
-        supabase
-          .from(source)
-          .select('email')
-          .eq('wallet_address', walletDestino)
-          .maybeSingle()
-      );
+      const { data, error } = await fetchRecipientDirectory(getAccessToken, {
+        wallet: walletDestino,
+        limit: 1,
+      });
+      if (error) {
+        console.error('Error resolving recipient email:', error);
+        return;
+      }
 
       if (!cancelled) {
-        const resolvedEmail = (data as { email?: string | null } | null)?.email?.trim();
+        const resolvedEmail = data?.[0]?.email?.trim();
         if (resolvedEmail) {
           setWalletDestino(resolvedEmail);
         }
@@ -386,7 +355,7 @@ export default function WalletTransferPage() {
     return () => {
       cancelled = true;
     };
-  }, [mappedTargets, recentWallets, supabase, walletDestino]);
+  }, [getAccessToken, mappedTargets, recentWallets, walletDestino]);
 
   const loadRecentWallets = useCallback(async () => {
     if (!user?.id || !smartWalletAddress) {
@@ -417,18 +386,17 @@ export default function WalletTransferPage() {
         orderedAddresses.push(other);
       });
 
-      const { data: profilesData } =
+      const { data: profilesData, error: profilesError } =
         orderedAddresses.length > 0
-          ? await runUserDirectoryQuery(supabase, (source) =>
-              supabase
-                .from(source)
-                .select('id,email,name,surname,avatar_url,country,role,wallet_address')
-                .in('wallet_address', orderedAddresses.slice(0, 12))
-            )
-          : { data: [] };
+          ? await fetchRecipientDirectory(getAccessToken, {
+              wallets: orderedAddresses.slice(0, 12),
+              limit: 12,
+            })
+          : { data: [], error: null };
+      if (profilesError) throw new Error(profilesError);
 
       const profileMap = new Map(
-        ((profilesData ?? []) as WalletTarget[])
+        ((profilesData ?? []) as RecipientDirectoryEntry[])
           .filter((profile) => profile.wallet_address)
           .map((profile) => [profile.wallet_address?.toLowerCase() ?? '', profile])
       );
@@ -462,7 +430,7 @@ export default function WalletTransferPage() {
     } finally {
       setLoadingRecentWallets(false);
     }
-  }, [getAccessToken, mappedTargets, smartWalletAddress, supabase, user?.id]);
+  }, [getAccessToken, mappedTargets, smartWalletAddress, user?.id]);
 
   useEffect(() => {
     void loadRecentWallets();

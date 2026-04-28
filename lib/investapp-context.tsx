@@ -40,6 +40,7 @@ import {
 } from '@/lib/pending-investment';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { createCurrentUserInvestment } from '@/utils/client/current-user-investments';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 import {
   createCurrentUserTransaction,
   fetchCurrentUserTransactions,
@@ -49,7 +50,6 @@ import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
 } from '@/utils/client/current-user-profile';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type FrontRole = 'inversor' | 'emprendedor';
@@ -1017,24 +1017,19 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     const roleTarget = rolSeleccionado === 'inversor' ? 'entrepreneur' : 'investor';
     setLoadingWallets(true);
     try {
-      const { data, error } = await runUserDirectoryQuery(supabase, (source) =>
-        supabase
-          .from(source)
-          .select('id,email,name,surname,avatar_url,country,role,wallet_address')
-          .eq('role', roleTarget)
-          .not('wallet_address', 'is', null)
-          .neq('id', user.id)
-          .order('name', { ascending: true, nullsFirst: false })
-      );
+      const { data, error } = await fetchRecipientDirectory(getAccessToken, {
+        role: roleTarget,
+        limit: 100,
+      });
 
-      if (error) throw error;
+      if (error) throw new Error(error);
       setWalletTargets((data ?? []) as UserWalletTarget[]);
     } catch (error: any) {
       console.error('Error loading recipient wallets:', error?.message ?? error);
     } finally {
       setLoadingWallets(false);
     }
-  }, [authenticated, rolSeleccionado, supabase, user?.id]);
+  }, [authenticated, getAccessToken, rolSeleccionado, user?.id]);
 
   const enviarUSDC = useCallback(
     async (
@@ -1050,16 +1045,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       const destinationValue = destino.trim();
       let receiverTarget = findWalletTargetByIdentifier(walletTargets, destinationValue);
       if (!receiverTarget && looksLikeEmail(destinationValue)) {
-        const { data } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase
-            .from(source)
-            .select('id,email,name,surname,avatar_url,country,role,wallet_address')
-            .ilike('email', destinationValue)
-            .not('wallet_address', 'is', null)
-            .maybeSingle()
-        );
+        const { data, error } = await fetchRecipientDirectory(getAccessToken, {
+          email: destinationValue,
+          limit: 1,
+        });
 
-        receiverTarget = ((data ?? null) as UserWalletTarget | null) ?? null;
+        if (error) throw new Error(error);
+        receiverTarget = ((data ?? [])[0] as UserWalletTarget | undefined) ?? null;
       }
       const directWalletAddress =
         destinationValue.startsWith('0x') && destinationValue.length === 42 ? destinationValue : '';
@@ -1301,6 +1293,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       client,
       getCachedMaxFeePerGas,
       getCachedUsdcQuote,
+      getAccessToken,
       registrarInversion,
       registrarRepayment,
       registrarTransaccion,
