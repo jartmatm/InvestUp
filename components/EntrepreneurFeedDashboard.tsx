@@ -519,11 +519,11 @@ function FundingGauge({
           </svg>
 
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-7 text-center">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-              Funding progress
-            </p>
-            <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-[#1C2336]">
+            <p className="text-[2rem] font-semibold tracking-[-0.05em] text-[#1C2336]">
               {percentageLabel}
+            </p>
+            <p className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
+              Funding progress
             </p>
           </div>
         </div>
@@ -888,11 +888,8 @@ export default function EntrepreneurFeedDashboard() {
                 <span className="text-[#6B39F4]">App</span>
                 <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
               </div>
-              <p className="mt-4 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-                Entrepreneur dashboard
-              </p>
-              <h1 className="mt-1 text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-                My venture
+              <h1 className="mt-4 text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
+                Dashboard
               </h1>
               <p className="mt-1 text-sm leading-6 text-[#7B879C]">
                 Funding progress and investor summary
