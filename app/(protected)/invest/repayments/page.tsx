@@ -30,6 +30,7 @@ type InvestorProfile = {
   id: string;
   name: string | null;
   surname: string | null;
+  email: string | null;
   avatar_url: string | null;
   country: string | null;
   wallet_address: string | null;
@@ -48,6 +49,7 @@ type RepaymentCard = {
   projectId: string;
   investorUserId: string | null;
   displayName: string;
+  email: string | null;
   avatarUrl: string | null;
   country: string | null;
   walletAddress: string;
@@ -75,7 +77,7 @@ const themes = [
 const nameFrom = (profile: InvestorProfile | undefined) => {
   const full = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (full) return full;
-  if (profile?.wallet_address) return `${profile.wallet_address.slice(0, 6)}...`;
+  if (profile?.email?.trim()) return profile.email.trim();
   return 'Investor';
 };
 
@@ -190,7 +192,7 @@ export default function RepaymentsPage() {
         const { data: profilesData } = await runUserDirectoryQuery(supabase, (source) =>
           supabase
             .from(source)
-            .select('id,name,surname,avatar_url,country,wallet_address')
+            .select('id,name,surname,email,avatar_url,country,wallet_address')
             .in('id', investorIds)
         );
         ((profilesData ?? []) as InvestorProfile[]).forEach((profile) => {
@@ -208,6 +210,7 @@ export default function RepaymentsPage() {
               projectId: investment.project_id,
               investorUserId: investment.investor_user_id,
               displayName: nameFrom(profile),
+              email: profile?.email ?? null,
               avatarUrl: profile?.avatar_url ?? null,
               country: profile?.country ?? null,
               walletAddress: profile?.wallet_address ?? investment.from_wallet ?? '',
@@ -284,7 +287,19 @@ export default function RepaymentsPage() {
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            router.push(`/invest/wallet?mode=repayment&wallet=${encodeURIComponent(card.walletAddress)}&amount=${encodeURIComponent(card.repaymentAmount.toFixed(2))}&name=${encodeURIComponent(card.displayName)}&projectId=${encodeURIComponent(card.projectId)}&investorUserId=${encodeURIComponent(card.investorUserId ?? '')}`);
+                            router.push(
+                              `/invest/wallet?mode=repayment${
+                                card.email ? `&email=${encodeURIComponent(card.email)}` : ''
+                              }&wallet=${encodeURIComponent(
+                                card.walletAddress
+                              )}&amount=${encodeURIComponent(
+                                card.repaymentAmount.toFixed(2)
+                              )}&name=${encodeURIComponent(
+                                card.displayName
+                              )}&projectId=${encodeURIComponent(
+                                card.projectId
+                              )}&investorUserId=${encodeURIComponent(card.investorUserId ?? '')}`
+                            );
                           }}
                           disabled={!card.walletAddress}
                           className={`mt-4 rounded-full px-4 py-2 text-xs font-semibold ${card.walletAddress ? 'bg-white text-slate-900' : 'bg-white/20 text-white/60'}`}

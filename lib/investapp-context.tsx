@@ -353,6 +353,9 @@ const normalizePendingInvestment = (
 const normalizeRecipientIdentifier = (value: string | null | undefined) =>
   value?.trim().toLowerCase() ?? '';
 
+const looksLikeEmail = (value: string | null | undefined) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? '');
+
 const getWalletTargetDisplayName = (target: Pick<UserWalletTarget, 'name' | 'surname' | 'email'>) => {
   const full = `${target.name ?? ''} ${target.surname ?? ''}`.trim();
   if (full) return full;
@@ -1045,7 +1048,19 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const destinationValue = destino.trim();
-      const receiverTarget = findWalletTargetByIdentifier(walletTargets, destinationValue);
+      let receiverTarget = findWalletTargetByIdentifier(walletTargets, destinationValue);
+      if (!receiverTarget && looksLikeEmail(destinationValue)) {
+        const { data } = await runUserDirectoryQuery(supabase, (source) =>
+          supabase
+            .from(source)
+            .select('id,email,name,surname,avatar_url,country,role,wallet_address')
+            .ilike('email', destinationValue)
+            .not('wallet_address', 'is', null)
+            .maybeSingle()
+        );
+
+        receiverTarget = ((data ?? null) as UserWalletTarget | null) ?? null;
+      }
       const directWalletAddress =
         destinationValue.startsWith('0x') && destinationValue.length === 42 ? destinationValue : '';
       const resolvedDestinationWallet = receiverTarget?.wallet_address ?? directWalletAddress;
@@ -1292,6 +1307,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       rolSeleccionado,
       smartWalletAddress,
       pushNotification,
+      supabase,
       user?.email?.address,
       userAlias,
       walletTargets,

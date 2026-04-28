@@ -92,7 +92,7 @@ export default function BottomNav() {
                     aria-hidden="true"
                   >
                     <span className="text-[11px] font-semibold tracking-[-0.02em] text-slate-400">
-                      Invest
+                      Send
                     </span>
                   </div>
                 );

@@ -4,17 +4,16 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
-import {
-  formatKycLevelLimit,
-  getKycLevelBadgeLabel,
-  type CurrentUserKycSummary,
-} from '@/utils/kyc/shared';
+import { getKycLevelBadgeLabel } from '@/utils/kyc/shared';
 
 type WithdrawalMethod = 'bank' | 'breve';
-type AccountType = 'ahorros' | 'corriente' | '';
-type IdentificationType = 'cc' | 'ti' | 'te' | 'pasaporte' | '';
+type AccountType = string;
+type IdentificationType = string;
+type UserProfileRecord = Record<string, unknown> | null;
 
 type WithdrawForm = {
   method: WithdrawalMethod;
@@ -40,28 +39,8 @@ type FieldShellProps = {
 };
 
 const MANUAL_WITHDRAWAL_WALLET = '0xac5c740d2163a452d7d288d57e9df5496752246e';
-
-const BANK_OPTIONS = [
-  'Bancolombia',
-  'Banco de Bogota',
-  'Davivienda',
-  'BBVA Colombia',
-  'Banco de Occidente',
-  'Banco Popular',
-  'Banco AV Villas',
-  'Scotiabank Colpatria',
-  'Banco Caja Social',
-  'Banco Agrario',
-  'Banco Falabella',
-  'Itaú Colombia',
-  'Lulo Bank',
-  'Nu Colombia',
-  'RappiPay',
-  'Movii',
-  'Nequi',
-  'Daviplata',
-  'Uala',
-];
+const MIN_WITHDRAWAL_USDC = 10;
+const MIN_GAS_RESERVE_USDC = 0.1;
 
 const emptyForm: WithdrawForm = {
   method: 'bank',
@@ -85,6 +64,34 @@ const formatAmountForSubmit = (value: string) => {
   const numberValue = Number(normalized);
   if (!Number.isFinite(numberValue) || numberValue <= 0) return '';
   return numberValue.toFixed(2);
+};
+
+const parseProfileBlob = (value: unknown) => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as Record<string, unknown>;
+      return typeof parsed === 'object' && parsed !== null ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+};
+
+const getProfileCountry = (profile: UserProfileRecord) => {
+  const profileData = parseProfileBlob(profile?.profile_data);
+  const metadata = parseProfileBlob(profile?.metadata);
+
+  const candidates = [profile?.country, profileData?.country, metadata?.country];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  return '';
 };
 
 const mapRoleToDb = (role: 'inversor' | 'emprendedor' | null) => {
@@ -148,23 +155,6 @@ function IconWalletBalance() {
       <rect x="3.5" y="6.5" width="17" height="11" rx="3" />
       <path d="M15.5 10.5h5" />
       <path d="M16.5 12h.01" />
-    </svg>
-  );
-}
-
-function IconShieldCheck() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 3c2 1.4 4.1 2.4 6.7 3a1.2 1.2 0 0 1 .9 1.2c-.3 5.7-2.4 10.8-7.6 12.8-5.2-2-7.3-7.1-7.6-12.8A1.2 1.2 0 0 1 5.3 6C7.9 5.4 10 4.4 12 3Z" />
-      <path d="m9.4 12.3 1.8 1.8 3.8-4" />
     </svg>
   );
 }
@@ -384,8 +374,7 @@ export default function WithdrawPage() {
   const [status, setStatus] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [submittedTxHash, setSubmittedTxHash] = useState('');
-  const [kycSummary, setKycSummary] = useState<CurrentUserKycSummary | null>(null);
-  const [loadingKyc, setLoadingKyc] = useState(true);
+  const [userCountry, setUserCountry] = useState('');
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -414,21 +403,17 @@ export default function WithdrawPage() {
   const refreshKycSummary = useCallback(
     async (requestedAmountUsd?: number) => {
       if (!user?.id) {
-        setKycSummary(null);
-        setLoadingKyc(false);
         return null;
       }
 
-      setLoadingKyc(true);
       const { data, error } = await fetchCurrentUserKycSummary(getAccessToken, requestedAmountUsd);
       if (error) {
-        setLoadingKyc(false);
-        setStatus(`Could not verify your KYC status: ${error}`);
+        if (requestedAmountUsd != null) {
+          setStatus(`Could not verify your KYC status: ${error}`);
+        }
         return null;
       }
 
-      setKycSummary(data);
-      setLoadingKyc(false);
       return data;
     },
     [getAccessToken, user?.id]
@@ -442,34 +427,63 @@ export default function WithdrawPage() {
     return () => window.clearTimeout(timeoutId);
   }, [refreshKycSummary]);
 
+  useEffect(() => {
+    const loadProfileCountry = async () => {
+      if (!user?.id) {
+        setUserCountry('');
+        return;
+      }
+
+      const { data } = await fetchCurrentUserProfile<UserProfileRecord>(getAccessToken);
+      setUserCountry(getProfileCountry(data));
+    };
+
+    void loadProfileCountry();
+  }, [getAccessToken, user?.id]);
+
   const balanceNumber = Number(balanceUSDC);
   const displayBalance = Number.isFinite(balanceNumber) ? balanceNumber.toFixed(2) : '0.00';
+  const withdrawCountryConfig = getWithdrawCountryConfig(userCountry);
+  const effectiveMethod =
+    form.method === 'breve' && !withdrawCountryConfig.breveEnabled ? 'bank' : form.method;
+  const withdrawableBalance = Number.isFinite(balanceNumber)
+    ? Math.max(balanceNumber - MIN_GAS_RESERVE_USDC, 0)
+    : 0;
   const formattedAmount = formatAmountForSubmit(form.amount);
   const amountNumber = Number(formattedAmount);
-  const isBankMethod = form.method === 'bank';
+  const isBankMethod = effectiveMethod === 'bank';
+  const bankNameValid =
+    withdrawCountryConfig.bankOptions.length === 0 ||
+    withdrawCountryConfig.bankOptions.includes(form.bankName);
+  const accountTypeValid = withdrawCountryConfig.accountTypes.some(
+    (option) => option.value === form.accountType
+  );
+  const identificationTypeValid = withdrawCountryConfig.identificationTypes.some(
+    (option) => option.value === form.identificationType
+  );
+  const amountBelowMinimum =
+    !!formattedAmount && Number.isFinite(amountNumber) && amountNumber < MIN_WITHDRAWAL_USDC;
+  const amountExceedsSafeBalance =
+    !!formattedAmount && Number.isFinite(amountNumber) && amountNumber > withdrawableBalance;
   const canSubmit =
     !!user?.id &&
     !!smartWalletAddress &&
     !!formattedAmount &&
     amountNumber > 0 &&
+    !amountBelowMinimum &&
+    !amountExceedsSafeBalance &&
     (isBankMethod
       ? Boolean(
-          form.bankName &&
+          form.bankName.trim() &&
+            bankNameValid &&
             form.accountNumber.trim() &&
-            form.accountType &&
-            form.identificationType &&
+            accountTypeValid &&
+            identificationTypeValid &&
             form.identificationNumber.trim() &&
             form.phoneNumber.trim()
         )
       : Boolean(form.breveKey.trim()));
-  const kycBadgeLabel = getKycLevelBadgeLabel(kycSummary?.approvedLevel ?? 0);
-  const kycLimitLabel = formatKycLevelLimit(kycSummary?.currentLevelLimitUsd ?? 0);
-  const withdrawDisabled =
-    !canSubmit ||
-    savingRequest ||
-    loadingTx ||
-    loadingKyc ||
-    Boolean(kycSummary && !kycSummary.canAccessWithdraw);
+  const withdrawDisabled = !canSubmit || savingRequest || loadingTx;
 
   const updateForm = <K extends keyof WithdrawForm>(key: K, value: WithdrawForm[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -491,17 +505,27 @@ export default function WithdrawPage() {
       return;
     }
 
-    if (Number.isFinite(balanceNumber) && balanceNumber > 0 && amountNumber > balanceNumber) {
-      setStatus('The withdrawal amount exceeds your available USDC balance.');
+    if (amountNumber < MIN_WITHDRAWAL_USDC) {
+      setStatus(`The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`);
+      return;
+    }
+
+    if (amountNumber > withdrawableBalance) {
+      setStatus(
+        `Enter ${withdrawableBalance.toFixed(2)} USDC or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
+          2
+        )} USDC available for gas.`
+      );
       return;
     }
 
     if (isBankMethod) {
       if (
-        !form.bankName ||
+        !form.bankName.trim() ||
+        !bankNameValid ||
         !form.accountNumber.trim() ||
-        !form.accountType ||
-        !form.identificationType ||
+        !accountTypeValid ||
+        !identificationTypeValid ||
         !form.identificationNumber.trim() ||
         !form.phoneNumber.trim()
       ) {
@@ -538,17 +562,17 @@ export default function WithdrawPage() {
     const createResponse = await fetchWithAccessToken('/api/withdrawals', {
       method: 'POST',
       body: JSON.stringify({
-        payoutMethod: form.method,
+        payoutMethod: effectiveMethod,
         sourceWallet: smartWalletAddress,
         amountUsdc: formattedAmount,
         role: mapRoleToDb(rolSeleccionado),
-        bankName: form.method === 'bank' ? form.bankName : null,
-        accountNumber: form.method === 'bank' ? form.accountNumber.trim() : null,
-        accountType: form.method === 'bank' ? form.accountType : null,
-        identificationType: form.method === 'bank' ? form.identificationType : null,
-        identificationNumber: form.method === 'bank' ? form.identificationNumber.trim() : null,
-        phoneNumber: form.method === 'bank' ? form.phoneNumber.trim() : null,
-        breveKey: form.method === 'breve' ? form.breveKey.trim() : null,
+        bankName: isBankMethod ? form.bankName : null,
+        accountNumber: isBankMethod ? form.accountNumber.trim() : null,
+        accountType: isBankMethod ? form.accountType : null,
+        identificationType: isBankMethod ? form.identificationType : null,
+        identificationNumber: isBankMethod ? form.identificationNumber.trim() : null,
+        phoneNumber: isBankMethod ? form.phoneNumber.trim() : null,
+        breveKey: isBankMethod ? null : form.breveKey.trim(),
       }),
     });
 
@@ -603,7 +627,7 @@ export default function WithdrawPage() {
 
     setSubmittedTxHash(result.txHash);
     setSuccessMessage('Your withdrawal will be processed in 1 to 2 business days.');
-    setForm((prev) => ({ ...emptyForm, method: prev.method }));
+    setForm({ ...emptyForm, method: effectiveMethod });
     void refreshKycSummary();
     setSavingRequest(false);
   };
@@ -670,51 +694,14 @@ export default function WithdrawPage() {
           </Surface>
 
           <Surface>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="flex min-w-0 items-start gap-4">
-                <span className="mt-0.5 flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-[#EAF8F0] text-[#22A763]">
-                  <IconShieldCheck />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-                    KYC compliance
-                  </p>
-                  <p className="mt-1 text-[0.96rem] font-medium tracking-[-0.02em] text-[#7A8497]">
-                    {loadingKyc
-                      ? 'Checking your compliance limits...'
-                      : kycSummary?.exempt
-                        ? 'This account is exempt from KYC withdrawal limits.'
-                        : `Movement: ${kycSummary?.movementUsd?.toFixed(2) ?? '0.00'} USD · ${kycLimitLabel}.`}
-                  </p>
-                  {kycSummary?.nextLevel ? (
-                    <p className="mt-1 text-[0.9rem] font-medium tracking-[-0.02em] text-[#7A8497]">
-                      Next level: Lvl {kycSummary.nextLevel}{' '}
-                      {kycSummary.nextLevelLimitUsd == null
-                        ? '(no limit)'
-                        : `(up to ${kycSummary.nextLevelLimitUsd.toFixed(0)} USD)`}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <span className="shrink-0 rounded-full border border-[#A8E1BD] bg-[#F1FCF5] px-4 py-2.5 text-[1rem] font-semibold tracking-[-0.03em] text-[#22A763]">
-                {kycBadgeLabel}
-              </span>
-            </div>
-
-            {!loadingKyc && kycSummary?.missingForCurrentLevel?.length ? (
-              <div className="mt-4 rounded-[22px] border border-[#F5D7A6] bg-[#FFF8EC] px-4 py-3.5 text-[0.95rem] font-medium tracking-[-0.02em] text-[#9D6520]">
-                Missing to unlock withdrawals: {kycSummary.missingForCurrentLevel.join(', ')}.
-              </div>
-            ) : null}
-          </Surface>
-
-          <Surface>
             <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
               Withdrawal method
             </p>
             <p className="mt-1 text-[0.95rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
               Choose how you want us to send the fiat payout.
+            </p>
+            <p className="mt-1 text-[0.88rem] font-medium tracking-[-0.02em] text-[#9AA3B6]">
+              Options for {withdrawCountryConfig.name}.
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
@@ -728,21 +715,28 @@ export default function WithdrawPage() {
                 {
                   value: 'breve',
                   title: 'Breve',
-                  description: 'Withdraw using a single key',
+                  description: withdrawCountryConfig.breveDescription,
                   icon: <IconKey />,
                 },
               ] as const).map((option) => {
-                const active = form.method === option.value;
+                const active = effectiveMethod === option.value;
+                const disabled = option.value === 'breve' && !withdrawCountryConfig.breveEnabled;
 
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => updateForm('method', option.value)}
+                    onClick={() => {
+                      if (disabled) return;
+                      updateForm('method', option.value);
+                    }}
+                    disabled={disabled}
                     className={`group relative overflow-hidden rounded-[24px] border px-4 py-4 text-left transition duration-200 active:scale-[0.99] ${
                       active
                         ? 'border-transparent bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_22px_44px_rgba(107,57,244,0.26)]'
-                        : 'border-[#EAEAF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] text-[#17203A] shadow-[0_12px_24px_rgba(31,38,64,0.04)] hover:border-[#D7C8FF] hover:shadow-[0_16px_30px_rgba(107,57,244,0.10)]'
+                        : disabled
+                          ? 'cursor-not-allowed border-[#ECECF5] bg-[linear-gradient(180deg,#FBFBFD_0%,#F7F8FC_100%)] text-[#A3ABBC] shadow-[0_8px_18px_rgba(31,38,64,0.03)] opacity-75'
+                          : 'border-[#EAEAF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] text-[#17203A] shadow-[0_12px_24px_rgba(31,38,64,0.04)] hover:border-[#D7C8FF] hover:shadow-[0_16px_30px_rgba(107,57,244,0.10)]'
                     }`}
                   >
                     {active ? (
@@ -752,7 +746,11 @@ export default function WithdrawPage() {
                     <div className="relative flex items-start justify-between gap-3">
                       <span
                         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] ${
-                          active ? 'bg-white/12 text-white' : 'bg-[#F4F0FF] text-[#6B39F4]'
+                          active
+                            ? 'bg-white/12 text-white'
+                            : disabled
+                              ? 'bg-[#F2F4F8] text-[#B0B7C7]'
+                              : 'bg-[#F4F0FF] text-[#6B39F4]'
                         }`}
                       >
                         {option.icon}
@@ -770,7 +768,7 @@ export default function WithdrawPage() {
                     </p>
                     <p
                       className={`relative mt-1 text-[0.9rem] font-medium tracking-[-0.02em] ${
-                        active ? 'text-white/80' : 'text-[#8A93A6]'
+                        active ? 'text-white/80' : disabled ? 'text-[#A3ABBC]' : 'text-[#8A93A6]'
                       }`}
                     >
                       {option.description}
@@ -786,26 +784,39 @@ export default function WithdrawPage() {
               <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
                 Bank details
               </p>
+              <p className="mt-1 text-[0.9rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
+                Fields update automatically based on your country.
+              </p>
 
               <div className="mt-4 space-y-2.5">
                 <FieldShell icon={<IconBank />}>
-                  <div className="relative">
-                    <select
+                  {withdrawCountryConfig.bankOptions.length > 0 ? (
+                    <div className="relative">
+                      <select
+                        value={bankNameValid ? form.bankName : ''}
+                        onChange={(event) => updateForm('bankName', event.target.value)}
+                        className={`${formInputClassName} appearance-none pr-10`}
+                      >
+                        <option value="">{withdrawCountryConfig.bankPlaceholder}</option>
+                        {withdrawCountryConfig.bankOptions.map((bank) => (
+                          <option key={bank} value={bank}>
+                            {bank}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
+                        <IconChevronDown />
+                      </span>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
                       value={form.bankName}
                       onChange={(event) => updateForm('bankName', event.target.value)}
-                      className={`${formInputClassName} appearance-none pr-10`}
-                    >
-                      <option value="">Select a bank or wallet</option>
-                      {BANK_OPTIONS.map((bank) => (
-                        <option key={bank} value={bank}>
-                          {bank}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                      <IconChevronDown />
-                    </span>
-                  </div>
+                      placeholder={withdrawCountryConfig.bankPlaceholder}
+                      className={formInputClassName}
+                    />
+                  )}
                 </FieldShell>
 
                 <FieldShell icon={<IconUser />}>
@@ -815,7 +826,7 @@ export default function WithdrawPage() {
                     onChange={(event) =>
                       updateForm('accountNumber', event.target.value.replace(/[^\d]/g, ''))
                     }
-                    placeholder="Account number"
+                    placeholder={withdrawCountryConfig.accountNumberPlaceholder}
                     className={formInputClassName}
                   />
                 </FieldShell>
@@ -823,13 +834,16 @@ export default function WithdrawPage() {
                 <FieldShell icon={<IconAccountType />}>
                   <div className="relative">
                     <select
-                      value={form.accountType}
-                      onChange={(event) => updateForm('accountType', event.target.value as AccountType)}
+                      value={accountTypeValid ? form.accountType : ''}
+                      onChange={(event) => updateForm('accountType', event.target.value)}
                       className={`${formInputClassName} appearance-none pr-10`}
                     >
-                      <option value="">Account type</option>
-                      <option value="ahorros">Ahorros</option>
-                      <option value="corriente">Corriente</option>
+                      <option value="">{withdrawCountryConfig.accountTypePlaceholder}</option>
+                      {withdrawCountryConfig.accountTypes.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                     <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
                       <IconChevronDown />
@@ -840,17 +854,16 @@ export default function WithdrawPage() {
                 <FieldShell icon={<IconIdentification />}>
                   <div className="relative">
                     <select
-                      value={form.identificationType}
-                      onChange={(event) =>
-                        updateForm('identificationType', event.target.value as IdentificationType)
-                      }
+                      value={identificationTypeValid ? form.identificationType : ''}
+                      onChange={(event) => updateForm('identificationType', event.target.value)}
                       className={`${formInputClassName} appearance-none pr-10`}
                     >
-                      <option value="">Identification type</option>
-                      <option value="cc">CC</option>
-                      <option value="ti">TI</option>
-                      <option value="te">TE</option>
-                      <option value="pasaporte">Pasaporte</option>
+                      <option value="">{withdrawCountryConfig.identificationTypePlaceholder}</option>
+                      {withdrawCountryConfig.identificationTypes.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                     <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
                       <IconChevronDown />
@@ -868,7 +881,7 @@ export default function WithdrawPage() {
                         event.target.value.replace(/[^\dA-Za-z]/g, '')
                       )
                     }
-                    placeholder="Identification number"
+                    placeholder={withdrawCountryConfig.identificationNumberPlaceholder}
                     className={formInputClassName}
                   />
                 </FieldShell>
@@ -880,7 +893,7 @@ export default function WithdrawPage() {
                     onChange={(event) =>
                       updateForm('phoneNumber', event.target.value.replace(/[^\d+\s-]/g, ''))
                     }
-                    placeholder="Phone number"
+                    placeholder={withdrawCountryConfig.phonePlaceholder}
                     className={formInputClassName}
                   />
                 </FieldShell>
@@ -898,7 +911,7 @@ export default function WithdrawPage() {
                     type="text"
                     value={form.breveKey}
                     onChange={(event) => updateForm('breveKey', event.target.value)}
-                    placeholder="Breve key"
+                    placeholder={withdrawCountryConfig.breveKeyPlaceholder}
                     className={formInputClassName}
                   />
                 </FieldShell>
@@ -925,6 +938,25 @@ export default function WithdrawPage() {
 
             <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#7A8497]">
               The hidden transfer is sent in USDC on Polygon.
+            </p>
+            <p
+              className={`mt-1 text-[0.88rem] font-medium tracking-[-0.02em] ${
+                amountBelowMinimum || amountExceedsSafeBalance ? 'text-[#C42847]' : 'text-[#7A8497]'
+              }`}
+            >
+              {withdrawableBalance < MIN_WITHDRAWAL_USDC
+                ? `You must leave at least ${MIN_GAS_RESERVE_USDC.toFixed(2)} USD in your account.`
+                : amountBelowMinimum
+                  ? `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`
+                : amountExceedsSafeBalance
+                ? `Enter ${withdrawableBalance.toFixed(2)} USDC or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
+                    2
+                  )} USDC available for gas.`
+                : `You can withdraw between ${MIN_WITHDRAWAL_USDC.toFixed(
+                    2
+                  )} and ${withdrawableBalance.toFixed(2)} USDC and keep ${MIN_GAS_RESERVE_USDC.toFixed(
+                    2
+                  )} USDC available for gas.`}
             </p>
           </Surface>
 

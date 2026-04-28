@@ -57,6 +57,9 @@ const nameFrom = (target: Partial<WalletTarget> | null | undefined) => {
 const normalizeRecipientIdentifier = (value: string | null | undefined) =>
   value?.trim().toLowerCase() ?? '';
 
+const looksLikeEmail = (value: string | null | undefined) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? '');
+
 const findRecipientByIdentifier = <
   T extends { email?: string | null; walletAddress?: string | null; wallet_address?: string | null }
 >(
@@ -351,6 +354,40 @@ export default function WalletTransferPage() {
     setMonto(searchParams.get('amount') ?? '200.00');
   }, [pendingInvestment, searchParams]);
 
+  useEffect(() => {
+    if (!walletDestino.startsWith('0x') || walletDestino.length !== 42) return;
+
+    const localRecipient = findRecipientByIdentifier([...recentWallets, ...mappedTargets], walletDestino);
+    if (localRecipient?.email) {
+      setWalletDestino(localRecipient.email);
+      return;
+    }
+
+    let cancelled = false;
+    const resolveRecipientEmail = async () => {
+      const { data } = await runUserDirectoryQuery(supabase, (source) =>
+        supabase
+          .from(source)
+          .select('email')
+          .eq('wallet_address', walletDestino)
+          .maybeSingle()
+      );
+
+      if (!cancelled) {
+        const resolvedEmail = (data as { email?: string | null } | null)?.email?.trim();
+        if (resolvedEmail) {
+          setWalletDestino(resolvedEmail);
+        }
+      }
+    };
+
+    void resolveRecipientEmail();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mappedTargets, recentWallets, supabase, walletDestino]);
+
   const loadRecentWallets = useCallback(async () => {
     if (!user?.id || !smartWalletAddress) {
       setRecentWallets([]);
@@ -446,7 +483,11 @@ export default function WalletTransferPage() {
       : '');
 
   const amountNumber = Number(monto);
-  const canSubmit = Boolean(resolvedDestinationWallet && Number(monto) > 0 && smartWalletAddress);
+  const canSubmit = Boolean(
+    (resolvedDestinationWallet || looksLikeEmail(walletDestino)) &&
+      Number(monto) > 0 &&
+      smartWalletAddress
+  );
   const canRefresh = !loadingWallets && !loadingRecentWallets;
   const numericBalance = Number(balanceUSDC ?? 0);
   const safeBalanceValue = Number.isFinite(numericBalance) ? Math.max(numericBalance, 0) : 0;

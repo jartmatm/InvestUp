@@ -373,7 +373,7 @@ export default function FeedPage() {
             <div>
               <InvestAppWordmark />
               <h1 className="mt-3 text-[2.05rem] font-semibold tracking-[-0.06em] text-[#111827]">
-                Ventures
+                Oportunities
               </h1>
               <p className="mt-1 text-[0.84rem] leading-5 text-[#858EA2]">
                 Projects published by entrepreneurs

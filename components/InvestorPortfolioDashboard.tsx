@@ -320,9 +320,9 @@ function PortfolioGauge({ value }: { value: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <p className="text-[2rem] font-semibold tracking-[-0.04em] text-white">{percent(value)}</p>
+        <p className="text-[29px] font-semibold tracking-[-0.04em] text-white">{percent(value)}</p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-          Average Rate
+          Agv. Rate
         </p>
       </div>
     </div>
@@ -337,7 +337,7 @@ function PortfolioSparkline({ points }: { points: number[] }) {
   const areaPath = `${linePath} L 320 112 L 0 112 Z`;
 
   return (
-    <svg viewBox="0 0 320 120" className="h-[92px] w-full">
+    <svg viewBox="0 0 320 120" className="h-[82px] w-full">
       <defs>
         <linearGradient id="portfolio-chart-fill" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
@@ -665,7 +665,7 @@ export default function InvestorPortfolioDashboard() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              My investments
+              My Portfolio
             </h1>
             <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
               Track your portfolio performance and growth
@@ -678,11 +678,11 @@ export default function InvestorPortfolioDashboard() {
 
         {!loading ? (
           <div className="space-y-4">
-            <section className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#7C69FF_0%,#5F4DFF_45%,#5641E7_100%)] px-5 pb-5 pt-6 shadow-[0_28px_60px_rgba(99,77,255,0.32)]">
+            <section className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#7C69FF_0%,#5F4DFF_45%,#5641E7_100%)] px-5 pb-4 pt-5 shadow-[0_28px_60px_rgba(99,77,255,0.32)]">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                    Portfolio value
+                    VALUE
                   </p>
                   <p className="mt-3 text-[2.35rem] font-semibold tracking-[-0.06em] text-white">
                     {money(totalPortfolio)}
@@ -701,7 +701,7 @@ export default function InvestorPortfolioDashboard() {
                 <PortfolioGauge value={averageRate} />
               </div>
 
-              <div className="mt-6">
+              <div className="mt-4">
                 <PortfolioSparkline points={sparklinePoints} />
               </div>
             </section>

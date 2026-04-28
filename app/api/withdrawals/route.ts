@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
+import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getCurrentUserKycSummary } from '@/utils/server/kyc-compliance';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
@@ -13,6 +14,7 @@ type PayoutMethod = 'bank' | 'breve';
 const MANUAL_WITHDRAWAL_WALLET =
   process.env.MANUAL_WITHDRAWAL_WALLET?.trim() ||
   '0xac5c740d2163a452d7d288d57e9df5496752246e';
+const MIN_WITHDRAWAL_USDC = 10;
 
 const jsonNoStore = (body: unknown, init?: ResponseInit) => {
   const response = NextResponse.json(body, init);
@@ -21,6 +23,19 @@ const jsonNoStore = (body: unknown, init?: ResponseInit) => {
 };
 
 const coerceString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+const parseProfileBlob = (value: unknown) => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as Record<string, unknown>;
+      return typeof parsed === 'object' && parsed !== null ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : null;
+};
 
 const coerceRole = (value: unknown): Role => {
   if (value === 'investor') return 'investor';
@@ -81,6 +96,16 @@ export async function POST(request: NextRequest) {
     return jsonNoStore({ error: 'A valid amountUsdc is required.' }, { status: 400 });
   }
 
+  if (amountUsdc < MIN_WITHDRAWAL_USDC) {
+    return jsonNoStore(
+      {
+        error: 'Withdrawal amount below minimum.',
+        details: `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`,
+      },
+      { status: 400 }
+    );
+  }
+
   const role = coerceRole(payload.role);
   const clientIp = getClientIp(request);
 
@@ -116,11 +141,8 @@ export async function POST(request: NextRequest) {
     if (
       !bankName ||
       !accountNumber ||
-      (accountType !== 'ahorros' && accountType !== 'corriente') ||
-      (identificationType !== 'cc' &&
-        identificationType !== 'ti' &&
-        identificationType !== 'te' &&
-        identificationType !== 'pasaporte') ||
+      !accountType ||
+      !identificationType ||
       !identificationNumber ||
       !phoneNumber
     ) {
@@ -156,6 +178,63 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdminClient();
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('country,profile_data,metadata')
+      .eq('id', verified.userId)
+      .maybeSingle();
+
+    const profileData = parseProfileBlob(userProfile?.profile_data);
+    const metadataRecord = parseProfileBlob(userProfile?.metadata);
+    const profileCountry =
+      coerceString(userProfile?.country) ||
+      coerceString(profileData?.country) ||
+      coerceString(metadataRecord?.country);
+    const withdrawCountryConfig = getWithdrawCountryConfig(profileCountry);
+
+    if (payoutMethod === 'bank') {
+      const bankName = coerceString(insertPayload.bank_name);
+      const accountNumber = coerceString(insertPayload.bank_account_number);
+      const accountType = coerceString(insertPayload.bank_account_type);
+      const identificationType = coerceString(insertPayload.identification_type);
+      const identificationNumber = coerceString(insertPayload.identification_number);
+      const phoneNumber = coerceString(insertPayload.phone_number);
+      const allowedAccountTypes = new Set(
+        withdrawCountryConfig.accountTypes.map((option) => option.value)
+      );
+      const allowedIdentificationTypes = new Set(
+        withdrawCountryConfig.identificationTypes.map((option) => option.value)
+      );
+
+      if (
+        !bankName ||
+        !accountNumber ||
+        !accountType ||
+        !allowedAccountTypes.has(accountType) ||
+        !identificationType ||
+        !allowedIdentificationTypes.has(identificationType) ||
+        !identificationNumber ||
+        !phoneNumber
+      ) {
+        return jsonNoStore({ error: 'Missing required bank payout fields.' }, { status: 400 });
+      }
+
+      if (
+        withdrawCountryConfig.bankOptions.length > 0 &&
+        !withdrawCountryConfig.bankOptions.includes(bankName)
+      ) {
+        return jsonNoStore({ error: 'Invalid bank for your country.' }, { status: 400 });
+      }
+    } else if (!withdrawCountryConfig.breveEnabled) {
+      return jsonNoStore(
+        {
+          error: 'Breve is not available for this country.',
+          details: 'Breve withdrawals are available only for Colombia.',
+        },
+        { status: 400 }
+      );
+    }
+
     const kycSummary = await getCurrentUserKycSummary({
       supabase,
       userId: verified.userId,
@@ -178,6 +257,7 @@ export async function POST(request: NextRequest) {
     metadata.kyc_level = kycSummary.approvedLevel;
     metadata.kyc_required_level = kycSummary.requiredLevelForRequestedAmount;
     metadata.kyc_projected_movement_usd = kycSummary.projectedMovementUsd;
+    metadata.withdraw_country = withdrawCountryConfig.code;
 
     const { data, error } = await supabase
       .from('withdraw_TEMP')
