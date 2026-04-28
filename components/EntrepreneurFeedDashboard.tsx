@@ -429,31 +429,31 @@ function FundingGauge({
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
 
   return (
-    <DashboardCard className="overflow-hidden border-white/12 bg-[linear-gradient(180deg,#1A1744_0%,#211A57_42%,#15133A_100%)] p-5 text-white shadow-[0_30px_70px_rgba(17,24,39,0.28)] ring-1 ring-white/10">
-      <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[radial-gradient(circle_at_50%_16%,rgba(124,92,255,0.38),transparent_42%),radial-gradient(circle_at_50%_100%,rgba(53,201,130,0.18),transparent_34%)]" />
-      <div className="pointer-events-none absolute -left-16 top-10 h-36 w-36 rounded-full bg-[#7C5CFF]/18 blur-3xl" />
-      <div className="pointer-events-none absolute -right-12 bottom-4 h-28 w-28 rounded-full bg-[#35C982]/10 blur-3xl" />
+    <DashboardCard className="overflow-hidden border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,243,255,0.90)_55%,rgba(241,246,255,0.96)_100%)] p-5 text-[#1C2336] shadow-[0_26px_64px_rgba(31,38,64,0.10)] ring-1 ring-[#EEF1FF]/80">
+      <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[radial-gradient(circle_at_50%_12%,rgba(124,92,255,0.16),transparent_42%),radial-gradient(circle_at_50%_100%,rgba(53,201,130,0.08),transparent_32%)]" />
+      <div className="pointer-events-none absolute -left-16 top-8 h-36 w-36 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-12 bottom-3 h-28 w-28 rounded-full bg-[#35C982]/8 blur-3xl" />
 
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/55">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
               Funds raised
             </p>
-            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
+            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
               {money(raised, currency)}
             </p>
-            <p className="mt-1 text-xs text-white/55">of {money(target, currency)} goal</p>
+            <p className="mt-1 text-xs text-[#8A93A8]">of {money(target, currency)} goal</p>
           </div>
 
           <div className="text-right">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/55">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
               Remaining
             </p>
-            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-white">
+            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
               {money(remaining, currency)}
             </p>
-            <p className="mt-1 text-xs text-white/55">to go</p>
+            <p className="mt-1 text-xs text-[#8A93A8]">to go</p>
           </div>
         </div>
 
@@ -479,7 +479,7 @@ function FundingGauge({
               d={buildArcPath(180, 0)}
               pathLength={100}
               fill="none"
-              stroke="rgba(255,255,255,0.10)"
+              stroke="rgba(124,92,255,0.14)"
               strokeWidth="18"
               strokeLinecap="round"
             />
@@ -507,30 +507,30 @@ function FundingGauge({
               className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
             />
 
-            <text x="27" y="168" className="fill-white/45 text-[11px] font-semibold">
+            <text x="27" y="168" className="fill-[#A0A8BC] text-[11px] font-semibold">
               0%
             </text>
-            <text x="132" y="34" className="fill-white/45 text-[11px] font-semibold">
+            <text x="132" y="34" className="fill-[#A0A8BC] text-[11px] font-semibold">
               50%
             </text>
-            <text x="230" y="168" className="fill-white/45 text-[11px] font-semibold">
+            <text x="230" y="168" className="fill-[#A0A8BC] text-[11px] font-semibold">
               100%
             </text>
           </svg>
 
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-7 text-center">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-white/55">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
               Funding progress
             </p>
-            <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-white">
+            <p className="mt-2 text-[2rem] font-semibold tracking-[-0.05em] text-[#1C2336]">
               {percentageLabel}
             </p>
           </div>
         </div>
 
         <div className="-mt-4 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/85 backdrop-blur-xl">
-            <span className="h-2 w-2 rounded-full bg-white/55" />
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-xs font-semibold text-[#4F5B76] shadow-[0_10px_24px_rgba(31,38,64,0.08)] backdrop-blur-xl">
+            <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/65" />
             {daysRemainingLabel} left
           </span>
         </div>
@@ -831,10 +831,6 @@ export default function EntrepreneurFeedDashboard() {
   const raisedAmount = Number(project?.amount_received ?? 0);
   const remainingAmount = Math.max(targetAmount - raisedAmount, 0);
   const currency = project?.currency ?? 'USD';
-  const businessName = project?.business_name || project?.title || 'Your venture';
-  const ventureDescription =
-    project?.description?.trim() || 'Track your fundraising and stay on top of investor repayments.';
-  const heroImage = project?.photo_urls?.[0] ?? null;
   const daysRemainingLabel = getDaysRemaining(project?.publication_end_date);
 
   const infoRows = [
@@ -923,47 +919,6 @@ export default function EntrepreneurFeedDashboard() {
 
           {!loading && project ? (
             <div className="flex flex-col gap-4 pb-2">
-              <DashboardCard className="overflow-hidden border-white/12 bg-[linear-gradient(140deg,#2B2370_0%,#2E2A7D_42%,#23224C_100%)] p-5 text-white shadow-[0_30px_70px_rgba(17,24,39,0.28)] ring-1 ring-white/10">
-                <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_28%),radial-gradient(circle_at_85%_15%,rgba(124,92,255,0.34),transparent_26%),radial-gradient(circle_at_75%_80%,rgba(53,201,130,0.12),transparent_28%)]" />
-                <div className="relative flex items-center gap-4">
-                  <div className="flex h-[84px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-[22px] border border-white/12 bg-[linear-gradient(135deg,#5A3FF0_0%,#221E4F_100%)] shadow-[0_18px_38px_rgba(7,10,23,0.32)]">
-                    {heroImage ? (
-                      <div
-                        role="img"
-                        aria-label={businessName}
-                        className="h-full w-full bg-cover bg-center"
-                        style={{ backgroundImage: `url("${heroImage}")` }}
-                      />
-                    ) : (
-                      <span className="text-lg font-semibold tracking-[0.08em] text-white">
-                        {initialsFrom(businessName)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-white/55">
-                      Venture dashboard
-                    </p>
-                    <h2 className="mt-2 text-[1.42rem] font-semibold tracking-[-0.04em] text-white">
-                      {businessName}
-                    </h2>
-                    <p className="mt-2 text-sm leading-5 text-white/72">
-                      {ventureDescription}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => router.push(`/feed/${encodeURIComponent(String(project.id))}`)}
-                  className="relative mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-full border border-white/14 bg-white/12 px-4 py-2 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(7,10,23,0.20)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/16"
-                >
-                  View venture
-                  <IconArrowRight />
-                </button>
-              </DashboardCard>
-
               <FundingGauge
                 raised={raisedAmount}
                 target={targetAmount}
