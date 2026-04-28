@@ -11,6 +11,7 @@ import { getPendingInvestment } from '@/lib/pending-investment';
 type ContactItem = {
   id: string;
   displayName: string;
+  email: string | null;
   avatarUrl: string | null;
   walletAddress: string;
 };
@@ -226,10 +227,10 @@ function WalletHeroCard({
             Transfer
           </p>
           <h2 className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-white">
-            Send to a Wallet
+            Send funds
           </h2>
           <p className="mt-3 text-sm leading-6 tracking-[-0.02em] text-white/86">
-            Enter a wallet address manually or pick one of your recent contacts.
+            Enter an InvestApp email manually or pick one of your recent contacts.
           </p>
         </div>
 
@@ -350,9 +351,8 @@ export default function InvestPage() {
         .filter((target) => target.wallet_address)
         .map((target) => ({
           id: target.id,
-          displayName:
-            `${target.name ?? ''} ${target.surname ?? ''}`.trim() ||
-            `${target.wallet_address?.slice(0, 6) ?? 'Wallet'}...`,
+          displayName: `${target.name ?? ''} ${target.surname ?? ''}`.trim() || target.email?.trim() || 'InvestApp user',
+          email: target.email,
           avatarUrl: target.avatar_url,
           walletAddress: target.wallet_address ?? '',
         }))
@@ -474,9 +474,9 @@ export default function InvestPage() {
                   recentContacts.map((contact) => (
                     <Link
                       key={contact.id}
-                      href={`/invest/wallet?mode=transfer&wallet=${encodeURIComponent(
-                        contact.walletAddress
-                      )}`}
+                      href={`/invest/wallet?mode=transfer${
+                        contact.email ? `&email=${encodeURIComponent(contact.email)}` : ''
+                      }&wallet=${encodeURIComponent(contact.walletAddress)}`}
                       className="flex w-[76px] shrink-0 flex-col items-center gap-2 text-center"
                     >
                       <ContactAvatar

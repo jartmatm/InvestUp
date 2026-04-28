@@ -83,9 +83,9 @@ type ReceiptData = {
   txHash: string;
   createdAt: string;
   senderName: string;
-  senderWallet: string;
+  senderContact: string;
   receiverName: string;
-  receiverWallet: string;
+  receiverContact: string;
 };
 
 type StoredTransaction = CurrentUserTransaction;
@@ -337,13 +337,43 @@ const getEmbeddedWalletAddressFromUser = (
 
 const normalizePendingInvestment = (
   pendingInvestment: PendingInvestment | null,
-  destinationWallet: string
+  destinationIdentifier: string
 ) => {
   if (!pendingInvestment) return null;
   const pendingWallet = pendingInvestment.entrepreneurWallet?.toLowerCase();
-  const currentDestination = destinationWallet.toLowerCase();
-  if (!pendingWallet || pendingWallet !== currentDestination) return null;
-  return pendingInvestment;
+  const pendingEmail = pendingInvestment.entrepreneurEmail?.trim().toLowerCase();
+  const currentDestination = destinationIdentifier.trim().toLowerCase();
+  if (!pendingWallet && !pendingEmail) return null;
+  if (pendingWallet === currentDestination || pendingEmail === currentDestination) {
+    return pendingInvestment;
+  }
+  return null;
+};
+
+const normalizeRecipientIdentifier = (value: string | null | undefined) =>
+  value?.trim().toLowerCase() ?? '';
+
+const getWalletTargetDisplayName = (target: Pick<UserWalletTarget, 'name' | 'surname' | 'email'>) => {
+  const full = `${target.name ?? ''} ${target.surname ?? ''}`.trim();
+  if (full) return full;
+  if (target.email?.trim()) return target.email.trim();
+  return 'Recipient';
+};
+
+const findWalletTargetByIdentifier = (
+  targets: UserWalletTarget[],
+  identifier: string
+) => {
+  const normalized = normalizeRecipientIdentifier(identifier);
+  if (!normalized) return null;
+
+  return (
+    targets.find((target) => {
+      const email = normalizeRecipientIdentifier(target.email);
+      const wallet = target.wallet_address?.toLowerCase() ?? '';
+      return email === normalized || wallet === normalized;
+    }) ?? null
+  );
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -755,6 +785,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         const senderName = userAlias || user.email?.address || 'Sender';
         const resolvedReceiverName =
           receiverName || metadata?.receiver_name?.toString() || receiver?.email || 'Recipient';
+        const senderContact = user.email?.address || 'No email available';
+        const receiverContact =
+          receiver?.email ||
+          (typeof metadata?.receiver_email === 'string' ? metadata.receiver_email : '') ||
+          toWallet;
         const normalizedAmount = Number(storedTransaction.amount ?? amountUsdc);
 
         setLastReceipt({
@@ -766,9 +801,9 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           txHash: String(storedTransaction.tx_hash ?? txHash),
           createdAt: String(storedTransaction.created_at ?? new Date().toISOString()),
           senderName,
-          senderWallet: storedTransaction.from_wallet ?? smartWalletAddress,
+          senderContact,
           receiverName: resolvedReceiverName,
-          receiverWallet: storedTransaction.to_wallet ?? toWallet,
+          receiverContact,
         });
 
         return storedTransaction;
@@ -982,7 +1017,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await runUserDirectoryQuery(supabase, (source) =>
         supabase
           .from(source)
-          .select('id,name,surname,avatar_url,country,role,wallet_address')
+          .select('id,email,name,surname,avatar_url,country,role,wallet_address')
           .eq('role', roleTarget)
           .not('wallet_address', 'is', null)
           .neq('id', user.id)
@@ -1008,8 +1043,20 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         alert('Missing data or the wallet is not ready yet.');
         return { success: false, txHash: null };
       }
-      if (!destino.startsWith('0x') || destino.length !== 42) {
-        alert('Invalid destination wallet address.');
+
+      const destinationValue = destino.trim();
+      const receiverTarget = findWalletTargetByIdentifier(walletTargets, destinationValue);
+      const directWalletAddress =
+        destinationValue.startsWith('0x') && destinationValue.length === 42 ? destinationValue : '';
+      const resolvedDestinationWallet = receiverTarget?.wallet_address ?? directWalletAddress;
+
+      if (!resolvedDestinationWallet) {
+        const isEmailDestination = destinationValue.includes('@');
+        alert(
+          isEmailDestination
+            ? 'We could not find an InvestApp user with that email.'
+            : 'Invalid recipient email or linked wallet.'
+        );
         return { success: false, txHash: null };
       }
 
@@ -1066,7 +1113,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           data: encodeFunctionData({
             abi: USDC_ABI,
             functionName: 'transfer',
-            args: [destino as `0x${string}`, montoSolicitado],
+            args: [resolvedDestinationWallet as `0x${string}`, montoSolicitado],
           }),
         });
 
@@ -1077,13 +1124,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         const pendingInvestment =
           rolSeleccionado === 'inversor'
-            ? normalizePendingInvestment(getPendingInvestment(user?.id), destino)
+            ? normalizePendingInvestment(getPendingInvestment(user?.id), destinationValue)
             : null;
-        const receiverTarget = walletTargets.find(
-          (target) =>
-            target.wallet_address &&
-            target.wallet_address.toLowerCase() === destino.toLowerCase()
-        );
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
         const fallbackMovementType =
           rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
@@ -1101,10 +1143,15 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
                 : 'Transfer';
         const provisionalReceiverName =
           (movementType === 'withdrawal' ? 'Manual withdrawal wallet' : null) ||
+          pendingInvestment?.entrepreneurEmail ||
           pendingInvestment?.entrepreneurName ||
-          `${receiverTarget?.name ?? ''} ${receiverTarget?.surname ?? ''}`.trim() ||
+          (receiverTarget ? getWalletTargetDisplayName(receiverTarget) : '') ||
           receiverTarget?.email ||
           'Recipient';
+        const provisionalReceiverContact =
+          movementType === 'withdrawal'
+            ? resolvedDestinationWallet
+            : pendingInvestment?.entrepreneurEmail || receiverTarget?.email || destinationValue;
 
         // Show the receipt as soon as we have an on-chain hash, even if the Supabase write fails later.
         setLastReceipt({
@@ -1116,12 +1163,15 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           txHash,
           createdAt: new Date().toISOString(),
           senderName: userAlias || user?.email?.address || 'Sender',
-          senderWallet: smartWalletAddress,
+          senderContact: user?.email?.address || 'No email available',
           receiverName: provisionalReceiverName,
-          receiverWallet: destino,
+          receiverContact: provisionalReceiverContact,
         });
 
-        setHistorial((prev) => [`${tipo} ${enviadoFmt} USDC -> ${destino.slice(0, 8)}...`, ...prev]);
+        setHistorial((prev) => [
+          `${tipo} ${enviadoFmt} USDC -> ${provisionalReceiverContact}`,
+          ...prev,
+        ]);
         const transactionNotificationKey = buildTransactionNotificationKey(txHash, txHash);
         if (transactionNotificationKey) {
           seenTransactionNotificationKeysRef.current.add(transactionNotificationKey);
@@ -1159,25 +1209,28 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         const transactionRow = await registrarTransaccion({
           txHash,
-          toWallet: destino,
+          toWallet: resolvedDestinationWallet,
           amountUsdc: enviadoFmt,
           movementType,
           status: 'completed',
-          receiverName: pendingInvestment?.entrepreneurName,
+          receiverName: pendingInvestment?.entrepreneurEmail || pendingInvestment?.entrepreneurName,
           metadata: pendingInvestment
             ? {
                 project_id: pendingInvestment.projectId,
                 project_title: pendingInvestment.projectTitle,
                 entrepreneur_user_id: pendingInvestment.entrepreneurUserId,
                 entrepreneur_name: pendingInvestment.entrepreneurName,
+                receiver_email: pendingInvestment.entrepreneurEmail ?? null,
                 projected_return_usdc: pendingInvestment.projectedReturnUsdc,
                 projected_total_usdc: pendingInvestment.projectedTotalUsdc,
-                receiver_name: pendingInvestment.entrepreneurName,
+                receiver_name:
+                  pendingInvestment.entrepreneurEmail ?? pendingInvestment.entrepreneurName,
               }
             : movementType === 'repayment'
               ? {
                   investor_user_id: receiverTarget?.id ?? null,
                   receiver_name: receiverTarget?.email ?? 'Investor',
+                  receiver_email: receiverTarget?.email ?? null,
                   created_from: 'direct-repayment-flow',
                 }
               : movementType === 'withdrawal'
@@ -1188,6 +1241,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
               : {
                   receiver_user_id: receiverTarget?.id ?? null,
                   receiver_name: receiverTarget?.email ?? 'Recipient',
+                  receiver_email: receiverTarget?.email ?? null,
                   created_from: 'direct-transfer-flow',
                 },
         });
@@ -1198,7 +1252,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             txHash,
             transactionId: transactionRow?.id ?? null,
             amountUsdc: enviadoFmt,
-            toWallet: destino,
+            toWallet: resolvedDestinationWallet,
           });
           clearPendingInvestment(user?.id);
         } else if (movementType === 'repayment') {
@@ -1207,7 +1261,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
             transactionId: transactionRow?.id ?? null,
             transactionUuid: transactionRow?.uuid ?? null,
             amountUsdc: enviadoFmt,
-            toWallet: destino,
+            toWallet: resolvedDestinationWallet,
             projectId: options?.projectId ?? null,
             investorUserId: options?.investorUserId ?? null,
           });

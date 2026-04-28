@@ -37,6 +37,7 @@ type ProjectInvestmentDetail = {
 type OwnerProfile = {
   name: string | null;
   surname: string | null;
+  email: string | null;
   wallet_address: string | null;
 };
 
@@ -150,7 +151,7 @@ export default function ProjectInvestPage() {
         const { data: ownerData } = await runUserDirectoryQuery(supabase, (source) =>
           supabase
             .from(source)
-            .select('name,surname,wallet_address')
+            .select('name,surname,email,wallet_address')
             .eq('id', normalizedProject.owner_user_id)
             .maybeSingle()
         );
@@ -201,11 +202,12 @@ export default function ProjectInvestPage() {
   const entrepreneurName = (() => {
     const ownerName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
     if (ownerName) return ownerName;
-    if (owner?.wallet_address) return `${owner.wallet_address.slice(0, 6)}...`;
+    if (owner?.email?.trim()) return owner.email.trim();
     if (project?.business_name) return project.business_name;
     return 'Entrepreneur';
   })();
 
+  const entrepreneurEmail = owner?.email?.trim() ?? '';
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
   const canContinue = Boolean(project && entrepreneurWallet && amountNumber > 0);
   const quickAmounts = Array.from(
@@ -235,6 +237,7 @@ export default function ProjectInvestPage() {
       projectTitle: project.title,
       entrepreneurUserId: project.owner_user_id ?? '',
       entrepreneurName,
+      entrepreneurEmail,
       entrepreneurWallet,
       amountUsdc: amountNumber.toFixed(2),
       interestRateEa: safeInterestRate,
@@ -301,9 +304,9 @@ export default function ProjectInvestPage() {
             <p className="mt-4 text-sm text-gray-700">{project.description}</p>
 
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
-              <p className="text-xs text-gray-500">Entrepreneur wallet</p>
+              <p className="text-xs text-gray-500">InvestApp user email</p>
               <p className="mt-1 break-all text-sm font-medium text-gray-800">
-                {entrepreneurWallet || 'Configuration pending'}
+                {entrepreneurEmail || 'Email pending'}
               </p>
             </div>
             <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/10 p-4">

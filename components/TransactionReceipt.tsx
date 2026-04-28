@@ -87,11 +87,11 @@ export default function TransactionReceipt() {
       { label: 'UUID', values: [lastReceipt.uuid || 'Pending'] },
       {
         label: 'Sender',
-        values: [lastReceipt.senderName, lastReceipt.senderWallet],
+        values: [lastReceipt.senderName, lastReceipt.senderContact],
       },
       {
         label: 'Recipient',
-        values: [lastReceipt.receiverName, lastReceipt.receiverWallet],
+        values: [lastReceipt.receiverName, lastReceipt.receiverContact],
       },
       { label: 'Transaction type', values: [mapType(lastReceipt.type)] },
       {
@@ -231,13 +231,13 @@ export default function TransactionReceipt() {
           <div className="rounded-2xl bg-white/10 p-3">
             <p className="text-xs uppercase text-white/60">Sender</p>
             <p>{lastReceipt.senderName}</p>
-            <p className="text-xs text-white/60">{lastReceipt.senderWallet}</p>
+            <p className="text-xs text-white/60">{lastReceipt.senderContact}</p>
           </div>
 
           <div className="rounded-2xl bg-white/10 p-3">
             <p className="text-xs uppercase text-white/60">Recipient</p>
             <p>{lastReceipt.receiverName}</p>
-            <p className="text-xs text-white/60">{lastReceipt.receiverWallet}</p>
+            <p className="text-xs text-white/60">{lastReceipt.receiverContact}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

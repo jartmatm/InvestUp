@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
+import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
 import type {
   CurrentUserTransaction,
   TransactionMovementType,
@@ -21,6 +23,22 @@ type DirectionFilter = 'all' | Exclude<TransactionDirection, 'neutral'>;
 type SortFilter = 'latest' | 'oldest' | 'highest' | 'lowest';
 
 type TransactionRow = CurrentUserTransaction;
+
+type DirectoryProfile = {
+  name: string | null;
+  surname: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  wallet_address: string | null;
+};
+
+const SUPABASE_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
+const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const movementTypeOptions: Array<{ value: MovementFilter; label: string }> = [
   { value: 'all', label: 'All types' },
@@ -163,6 +181,13 @@ const initialsFrom = (value: string) =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
+
+const getDirectoryDisplayName = (profile: DirectoryProfile | null | undefined) => {
+  const fullName = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
+  if (fullName) return fullName;
+  if (profile?.email?.trim()) return profile.email.trim();
+  return 'InvestApp user';
+};
 
 function IconDocument() {
   return (
@@ -375,8 +400,9 @@ export default function HistoryPage() {
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado, smartWalletAddress, lastReceipt } = useInvestApp();
-  const { avatarUrl, displayName: profileName } = useUserProfileSummary();
+  const { avatarUrl, displayName: profileName, email: profileEmail } = useUserProfileSummary();
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [directoryProfiles, setDirectoryProfiles] = useState<Record<string, DirectoryProfile>>({});
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '');
@@ -385,6 +411,36 @@ export default function HistoryPage() {
   const [directionFilter, setDirectionFilter] = useState<DirectionFilter>('all');
   const [sortBy, setSortBy] = useState<SortFilter>('latest');
   const [copiedTransactionId, setCopiedTransactionId] = useState<string | null>(null);
+
+  const supabase = useMemo(() => {
+    const authedFetch: typeof fetch = async (input, init = {}) => {
+      const token = await getAccessToken();
+      const baseHeaders = new Headers(init.headers ?? {});
+      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
+
+      const run = (headers: Headers) => fetch(input, { ...init, headers });
+      if (!token) return run(baseHeaders);
+
+      const headersWithAuth = new Headers(baseHeaders);
+      headersWithAuth.set('Authorization', `Bearer ${token}`);
+      const response = await run(headersWithAuth);
+      if (response.ok) return response;
+
+      const raw = (await response.clone().text()).toLowerCase();
+      const shouldFallback =
+        response.status === 401 ||
+        response.status === 403 ||
+        raw.includes('no suitable key') ||
+        raw.includes('wrong key type') ||
+        raw.includes('invalid jwt');
+      if (!shouldFallback) return response;
+      return run(baseHeaders);
+    };
+
+    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { fetch: authedFetch },
+    });
+  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -427,11 +483,61 @@ export default function HistoryPage() {
     return () => window.clearInterval(interval);
   }, [getAccessToken, user?.id, smartWalletAddress, lastReceipt?.txHash]);
 
+  useEffect(() => {
+    const loadDirectoryProfiles = async () => {
+      const uniqueWallets = Array.from(
+        new Set(
+          transactions
+            .flatMap((transaction) => [transaction.from_wallet, transaction.to_wallet])
+            .filter((wallet): wallet is string => Boolean(wallet))
+        )
+      );
+
+      if (uniqueWallets.length === 0) {
+        setDirectoryProfiles({});
+        return;
+      }
+
+      const { data, error } = await runUserDirectoryQuery(supabase, (source) =>
+        supabase
+          .from(source)
+          .select('name,surname,email,avatar_url,wallet_address')
+          .in('wallet_address', uniqueWallets)
+      );
+
+      if (error) {
+        console.error('Error loading directory profiles for history:', error);
+        setDirectoryProfiles({});
+        return;
+      }
+
+      const nextProfiles = ((data ?? []) as DirectoryProfile[]).reduce<Record<string, DirectoryProfile>>(
+        (accumulator, profile) => {
+          if (profile.wallet_address) {
+            accumulator[profile.wallet_address.toLowerCase()] = profile;
+          }
+          return accumulator;
+        },
+        {}
+      );
+
+      setDirectoryProfiles(nextProfiles);
+    };
+
+    void loadDirectoryProfiles();
+  }, [supabase, transactions]);
+
   const normalizedSearchQuery = useMemo(() => normalizeSearchQuery(searchQuery), [searchQuery]);
 
   const filteredTransactions = useMemo(() => {
     const next = transactions.filter((transaction) => {
       const direction = getTransactionDirection(transaction, smartWalletAddress);
+      const fromProfile = transaction.from_wallet
+        ? directoryProfiles[transaction.from_wallet.toLowerCase()]
+        : undefined;
+      const toProfile = transaction.to_wallet
+        ? directoryProfiles[transaction.to_wallet.toLowerCase()]
+        : undefined;
       const matchesSearch =
         normalizedSearchQuery.length === 0 ||
         [
@@ -441,6 +547,12 @@ export default function HistoryPage() {
           transaction.to_wallet,
           transaction.movement_type,
           transaction.status,
+          fromProfile?.name,
+          fromProfile?.surname,
+          fromProfile?.email,
+          toProfile?.name,
+          toProfile?.surname,
+          toProfile?.email,
         ]
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(normalizedSearchQuery));
@@ -470,6 +582,7 @@ export default function HistoryPage() {
   }, [
     transactions,
     smartWalletAddress,
+    directoryProfiles,
     normalizedSearchQuery,
     movementFilter,
     statusFilter,
@@ -628,7 +741,7 @@ export default function HistoryPage() {
                   Filters
                 </h2>
                 <p className="mt-1 text-[0.92rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                  Search by hash, transaction ID or wallet.
+                  Search by hash, transaction ID or email.
                 </p>
               </div>
               {hasActiveFilters ? (
@@ -657,7 +770,7 @@ export default function HistoryPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search by tx hash, wallet or ID"
+                  placeholder="Search by tx hash, email or ID"
                   className="w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#17203A] outline-none placeholder:text-[#99A3B6]"
                 />
               </div>
@@ -792,11 +905,18 @@ export default function HistoryPage() {
               const amountPrefix = incoming ? '+' : outgoing ? '-' : '';
               const currentWallet = smartWalletAddress?.toLowerCase();
               const isCurrentSender = transaction.from_wallet?.toLowerCase() === currentWallet;
+              const senderProfile = transaction.from_wallet
+                ? directoryProfiles[transaction.from_wallet.toLowerCase()]
+                : undefined;
               const senderDisplayName = isCurrentSender
-                ? profileName || 'Current wallet'
-                : shortenIdentifier(transaction.from_wallet, 5);
-              const senderAvatarUrl = isCurrentSender ? avatarUrl : null;
-              const senderWallet = shortenIdentifier(transaction.from_wallet, 6);
+                ? profileName || profileEmail || 'Current user'
+                : getDirectoryDisplayName(senderProfile);
+              const senderAvatarUrl = isCurrentSender
+                ? avatarUrl
+                : senderProfile?.avatar_url ?? null;
+              const senderContact = isCurrentSender
+                ? profileEmail || 'Email pending'
+                : senderProfile?.email?.trim() || 'Email pending';
               const copyActive = copiedTransactionId === transaction.id;
 
               return (
@@ -891,7 +1011,7 @@ export default function HistoryPage() {
                             {senderDisplayName}
                           </p>
                           <p className="mt-1 truncate text-[0.92rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                            {senderWallet}
+                            {senderContact}
                           </p>
                         </div>
                       </div>

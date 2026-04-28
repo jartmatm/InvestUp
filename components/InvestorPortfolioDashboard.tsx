@@ -46,6 +46,7 @@ type OwnerRow = {
   id: string;
   name: string | null;
   surname: string | null;
+  email: string | null;
 };
 
 type PortfolioItem = {
@@ -94,6 +95,7 @@ const normalizePhotos = (value: unknown) =>
 const ownerNameFrom = (owner: OwnerRow | undefined) => {
   const full = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
   if (full) return full;
+  if (owner?.email?.trim()) return owner.email.trim();
   return 'Business owner';
 };
 
@@ -542,7 +544,7 @@ export default function InvestorPortfolioDashboard() {
       const ownerMap = new Map<string, OwnerRow>();
       if (ownerIds.length > 0) {
         const { data: ownersData } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase.from(source).select('id,name,surname').in('id', ownerIds)
+          supabase.from(source).select('id,name,surname,email').in('id', ownerIds)
         );
         ((ownersData ?? []) as OwnerRow[]).forEach((owner) => ownerMap.set(owner.id, owner));
       }

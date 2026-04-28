@@ -3,6 +3,7 @@
   projectTitle: string;
   entrepreneurUserId: string;
   entrepreneurName: string;
+  entrepreneurEmail?: string;
   entrepreneurWallet: string;
   amountUsdc: string;
   interestRateEa: number;

@@ -215,6 +215,7 @@ type SearchUserRow = {
   id: string;
   name: string | null;
   surname: string | null;
+  email: string | null;
   avatar_url: string | null;
   wallet_address: string | null;
   role: string | null;
@@ -331,7 +332,7 @@ const shortenIdentifier = (value: string | null | undefined, size = 6) => {
 const getUserDisplayName = (user: SearchUserRow) => {
   const fullName = `${user.name ?? ''} ${user.surname ?? ''}`.trim();
   if (fullName) return fullName;
-  if (user.wallet_address) return shortenIdentifier(user.wallet_address, 5);
+  if (user.email?.trim()) return user.email.trim();
   return shortenIdentifier(user.id, 8) || 'User';
 };
 
@@ -634,11 +635,12 @@ export default function HomePage() {
           runUserDirectoryQuery(supabase, (source) =>
             supabase
               .from(source)
-              .select('id,name,surname,avatar_url,wallet_address,role')
+              .select('id,name,surname,email,avatar_url,wallet_address,role')
               .or(
                 [
                   `name.ilike.${wildcardTerm}`,
                   `surname.ilike.${wildcardTerm}`,
+                  `email.ilike.${wildcardTerm}`,
                   `id.ilike.${wildcardTerm}`,
                   `wallet_address.ilike.${wildcardTerm}`,
                 ].join(',')
@@ -737,10 +739,7 @@ export default function HomePage() {
           rawUsers.map((entry) => ({
             id: entry.id,
             displayName: getUserDisplayName(entry),
-            subtitle:
-              entry.wallet_address ??
-              shortenIdentifier(entry.id, 10) ??
-              'User profile',
+            subtitle: entry.email?.trim() || 'Email pending',
             avatarUrl: entry.avatar_url ?? null,
             linkedProjectId: userProjectMap.get(entry.id) ?? null,
           }))
@@ -941,7 +940,7 @@ export default function HomePage() {
                 value={searchQuery}
                 autoFocus
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by venture, user, wallet, DID or tx hash"
+                placeholder="Search by venture, user, email, DID or tx hash"
                 className="flex-1 bg-transparent text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8]"
               />
               {searchQuery ? (
@@ -958,7 +957,7 @@ export default function HomePage() {
             <div className="max-h-[360px] overflow-y-auto rounded-[24px] border border-[#EEF0F8] bg-white/90 p-4 shadow-[0_18px_38px_rgba(31,38,64,0.08)] backdrop-blur-xl">
               {trimmedSearchQuery.length < 2 ? (
                 <p className="text-sm text-[#818898]">
-                  Start typing to search ventures, people, wallet addresses, DIDs, project IDs, or
+                  Start typing to search ventures, people, email addresses, DIDs, project IDs, or
                   your transaction hashes.
                 </p>
               ) : searching ? (

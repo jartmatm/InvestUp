@@ -53,6 +53,7 @@ type InvestorProfile = {
   id: string;
   name: string | null;
   surname: string | null;
+  email: string | null;
   avatar_url: string | null;
   country: string | null;
   wallet_address: string | null;
@@ -62,6 +63,7 @@ type SummaryItem = {
   id: string;
   investorUserId: string | null;
   displayName: string;
+  email: string | null;
   avatarUrl: string | null;
   country: string | null;
   walletAddress: string;
@@ -110,7 +112,7 @@ const money = (value: number, currency = 'USD') =>
 const nameFrom = (profile: InvestorProfile | undefined) => {
   const full = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (full) return full;
-  if (profile?.wallet_address) return `${profile.wallet_address.slice(0, 6)}...`;
+  if (profile?.email?.trim()) return profile.email.trim();
   return 'Investor';
 };
 
@@ -705,7 +707,7 @@ export default function EntrepreneurFeedDashboard() {
         const { data: profilesData } = await runUserDirectoryQuery(supabase, (source) =>
           supabase
             .from(source)
-            .select('id,name,surname,avatar_url,country,wallet_address')
+            .select('id,name,surname,email,avatar_url,country,wallet_address')
             .in('id', investorIds)
         );
 
@@ -799,6 +801,7 @@ export default function EntrepreneurFeedDashboard() {
             id: investment.id,
             investorUserId: investment.investor_user_id,
             displayName: nameFrom(investor),
+            email: investor?.email ?? null,
             avatarUrl: investor?.avatar_url ?? null,
             country: investor?.country ?? null,
             walletAddress: investor?.wallet_address ?? investment.from_wallet ?? '',
@@ -1004,7 +1007,9 @@ export default function EntrepreneurFeedDashboard() {
                                 type="button"
                                 onClick={() =>
                                   router.push(
-                                    `/invest/wallet?mode=repayment&wallet=${encodeURIComponent(
+                                    `/invest/wallet?mode=repayment${
+                                      item.email ? `&email=${encodeURIComponent(item.email)}` : ''
+                                    }&wallet=${encodeURIComponent(
                                       item.walletAddress
                                     )}&amount=${encodeURIComponent(
                                       item.installmentAmount.toFixed(2)

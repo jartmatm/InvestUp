@@ -18,6 +18,7 @@ import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type WalletTarget = {
   id: string;
+  email: string | null;
   name: string | null;
   surname: string | null;
   avatar_url: string | null;
@@ -29,6 +30,7 @@ type WalletTarget = {
 type RecentWallet = {
   id: string;
   displayName: string;
+  email: string | null;
   avatarUrl: string | null;
   walletAddress: string;
 };
@@ -48,8 +50,29 @@ const suggestedValues = [100, 200, 250, 300, 350, 400];
 const nameFrom = (target: Partial<WalletTarget> | null | undefined) => {
   const full = `${target?.name ?? ''} ${target?.surname ?? ''}`.trim();
   if (full) return full;
-  if (target?.wallet_address) return `${target.wallet_address.slice(0, 6)}...`;
-  return 'Wallet user';
+  if (target?.email?.trim()) return target.email.trim();
+  return 'InvestApp user';
+};
+
+const normalizeRecipientIdentifier = (value: string | null | undefined) =>
+  value?.trim().toLowerCase() ?? '';
+
+const findRecipientByIdentifier = <
+  T extends { email?: string | null; walletAddress?: string | null; wallet_address?: string | null }
+>(
+  targets: T[],
+  identifier: string
+) => {
+  const normalized = normalizeRecipientIdentifier(identifier);
+  if (!normalized) return null;
+
+  return (
+    targets.find((target) => {
+      const email = normalizeRecipientIdentifier(target.email);
+      const wallet = (target.walletAddress ?? target.wallet_address ?? '').toLowerCase();
+      return email === normalized || wallet === normalized;
+    }) ?? null
+  );
 };
 
 const initialsFrom = (value: string) =>
@@ -224,7 +247,7 @@ export default function WalletTransferPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken, createWallet } = usePrivy();
-  const { avatarUrl, displayName } = useUserProfileSummary();
+  const { avatarUrl, displayName, email } = useUserProfileSummary();
   const {
     faseApp,
     rolSeleccionado,
@@ -288,6 +311,7 @@ export default function WalletTransferPage() {
         .map((target) => ({
           id: target.id,
           displayName: nameFrom(target),
+          email: target.email,
           avatarUrl: target.avatar_url,
           walletAddress: target.wallet_address ?? '',
         })),
@@ -318,12 +342,12 @@ export default function WalletTransferPage() {
 
   useEffect(() => {
     if (pendingInvestment) {
-      setWalletDestino(pendingInvestment.entrepreneurWallet);
+      setWalletDestino(pendingInvestment.entrepreneurEmail ?? pendingInvestment.entrepreneurWallet);
       setMonto(pendingInvestment.amountUsdc);
       return;
     }
 
-    setWalletDestino(searchParams.get('wallet') ?? '');
+    setWalletDestino(searchParams.get('email') ?? searchParams.get('wallet') ?? '');
     setMonto(searchParams.get('amount') ?? '200.00');
   }, [pendingInvestment, searchParams]);
 
@@ -361,7 +385,7 @@ export default function WalletTransferPage() {
           ? await runUserDirectoryQuery(supabase, (source) =>
               supabase
                 .from(source)
-                .select('id,name,surname,avatar_url,country,role,wallet_address')
+                .select('id,email,name,surname,avatar_url,country,role,wallet_address')
                 .in('wallet_address', orderedAddresses.slice(0, 12))
             )
           : { data: [] };
@@ -381,6 +405,7 @@ export default function WalletTransferPage() {
             return {
               id: profile.id,
               displayName: nameFrom(profile),
+              email: profile.email,
               avatarUrl: profile.avatar_url,
               walletAddress: profile.wallet_address ?? address,
             };
@@ -410,13 +435,22 @@ export default function WalletTransferPage() {
     () => (showAllWallets ? recentWallets : recentWallets.slice(0, 1)),
     [recentWallets, showAllWallets]
   );
+  const resolvedRecipient = useMemo(
+    () => findRecipientByIdentifier([...recentWallets, ...mappedTargets], walletDestino),
+    [mappedTargets, recentWallets, walletDestino]
+  );
+  const resolvedDestinationWallet =
+    resolvedRecipient?.walletAddress ??
+    (walletDestino.trim().startsWith('0x') && walletDestino.trim().length === 42
+      ? walletDestino.trim()
+      : '');
 
   const amountNumber = Number(monto);
-  const canSubmit = Boolean(walletDestino.trim() && Number(monto) > 0 && smartWalletAddress);
+  const canSubmit = Boolean(resolvedDestinationWallet && Number(monto) > 0 && smartWalletAddress);
   const canRefresh = !loadingWallets && !loadingRecentWallets;
   const numericBalance = Number(balanceUSDC ?? 0);
   const safeBalanceValue = Number.isFinite(numericBalance) ? Math.max(numericBalance, 0) : 0;
-  const displaySourceWallet = smartWalletAddress ?? 'Smart wallet not ready yet';
+  const displaySourceContact = email || user?.email?.address || 'No email available yet';
 
   const handleRefresh = async () => {
     await Promise.all([cargarWalletsObjetivo(), loadRecentWallets()]);
@@ -476,10 +510,10 @@ export default function WalletTransferPage() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.62rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              Send to a Wallet
+              Send to an InvestApp User
             </h1>
             <p className="mt-1 max-w-[320px] text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
-              Enter a wallet manually or pick one of your recent wallets
+              Enter an email or pick one of your recent InvestApp users
             </p>
           </div>
 
@@ -511,12 +545,12 @@ export default function WalletTransferPage() {
                   type="text"
                   value={walletDestino}
                   onChange={(event) => setWalletDestino(event.target.value)}
-                  placeholder="Paste or type a 0x wallet address"
+                  placeholder="Enter an InvestApp email"
                   className="w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#18213C] outline-none placeholder:text-slate-400"
                 />
                 <button
                   type="button"
-                  aria-label="Scan wallet address"
+                  aria-label="Scan recipient QR"
                   onClick={() => void 0}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#7C5CFF] transition hover:bg-[#F7F4FF]"
                 >
@@ -529,7 +563,7 @@ export default function WalletTransferPage() {
           <section className="rounded-[26px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between gap-3 px-1">
               <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                Recent wallets
+                Recent users
               </h2>
               <button
                 type="button"
@@ -544,12 +578,13 @@ export default function WalletTransferPage() {
             <div className="space-y-3">
               {loadingWallets || loadingRecentWallets ? (
                 <div className="rounded-[22px] bg-[#FAFAFE] px-4 py-4 text-sm text-slate-500">
-                  Loading wallets...
+                  Loading users...
                 </div>
               ) : visibleWallets.length > 0 ? (
                 visibleWallets.map((wallet) => {
                   const isSelected =
-                    walletDestino.toLowerCase() === wallet.walletAddress.toLowerCase();
+                    normalizeRecipientIdentifier(walletDestino) ===
+                    normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
 
                   return (
                     <div
@@ -566,12 +601,12 @@ export default function WalletTransferPage() {
                           {wallet.displayName}
                         </p>
                         <p className="truncate text-[12px] leading-5 text-slate-400">
-                          {wallet.walletAddress}
+                          {wallet.email || 'Email pending'}
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => setWalletDestino(wallet.walletAddress)}
+                        onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
                         className={`rounded-full border px-4 py-2 text-sm font-semibold tracking-[-0.02em] transition ${
                           isSelected
                             ? 'border-[#7C5CFF] bg-[#7C5CFF] text-white shadow-[0_14px_26px_rgba(124,92,255,0.18)]'
@@ -585,7 +620,7 @@ export default function WalletTransferPage() {
                 })
               ) : (
                 <div className="rounded-[22px] border border-dashed border-[#E8E8F2] bg-[#FAFAFE] px-4 py-5 text-sm leading-6 text-slate-500">
-                  No recent wallets yet. You can still paste any wallet manually.
+                  No recent users yet. You can still type an InvestApp email manually.
                 </div>
               )}
             </div>
@@ -614,7 +649,7 @@ export default function WalletTransferPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12px] leading-5 text-slate-400">{displayName}</p>
                   <p className="max-w-[240px] break-all text-[12px] leading-5 text-slate-400">
-                    {displaySourceWallet}
+                    {displaySourceContact}
                   </p>
                   {!smartWalletAddress ? (
                     <p className="mt-1 text-[11px] leading-4 text-slate-400">
