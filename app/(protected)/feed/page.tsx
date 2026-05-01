@@ -9,6 +9,7 @@ import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
 
 type FeedProject = {
@@ -17,6 +18,7 @@ type FeedProject = {
   description: string;
   sector: string | null;
   owner_user_id: string | null;
+  owner_id?: string | null;
   status: string | null;
   amount_requested: number | null;
   minimum_investment: number | null;
@@ -191,10 +193,12 @@ const CATEGORY_PREFERRED_ORDER = ['Tech', 'Commerce', 'Food', 'Health'];
 
 export default function FeedPage() {
   const router = useRouter();
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasOwnProject, setHasOwnProject] = useState(false);
+  const [loadingOwnProject, setLoadingOwnProject] = useState(true);
   const [status, setStatus] = useState('');
   const [flippedId, setFlippedId] = useState<string | null>(null);
   const [wishlistState, setWishlistState] = useState<{ userId: string | null; ids: string[] }>({
@@ -231,13 +235,35 @@ export default function FeedPage() {
         ...project,
         photo_urls: normalizePhotos(project.photo_urls),
       }));
-      const visibleProjects = normalizedProjects.filter((project) => isProjectPubliclyVisible(project));
+      const visibleProjects = normalizedProjects
+        .filter((project) => isProjectPubliclyVisible(project))
+        .filter((project) => {
+          if (rolSeleccionado !== 'emprendedor' || !user?.id) return true;
+          return project.owner_user_id !== user.id && project.owner_id !== user.id;
+        });
       setProjects(visibleProjects);
       setLoading(false);
     };
 
     loadFeed();
-  }, [rolSeleccionado]);
+  }, [rolSeleccionado, user?.id]);
+
+  useEffect(() => {
+    const loadOwnProject = async () => {
+      if (rolSeleccionado !== 'emprendedor' || !user?.id) {
+        setHasOwnProject(false);
+        setLoadingOwnProject(false);
+        return;
+      }
+
+      setLoadingOwnProject(true);
+      const { data, error } = await fetchCurrentUserProjects(getAccessToken, { limit: 1 });
+      setHasOwnProject(error ? true : Boolean(data?.length));
+      setLoadingOwnProject(false);
+    };
+
+    void loadOwnProject();
+  }, [getAccessToken, rolSeleccionado, user?.id]);
 
   const activeWishlistUserId = user?.id ?? null;
   const wishlist =
@@ -343,6 +369,7 @@ export default function FeedPage() {
     setFavoritesOnly(false);
     setShowFilterSheet(false);
   };
+  const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.10),transparent_28%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_55%,#F7F8FC_100%)] text-[#162033]">
@@ -390,10 +417,23 @@ export default function FeedPage() {
           {rolSeleccionado === 'emprendedor' ? (
             <button
               type="button"
-              onClick={() => router.push('/portfolio?new=1')}
-              className="mt-4 flex w-full items-center gap-4 rounded-[24px] border border-[#E6DFFF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] px-4 py-4 text-left shadow-[0_16px_34px_rgba(107,57,244,0.10)] transition hover:-translate-y-0.5"
+              onClick={() => {
+                if (!publishDisabled) router.push('/portfolio?new=1');
+              }}
+              disabled={publishDisabled}
+              className={`mt-4 flex w-full items-center gap-4 rounded-[24px] border px-4 py-4 text-left shadow-[0_16px_34px_rgba(107,57,244,0.10)] transition ${
+                publishDisabled
+                  ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] opacity-75'
+                  : 'border-[#E6DFFF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] hover:-translate-y-0.5'
+              }`}
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]">
+              <span
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)] ${
+                  publishDisabled
+                    ? 'bg-[#C8CBE0]'
+                    : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)]'
+                }`}
+              >
                 <IconPlus />
               </span>
               <span className="min-w-0 flex-1">
@@ -401,7 +441,11 @@ export default function FeedPage() {
                   Publish project
                 </span>
                 <span className="mt-1 block text-xs leading-5 text-[#7B879C]">
-                  Add or update your business listing from portfolio.
+                  {loadingOwnProject
+                    ? 'Checking your current business listing...'
+                    : hasOwnProject
+                      ? 'You already have one business. Edit it from portfolio.'
+                      : 'Add your business listing from portfolio.'}
                 </span>
               </span>
             </button>

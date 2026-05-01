@@ -9,7 +9,6 @@ import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
 import {
   expandPaymentScheduleRows,
-  getPaymentScheduleStatusMeta,
   normalizePaymentScheduleRecord,
   type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
@@ -368,23 +367,6 @@ function IconChart() {
       <path d="M5 19V9" />
       <path d="M12 19V5" />
       <path d="M19 19v-7" />
-    </svg>
-  );
-}
-
-function IconArrowRight() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
     </svg>
   );
 }
@@ -1025,80 +1007,34 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
                       Contracts will appear here once an investment is registered and the payment schedule is available in Supabase.
                     </div>
                   ) : (
-                    scheduleGroups.map((group) => {
-                      const activeRow =
-                        group.rows.find((row) => row.status !== 'paid') ??
-                        group.rows[group.rows.length - 1] ??
-                        null;
-                      const activeStatus = getPaymentScheduleStatusMeta(activeRow?.status ?? null);
-                      const nextDueDate =
-                        activeRow?.due_date && !Number.isNaN(new Date(activeRow.due_date).getTime())
-                          ? new Date(activeRow.due_date)
-                          : null;
+                    scheduleGroups.map((group) => (
+                      <div
+                        key={group.creditId}
+                        className="rounded-[26px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_16px_32px_rgba(31,38,64,0.05)]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            imageUrl={group.investorAvatarUrl}
+                            label={group.investorName}
+                            className="h-14 w-14 shrink-0 border border-white shadow-[0_10px_20px_rgba(31,38,64,0.08)]"
+                          />
 
-                      return (
-                        <div
-                          key={group.creditId}
-                          className="rounded-[26px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_16px_32px_rgba(31,38,64,0.05)]"
-                        >
-                          <div className="flex items-start gap-3">
-                            <Avatar
-                              imageUrl={group.investorAvatarUrl}
-                              label={group.investorName}
-                              className="h-14 w-14 shrink-0 border border-white shadow-[0_10px_20px_rgba(31,38,64,0.08)]"
-                            />
+                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#1C2336]">
+                            {group.investorName}
+                          </p>
 
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-[#1C2336]">
-                                    {group.investorName}
-                                  </p>
-                                  <p className="mt-1 truncate text-xs text-[#7B879C]">
-                                    {group.investorCountry || 'Country pending'}
-                                  </p>
-                                </div>
-                                <span
-                                  className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${activeStatus.className}`}
-                                >
-                                  {activeStatus.label}
-                                </span>
-                              </div>
-
-                              <div className="mt-4 flex gap-6">
-                                <div>
-                                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                                    Next due
-                                  </p>
-                                  <p className="mt-1 text-xs font-semibold text-[#1C2336]">
-                                    {formatDate(nextDueDate)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                                    Installments
-                                  </p>
-                                  <p className="mt-1 text-xs font-semibold text-[#1C2336]">
-                                    {group.rows.length}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
-                                }
-                                className="mt-4 inline-flex min-h-[40px] items-center gap-2 rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-xs font-semibold text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
-                              >
-                                View contract
-                                <IconArrowRight />
-                              </button>
-                            </div>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
+                            }
+                            className="inline-flex min-h-[40px] shrink-0 items-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-xs font-semibold text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
+                          >
+                            View contract
+                          </button>
                         </div>
-                      );
-                    })
+                      </div>
+                    ))
                   )}
                 </div>
               </DashboardCard>
