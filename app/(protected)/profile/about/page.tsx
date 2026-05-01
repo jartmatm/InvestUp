@@ -15,7 +15,7 @@ const ABOUT_SECTIONS = [
       'Web3 efficiency: We use the Polygon network to provide fast, transparent transactions with minimal fees.',
       'Non-custodial control: With Privy integration, you are the sole owner of your keys and capital. InvestApp never touches your funds.',
       'Data intelligence: We use AI and alternative scoring to deliver clear, transparent metrics on every opportunity.',
-      'Global inclusion: An entrepreneur in Latin America or Southeast Asia can connect with an investor in Europe or Australia in seconds, settling in USDC, the leading stablecoin.',
+      'Global inclusion: An entrepreneur in Latin America or Southeast Asia can connect with an investor in Europe or Australia in seconds, with balances shown in USD.',
     ],
   },
   {
@@ -34,8 +34,8 @@ const ABOUT_SECTIONS = [
         text: 'Smart contracts can contain vulnerabilities. Transactions on Polygon are final and irreversible. Network congestion or node failures can delay transactions or increase costs.',
       },
       {
-        title: 'Digital asset risk (USDC)',
-        text: 'InvestApp uses USDC for settlement. Although it is a stablecoin, it is not free from peg, regulatory, or issuer solvency risks (Circle).',
+        title: 'Digital asset risk',
+        text: 'InvestApp shows balances in USD. Digital settlement assets can still carry peg, regulatory, or issuer solvency risks.',
       },
       {
         title: 'Regulatory risk',

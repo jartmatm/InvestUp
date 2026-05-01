@@ -73,7 +73,7 @@ export default function BottomNav() {
         <div className="relative rounded-[32px] border border-white/80 bg-white/88 px-3 pb-3 pt-3.5 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
           <Link
             href="/invest"
-            aria-label="Send"
+            aria-label="Send Money"
             className={`absolute left-1/2 top-2 z-10 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_24px_42px_rgba(107,57,244,0.34)] transition ${
               pathname.startsWith('/invest') ? 'scale-[1.02]' : 'hover:scale-[1.02]'
             }`}
@@ -92,7 +92,7 @@ export default function BottomNav() {
                     aria-hidden="true"
                   >
                     <span className="text-[11px] font-semibold tracking-[-0.02em] text-slate-400">
-                      Send
+                      Send Money
                     </span>
                   </div>
                 );

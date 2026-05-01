@@ -33,6 +33,18 @@ const parseWallets = (value: string | null) =>
     .map((entry) => entry.trim())
     .filter((entry) => isAddress(entry));
 
+const parseIds = (value: string | null) =>
+  (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const sanitizeSearchFragment = (value: string) =>
+  value
+    .trim()
+    .replace(/[,()]/g, ' ')
+    .replace(/\s+/g, ' ');
+
 async function verifyRequest(request: NextRequest) {
   const accessToken = extractBearerToken(request.headers.get('authorization'));
   if (!accessToken) {
@@ -62,8 +74,10 @@ export async function GET(request: NextRequest) {
     const roleParam = coerceString(request.nextUrl.searchParams.get('role')).toLowerCase();
     const role = ALLOWED_ROLES.has(roleParam) ? roleParam : '';
     const email = coerceString(request.nextUrl.searchParams.get('email'));
+    const search = sanitizeSearchFragment(coerceString(request.nextUrl.searchParams.get('search')));
     const wallet = coerceString(request.nextUrl.searchParams.get('wallet'));
     const wallets = parseWallets(request.nextUrl.searchParams.get('wallets'));
+    const ids = parseIds(request.nextUrl.searchParams.get('ids'));
     const limit = coerceLimit(request.nextUrl.searchParams.get('limit'));
 
     let query = supabase
@@ -76,7 +90,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('role', role);
     }
 
-    if (email) {
+    if (ids.length > 0) {
+      query = query.in('id', ids).limit(Math.min(ids.length, limit));
+    } else if (email) {
       query = query.ilike('email', email).limit(1);
     } else if (wallet && isAddress(wallet)) {
       query = query.ilike('wallet_address', wallet).limit(1);
@@ -86,6 +102,19 @@ export async function GET(request: NextRequest) {
       query = query
         .or(wallets.map((entry) => `wallet_address.ilike.${entry}`).join(','))
         .limit(Math.min(wallets.length, limit));
+    } else if (search) {
+      const wildcardTerm = `%${search.replace(/\s+/g, '%')}%`;
+      query = query
+        .or(
+          [
+            `name.ilike.${wildcardTerm}`,
+            `surname.ilike.${wildcardTerm}`,
+            `email.ilike.${wildcardTerm}`,
+            `id.ilike.${wildcardTerm}`,
+            `wallet_address.ilike.${wildcardTerm}`,
+          ].join(',')
+        )
+        .limit(limit);
     } else {
       query = query.limit(limit);
     }

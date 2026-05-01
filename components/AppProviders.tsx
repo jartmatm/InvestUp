@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import AppLoadingSkeleton from '@/components/AppLoadingSkeleton';
+import MobileSwipeBack from '@/components/MobileSwipeBack';
 
 type AppBundle = {
   InvestAppProvider: React.ComponentType<{ children: React.ReactNode }>;
@@ -46,7 +48,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (!bundle) {
-    return <div className="min-h-screen bg-transparent" />;
+    return <AppLoadingSkeleton />;
   }
 
   const { InvestAppProvider, SmartWalletsProvider, TransactionOverlay, TransactionReceipt } = bundle;
@@ -54,6 +56,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <SmartWalletsProvider config={{ paymasterContext: { token: USDC_ADDRESS } }}>
       <InvestAppProvider>
+        <MobileSwipeBack />
         {children}
         <TransactionOverlay />
         <TransactionReceipt />

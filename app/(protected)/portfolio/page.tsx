@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import Input from '@/components/Input';
+import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import InvestorPortfolioDashboard from '@/components/InvestorPortfolioDashboard';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   canDeleteProject,
   canPauseProject,
-  getProjectRepaymentTermMonths,
   getProjectStatusLabel,
   getProjectStatusTone,
   type ProjectStatus,
@@ -170,19 +171,6 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
-function PublishProjectIcon() {
-  return (
-    <svg width="19" height="17" viewBox="0 0 19 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M13.6068 2.08431C14.2636 1.80223 15 2.28378 15 3.00755V9.95572C15 10.6795 14.2636 11.161 13.6068 10.879L11.2812 9.88023C10.2681 9.44512 9.1974 9.16592 8.10547 9.05011C7.72156 9.00939 7.33502 8.98886 6.94742 8.98886H5H4.5C3.12123 8.98886 2 7.86829 2 6.48163C2 5.09498 3.12123 3.9744 4.5 3.9744H6.94742C8.43741 3.9744 9.91183 3.67113 11.2812 3.08303L13.6068 2.08431ZM17 3.00755C17 0.853721 14.8002 -0.604842 12.8176 0.246613L10.492 1.24533C9.37187 1.72639 8.16597 1.9744 6.94742 1.9744H4.5C2.01277 1.9744 0 3.99431 0 6.48163C0 8.85129 1.82684 10.7967 4.15036 10.9755L4.18022 11.155L4.87428 15.328C5.03463 16.2921 5.86784 17.0013 6.84713 17.0013H7C8.10651 17.0013 9 16.103 9 14.9992V11.2266C9.50939 11.3462 10.0087 11.5104 10.492 11.7179L12.8176 12.7167C14.8002 13.5681 17 12.1095 17 9.95572V9.33055C18.1652 8.91872 19 7.80748 19 6.50126C19 5.19504 18.1652 4.0838 17 3.67197V3.00755ZM6.84718 14.9999L6.18006 10.9889H6.94742L7 10.989V10.9909V14.9992L6.99995 15.0006L6.99939 15.0013H6.84771C6.84757 15.0011 6.84747 15.001 6.8474 15.0009M6.84733 15.0008C6.84734 15.0009 6.84737 15.0009 6.8474 15.0009C6.84735 15.0007 6.84727 15.0004 6.84718 14.9999M9 5.50126C9 4.94898 8.55228 4.50126 8 4.50126C7.44772 4.50126 7 4.94898 7 5.50126V7.50126C7 8.05354 7.44772 8.50126 8 8.50126C8.55228 8.50126 9 8.05354 9 7.50126V5.50126Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
-
 const surfaceClassName =
   'rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl';
 
@@ -192,89 +180,6 @@ const fieldClassName =
 const inputClassName =
   '!rounded-[22px] !border-[#E7ECF4] !bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] !px-4 !py-3.5 !text-[0.95rem] !font-medium !tracking-[-0.025em] !text-[#162033] !shadow-[0_16px_32px_rgba(31,38,64,0.05)] placeholder:!text-[#9BA5B9] focus:!border-[#D7C8FF] focus:!ring-4 focus:!ring-[#6B39F4]/10';
 
-const formatMoney = (value: number | null | undefined, currency: string | null | undefined) => {
-  if (value == null) return '--';
-  const code = currency ?? 'USD';
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    return `${Number(value).toFixed(2)} ${code}`;
-  }
-};
-
-const formatProjectDate = (value: string | null | undefined) => {
-  if (!value) return 'Pending';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-US', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-};
-
-const getProgressValue = (raised: number | null | undefined, requested: number | null | undefined) => {
-  if (!requested || requested <= 0) return 0;
-  return Math.max(0, Math.min(100, (Number(raised ?? 0) / Number(requested)) * 100));
-};
-
-const getProjectDescriptionPreview = (value: string, maxLength = 180) => {
-  const trimmed = value.trim();
-  if (trimmed.length <= maxLength) return trimmed;
-  return `${trimmed.slice(0, maxLength - 1).trimEnd()}...`;
-};
-
-const hexToRgb = (hex: string) => {
-  const normalized = hex.replace('#', '');
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map((char) => `${char}${char}`)
-          .join('')
-      : normalized;
-
-  return {
-    r: Number.parseInt(value.slice(0, 2), 16),
-    g: Number.parseInt(value.slice(2, 4), 16),
-    b: Number.parseInt(value.slice(4, 6), 16),
-  };
-};
-
-const rgbToHex = ({ r, g, b }: { r: number; g: number; b: number }) =>
-  `#${[r, g, b]
-    .map((channel) => Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, '0'))
-    .join('')}`;
-
-const mixColors = (left: string, right: string, ratio: number) => {
-  const a = hexToRgb(left);
-  const b = hexToRgb(right);
-  const weight = Math.max(0, Math.min(1, ratio));
-
-  return rgbToHex({
-    r: a.r + (b.r - a.r) * weight,
-    g: a.g + (b.g - a.g) * weight,
-    b: a.b + (b.b - a.b) * weight,
-  });
-};
-
-const getProgressAccentColor = (progress: number) => {
-  if (progress <= 30) {
-    return mixColors('#FF8A5B', '#F2C94C', progress / 30);
-  }
-
-  if (progress <= 70) {
-    return mixColors('#F2C94C', '#8CD95A', (progress - 30) / 40);
-  }
-
-  return mixColors('#8CD95A', '#28C76F', (progress - 70) / 30);
-};
-
 function SectionSurface({
   children,
   className = '',
@@ -283,36 +188,6 @@ function SectionSurface({
   className?: string;
 }) {
   return <section className={`${surfaceClassName} ${className}`}>{children}</section>;
-}
-
-function MetricIconShell({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[#F5F1FF] text-[#6B39F4] shadow-[0_10px_20px_rgba(107,57,244,0.08)]">
-      {children}
-    </span>
-  );
-}
-
-function MetricRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-[22px] border border-[#EDF1F7] bg-white/82 px-4 py-3.5 shadow-[0_12px_24px_rgba(31,38,64,0.04)]">
-      <MetricIconShell>{icon}</MetricIconShell>
-      <div className="min-w-0 flex-1">
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-          {label}
-        </p>
-        <p className="mt-1 text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">{value}</p>
-      </div>
-    </div>
-  );
 }
 
 function StatusBadge({
@@ -326,133 +201,6 @@ function StatusBadge({
     <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold ${className}`}>
       {children}
     </span>
-  );
-}
-
-function IconPlus() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 5v14" />
-      <path d="M5 12h14" />
-    </svg>
-  );
-}
-
-function IconSector() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 19V8" />
-      <path d="M10 19V5" />
-      <path d="M16 19v-8" />
-      <path d="M22 19H2" />
-    </svg>
-  );
-}
-
-function IconLocation() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 20s6-4.4 6-10a6 6 0 1 0-12 0c0 5.6 6 10 6 10Z" />
-      <circle cx="12" cy="10" r="2.5" />
-    </svg>
-  );
-}
-
-function IconAmount() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="3.5" y="6.5" width="17" height="11" rx="3" />
-      <path d="M15.5 10.5h5" />
-      <path d="M16.5 12h.01" />
-    </svg>
-  );
-}
-
-function IconInstallments() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="5" width="16" height="14" rx="3" />
-      <path d="M8 3.5v3" />
-      <path d="M16 3.5v3" />
-      <path d="M4 10h16" />
-    </svg>
-  );
-}
-
-function IconInterest() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 19L19 5" />
-      <circle cx="7" cy="7" r="2" />
-      <circle cx="17" cy="17" r="2" />
-    </svg>
-  );
-}
-
-function IconCalendar() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="5" width="16" height="14" rx="3" />
-      <path d="M8 3.5v3" />
-      <path d="M16 3.5v3" />
-      <path d="M4 10h16" />
-    </svg>
   );
 }
 
@@ -527,6 +275,7 @@ export default function PortfolioPage() {
   const [status, setStatus] = useState('');
   const autoOpenedEditId = useRef<string | null>(null);
   const editProjectIdFromUrl = searchParams.get('edit');
+  const newProjectFromUrl = searchParams.get('new') === '1';
 
   const cityOptions = useMemo(() => {
     if (!form.country) return [];
@@ -691,6 +440,13 @@ export default function PortfolioPage() {
     }
   }, [editProjectIdFromUrl, myProjects, startEditPublication]);
 
+  useEffect(() => {
+    if (!newProjectFromUrl || loadingProjects) return;
+    if (autoOpenedEditId.current === 'new') return;
+    startNewPublication();
+    autoOpenedEditId.current = 'new';
+  }, [loadingProjects, newProjectFromUrl, startNewPublication]);
+
   const deletePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
     try {
@@ -853,8 +609,6 @@ export default function PortfolioPage() {
     return <InvestorPortfolioDashboard />;
   }
 
-  const canCreateNewProject = myProjects.length === 0;
-
   return (
     <>
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
@@ -873,37 +627,6 @@ export default function PortfolioPage() {
               </p>
             </div>
           </header>
-
-          <SectionSurface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.10)_0%,rgba(255,255,255,0.95)_44%,rgba(76,110,245,0.08)_100%)]">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F5F1FF] text-[#6B39F4] shadow-[0_14px_28px_rgba(107,57,244,0.12)]">
-                <PublishProjectIcon />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">
-                  Publish project
-                </p>
-                <p className="mt-2 text-xs leading-6 text-[#7B879C]">
-                  Only one business can stay published per user. Use Edit to update the current publication.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={startNewPublication}
-                disabled={!canCreateNewProject}
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition ${
-                  canCreateNewProject
-                    ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] hover:-translate-y-0.5'
-                    : 'cursor-not-allowed bg-[#C8CBE0] shadow-none'
-                }`}
-                aria-label="Open project form"
-              >
-                <IconPlus />
-              </button>
-            </div>
-          </SectionSurface>
 
           {showPublisher ? (
             <SectionSurface>
@@ -1096,7 +819,6 @@ export default function PortfolioPage() {
                   className={fieldClassName}
                 >
                   <option value="USD">USD</option>
-                  <option value="USDC">USDC</option>
                   <option value="EUR">EUR</option>
                   <option value="COP">COP</option>
                   <option value="ARS">ARS</option>
@@ -1131,12 +853,12 @@ export default function PortfolioPage() {
           <section className="flex flex-col gap-3">
             <div className="px-1">
               <h2 className="text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">
-                My published projects
+                My business
               </h2>
             </div>
 
             {loadingProjects ? (
-              <SectionSurface className="text-sm text-[#7B879C]">Loading projects...</SectionSurface>
+              <SectionLoadingSkeleton rows={2} />
             ) : null}
 
             {!loadingProjects && myProjects.length === 0 ? (
@@ -1146,139 +868,46 @@ export default function PortfolioPage() {
             ) : null}
 
             {myProjects.map((project) => {
-              const progressValue = getProgressValue(project.amount_received, project.amount_requested);
-              const progressColor = getProgressAccentColor(progressValue);
-              const progressGlow = mixColors(progressColor, '#FFFFFF', 0.35);
               const projectStatusLabel = getProjectStatusLabel(project);
-              const deletionHint = canDeleteProject(project)
-                ? 'Deletion stays available while the listing has not received financing.'
-                : 'Deletion disabled because the listing has already received financing.';
 
               return (
-                <div key={project.id} className="flex flex-col gap-3">
-                  <SectionSurface className="overflow-hidden">
-                    <div className="flex flex-col gap-4">
-                      <div className="relative overflow-hidden rounded-[24px] border border-[#E9EAF5] bg-[#0F172A] shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
-                        <div className="relative h-44 w-full overflow-hidden">
-                          {project.photo_urls?.[0] ? (
-                            <div
-                              role="img"
-                              aria-label={project.title}
-                              className="h-full w-full bg-cover bg-center"
-                              style={{ backgroundImage: `url("${project.photo_urls[0]}")` }}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#3B2F93_0%,#201942_100%)] text-white">
-                              <span className="text-lg font-semibold tracking-[0.08em]">
-                                {project.title.slice(0, 2).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.04)_0%,rgba(15,23,42,0.10)_36%,rgba(15,23,42,0.74)_100%)]" />
-                          <div className="absolute left-3 top-3">
-                            <StatusBadge className={getProjectStatusTone(project)}>
-                              {projectStatusLabel}
-                            </StatusBadge>
-                          </div>
+                <SectionSurface key={project.id} className="overflow-hidden">
+                  <div className="relative overflow-hidden rounded-[24px] border border-[#E9EAF5] bg-[#0F172A] shadow-[0_18px_40px_rgba(15,23,42,0.16)]">
+                    <div className="relative h-32 w-full overflow-hidden">
+                      {project.photo_urls?.[0] ? (
+                        <div
+                          role="img"
+                          aria-label={project.title}
+                          className="h-full w-full bg-cover bg-center"
+                          style={{ backgroundImage: `url("${project.photo_urls[0]}")` }}
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#3B2F93_0%,#201942_100%)] text-white">
+                          <span className="text-lg font-semibold tracking-[0.08em]">
+                            {project.title.slice(0, 2).toUpperCase()}
+                          </span>
                         </div>
-
-                        <div className="relative px-4 pb-4 pt-3 text-white">
-                          <h3 className="text-[1.05rem] font-semibold tracking-[-0.03em]">
-                            {project.title}
-                          </h3>
-                          <p
-                            className="mt-2 text-sm leading-6 text-white/78"
-                            style={{
-                              display: '-webkit-box',
-                              WebkitLineClamp: 3,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            {getProjectDescriptionPreview(project.description, 220)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <MetricRow
-                          icon={<IconSector />}
-                          label="Sector"
-                          value={toEnglishSector(project.sector) || 'Pending'}
-                        />
-                        <MetricRow
-                          icon={<IconLocation />}
-                          label="Location"
-                          value={[project.city, project.country].filter(Boolean).join(', ') || 'Pending'}
-                        />
-                        <MetricRow
-                          icon={<IconAmount />}
-                          label="Requested amount"
-                          value={formatMoney(project.amount_requested, project.currency)}
-                        />
-                        <MetricRow
-                          icon={<IconAmount />}
-                          label="Raised amount"
-                          value={formatMoney(project.amount_received, project.currency)}
-                        />
-                        <MetricRow
-                          icon={<IconInstallments />}
-                          label="Installments"
-                          value={
-                            getProjectRepaymentTermMonths(project)
-                              ? `${getProjectRepaymentTermMonths(project)} months`
-                              : 'Pending'
-                          }
-                        />
-                        <MetricRow
-                          icon={<IconInterest />}
-                          label="Interest"
-                          value={project.interest_rate ? `${project.interest_rate}%` : 'Pending'}
-                        />
-                        <MetricRow
-                          icon={<IconCalendar />}
-                          label="Published until"
-                          value={formatProjectDate(project.publication_end_date)}
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                            Funding progress
-                          </p>
-                          <p className="text-sm font-semibold text-[#1C2336]">
-                            {Math.round(progressValue)}%
-                          </p>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-[#EEF1F6]">
-                          <div
-                            className="h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                            style={{
-                              width: `${progressValue}%`,
-                              background: `linear-gradient(90deg,#7C5CFF 0%, ${progressColor} 100%)`,
-                              boxShadow: `0 0 18px ${progressGlow}88`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex items-start justify-between gap-3">
+                      )}
+                      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.12)_42%,rgba(15,23,42,0.64)_100%)]" />
+                      <div className="absolute left-3 top-3">
                         <StatusBadge className={getProjectStatusTone(project)}>
                           {projectStatusLabel}
                         </StatusBadge>
-                        <p className="max-w-[15rem] text-right text-[11px] leading-5 text-[#7B879C]">
-                          {deletionHint}
-                        </p>
                       </div>
                     </div>
-                  </SectionSurface>
 
-                  <div className="flex gap-2">
+                    <div className="relative px-4 pb-4 pt-3 text-white">
+                      <h3 className="text-[1.05rem] font-semibold tracking-[-0.03em]">
+                        {project.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => startEditPublication(project)}
-                      className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
+                      className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
                     >
                       <IconEdit />
                       Edit
@@ -1287,7 +916,7 @@ export default function PortfolioPage() {
                       type="button"
                       onClick={() => togglePausePublication(project)}
                       disabled={!canPauseProject(project) && project.status !== 'paused'}
-                      className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
+                      className={`flex min-h-[46px] items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
                         !canPauseProject(project) && project.status !== 'paused'
                           ? 'border-[#E1E5F0] bg-[#F4F5F8] text-[#A0A7B9]'
                           : 'border-[#DDD3FF] bg-white text-[#6B39F4] shadow-[0_14px_28px_rgba(31,38,64,0.06)] hover:-translate-y-0.5 hover:bg-[#FBFAFF]'
@@ -1300,7 +929,7 @@ export default function PortfolioPage() {
                       type="button"
                       onClick={() => deletePublication(project)}
                       disabled={!canDeleteProject(project)}
-                      className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold transition ${
+                      className={`flex min-h-[46px] items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition ${
                         canDeleteProject(project)
                           ? 'border-[#F5CDD3] bg-[#FFF6F7] text-[#DF1C41] shadow-[0_14px_28px_rgba(31,38,64,0.05)] hover:-translate-y-0.5'
                           : 'border-[#E1E5F0] bg-[#F4F5F8] text-[#A0A7B9]'
@@ -1310,10 +939,12 @@ export default function PortfolioPage() {
                       Delete
                     </button>
                   </div>
-                </div>
+                </SectionSurface>
               );
             })}
           </section>
+
+          <EntrepreneurFeedDashboard embedded />
 
           {status ? (
             <SectionSurface className="text-xs leading-6 text-[#7B879C]">{status}</SectionSurface>

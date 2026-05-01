@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
@@ -12,7 +12,7 @@ import { setPendingInvestment } from '@/lib/pending-investment';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
 import { fetchProjectById } from '@/utils/client/projects';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 
 type ProjectInvestmentDetail = {
   id: string;
@@ -40,14 +40,6 @@ type OwnerProfile = {
   email: string | null;
   wallet_address: string | null;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const normalizePhotos = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -77,35 +69,6 @@ export default function ProjectInvestPage() {
   const [amount, setAmount] = useState('100.00');
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -148,14 +111,11 @@ export default function ProjectInvestPage() {
       setProject(normalizedProject);
 
       if (normalizedProject?.owner_user_id) {
-        const { data: ownerData } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase
-            .from(source)
-            .select('name,surname,email,wallet_address')
-            .eq('id', normalizedProject.owner_user_id)
-            .maybeSingle()
-        );
-        setOwner((ownerData ?? null) as OwnerProfile | null);
+        const { data: ownerData } = await fetchRecipientDirectory(getAccessToken, {
+          ids: [normalizedProject.owner_user_id],
+          limit: 1,
+        });
+        setOwner(((ownerData ?? [])[0] ?? null) as OwnerProfile | null);
       } else {
         setOwner(null);
       }
@@ -168,7 +128,7 @@ export default function ProjectInvestPage() {
     };
 
     loadProject();
-  }, [projectId, supabase]);
+  }, [getAccessToken, projectId]);
 
   const handleAmountChange = (value: string) => {
     const sanitized = value.replace(/[^0-9.]/g, '');
@@ -228,7 +188,7 @@ export default function ProjectInvestPage() {
       return;
     }
     if (minimumInvestment > 0 && amountNumber < minimumInvestment) {
-      setStatus(`The minimum investment for this venture is ${minimumInvestment.toFixed(2)} USDC.`);
+      setStatus(`The minimum investment for this venture is ${minimumInvestment.toFixed(2)} USD.`);
       return;
     }
 
@@ -254,7 +214,7 @@ export default function ProjectInvestPage() {
 
   return (
     <PageFrame title="Invest" subtitle="Simulate your return before transferring">
-      {loading ? <p className="text-sm text-gray-500">Loading simulator...</p> : null}
+      {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="mb-4 text-sm text-rose-600">{status}</p> : null}
 
       {!loading && project ? (
@@ -322,7 +282,7 @@ export default function ProjectInvestPage() {
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Selected amount</p>
               <p className="mt-2 text-3xl font-semibold text-gray-900">
-                {(formatAmountInput(amount) || '0.00')} USDC
+                {(formatAmountInput(amount) || '0.00')} USD
               </p>
             </div>
 
@@ -347,7 +307,7 @@ export default function ProjectInvestPage() {
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Custom amount</p>
               <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/25 bg-white/20 px-4 py-4">
                 <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  USDC
+                  USD
                 </span>
                 <input
                   type="text"

@@ -24,6 +24,13 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
+const firstNameFromContact = (contact: ContactItem) => {
+  const fromName = contact.displayName.trim().split(/\s+/)[0];
+  if (fromName && !fromName.includes('@')) return fromName;
+  const emailName = contact.email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim();
+  return emailName?.split(/\s+/)[0] || fromName || 'User';
+};
+
 function ArrowLaunchIcon() {
   return (
     <svg
@@ -384,7 +391,7 @@ export default function InvestPage() {
                 <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
               </div>
               <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-                Send
+                Send Money
               </h1>
               <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
                 Preparing your investment transfer
@@ -417,7 +424,7 @@ export default function InvestPage() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              Send
+              Send Money
             </h1>
             <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
               Choose how you want to move funds
@@ -486,7 +493,7 @@ export default function InvestPage() {
                         textClassName="text-sm"
                       />
                       <span className="line-clamp-1 text-xs font-medium tracking-[-0.02em] text-slate-600">
-                        {contact.displayName}
+                        {firstNameFromContact(contact)}
                       </span>
                     </Link>
                   ))

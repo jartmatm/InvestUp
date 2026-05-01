@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -170,7 +171,7 @@ export default function FeedDetailPage() {
     };
 
     loadProject();
-  }, [projectId, rolSeleccionado, supabase]);
+  }, [getAccessToken, projectId, rolSeleccionado]);
 
   useEffect(() => {
     const loadPaymentSchedule = async () => {
@@ -243,7 +244,7 @@ export default function FeedDetailPage() {
 
   return (
     <PageFrame title="Details" subtitle="Full listing">
-      {loading ? <p className="text-sm text-gray-500">Loading listing...</p> : null}
+      {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
       {!loading && project ? (

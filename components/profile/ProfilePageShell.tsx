@@ -136,16 +136,10 @@ export function ProfilePageShell({
           </header>
 
           {children}
+
+          {footer ? <div className="flex flex-col gap-3">{footer}</div> : null}
         </div>
       </main>
-
-      {footer ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[5.75rem] z-20">
-          <div className="pointer-events-auto mx-auto flex w-full max-w-md flex-col gap-3 px-4">
-            {footer}
-          </div>
-        </div>
-      ) : null}
 
       <BottomNav />
     </>

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
 import {
@@ -17,7 +17,7 @@ import { getProjectStatusLabel, getProjectStatusTone } from '@/lib/project-statu
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 
 type EntrepreneurProjectRow = {
   id: string | number;
@@ -92,14 +92,6 @@ type SectionHeadingProps = {
   subtitle?: string;
   actionLabel?: string;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const money = (value: number, currency = 'USD') =>
   new Intl.NumberFormat('en-US', {
@@ -590,7 +582,7 @@ function MetricTile({
   );
 }
 
-export default function EntrepreneurFeedDashboard() {
+export default function EntrepreneurFeedDashboard({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const [project, setProject] = useState<EntrepreneurProjectRow | null>(null);
@@ -598,34 +590,6 @@ export default function EntrepreneurFeedDashboard() {
   const [scheduleGroups, setScheduleGroups] = useState<PaymentScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -704,12 +668,10 @@ export default function EntrepreneurFeedDashboard() {
 
       const profileMap = new Map<string, InvestorProfile>();
       if (investorIds.length > 0) {
-        const { data: profilesData } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase
-            .from(source)
-            .select('id,name,surname,email,avatar_url,country,wallet_address')
-            .in('id', investorIds)
-        );
+        const { data: profilesData } = await fetchRecipientDirectory(getAccessToken, {
+          ids: investorIds,
+          limit: investorIds.length,
+        });
 
         ((profilesData ?? []) as InvestorProfile[]).forEach((profile) => {
           profileMap.set(profile.id, profile);
@@ -828,7 +790,7 @@ export default function EntrepreneurFeedDashboard() {
     };
 
     void loadDashboard();
-  }, [getAccessToken, supabase, user?.id]);
+  }, [getAccessToken, user?.id]);
 
   const targetAmount = Number(project?.amount_requested ?? 0);
   const raisedAmount = Number(project?.amount_received ?? 0);
@@ -878,20 +840,38 @@ export default function EntrepreneurFeedDashboard() {
 
   return (
     <>
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.16),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_52%,#F7F8FD_100%)] pb-36 text-[#101828]">
-        <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
-        <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
+      <main
+        className={
+          embedded
+            ? 'relative text-[#101828]'
+            : 'relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.16),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_52%,#F7F8FD_100%)] pb-36 text-[#101828]'
+        }
+      >
+        {!embedded ? (
+          <>
+            <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+            <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
+            <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
+          </>
+        ) : null}
 
-        <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-10">
+        <div
+          className={
+            embedded
+              ? 'relative flex w-full flex-col gap-4 pb-2'
+              : 'relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-10'
+          }
+        >
           <header className="flex items-start gap-4">
             <div className="min-w-0">
-              <div className="flex items-center gap-0.5 text-[1.9rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
-                <span>Invest</span>
-                <span className="text-[#6B39F4]">App</span>
-                <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
-              </div>
-              <h1 className="mt-4 text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
+              {!embedded ? (
+                <div className="flex items-center gap-0.5 text-[1.9rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
+                  <span>Invest</span>
+                  <span className="text-[#6B39F4]">App</span>
+                  <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
+                </div>
+              ) : null}
+              <h1 className={`${embedded ? 'mt-0 text-[1.35rem]' : 'mt-4 text-[2rem]'} font-semibold tracking-[-0.065em] text-[#1C2336]`}>
                 Dashboard
               </h1>
               <p className="mt-1 text-sm leading-6 text-[#7B879C]">
@@ -902,9 +882,7 @@ export default function EntrepreneurFeedDashboard() {
           </header>
 
           {loading ? (
-            <DashboardCard className="text-sm text-[#7B879C]">
-              Loading your dashboard...
-            </DashboardCard>
+            <SectionLoadingSkeleton rows={4} />
           ) : null}
 
           {status ? (
@@ -1039,10 +1017,7 @@ export default function EntrepreneurFeedDashboard() {
               </DashboardCard>
 
               <DashboardCard>
-                <SectionHeading
-                  title="Contracts"
-                  subtitle="Open each investment contract to review the backend ledger agreement and the full amortization table."
-                />
+                <SectionHeading title="Contracts" />
 
                 <div className="mt-4 flex flex-col gap-3">
                   {scheduleGroups.length === 0 ? (
@@ -1132,7 +1107,7 @@ export default function EntrepreneurFeedDashboard() {
         </div>
       </main>
 
-      <BottomNav />
+      {!embedded ? <BottomNav /> : null}
     </>
   );
 }

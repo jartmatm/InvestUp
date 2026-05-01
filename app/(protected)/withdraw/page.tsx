@@ -506,15 +506,15 @@ export default function WithdrawPage() {
     }
 
     if (amountNumber < MIN_WITHDRAWAL_USDC) {
-      setStatus(`The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`);
+      setStatus(`The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USD.`);
       return;
     }
 
     if (amountNumber > withdrawableBalance) {
       setStatus(
-        `Enter ${withdrawableBalance.toFixed(2)} USDC or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
+        `Enter ${withdrawableBalance.toFixed(2)} USD or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
           2
-        )} USDC available for gas.`
+        )} USD available for network fees.`
       );
       return;
     }
@@ -619,7 +619,7 @@ export default function WithdrawPage() {
 
     if (!updateResponse.ok) {
       const baseMessage =
-        updateJson?.error ?? 'USDC was sent, but we could not finalize the withdrawal request.';
+        updateJson?.error ?? 'USD was sent, but we could not finalize the withdrawal request.';
       setStatus(updateJson?.details ? `${baseMessage}: ${updateJson.details}` : baseMessage);
       setSavingRequest(false);
       return;
@@ -652,7 +652,7 @@ export default function WithdrawPage() {
               Withdraw funds
             </h1>
             <p className="mt-1 text-[1.12rem] font-medium tracking-[-0.03em] text-[#7A8497]">
-              Temporary manual payout from USDC
+              Temporary manual payout from USD
             </p>
           </div>
 
@@ -930,14 +930,14 @@ export default function WithdrawPage() {
                   onChange={(event) =>
                     updateForm('amount', event.target.value.replace(/[^0-9.]/g, ''))
                   }
-                  placeholder="Amount in USDC"
+                  placeholder="Amount in USD"
                   className={formInputClassName}
                 />
               </FieldShell>
             </div>
 
             <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#7A8497]">
-              The hidden transfer is sent in USDC on Polygon.
+              The hidden transfer is sent in USD on Polygon.
             </p>
             <p
               className={`mt-1 text-[0.88rem] font-medium tracking-[-0.02em] ${
@@ -947,16 +947,16 @@ export default function WithdrawPage() {
               {withdrawableBalance < MIN_WITHDRAWAL_USDC
                 ? `You must leave at least ${MIN_GAS_RESERVE_USDC.toFixed(2)} USD in your account.`
                 : amountBelowMinimum
-                  ? `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`
+                  ? `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USD.`
                 : amountExceedsSafeBalance
-                ? `Enter ${withdrawableBalance.toFixed(2)} USDC or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
+                ? `Enter ${withdrawableBalance.toFixed(2)} USD or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
                     2
-                  )} USDC available for gas.`
+                  )} USD available for network fees.`
                 : `You can withdraw between ${MIN_WITHDRAWAL_USDC.toFixed(
                     2
-                  )} and ${withdrawableBalance.toFixed(2)} USDC and keep ${MIN_GAS_RESERVE_USDC.toFixed(
+                  )} and ${withdrawableBalance.toFixed(2)} USD and keep ${MIN_GAS_RESERVE_USDC.toFixed(
                     2
-                  )} USDC available for gas.`}
+                  )} USD available for network fees.`}
             </p>
           </Surface>
 

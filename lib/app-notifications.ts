@@ -53,8 +53,8 @@ const readStorage = (keys: string[]) => {
 
 export const formatNotificationAmount = (amount: number | string | null | undefined) => {
   const numericAmount = typeof amount === 'number' ? amount : Number(amount ?? 0);
-  if (!Number.isFinite(numericAmount)) return '0.00 USDC';
-  return `${numericAmount.toFixed(2)} USDC`;
+  if (!Number.isFinite(numericAmount)) return '0.00 USD';
+  return `${numericAmount.toFixed(2)} USD`;
 };
 
 export const buildTransactionNotificationKey = (

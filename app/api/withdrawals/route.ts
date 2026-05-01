@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     return jsonNoStore(
       {
         error: 'Withdrawal amount below minimum.',
-        details: `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USDC.`,
+        details: `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USD.`,
       },
       { status: 400 }
     );

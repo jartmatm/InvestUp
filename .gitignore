@@ -20,6 +20,9 @@
 # production
 /build
 
+# standalone repositories kept outside the main InvestUp app
+/investapp-landing/
+
 # misc
 .DS_Store
 .idea/

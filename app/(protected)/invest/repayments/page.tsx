@@ -1,15 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 
 type InvestmentRow = {
   id: string;
@@ -60,13 +60,6 @@ type RepaymentCard = {
   repaymentAmount: number;
 };
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
-
 const themes = [
   'bg-gradient-to-br from-[#40C4AA] via-[#1EA48D] to-[#137F70]',
   'bg-gradient-to-br from-[#FFBE4C] via-[#F59E0B] to-[#EA580C]',
@@ -89,7 +82,7 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'I';
 
-const money = (value: number) => `${value.toFixed(2)} USDC`;
+const money = (value: number) => `${value.toFixed(2)} USD`;
 
 const dueDateFrom = (createdAt: string, termMonths: number | null) => {
   const date = new Date(createdAt);
@@ -105,26 +98,6 @@ export default function RepaymentsPage() {
   const [cards, setCards] = useState<RepaymentCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [flippedId, setFlippedId] = useState<string | null>(null);
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 || response.status === 403 || raw.includes('wrong key type') || raw.includes('invalid jwt');
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: authedFetch } });
-  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -189,12 +162,10 @@ export default function RepaymentsPage() {
 
       const profileMap = new Map<string, InvestorProfile>();
       if (investorIds.length > 0) {
-        const { data: profilesData } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase
-            .from(source)
-            .select('id,name,surname,email,avatar_url,country,wallet_address')
-            .in('id', investorIds)
-        );
+        const { data: profilesData } = await fetchRecipientDirectory(getAccessToken, {
+          ids: investorIds,
+          limit: investorIds.length,
+        });
         ((profilesData ?? []) as InvestorProfile[]).forEach((profile) => {
           profileMap.set(profile.id, profile);
         });
@@ -226,7 +197,7 @@ export default function RepaymentsPage() {
     };
 
     void loadCards();
-  }, [getAccessToken, rolSeleccionado, supabase, user?.id]);
+  }, [getAccessToken, rolSeleccionado, user?.id]);
 
   return (
     <PageFrame title="Repayments" subtitle="Review each investor and launch the payment flow">
@@ -236,7 +207,7 @@ export default function RepaymentsPage() {
         </div>
       ) : (
         <>
-          {loading ? <p className="text-sm text-gray-500">Loading investors...</p> : null}
+          {loading ? <SectionLoadingSkeleton rows={4} /> : null}
 
           {!loading && cards.length === 0 ? (
             <div className="rounded-[20px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">

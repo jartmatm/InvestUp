@@ -39,12 +39,14 @@ type RecentWallet = {
 
 type TxRow = Pick<CurrentUserTransaction, 'from_wallet' | 'to_wallet'>;
 
-const suggestedValues = [100, 200, 250, 300, 350, 400];
+const suggestedValues = [5, 10, 50, 100, 500, 1000];
 
 const nameFrom = (target: Partial<WalletTarget> | null | undefined) => {
   const full = `${target?.name ?? ''} ${target?.surname ?? ''}`.trim();
   if (full) return full;
-  if (target?.email?.trim()) return target.email.trim();
+  if (target?.email?.trim()) {
+    return target.email.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || target.email.trim();
+  }
   return 'InvestApp user';
 };
 
@@ -79,6 +81,9 @@ const initialsFrom = (value: string) =>
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
+
+const firstNameFromEmail = (email: string | null | undefined) =>
+  email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim().split(/\s+/)[0] ?? '';
 
 const hasEmbeddedPrivyWallet = (
   user:
@@ -194,6 +199,22 @@ function ChevronRightIcon() {
       strokeLinejoin="round"
     >
       <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function ChevronUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4">
+      <path d="M6 15l6-6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.4">
+      <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -465,6 +486,12 @@ export default function WalletTransferPage() {
     await Promise.all([cargarWalletsObjetivo(), loadRecentWallets()]);
   };
 
+  const stepAmount = (delta: number) => {
+    const current = Number(monto);
+    const next = Math.max((Number.isFinite(current) ? current : 0) + delta, 0);
+    setMonto(next.toFixed(2));
+  };
+
   const handleSetUpWallet = async () => {
     if (settingUpWallet || alreadyHasEmbeddedWallet) return;
 
@@ -519,7 +546,7 @@ export default function WalletTransferPage() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.62rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              Send to an InvestApp User
+              Send Money
             </h1>
             <p className="mt-1 max-w-[320px] text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
               Enter an email or pick one of your recent InvestApp users
@@ -586,8 +613,14 @@ export default function WalletTransferPage() {
 
             <div className="space-y-3">
               {loadingWallets || loadingRecentWallets ? (
-                <div className="rounded-[22px] bg-[#FAFAFE] px-4 py-4 text-sm text-slate-500">
-                  Loading users...
+                <div className="animate-pulse rounded-[22px] bg-[#FAFAFE] px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-[#E8E4F8]" />
+                    <div className="min-w-0 flex-1">
+                      <div className="h-4 w-2/3 rounded-full bg-[#E4E8F4]" />
+                      <div className="mt-2 h-3 w-1/2 rounded-full bg-[#EEF1F8]" />
+                    </div>
+                  </div>
                 </div>
               ) : visibleWallets.length > 0 ? (
                 visibleWallets.map((wallet) => {
@@ -610,7 +643,7 @@ export default function WalletTransferPage() {
                           {wallet.displayName}
                         </p>
                         <p className="truncate text-[12px] leading-5 text-slate-400">
-                          {wallet.email || 'Email pending'}
+                          {firstNameFromEmail(wallet.email) || 'Contact'}
                         </p>
                       </div>
                       <button
@@ -701,13 +734,33 @@ export default function WalletTransferPage() {
                   className="min-w-0 flex-1 bg-transparent text-[2.2rem] font-semibold tracking-[-0.06em] text-[#18213C] outline-none"
                   placeholder="0.00"
                 />
-                <button
-                  type="button"
-                  onClick={() => setMonto(safeBalanceValue.toFixed(2))}
-                  className="rounded-full border border-[#E4D9FF] bg-white px-4 py-2 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-[#F8F4FF]"
-                >
-                  MAX
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex h-10 w-7 flex-col overflow-hidden rounded-full border border-[#E4D9FF] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                    <button
+                      type="button"
+                      onClick={() => stepAmount(1)}
+                      className="flex flex-1 items-center justify-center text-[#7C5CFF] transition hover:bg-[#F8F4FF]"
+                      aria-label="Increase amount by 1 dollar"
+                    >
+                      <ChevronUpIcon />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => stepAmount(-1)}
+                      className="flex flex-1 items-center justify-center border-t border-[#E4D9FF] text-[#7C5CFF] transition hover:bg-[#F8F4FF]"
+                      aria-label="Decrease amount by 1 dollar"
+                    >
+                      <ChevronDownIcon />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMonto(safeBalanceValue.toFixed(2))}
+                    className="rounded-full border border-[#E4D9FF] bg-white px-4 py-2 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-[#F8F4FF]"
+                  >
+                    MAX
+                  </button>
+                </div>
               </div>
             </div>
           </section>
@@ -750,7 +803,7 @@ export default function WalletTransferPage() {
               }`}
             >
               <PaperPlaneIcon />
-              {loadingTx ? 'Processing...' : 'Send'}
+              {loadingTx ? 'Processing...' : 'Send Money'}
             </button>
           </section>
         </div>

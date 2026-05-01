@@ -971,7 +971,7 @@ function WithdrawScene() {
           <div className="grid gap-2">
             <MockField icon={<IconBank />} label="Select bank" value="Commonwealth Bank" />
             <MockField icon={<IconWallet />} label="Account number" value="**** 3307" />
-            <MockField icon={<IconDownload />} label="Amount in USDC" value="100.00" />
+            <MockField icon={<IconDownload />} label="Amount in USD" value="100.00" />
           </div>
         </div>
       </motion.div>
@@ -1000,7 +1000,7 @@ function WithdrawScene() {
               <p className="text-[11px] text-slate-500">Investment • Apr 03, 2026 at 02:29 PM</p>
             </div>
           </div>
-          <p className="text-[13px] font-semibold text-rose-500">-100.00 USDC</p>
+          <p className="text-[13px] font-semibold text-rose-500">-100.00 USD</p>
         </div>
       </motion.div>
     </SceneShell>

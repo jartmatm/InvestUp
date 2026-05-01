@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import {
   formatNextRepaymentDate,
@@ -16,7 +15,7 @@ import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchProjects } from '@/utils/client/projects';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 
 type InvestmentRow = {
   id: string;
@@ -63,14 +62,6 @@ type PortfolioItem = {
   nextRepaymentLabel: string;
   health: InvestmentHealth;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const FALLBACK_SPARKLINE = [18, 24, 22, 20, 28, 36, 34, 40, 37, 48, 56, 64];
 
@@ -461,33 +452,6 @@ export default function InvestorPortfolioDashboard() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-
-      return shouldFallback ? run(baseHeaders) : response;
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { fetch: authedFetch } });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -543,9 +507,10 @@ export default function InvestorPortfolioDashboard() {
 
       const ownerMap = new Map<string, OwnerRow>();
       if (ownerIds.length > 0) {
-        const { data: ownersData } = await runUserDirectoryQuery(supabase, (source) =>
-          supabase.from(source).select('id,name,surname,email').in('id', ownerIds)
-        );
+        const { data: ownersData } = await fetchRecipientDirectory(getAccessToken, {
+          ids: ownerIds,
+          limit: ownerIds.length,
+        });
         ((ownersData ?? []) as OwnerRow[]).forEach((owner) => ownerMap.set(owner.id, owner));
       }
 
@@ -591,7 +556,7 @@ export default function InvestorPortfolioDashboard() {
     };
 
     void loadDashboard();
-  }, [getAccessToken, supabase, user?.id]);
+  }, [getAccessToken, user?.id]);
 
   const sortedItems = useMemo(
     () =>

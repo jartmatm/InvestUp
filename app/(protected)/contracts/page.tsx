@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import PaymentScheduleTable from '@/components/PaymentScheduleTable';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import {
   buildInvestmentContractSnapshot,
   buildInvestmentContractSource,
@@ -263,7 +264,7 @@ export default function ContractPage() {
 
   return (
     <PageFrame title="Contract ledger" subtitle="Backend contract and internal audit trail">
-      {loading ? <p className="text-sm text-slate-500">Loading contract ledger...</p> : null}
+      {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="text-sm text-slate-500">{status}</p> : null}
 
       {!loading && snapshot ? (

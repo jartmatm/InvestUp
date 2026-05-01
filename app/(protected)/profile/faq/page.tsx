@@ -22,7 +22,7 @@ const FAQS = [
   {
     question: 'Which currency are investments made in?',
     answer:
-      'To provide stability and avoid extreme volatility, we use USDC (USD Coin). It is a stablecoin pegged 1:1 to the US dollar, so contracts and returns are clear and predictable.',
+      'To provide stability and avoid extreme volatility, balances are shown in USD. Contracts and returns stay clear and predictable for users.',
   },
   {
     question: 'Why do you use the Polygon network?',

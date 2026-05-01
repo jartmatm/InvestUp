@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } fro
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
-import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -133,6 +132,15 @@ function IconSpark() {
   );
 }
 
+function IconPlus() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M12 5v14" strokeLinecap="round" />
+      <path d="M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function InvestAppWordmark() {
   return (
     <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
@@ -209,13 +217,6 @@ export default function FeedPage() {
 
   useEffect(() => {
     const loadFeed = async () => {
-      if (rolSeleccionado === 'emprendedor') {
-        setProjects([]);
-        setLoading(false);
-        setStatus('');
-        return;
-      }
-
       setLoading(true);
       setStatus('');
       const { data, error } = await fetchProjects({ limit: 48 });
@@ -343,10 +344,6 @@ export default function FeedPage() {
     setShowFilterSheet(false);
   };
 
-  if (rolSeleccionado === 'emprendedor') {
-    return <EntrepreneurFeedDashboard />;
-  }
-
   return (
     <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.10),transparent_28%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_55%,#F7F8FC_100%)] text-[#162033]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[260px] bg-[radial-gradient(circle_at_top_left,rgba(124,92,255,0.12),transparent_52%),radial-gradient(circle_at_top_right,rgba(67,120,255,0.10),transparent_40%)]" />
@@ -389,6 +386,26 @@ export default function FeedPage() {
               <IconBell />
             </button>
           </div>
+
+          {rolSeleccionado === 'emprendedor' ? (
+            <button
+              type="button"
+              onClick={() => router.push('/portfolio?new=1')}
+              className="mt-4 flex w-full items-center gap-4 rounded-[24px] border border-[#E6DFFF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] px-4 py-4 text-left shadow-[0_16px_34px_rgba(107,57,244,0.10)] transition hover:-translate-y-0.5"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]">
+                <IconPlus />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">
+                  Publish project
+                </span>
+                <span className="mt-1 block text-xs leading-5 text-[#7B879C]">
+                  Add or update your business listing from portfolio.
+                </span>
+              </span>
+            </button>
+          ) : null}
 
           <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-[#EEF0F8] bg-[#FAF9FF] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
             <span className="text-[#9AA3B6]">

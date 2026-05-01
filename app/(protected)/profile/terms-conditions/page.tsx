@@ -21,7 +21,7 @@ const TERMS_SECTIONS = [
       'Privy (wallet management): Wallet creation and access are handled by Privy. You are solely responsible for securing your access. InvestApp cannot access private keys or recover lost wallets.',
       'MoonPay (on/off ramp): Fiat-to-crypto purchases and sales are processed entirely by MoonPay. You must complete MoonPay KYC/AML procedures. InvestApp does not process payments or handle banking data.',
       'Polygon network: All transactions occur on Polygon (Ethereum Layer 2). You accept inherent blockchain risks such as network congestion, delays, and gas fees.',
-      'USDC (settlement asset): USDC (Circle) is the primary unit of account and settlement. InvestApp is not responsible for de-pegging or issuer solvency.',
+      'USD display: InvestApp shows balances, contracts, and returns in USD. Digital settlement assets may still carry issuer, regulatory, or peg-related risks.',
     ],
   },
   {

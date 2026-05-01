@@ -40,6 +40,7 @@ export default function TransactionReceipt() {
   }, [lastReceipt?.createdAt]);
 
   if (!lastReceipt) return null;
+  const receiptCurrency = lastReceipt.currency === 'USDC' ? 'USD' : lastReceipt.currency;
 
   const loadReceiptLogo = async () =>
     await new Promise<HTMLImageElement | null>((resolve) => {
@@ -96,7 +97,7 @@ export default function TransactionReceipt() {
       { label: 'Transaction type', values: [mapType(lastReceipt.type)] },
       {
         label: 'Amount',
-        values: [`${lastReceipt.amount} ${lastReceipt.currency}`],
+        values: [`${lastReceipt.amount} ${receiptCurrency}`],
       },
       { label: 'Status', values: [mapStatus(lastReceipt.status)] },
       { label: 'Transaction hash', values: [lastReceipt.txHash] },
@@ -248,7 +249,7 @@ export default function TransactionReceipt() {
             <div className="rounded-2xl bg-white/10 p-3">
               <p className="text-xs uppercase text-white/60">Amount</p>
               <p>
-                {lastReceipt.amount} {lastReceipt.currency}
+                {lastReceipt.amount} {receiptCurrency}
               </p>
             </div>
           </div>

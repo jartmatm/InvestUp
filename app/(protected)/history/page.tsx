@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
-import { runUserDirectoryQuery } from '@/utils/supabase/user-directory';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 import type {
   CurrentUserTransaction,
   TransactionMovementType,
@@ -31,14 +31,6 @@ type DirectoryProfile = {
   avatar_url: string | null;
   wallet_address: string | null;
 };
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const movementTypeOptions: Array<{ value: MovementFilter; label: string }> = [
   { value: 'all', label: 'All types' },
@@ -66,8 +58,8 @@ const sortOptions: Array<{ value: SortFilter; label: string }> = [
 const normalizeSearchQuery = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
 
 const formatTransactionAmount = (amount: number | null) => {
-  if (amount == null) return '0.00 USDC';
-  return `${Number(amount).toFixed(2)} USDC`;
+  if (amount == null) return '0.00 USD';
+  return `${Number(amount).toFixed(2)} USD`;
 };
 
 const shortenIdentifier = (value: string | null | undefined, size = 6) => {
@@ -412,36 +404,6 @@ export default function HistoryPage() {
   const [sortBy, setSortBy] = useState<SortFilter>('latest');
   const [copiedTransactionId, setCopiedTransactionId] = useState<string | null>(null);
 
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
-
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -498,12 +460,10 @@ export default function HistoryPage() {
         return;
       }
 
-      const { data, error } = await runUserDirectoryQuery(supabase, (source) =>
-        supabase
-          .from(source)
-          .select('name,surname,email,avatar_url,wallet_address')
-          .in('wallet_address', uniqueWallets)
-      );
+      const { data, error } = await fetchRecipientDirectory(getAccessToken, {
+        wallets: uniqueWallets,
+        limit: uniqueWallets.length,
+      });
 
       if (error) {
         console.error('Error loading directory profiles for history:', error);
@@ -525,7 +485,7 @@ export default function HistoryPage() {
     };
 
     void loadDirectoryProfiles();
-  }, [supabase, transactions]);
+  }, [getAccessToken, transactions]);
 
   const normalizedSearchQuery = useMemo(() => normalizeSearchQuery(searchQuery), [searchQuery]);
 
@@ -869,9 +829,7 @@ export default function HistoryPage() {
           </section>
 
           {loading ? (
-            <div className="rounded-[26px] border border-white/85 bg-white/88 px-5 py-5 text-[0.95rem] font-medium text-[#8A93A6] shadow-[0_18px_46px_rgba(31,38,64,0.08)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
-              Loading transaction history...
-            </div>
+            <SectionLoadingSkeleton rows={4} />
           ) : null}
 
           {statusMessage ? (

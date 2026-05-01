@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
+import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import InvestorWalletCard from '@/components/InvestorWalletCard';
 import {
   formatNextRepaymentDate,
@@ -20,6 +21,7 @@ import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investm
 import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
+import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import type { InternalAccountBalance } from '@/utils/internal-ledger/types';
 import { getKycLevelBadgeLabel } from '@/utils/kyc/shared';
@@ -233,6 +235,7 @@ type SearchUserResult = {
   displayName: string;
   subtitle: string;
   avatarUrl: string | null;
+  walletAddress: string | null;
   linkedProjectId: string | null;
 };
 
@@ -268,8 +271,8 @@ const getTransactionTypeLabel = (transaction: TransactionRow, walletAddress?: st
 };
 
 const formatTransactionAmount = (amount: number | null) => {
-  if (amount == null) return '0.00 USDC';
-  return `${Number(amount).toFixed(2)} USDC`;
+  if (amount == null) return '0.00 USD';
+  return `${Number(amount).toFixed(2)} USD`;
 };
 
 const formatMoney = (amount: number | null, currency: string | null = 'USD') => {
@@ -334,6 +337,18 @@ const getUserDisplayName = (user: SearchUserRow) => {
   if (fullName) return fullName;
   if (user.email?.trim()) return user.email.trim();
   return shortenIdentifier(user.id, 8) || 'User';
+};
+
+const matchesSearchUser = (user: SearchUserRow, normalizedQuery: string) => {
+  const fields = [
+    user.name,
+    user.surname,
+    user.email,
+    user.id,
+    user.wallet_address,
+    `${user.name ?? ''} ${user.surname ?? ''}`.trim(),
+  ];
+  return fields.some((field) => field?.toLowerCase().includes(normalizedQuery));
 };
 
 export default function HomePage() {
@@ -617,7 +632,6 @@ export default function HomePage() {
     let isCancelled = false;
     const timeout = window.setTimeout(async () => {
       const searchTerm = sanitizeSearchFragment(normalizedQuery);
-      const wildcardTerm = `%${searchTerm.replace(/\s+/g, '%')}%`;
 
       setSearching(true);
       setSearchError(null);
@@ -632,21 +646,10 @@ export default function HomePage() {
             },
             getAccessToken
           ),
-          runUserDirectoryQuery(supabase, (source) =>
-            supabase
-              .from(source)
-              .select('id,name,surname,email,avatar_url,wallet_address,role')
-              .or(
-                [
-                  `name.ilike.${wildcardTerm}`,
-                  `surname.ilike.${wildcardTerm}`,
-                  `email.ilike.${wildcardTerm}`,
-                  `id.ilike.${wildcardTerm}`,
-                  `wallet_address.ilike.${wildcardTerm}`,
-                ].join(',')
-              )
-              .limit(6)
-          ),
+          fetchRecipientDirectory(getAccessToken, {
+            search: searchTerm,
+            limit: 6,
+          }),
         ]);
 
         if (projectsResponse.error) {
@@ -654,7 +657,7 @@ export default function HomePage() {
         }
 
         if (usersResponse.error) {
-          throw usersResponse.error;
+          throw new Error(usersResponse.error);
         }
 
         const currentUserId = user?.id ?? null;
@@ -668,7 +671,58 @@ export default function HomePage() {
           })
           .slice(0, 6);
 
-        const rawUsers = (usersResponse.data ?? []) as SearchUserRow[];
+        const rawUsers = [...((usersResponse.data ?? []) as SearchUserRow[])];
+
+        if (user?.id) {
+          const { data: userTransactions, error: userTransactionsError } =
+            await fetchCurrentUserTransactions(getAccessToken, {
+              limit: 200,
+              wallet: smartWalletAddress ?? undefined,
+            });
+
+          if (userTransactionsError) {
+            throw new Error(userTransactionsError);
+          }
+
+          const currentWallet = smartWalletAddress?.toLowerCase() ?? '';
+          const seenWallets = new Set<string>();
+          const counterpartyWallets: string[] = [];
+
+          (userTransactions ?? []).forEach((transaction) => {
+            const wallets = [transaction.from_wallet, transaction.to_wallet]
+              .filter((wallet): wallet is string => Boolean(wallet))
+              .filter((wallet) => wallet.toLowerCase() !== currentWallet);
+
+            wallets.forEach((wallet) => {
+              const normalizedWallet = wallet.toLowerCase();
+              if (seenWallets.has(normalizedWallet)) return;
+              seenWallets.add(normalizedWallet);
+              counterpartyWallets.push(wallet);
+            });
+          });
+
+          if (counterpartyWallets.length > 0) {
+            const { data: contactProfiles, error: contactProfilesError } =
+              await fetchRecipientDirectory(getAccessToken, {
+                wallets: counterpartyWallets.slice(0, 50),
+                limit: 50,
+              });
+
+            if (contactProfilesError) {
+              throw new Error(contactProfilesError);
+            }
+
+            const existingUserIds = new Set(rawUsers.map((entry) => entry.id));
+            ((contactProfiles ?? []) as SearchUserRow[])
+              .filter((entry) => matchesSearchUser(entry, normalizedQuery))
+              .forEach((entry) => {
+                if (existingUserIds.has(entry.id)) return;
+                existingUserIds.add(entry.id);
+                rawUsers.push(entry);
+              });
+          }
+        }
+
         const userIds = rawUsers.map((entry) => entry.id);
         const userProjectMap = new Map<string, string>();
 
@@ -741,6 +795,7 @@ export default function HomePage() {
             displayName: getUserDisplayName(entry),
             subtitle: entry.email?.trim() || 'Email pending',
             avatarUrl: entry.avatar_url ?? null,
+            walletAddress: entry.wallet_address ?? null,
             linkedProjectId: userProjectMap.get(entry.id) ?? null,
           }))
         );
@@ -763,7 +818,7 @@ export default function HomePage() {
       isCancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [getAccessToken, searchQuery, showSearch, supabase, user?.id]);
+  }, [getAccessToken, searchQuery, showSearch, smartWalletAddress, supabase, user?.id]);
 
   const handleTopUpClick = async () => {
     if (openingTopUp) return;
@@ -842,7 +897,7 @@ export default function HomePage() {
 
   const actions: ActionItem[] = [
     { label: 'Top up', icon: <IconPlus />, onClick: () => void handleTopUpClick() },
-    { label: 'Send', icon: <IconSend />, onClick: () => router.push('/invest') },
+    { label: 'Send Money', icon: <IconSend />, onClick: () => router.push('/invest') },
     { label: 'Withdraw', icon: <IconDownload />, onClick: handleWithdrawClick },
     { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
   ];
@@ -1014,15 +1069,25 @@ export default function HomePage() {
                         People
                       </p>
                       <div className="space-y-2">
-                        {searchUsers.map((entry) =>
-                          entry.linkedProjectId ? (
+                        {searchUsers.map((entry) => {
+                          const userHref = entry.linkedProjectId
+                            ? `/feed/${entry.linkedProjectId}`
+                            : entry.walletAddress
+                              ? `/invest/wallet?mode=transfer${
+                                  entry.subtitle && entry.subtitle !== 'Email pending'
+                                    ? `&email=${encodeURIComponent(entry.subtitle)}`
+                                    : ''
+                                }&wallet=${encodeURIComponent(entry.walletAddress)}`
+                              : null;
+
+                          return userHref ? (
                             <button
                               key={entry.id}
                               type="button"
                               onClick={() => {
                                 setShowSearch(false);
                                 setSearchQuery('');
-                                router.push(`/feed/${entry.linkedProjectId}`);
+                                router.push(userHref);
                               }}
                               className="flex w-full items-center gap-3 rounded-[18px] border border-white/30 bg-white/70 px-3 py-3 text-left transition hover:bg-white"
                             >
@@ -1042,7 +1107,9 @@ export default function HomePage() {
                                 </p>
                                 <p className="truncate text-xs text-[#818898]">{entry.subtitle}</p>
                               </div>
-                              <span className="text-xs font-semibold text-[#6B39F4]">Venture</span>
+                              <span className="text-xs font-semibold text-[#6B39F4]">
+                                {entry.linkedProjectId ? 'Venture' : 'Send'}
+                              </span>
                             </button>
                           ) : (
                             <div
@@ -1067,8 +1134,8 @@ export default function HomePage() {
                               </div>
                               <span className="text-[11px] font-medium text-[#94A3B8]">Profile match</span>
                             </div>
-                          )
-                        )}
+                          );
+                        })}
                       </div>
                     </section>
                   ) : null}
@@ -1177,6 +1244,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {rolSeleccionado === 'inversor' ? (
         <section className="mb-7 rounded-[32px] border border-white/85 bg-white/88 p-4 shadow-[0_22px_58px_rgba(31,38,64,0.08)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-[1.45rem] font-semibold tracking-[-0.06em] text-[#101828]">
@@ -1194,9 +1262,7 @@ export default function HomePage() {
           <div className="space-y-5">
             {rolSeleccionado === 'inversor' ? (
               loadingActiveInvestments ? (
-                <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
-                  Loading your active investments...
-                </div>
+                <SectionLoadingSkeleton rows={2} />
               ) : activeInvestments.length > 0 ? (
                 <div className="overflow-hidden rounded-[26px] bg-[linear-gradient(180deg,#FFFFFF_0%,#F7F8FD_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
                   <div className="mb-3 flex justify-end px-1">
@@ -1251,9 +1317,7 @@ export default function HomePage() {
             ) : (
               <>
                 {loadingProject ? (
-                  <div className="rounded-[24px] border border-[#EEF0F8] bg-white/74 p-5 text-sm text-[#818898] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
-                    Loading your latest listing...
-                  </div>
+                  <SectionLoadingSkeleton rows={2} />
                 ) : lastProject ? (
                   <button
                     type="button"
@@ -1309,6 +1373,7 @@ export default function HomePage() {
             ) : null}
           </div>
         </section>
+        ) : null}
 
         <section>
           <div className="mb-4 flex items-center justify-between px-1">
@@ -1326,9 +1391,7 @@ export default function HomePage() {
 
           <div className="max-h-[288px] space-y-3 overflow-y-auto pb-2">
             {loadingTransactions ? (
-              <div className="rounded-[24px] border border-white/85 bg-white/88 px-4 py-5 text-sm text-[#818898] shadow-[0_16px_34px_rgba(31,38,64,0.06)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
-                Loading transactions...
-              </div>
+              <SectionLoadingSkeleton rows={3} />
             ) : null}
 
             {!loadingTransactions && transactions.length === 0 ? (

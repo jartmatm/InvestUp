@@ -799,7 +799,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           uuid: String(storedTransaction.uuid ?? storedTransaction.id ?? txHash ?? ''),
           type: (storedTransaction.movement_type ?? movementType) as MovementType,
           amount: Number.isFinite(normalizedAmount) ? normalizedAmount.toFixed(2) : amountUsdc,
-          currency: 'USDC',
+          currency: 'USD',
           status: getReceiptStatus(String(storedTransaction.status ?? persistedStatus)),
           txHash: String(storedTransaction.tx_hash ?? txHash),
           createdAt: String(storedTransaction.created_at ?? new Date().toISOString()),
@@ -1091,7 +1091,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         });
         const costoTotalEstimado = montoSolicitado + gasCostUsdc;
         if ((balanceDisponible as bigint) < costoTotalEstimado) {
-          throw new Error('Insufficient balance for amount plus USDC gas.');
+          throw new Error('Insufficient balance for amount plus network fees.');
         }
 
         const allowance = await publicClient.readContract({
@@ -1165,7 +1165,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           uuid: txHash,
           type: movementType,
           amount: Number(enviadoFmt).toFixed(2),
-          currency: 'USDC',
+          currency: 'USD',
           status: 'completed',
           txHash,
           createdAt: new Date().toISOString(),
@@ -1176,7 +1176,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         });
 
         setHistorial((prev) => [
-          `${tipo} ${enviadoFmt} USDC -> ${provisionalReceiverContact}`,
+          `${tipo} ${enviadoFmt} USD -> ${provisionalReceiverContact}`,
           ...prev,
         ]);
         const transactionNotificationKey = buildTransactionNotificationKey(txHash, txHash);

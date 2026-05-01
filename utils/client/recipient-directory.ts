@@ -19,8 +19,10 @@ type RecipientDirectoryResponse<T> =
 
 type FetchRecipientDirectoryQuery = {
   email?: string | null;
+  ids?: string[] | null;
   limit?: number | null;
   role?: 'investor' | 'entrepreneur' | null;
+  search?: string | null;
   wallet?: string | null;
   wallets?: string[] | null;
 };
@@ -30,7 +32,14 @@ const buildSearchParams = (query?: FetchRecipientDirectoryQuery) => {
 
   if (query?.role) searchParams.set('role', query.role);
   if (query?.email?.trim()) searchParams.set('email', query.email.trim());
+  if (query?.search?.trim()) searchParams.set('search', query.search.trim());
   if (query?.wallet?.trim()) searchParams.set('wallet', query.wallet.trim());
+  if (query?.ids?.length) {
+    const ids = query.ids.map((entry) => entry.trim()).filter(Boolean);
+    if (ids.length > 0) {
+      searchParams.set('ids', ids.join(','));
+    }
+  }
   if (query?.wallets?.length) {
     const wallets = query.wallets.map((entry) => entry.trim()).filter(Boolean);
     if (wallets.length > 0) {
