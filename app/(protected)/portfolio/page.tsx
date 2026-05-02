@@ -345,11 +345,11 @@ export default function PortfolioPage() {
   const onPickPhotos = async (files: FileList | null) => {
     if (!files) return;
     const selected = Array.from(files);
-    if (selected.length > 10) {
-      setStatus('Maximum 10 photos.');
+    if (selected.length > 12) {
+      setStatus('Maximum 12 photos.');
       return;
     }
-    const urls = await Promise.all(selected.slice(0, 10).map(fileToDataUrl));
+    const urls = await Promise.all(selected.slice(0, 12).map(fileToDataUrl));
     setProjectPhotos(urls);
   };
 
@@ -535,8 +535,8 @@ export default function PortfolioPage() {
       setStatus('Maximum description length: 2500 characters.');
       return;
     }
-    if (projectPhotos.length > 10) {
-      setStatus('You can upload up to 10 photos only.');
+    if (projectPhotos.length > 12) {
+      setStatus('You can upload up to 12 photos only.');
       return;
     }
 
@@ -729,7 +729,7 @@ export default function PortfolioPage() {
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
                     Business photos
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">Upload up to 10 images</p>
+                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">Upload up to 12 images</p>
                   <input
                     type="file"
                     accept="image/*"

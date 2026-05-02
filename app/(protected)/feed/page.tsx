@@ -418,7 +418,7 @@ export default function FeedPage() {
             <button
               type="button"
               onClick={() => {
-                if (!publishDisabled) router.push('/portfolio?new=1');
+                if (!publishDisabled) router.push('/publish');
               }}
               disabled={publishDisabled}
               className={`mt-4 flex w-full items-center gap-4 rounded-[24px] border px-4 py-4 text-left shadow-[0_16px_34px_rgba(107,57,244,0.10)] transition ${
@@ -445,7 +445,7 @@ export default function FeedPage() {
                     ? 'Checking your current business listing...'
                     : hasOwnProject
                       ? 'You already have one business. Edit it from portfolio.'
-                      : 'Add your business listing from portfolio.'}
+                      : 'Add your business listing with the guided flow.'}
                 </span>
               </span>
             </button>

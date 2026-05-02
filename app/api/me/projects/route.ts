@@ -238,8 +238,8 @@ function buildProjectPayload({
     return { error: 'A valid interest rate is required.', data: null };
   }
 
-  if (photoUrls.length > 10) {
-    return { error: 'You can upload up to 10 photos only.', data: null };
+  if (photoUrls.length > 12) {
+    return { error: 'You can upload up to 12 photos only.', data: null };
   }
 
   const parsedPublicationEndDate = new Date(publicationEndDate);

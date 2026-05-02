@@ -286,6 +286,19 @@ export default function FeedDetailPage() {
             imageClassName="h-56 w-full object-cover"
           />
 
+          {project.video_url ? (
+            <div className="overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
+              <video
+                controls
+                preload="metadata"
+                src={project.video_url}
+                className="h-56 w-full bg-slate-950 object-cover"
+              >
+                Your browser does not support video playback.
+              </video>
+            </div>
+          ) : null}
+
           <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-3">
               <div>

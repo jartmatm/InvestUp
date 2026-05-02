@@ -8,7 +8,6 @@ import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
 import {
-  expandPaymentScheduleRows,
   normalizePaymentScheduleRecord,
   type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
@@ -66,19 +65,11 @@ type SummaryItem = {
   avatarUrl: string | null;
   country: string | null;
   walletAddress: string;
+  creditId: string | null;
   nextDueDate: Date | null;
   nextDueLabel: string;
   installmentAmount: number;
   healthTone: ReturnType<typeof getInvestmentHealthMeta>;
-};
-
-type PaymentScheduleGroup = {
-  creditId: string;
-  investorUserId: string | null;
-  investorName: string;
-  investorAvatarUrl: string | null;
-  investorCountry: string | null;
-  rows: ReturnType<typeof expandPaymentScheduleRows>;
 };
 
 type DashboardCardProps = {
@@ -569,7 +560,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
   const { user, getAccessToken } = usePrivy();
   const [project, setProject] = useState<EntrepreneurProjectRow | null>(null);
   const [summaryItems, setSummaryItems] = useState<SummaryItem[]>([]);
-  const [scheduleGroups, setScheduleGroups] = useState<PaymentScheduleGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
 
@@ -578,7 +568,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
       if (!user?.id) {
         setProject(null);
         setSummaryItems([]);
-        setScheduleGroups([]);
         setLoading(false);
         return;
       }
@@ -595,7 +584,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
         setStatus('Could not load your venture dashboard right now.');
         setProject(null);
         setSummaryItems([]);
-        setScheduleGroups([]);
         setLoading(false);
         return;
       }
@@ -605,7 +593,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
 
       if (!currentProject) {
         setSummaryItems([]);
-        setScheduleGroups([]);
         setLoading(false);
         return;
       }
@@ -661,7 +648,7 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
       }
 
       const nextScheduleByInvestor = new Map<string, PaymentScheduleRecord>();
-      let groupedSchedules: PaymentScheduleGroup[] = [];
+      const contractIdByInvestor = new Map<string, string>();
       const { data: scheduleData, error: scheduleError } = await fetchCurrentUserPaymentSchedule(
         getAccessToken,
         { projectId }
@@ -677,6 +664,14 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
         );
 
         normalizedRecords.forEach((record) => {
+          if (
+            record.investor_user_id &&
+            record.credit_id &&
+            !contractIdByInvestor.has(record.investor_user_id)
+          ) {
+            contractIdByInvestor.set(record.investor_user_id, record.credit_id);
+          }
+
           if (record.investor_user_id && record.status !== 'paid') {
             const current = nextScheduleByInvestor.get(record.investor_user_id);
             const currentTime = current?.next_due_date
@@ -690,29 +685,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
             }
           }
         });
-
-        groupedSchedules = normalizedRecords
-          .map((record) => {
-            const investorUserId = record.investor_user_id ?? null;
-            const investor = investorUserId ? profileMap.get(investorUserId) : undefined;
-            return {
-              creditId: record.credit_id,
-              investorUserId,
-              investorName: nameFrom(investor),
-              investorAvatarUrl: investor?.avatar_url ?? null,
-              investorCountry: investor?.country ?? null,
-              rows: expandPaymentScheduleRows(record),
-            };
-          })
-          .sort((a, b) => {
-            const left = a.rows[0]?.due_date
-              ? new Date(a.rows[0].due_date ?? '').getTime()
-              : Number.MAX_SAFE_INTEGER;
-            const right = b.rows[0]?.due_date
-              ? new Date(b.rows[0].due_date ?? '').getTime()
-              : Number.MAX_SAFE_INTEGER;
-            return left - right;
-          });
       }
 
       const items = investments
@@ -749,6 +721,9 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
             avatarUrl: investor?.avatar_url ?? null,
             country: investor?.country ?? null,
             walletAddress: investor?.wallet_address ?? investment.from_wallet ?? '',
+            creditId: investment.investor_user_id
+              ? contractIdByInvestor.get(investment.investor_user_id) ?? scheduleSnapshot?.credit_id ?? null
+              : null,
             nextDueDate,
             nextDueLabel: formatDate(nextDueDate),
             installmentAmount:
@@ -767,7 +742,6 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
         });
 
       setSummaryItems(items);
-      setScheduleGroups(groupedSchedules);
       setLoading(false);
     };
 
@@ -943,7 +917,7 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
                               </span>
                             </div>
 
-                            <div className="mt-4 flex items-end justify-between gap-3">
+                            <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
                               <div className="flex gap-6">
                                 <div>
                                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
@@ -963,75 +937,50 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
                                 </div>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  router.push(
-                                    `/invest/wallet?mode=repayment${
-                                      item.email ? `&email=${encodeURIComponent(item.email)}` : ''
-                                    }&wallet=${encodeURIComponent(
-                                      item.walletAddress
-                                    )}&amount=${encodeURIComponent(
-                                      item.installmentAmount.toFixed(2)
-                                    )}&name=${encodeURIComponent(
-                                      item.displayName
-                                    )}&projectId=${encodeURIComponent(
-                                      String(project.id)
-                                    )}&investorUserId=${encodeURIComponent(item.investorUserId ?? '')}`
-                                  )
-                                }
-                                disabled={!item.walletAddress}
-                                className={`flex min-h-[40px] shrink-0 items-center justify-center rounded-full px-4 text-xs font-semibold transition ${
-                                  item.walletAddress
-                                    ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] hover:-translate-y-0.5'
-                                    : 'bg-[#E7E4F7] text-[#A39FB7]'
-                                }`}
-                              >
-                                Pay
-                              </button>
+                              <div className="flex flex-wrap justify-end gap-2">
+                                {item.creditId ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      router.push(
+                                        `/contracts?credit=${encodeURIComponent(item.creditId ?? '')}`
+                                      )
+                                    }
+                                    className="inline-flex min-h-[40px] shrink-0 items-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-xs font-semibold text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
+                                  >
+                                    View contract
+                                  </button>
+                                ) : null}
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    router.push(
+                                      `/invest/wallet?mode=repayment${
+                                        item.email ? `&email=${encodeURIComponent(item.email)}` : ''
+                                      }&wallet=${encodeURIComponent(
+                                        item.walletAddress
+                                      )}&amount=${encodeURIComponent(
+                                        item.installmentAmount.toFixed(2)
+                                      )}&name=${encodeURIComponent(
+                                        item.displayName
+                                      )}&projectId=${encodeURIComponent(
+                                        String(project.id)
+                                      )}&investorUserId=${encodeURIComponent(item.investorUserId ?? '')}`
+                                    )
+                                  }
+                                  disabled={!item.walletAddress}
+                                  className={`flex min-h-[40px] shrink-0 items-center justify-center rounded-full px-4 text-xs font-semibold transition ${
+                                    item.walletAddress
+                                      ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] hover:-translate-y-0.5'
+                                      : 'bg-[#E7E4F7] text-[#A39FB7]'
+                                  }`}
+                                >
+                                  Pay
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </DashboardCard>
-
-              <DashboardCard>
-                <SectionHeading title="Contracts" />
-
-                <div className="mt-4 flex flex-col gap-3">
-                  {scheduleGroups.length === 0 ? (
-                    <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 text-sm leading-6 text-[#7B879C] shadow-[0_16px_32px_rgba(31,38,64,0.05)]">
-                      Contracts will appear here once an investment is registered and the payment schedule is available in Supabase.
-                    </div>
-                  ) : (
-                    scheduleGroups.map((group) => (
-                      <div
-                        key={group.creditId}
-                        className="rounded-[26px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_16px_32px_rgba(31,38,64,0.05)]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar
-                            imageUrl={group.investorAvatarUrl}
-                            label={group.investorName}
-                            className="h-14 w-14 shrink-0 border border-white shadow-[0_10px_20px_rgba(31,38,64,0.08)]"
-                          />
-
-                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-[#1C2336]">
-                            {group.investorName}
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
-                            }
-                            className="inline-flex min-h-[40px] shrink-0 items-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-xs font-semibold text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
-                          >
-                            View contract
-                          </button>
                         </div>
                       </div>
                     ))
