@@ -12,7 +12,12 @@ import {
   createCurrentUserProject,
   fetchCurrentUserProjects,
 } from '@/utils/client/current-user-projects';
-import { createCurrentUserPublicationPrompt } from '@/utils/client/current-user-publication-prompts';
+import {
+  createCurrentUserPublicationPrompt,
+  fetchCurrentUserPublicationDraft,
+  saveCurrentUserPublicationDraft,
+  type PublicationPromptDraft,
+} from '@/utils/client/current-user-publication-prompts';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 import type { ProjectMutationPayload, ProjectRecord } from '@/utils/projects/shared';
 
@@ -70,6 +75,7 @@ type PromptJson = {
   media: {
     photoCount: number;
     videoCount: number;
+    videoUrl: string | null;
   };
 };
 
@@ -91,8 +97,8 @@ type ReviewState = {
   optimizedPublication: OptimizedPublication;
 };
 
-const OPERATING_TIME_OPTIONS = ['<1 ano', '>1 <5 anos', '>5 <10 anos', '>10 anos'];
-const REGISTRATION_OPTIONS = ['Si', 'No'];
+const OPERATING_TIME_OPTIONS = ['<1 year', '>1 <5 years', '>5 <10 years', '>10 years'];
+const REGISTRATION_OPTIONS = ['Registered business', 'Not registered yet'];
 
 const emptyForm: PublishWizardForm = {
   business_name: '',
@@ -122,13 +128,13 @@ const emptyForm: PublishWizardForm = {
 };
 
 const steps = [
-  'Informacion basica',
-  'Propuesta clara',
-  'Traccion',
-  'Inversion',
-  'Mercado',
-  'Equipo',
-  'Multimedia',
+  'Basic information',
+  'Value proposition',
+  'Traction',
+  'Investment',
+  'Market',
+  'Team',
+  'Media',
   'Extra',
 ] as const;
 
@@ -176,9 +182,9 @@ const addDays = (days: number) => {
 
 const inferOpeningDate = (timeOperating: string) => {
   const date = new Date();
-  if (timeOperating === '<1 ano') date.setMonth(date.getMonth() - 6);
-  else if (timeOperating === '>1 <5 anos') date.setFullYear(date.getFullYear() - 2);
-  else if (timeOperating === '>5 <10 anos') date.setFullYear(date.getFullYear() - 7);
+  if (timeOperating === '<1 year') date.setMonth(date.getMonth() - 6);
+  else if (timeOperating === '>1 <5 years') date.setFullYear(date.getFullYear() - 2);
+  else if (timeOperating === '>5 <10 years') date.setFullYear(date.getFullYear() - 7);
   else date.setFullYear(date.getFullYear() - 11);
   return date.toISOString().slice(0, 10);
 };
@@ -196,6 +202,29 @@ const getErrorMessage = (error: unknown) => {
   }
   return String(error);
 };
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const coerceText = (value: unknown) => (typeof value === 'string' ? value : '');
+
+const normalizeDraftForm = (value: unknown): PublishWizardForm => {
+  const source = isPlainObject(value) ? value : {};
+  return (Object.keys(emptyForm) as Array<keyof PublishWizardForm>).reduce(
+    (draftForm, key) => ({
+      ...draftForm,
+      [key]: coerceText(source[key]),
+    }),
+    { ...emptyForm }
+  );
+};
+
+const normalizeStringArray = (value: unknown, maxItems: number) =>
+  Array.isArray(value)
+    ? value
+        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        .slice(0, maxItems)
+    : [];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-[0.72rem] font-semibold text-[#596277]">{children}</label>;
@@ -333,10 +362,14 @@ export default function PublishPage() {
   const [stepIndex, setStepIndex] = useState(0);
   const [projectPhotos, setProjectPhotos] = useState<string[]>([]);
   const [projectVideos, setProjectVideos] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState('');
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
+  const [savedDraft, setSavedDraft] = useState<PublicationPromptDraft | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [hasExistingProject, setHasExistingProject] = useState(false);
   const [checkingProject, setCheckingProject] = useState(true);
   const [status, setStatus] = useState('');
+  const [savingDraft, setSavingDraft] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [review, setReview] = useState<ReviewState | null>(null);
@@ -354,9 +387,10 @@ export default function PublishPage() {
       if (!user?.id || rolSeleccionado !== 'emprendedor') return;
       setCheckingProject(true);
 
-      const [projectsResponse, profileResponse] = await Promise.all([
+      const [projectsResponse, profileResponse, draftResponse] = await Promise.all([
         fetchCurrentUserProjects(getAccessToken),
         fetchCurrentUserProfile<ProfileSnapshot | null>(getAccessToken),
+        fetchCurrentUserPublicationDraft(getAccessToken),
       ]);
 
       if (projectsResponse.error) {
@@ -367,6 +401,10 @@ export default function PublishPage() {
 
       if (!profileResponse.error) {
         setProfile(profileResponse.data ?? null);
+      }
+
+      if (!draftResponse.error) {
+        setSavedDraft(draftResponse.data ?? null);
       }
 
       setCheckingProject(false);
@@ -383,83 +421,88 @@ export default function PublishPage() {
   const promptJson = useMemo<PromptJson>(
     () => ({
       version: 1,
-      locale: 'es',
+      locale: 'en',
       createdAt: new Date().toISOString(),
       fields: form,
       sections: [
         {
-          title: '1. Informacion basica del negocio',
+          title: '1. Basic business information',
           fields: [
-            { key: 'business_name', label: 'Nombre del negocio', value: form.business_name },
-            { key: 'location', label: 'Direccion', value: form.location },
-            { key: 'industry', label: 'Industria', value: form.industry },
-            { key: 'time_operating', label: 'Hace cuanto operas', value: form.time_operating },
-            { key: 'business_stage', label: 'Etapa o registro del negocio', value: form.business_stage },
+            { key: 'business_name', label: 'Business name', value: form.business_name },
+            { key: 'location', label: 'Location', value: form.location },
+            { key: 'industry', label: 'Industry', value: form.industry },
+            { key: 'time_operating', label: 'Time operating', value: form.time_operating },
+            { key: 'business_stage', label: 'Business stage', value: form.business_stage },
           ],
         },
         {
-          title: '2. Que haces',
+          title: '2. What you do',
           fields: [
-            { key: 'product_description', label: 'Que vendes exactamente', value: form.product_description },
-            { key: 'problem_solved', label: 'Que problema resuelves', value: form.problem_solved },
-            { key: 'differentiation', label: 'Por que tu negocio es diferente o mejor que otros', value: form.differentiation },
+            { key: 'product_description', label: 'What you sell exactly', value: form.product_description },
+            { key: 'problem_solved', label: 'Problem solved', value: form.problem_solved },
+            { key: 'differentiation', label: 'Differentiation', value: form.differentiation },
           ],
         },
         {
-          title: '3. Traccion',
+          title: '3. Traction',
           fields: [
-            { key: 'monthly_revenue', label: 'Ventas mensuales actuales', value: form.monthly_revenue },
-            { key: 'avg_ticket', label: 'Ticket promedio por cliente', value: form.avg_ticket },
-            { key: 'monthly_customers', label: 'Numero de clientes al mes', value: form.monthly_customers },
-            { key: 'growth_rate', label: 'Crecimiento aproximado', value: form.growth_rate },
+            { key: 'monthly_revenue', label: 'Current monthly revenue', value: form.monthly_revenue },
+            { key: 'avg_ticket', label: 'Average ticket per customer', value: form.avg_ticket },
+            { key: 'monthly_customers', label: 'Monthly customers', value: form.monthly_customers },
+            { key: 'growth_rate', label: 'Growth rate', value: form.growth_rate },
             { key: 'social_media', label: 'Social media', value: form.social_media },
           ],
         },
         {
-          title: '4. Inversion que buscas',
+          title: '4. Investment requested',
           fields: [
-            { key: 'capital_needed', label: 'Capital que necesitas levantar', value: form.capital_needed },
-            { key: 'funds_usage', label: 'En que usaras el dinero', value: form.funds_usage },
-            { key: 'investment_offer', label: 'Oferta de inversion', value: form.investment_offer },
+            { key: 'capital_needed', label: 'Capital needed', value: form.capital_needed },
+            { key: 'funds_usage', label: 'Use of funds', value: form.funds_usage },
+            { key: 'investment_offer', label: 'Investment offer', value: form.investment_offer },
           ],
         },
         {
-          title: '5. Mercado y oportunidad',
+          title: '5. Market and opportunity',
           fields: [
-            { key: 'target_customer', label: 'Cliente ideal', value: form.target_customer },
-            { key: 'market_size', label: 'Tamano del mercado', value: form.market_size },
-            { key: 'competition', label: 'Competencia y diferenciacion', value: form.competition },
+            { key: 'target_customer', label: 'Target customer', value: form.target_customer },
+            { key: 'market_size', label: 'Market size', value: form.market_size },
+            { key: 'competition', label: 'Competition and differentiation', value: form.competition },
           ],
         },
         {
-          title: '6. Equipo',
+          title: '6. Team',
           fields: [
-            { key: 'founder_info', label: 'Quien eres tu', value: form.founder_info },
-            { key: 'team_info', label: 'Socios o equipo', value: form.team_info },
+            { key: 'founder_info', label: 'Founder info', value: form.founder_info },
+            { key: 'team_info', label: 'Team info', value: form.team_info },
           ],
         },
         {
-          title: '7. Contenido multimedia',
+          title: '7. Media content',
           fields: [
-            { key: 'photo_count', label: 'Fotos', value: `${projectPhotos.length} photo(s) uploaded` },
-            { key: 'video_count', label: 'Videos', value: `${projectVideos.length} video(s) uploaded` },
+            { key: 'photo_count', label: 'Photos', value: `${projectPhotos.length} photo(s) uploaded` },
+            {
+              key: 'video_count',
+              label: 'Videos',
+              value: `${projectVideos.length + (videoUrl.trim() ? 1 : 0)} video source(s) added`,
+            },
           ],
         },
         {
           title: '8. Extra',
           fields: [
-            { key: 'testimonials', label: 'Testimonios de clientes', value: form.testimonials },
-            { key: 'achievements', label: 'Logros', value: form.achievements },
-            { key: 'timing_reason', label: 'Por que este es el momento', value: form.timing_reason },
+            { key: 'testimonials', label: 'Customer testimonials', value: form.testimonials },
+            { key: 'achievements', label: 'Achievements', value: form.achievements },
+            { key: 'timing_reason', label: 'Why now', value: form.timing_reason },
           ],
         },
       ],
       media: {
         photoCount: projectPhotos.length,
-        videoCount: projectVideos.length,
+        videoCount: projectVideos.length + (videoUrl.trim() ? 1 : 0),
+        videoUrl: videoUrl.trim() || null,
       },
     }),
-    [form, projectPhotos.length, projectVideos.length]
+    [form, projectPhotos.length, projectVideos.length, videoUrl]
   );
 
   const promptText = useMemo(
@@ -475,6 +518,19 @@ export default function PublishPage() {
     [promptJson]
   );
 
+  const draftMetadata = useMemo(
+    () => ({
+      step_index: stepIndex,
+      media: {
+        photo_urls: projectPhotos,
+        video_urls: projectVideos,
+        video_url: videoUrl.trim() || null,
+        video_count: projectVideos.length + (videoUrl.trim() ? 1 : 0),
+      },
+    }),
+    [projectPhotos, projectVideos, stepIndex, videoUrl]
+  );
+
   const profileName = useMemo(() => {
     const name = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
     return name || firstSentence(form.founder_info) || `${form.business_name} founder`;
@@ -484,7 +540,7 @@ export default function PublishPage() {
     (targetStep: number) => {
       const missing = requiredByStep[targetStep].find((field) => !form[field].trim());
       if (missing) {
-        setStatus('Completa todos los campos requeridos de esta seccion.');
+        setStatus('Complete all required fields in this section.');
         return false;
       }
 
@@ -504,31 +560,74 @@ export default function PublishPage() {
     setStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
+  const resumeDraft = (draft: PublicationPromptDraft) => {
+    const promptData = isPlainObject(draft.promptJson) ? draft.promptJson : {};
+    const metadata = isPlainObject(draft.metadata) ? draft.metadata : {};
+    const media = isPlainObject(metadata.media) ? metadata.media : {};
+    const savedStepIndex = Number(metadata.step_index ?? 0);
+
+    setForm(normalizeDraftForm(promptData.fields));
+    setProjectPhotos(normalizeStringArray(media.photo_urls, 12));
+    setProjectVideos(normalizeStringArray(media.video_urls, 2));
+    setVideoUrl(coerceText(media.video_url));
+    setStepIndex(
+      Number.isFinite(savedStepIndex) ? Math.max(0, Math.min(steps.length - 1, savedStepIndex)) : 0
+    );
+    setDraftId(draft.id);
+    setReview(null);
+    setStatus('Draft resumed. You can keep editing.');
+  };
+
+  const saveDraft = async () => {
+    if (!user?.id || hasExistingProject || checkingProject || savingDraft) return;
+
+    setSavingDraft(true);
+    setStatus('');
+
+    const { data, error } = await saveCurrentUserPublicationDraft(getAccessToken, {
+      id: draftId,
+      promptJson,
+      promptText,
+      metadata: draftMetadata,
+    });
+
+    if (error || !data) {
+      setStatus(`Could not save the draft: ${error ?? 'Unknown error.'}`);
+      setSavingDraft(false);
+      return;
+    }
+
+    setDraftId(data.id);
+    setSavedDraft(data);
+    setStatus('Draft saved. You can resume it later from this page.');
+    setSavingDraft(false);
+  };
+
   const validateAll = () => {
     for (let index = 0; index < requiredByStep.length; index += 1) {
       const missing = requiredByStep[index].find((field) => !form[field].trim());
       if (missing) {
         setStepIndex(index);
-        setStatus('Completa todos los campos requeridos antes de finalizar.');
+        setStatus('Complete all required fields before finishing.');
         return false;
       }
     }
 
     if (projectPhotos.length < 5) {
       setStepIndex(6);
-      setStatus('Sube minimo 5 fotos para que la publicacion pueda destacar.');
+      setStatus('Upload at least 5 photos so the publication can stand out.');
       return false;
     }
 
     if (moneyNumber(form.capital_needed) <= 0) {
       setStepIndex(3);
-      setStatus('Agrega un monto de capital valido.');
+      setStatus('Add a valid capital amount.');
       return false;
     }
 
     if (moneyNumber(form.investment_offer) < 0) {
       setStepIndex(3);
-      setStatus('Agrega una tasa de interes valida.');
+      setStatus('Add a valid interest rate.');
       return false;
     }
 
@@ -539,7 +638,7 @@ export default function PublishPage() {
     if (!files) return;
     const selected = Array.from(files);
     if (selected.length > 12) {
-      setStatus('Puedes subir maximo 12 fotos.');
+      setStatus('You can upload up to 12 photos.');
       return;
     }
 
@@ -549,7 +648,7 @@ export default function PublishPage() {
       setReview(null);
       setStatus('');
     } catch (error) {
-      setStatus(`No pudimos leer las imagenes: ${getErrorMessage(error)}`);
+      setStatus(`Could not read the images: ${getErrorMessage(error)}`);
     }
   };
 
@@ -557,7 +656,7 @@ export default function PublishPage() {
     if (!files) return;
     const selected = Array.from(files);
     if (selected.length > 2) {
-      setStatus('Puedes subir maximo 2 videos.');
+      setStatus('You can upload up to 2 videos.');
       return;
     }
 
@@ -567,8 +666,13 @@ export default function PublishPage() {
       setReview(null);
       setStatus('');
     } catch (error) {
-      setStatus(`No pudimos leer los videos: ${getErrorMessage(error)}`);
+      setStatus(`Could not read the videos: ${getErrorMessage(error)}`);
     }
+  };
+
+  const updateVideoUrl = (value: string) => {
+    setReview(null);
+    setVideoUrl(value);
   };
 
   const finalizePrompt = async () => {
@@ -580,8 +684,10 @@ export default function PublishPage() {
 
     try {
       const { data, error } = await createCurrentUserPublicationPrompt(getAccessToken, {
+        id: draftId,
         promptJson,
         promptText,
+        metadata: draftMetadata,
       });
 
       if (error || !data) {
@@ -594,10 +700,11 @@ export default function PublishPage() {
         promptJson,
         optimizedPublication: data.optimizedPublication,
       });
-      setStatus('Revisa la publicacion optimizada antes de publicarla.');
+      setDraftId(data.id);
+      setStatus('Review the optimized publication before publishing.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      setStatus(`No pudimos preparar la publicacion: ${getErrorMessage(error)}`);
+      setStatus(`Could not prepare the publication: ${getErrorMessage(error)}`);
     } finally {
       setFinalizing(false);
     }
@@ -632,7 +739,7 @@ export default function PublishPage() {
       publication_end_date: addDays(90),
       interest_rate: moneyNumber(form.investment_offer),
       photo_urls: projectPhotos.slice(0, 12),
-      video_url: projectVideos[0] ?? null,
+      video_url: (projectVideos[0] ?? videoUrl.trim()) || null,
       metadata: {
         submitted_from: 'guided_publish_page',
         publication_prompt_id: review.draftId,
@@ -643,7 +750,8 @@ export default function PublishPage() {
         business_stage: form.business_stage,
         media: {
           photo_count: projectPhotos.length,
-          video_count: projectVideos.length,
+          video_count: projectVideos.length + (videoUrl.trim() ? 1 : 0),
+          video_url: videoUrl.trim() || null,
         },
       },
     };
@@ -660,12 +768,12 @@ export default function PublishPage() {
 
     const { error } = await createCurrentUserProject(getAccessToken, payload);
     if (error) {
-      setStatus(`No pudimos publicar el emprendimiento: ${error}`);
+      setStatus(`Could not publish the venture: ${error}`);
       setPublishing(false);
       return;
     }
 
-    setStatus('Emprendimiento publicado y visible en el marketplace.');
+    setStatus('Venture published and visible in the marketplace.');
     setPublishing(false);
     router.push('/feed');
   };
@@ -676,37 +784,37 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextInput
-              label="Nombre del negocio"
+              label="Business name"
               value={form.business_name}
               onChange={(value) => updateForm('business_name', value)}
-              placeholder="Cafe Aurora"
+              placeholder="Aurora Coffee"
             />
             <TextInput
-              label="Direccion"
+              label="Location"
               value={form.location}
               onChange={(value) => updateForm('location', value)}
-              placeholder="Calle, ciudad, pais"
+              placeholder="Street, city, country"
             />
             <SelectField
-              label="En que industria estas"
+              label="What industry are you in?"
               value={form.industry}
               onChange={(value) => updateForm('industry', value)}
               options={SECTOR_OPTIONS_ENGLISH}
-              placeholder="Selecciona una categoria"
+              placeholder="Select a category"
             />
             <SelectField
-              label="Hace cuanto operas"
+              label="How long have you been operating?"
               value={form.time_operating}
               onChange={(value) => updateForm('time_operating', value)}
               options={OPERATING_TIME_OPTIONS}
-              placeholder="Selecciona una opcion"
+              placeholder="Select an option"
             />
             <SelectField
-              label="Es un negocio registrado"
+              label="Business stage"
               value={form.business_stage}
               onChange={(value) => updateForm('business_stage', value)}
               options={REGISTRATION_OPTIONS}
-              placeholder="Selecciona si o no"
+              placeholder="Select current stage"
             />
           </div>
         );
@@ -714,22 +822,22 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Que vendes exactamente"
+              label="What exactly do you sell?"
               value={form.product_description}
               onChange={(value) => updateForm('product_description', value)}
-              placeholder="Describe el producto o servicio de forma concreta."
+              placeholder="Describe the product or service clearly."
             />
             <TextArea
-              label="Que problema resuelves"
+              label="What problem do you solve?"
               value={form.problem_solved}
               onChange={(value) => updateForm('problem_solved', value)}
-              placeholder="Cuenta el dolor real del cliente y como lo solucionas."
+              placeholder="Describe the customer's real pain and how you solve it."
             />
             <TextArea
-              label="Por que tu negocio es diferente o mejor que otros"
+              label="Why is your business different or better?"
               value={form.differentiation}
               onChange={(value) => updateForm('differentiation', value)}
-              helper="Evita respuestas genericas tipo calidad y buen servicio."
+              helper="Avoid generic answers like quality and good service."
             />
           </div>
         );
@@ -737,39 +845,39 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              Mientras mas especifico seas, mejor: evita frases como vendemos mucho. Un buen ejemplo seria:
-              $12,000 USD mensuales con crecimiento del 18% en 3 meses.
+              The more specific you are, the better. Avoid phrases like we sell a lot. A strong
+              example: $12,000 USD monthly revenue with 18% growth over 3 months.
             </div>
             <TextInput
-              label="Ventas mensuales actuales"
+              label="Current monthly revenue"
               value={form.monthly_revenue}
               onChange={(value) => updateForm('monthly_revenue', value)}
               placeholder="$12,000 USD"
             />
             <TextInput
-              label="Ticket promedio por cliente"
+              label="Average ticket per customer"
               value={form.avg_ticket}
               onChange={(value) => updateForm('avg_ticket', value)}
               placeholder="$45 USD"
             />
             <TextInput
-              label="Numero de clientes al mes"
+              label="Number of customers per month"
               value={form.monthly_customers}
               onChange={(value) => updateForm('monthly_customers', value)}
               type="number"
               placeholder="320"
             />
             <TextInput
-              label="Estas creciendo? si/no + % aproximado"
+              label="Are you growing? yes/no + approximate %"
               value={form.growth_rate}
               onChange={(value) => updateForm('growth_rate', value)}
-              placeholder="Si, 18% en los ultimos 3 meses"
+              placeholder="Yes, 18% over the last 3 months"
             />
             <TextInput
               label="Social media"
               value={form.social_media}
               onChange={(value) => updateForm('social_media', value)}
-              placeholder="@negocio, Instagram, TikTok, web o links"
+              placeholder="@business, Instagram, TikTok, website or links"
             />
           </div>
         );
@@ -777,20 +885,20 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextInput
-              label="Cuanto capital necesitas levantar"
+              label="How much capital do you need to raise?"
               value={form.capital_needed}
               onChange={(value) => updateForm('capital_needed', value)}
               type="number"
               placeholder="50000"
             />
             <TextArea
-              label="En que usaras el dinero"
+              label="How will you use the money?"
               value={form.funds_usage}
               onChange={(value) => updateForm('funds_usage', value)}
-              placeholder="Ej: 45% inventario, 30% maquinaria, 25% marketing."
+              placeholder="Example: 45% inventory, 30% equipment, 25% marketing."
             />
             <TextInput
-              label="Que tasa de interes ofreces anual"
+              label="What annual interest rate do you offer?"
               value={form.investment_offer}
               onChange={(value) => updateForm('investment_offer', value)}
               type="number"
@@ -802,18 +910,18 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Quien es tu cliente ideal"
+              label="Who is your ideal customer?"
               value={form.target_customer}
               onChange={(value) => updateForm('target_customer', value)}
             />
             <TextArea
-              label="Que tan grande es el mercado"
+              label="How large is the market?"
               value={form.market_size}
               onChange={(value) => updateForm('market_size', value)}
-              placeholder="Puede ser estimado."
+              placeholder="An estimate is okay."
             />
             <TextArea
-              label="Hay competencia? Que te diferencia o haces mejor"
+              label="Is there competition? What do you do better?"
               value={form.competition}
               onChange={(value) => updateForm('competition', value)}
             />
@@ -823,16 +931,16 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Quien eres tu"
+              label="Who are you?"
               value={form.founder_info}
               onChange={(value) => updateForm('founder_info', value)}
-              placeholder="Experiencia breve."
+              placeholder="Brief experience."
             />
             <TextArea
-              label="Tienes socios o equipo"
+              label="Do you have partners or a team?"
               value={form.team_info}
               onChange={(value) => updateForm('team_info', value)}
-              placeholder="Roles y responsabilidades."
+              placeholder="Roles and responsibilities."
             />
           </div>
         );
@@ -840,12 +948,12 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              Para que la publicacion destaque, sube minimo 5 fotos. Lo ideal es mostrar producto,
-              local, proceso, clientes y branding.
+              To make the publication stand out, upload at least 5 photos. Ideally show product,
+              location, process, customers and branding.
             </div>
             <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-              <p className="text-sm font-semibold text-[#1C2336]">Fotos</p>
-              <p className="mt-1 text-xs leading-5 text-[#7B879C]">Minimo 5, ideal 8-12.</p>
+              <p className="text-sm font-semibold text-[#1C2336]">Photos</p>
+              <p className="mt-1 text-xs leading-5 text-[#7B879C]">Minimum 5, ideal 8-12.</p>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -860,19 +968,25 @@ export default function PublishPage() {
                 className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
               >
                 <UploadIcon />
-                Subir imagenes
+                Upload images
               </button>
               {projectPhotos.length ? (
                 <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {projectPhotos.length} foto(s) cargadas
+                  {projectPhotos.length} photo(s) uploaded
                 </p>
               ) : null}
             </div>
             <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
               <p className="text-sm font-semibold text-[#1C2336]">Video</p>
               <p className="mt-1 text-xs leading-5 text-[#7B879C]">
-                Recomendado 1-2 videos de 30-60 segundos.
+                Recommended: 1-2 videos of 30-60 seconds.
               </p>
+              <TextInput
+                label="Video URL"
+                value={videoUrl}
+                onChange={updateVideoUrl}
+                placeholder="Paste a video URL if the file is not on this device"
+              />
               <input
                 ref={videoInputRef}
                 type="file"
@@ -887,12 +1001,15 @@ export default function PublishPage() {
                 className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
               >
                 <UploadIcon />
-                Subir videos
+                Upload videos
               </button>
               {projectVideos.length ? (
                 <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {projectVideos.length} video(s) cargados
+                  {projectVideos.length} video file(s) uploaded
                 </p>
+              ) : null}
+              {videoUrl.trim() ? (
+                <p className="mt-2 text-xs font-semibold text-[#6B39F4]">Video URL added</p>
               ) : null}
             </div>
           </div>
@@ -901,22 +1018,22 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Testimonios de clientes"
+              label="Customer testimonials"
               value={form.testimonials}
               onChange={(value) => updateForm('testimonials', value)}
-              placeholder="Opcional."
+              placeholder="Optional."
             />
             <TextArea
-              label="Logros"
+              label="Achievements"
               value={form.achievements}
               onChange={(value) => updateForm('achievements', value)}
-              placeholder="Ventas, premios, prensa, alianzas o hitos."
+              placeholder="Sales, awards, press, partnerships or milestones."
             />
             <TextArea
-              label="Por que este es el momento"
+              label="Why is now the right time?"
               value={form.timing_reason}
               onChange={(value) => updateForm('timing_reason', value)}
-              placeholder="Opcional: explica por que levantar capital ahora aumenta la oportunidad."
+              placeholder="Optional: explain why raising capital now increases the opportunity."
             />
           </div>
         );
@@ -930,7 +1047,7 @@ export default function PublishPage() {
           <div className="mx-auto w-full max-w-md">
             <PageBackButton fallbackHref="/feed" label="Back" />
             <SectionSurface className="mt-4 text-sm leading-6 text-[#667085]">
-              Esta pagina esta disponible para perfiles emprendedores.
+              This page is available for entrepreneur profiles.
             </SectionSurface>
           </div>
         </main>
@@ -941,7 +1058,7 @@ export default function PublishPage() {
 
   return (
     <>
-      {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? 'Enviando...' : 'Publicando...'} /> : null}
+      {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? 'Sending...' : 'Publishing...'} /> : null}
 
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
@@ -958,7 +1075,7 @@ export default function PublishPage() {
               Publish project
             </h1>
             <p className="text-sm leading-6 text-[#7B879C]">
-              Completa cada seccion y revisa la version optimizada antes de publicarla.
+              Complete each section and review the optimized version before publishing.
             </p>
           </header>
 
@@ -968,14 +1085,35 @@ export default function PublishPage() {
 
           {!checkingProject && hasExistingProject ? (
             <SectionSurface className="text-sm leading-6 text-[#667085]">
-              Ya tienes un emprendimiento publicado. Puedes editarlo desde portfolio; la regla es un proyecto
-              por emprendedor.
+              You already have a published venture. You can edit it from portfolio; the rule is one
+              project per entrepreneur.
               <button
                 type="button"
                 onClick={() => router.push('/portfolio')}
                 className={`${primaryButtonClassName} mt-4 w-full`}
               >
-                Ir a portfolio
+                Go to portfolio
+              </button>
+            </SectionSurface>
+          ) : null}
+
+          {!hasExistingProject && savedDraft && !draftId && !review ? (
+            <SectionSurface className="text-sm leading-6 text-[#667085]">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
+                Saved draft
+              </p>
+              <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
+                Resume your publication
+              </h2>
+              <p className="mt-2">
+                You have a saved publication draft. Resume it to keep editing from where you left off.
+              </p>
+              <button
+                type="button"
+                onClick={() => resumeDraft(savedDraft)}
+                className={`${primaryButtonClassName} mt-4 w-full`}
+              >
+                Resume
               </button>
             </SectionSurface>
           ) : null}
@@ -985,7 +1123,7 @@ export default function PublishPage() {
               <div className="flex flex-col gap-4">
                 <div>
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    Revisar publicacion
+                    Review publication
                   </p>
                   <h2 className="mt-1 text-xl font-semibold tracking-[-0.04em] text-[#1C2336]">
                     {review.optimizedPublication.title || `${form.business_name} investment opportunity`}
@@ -1023,7 +1161,7 @@ export default function PublishPage() {
                     disabled={publishing}
                     className={secondaryButtonClassName}
                   >
-                    Editar datos
+                    Edit details
                   </button>
                   <button
                     type="button"
@@ -1031,7 +1169,7 @@ export default function PublishPage() {
                     disabled={publishing}
                     className={primaryButtonClassName}
                   >
-                    Publicar
+                    Publish
                   </button>
                 </div>
               </div>
@@ -1044,7 +1182,7 @@ export default function PublishPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                      Paso {stepIndex + 1} de {steps.length}
+                      Step {stepIndex + 1} of {steps.length}
                     </p>
                     <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
                       {currentStep}
@@ -1068,23 +1206,31 @@ export default function PublishPage() {
                 <button
                   type="button"
                   onClick={goBack}
-                  disabled={stepIndex === 0 || finalizing}
+                  disabled={stepIndex === 0 || finalizing || savingDraft}
                   className={secondaryButtonClassName}
                 >
-                  Anterior
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void saveDraft()}
+                  disabled={savingDraft || finalizing || checkingProject}
+                  className={secondaryButtonClassName}
+                >
+                  {savingDraft ? 'Saving...' : 'Save draft'}
                 </button>
                 {stepIndex === steps.length - 1 ? (
                   <button
                     type="button"
                     onClick={finalizePrompt}
                     disabled={finalizing || checkingProject}
-                    className={primaryButtonClassName}
+                    className={`${primaryButtonClassName} col-span-2`}
                   >
-                    Finalizar
+                    Finish
                   </button>
                 ) : (
-                  <button type="button" onClick={goNext} className={primaryButtonClassName}>
-                    Siguiente
+                  <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
+                    Next
                   </button>
                 )}
               </div>
