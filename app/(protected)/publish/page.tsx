@@ -6,6 +6,10 @@ import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import PageBackButton from '@/components/PageBackButton';
 import TransactionLoader from '@/components/TransactionLoader';
+import InvestmentOpportunityDetail, {
+  type OpportunityMetric,
+  type OpportunitySection,
+} from '@/components/InvestmentOpportunityDetail';
 import { useInvestApp } from '@/lib/investapp-context';
 import { SECTOR_OPTIONS_ENGLISH } from '@/lib/sector-labels';
 import {
@@ -170,9 +174,113 @@ const fileToDataUrl = (file: File) =>
   });
 
 const moneyNumber = (value: string) => {
-  const parsed = Number(value.replace(/,/g, ''));
+  const parsed = Number(value.replace(/[^0-9.-]/g, ''));
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const moneyLabel = (value: string, fallback = 'Pending') => {
+  const amount = moneyNumber(value);
+  if (amount <= 0) return fallback;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const textOrFallback = (value: string | null | undefined, fallback = 'Pending') =>
+  value?.trim() || fallback;
+
+const splitBullets = (value: string | null | undefined) =>
+  (value ?? '')
+    .split(/\n|;|•/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+
+const buildPreviewSections = (
+  form: PublishWizardForm,
+  optimized: OptimizedPublication
+): OpportunitySection[] => {
+  const useOfFunds = splitBullets(form.funds_usage);
+  const achievements = [
+    ...splitBullets(form.achievements),
+    ...splitBullets(form.testimonials),
+    form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
+    form.growth_rate ? `Growth: ${form.growth_rate}` : '',
+  ]
+    .filter(Boolean)
+    .slice(0, 6);
+
+  return [
+    {
+      title: 'Overview',
+      body: optimized.description?.trim() || optimized.summary || form.product_description,
+      icon: 'overview',
+    },
+    {
+      title: 'The Problem',
+      body: textOrFallback(form.problem_solved, 'The founder will provide more detail about the customer pain point.'),
+      icon: 'problem',
+    },
+    {
+      title: 'Our Solution',
+      body: textOrFallback(form.differentiation || form.product_description),
+      icon: 'solution',
+    },
+    {
+      title: 'Business Model',
+      body: [
+        form.product_description ? `Product or service: ${form.product_description}` : '',
+        form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
+        form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'business',
+    },
+    {
+      title: 'Traction & Achievements',
+      body: optimized.traction,
+      bullets: achievements.length ? achievements : optimized.highlights?.slice(0, 5),
+      icon: 'traction',
+    },
+    {
+      title: 'Market Opportunity',
+      body: optimized.marketOpportunity || [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
+      icon: 'market',
+    },
+    {
+      title: 'Use of Funds',
+      body: optimized.useOfFunds,
+      bullets: useOfFunds.length ? useOfFunds : undefined,
+      icon: 'funds',
+    },
+  ];
+};
+
+const buildPreviewMetrics = (form: PublishWizardForm): OpportunityMetric[] => [
+  {
+    label: 'Funding Goal',
+    value: moneyLabel(form.capital_needed),
+    icon: 'goal',
+  },
+  {
+    label: 'Annual Rate',
+    value: form.investment_offer ? `${form.investment_offer}% EA` : 'Pending',
+    icon: 'rate',
+  },
+  {
+    label: 'Monthly Sales',
+    value: moneyLabel(form.monthly_revenue),
+    icon: 'sales',
+  },
+  {
+    label: 'Active Clients',
+    value: form.monthly_customers || 'Pending',
+    icon: 'clients',
+  },
+];
 
 const addDays = (days: number) => {
   const date = new Date();
@@ -1086,6 +1194,25 @@ export default function PublishPage() {
     <>
       {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? 'Sending...' : 'Publishing...'} /> : null}
 
+      {!hasExistingProject && review ? (
+        <InvestmentOpportunityDetail
+          title={review.optimizedPublication.title || `${form.business_name} investment opportunity`}
+          subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
+          location={form.location || profile?.country || 'Location pending'}
+          category={form.industry || 'Business'}
+          rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
+          images={projectPhotos}
+          metrics={buildPreviewMetrics(form)}
+          sections={buildPreviewSections(form, review.optimizedPublication)}
+          primaryActionLabel={publishing ? 'Publishing...' : 'Publish'}
+          secondaryActionLabel="Edit details"
+          onPrimaryAction={publishProject}
+          onSecondaryAction={() => setReview(null)}
+          onBack={() => setReview(null)}
+          primaryDisabled={publishing}
+          secondaryDisabled={publishing}
+        />
+      ) : (
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
@@ -1141,64 +1268,6 @@ export default function PublishPage() {
               >
                 Resume
               </button>
-            </SectionSurface>
-          ) : null}
-
-          {!hasExistingProject && review ? (
-            <SectionSurface>
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    Review publication
-                  </p>
-                  <h2 className="mt-1 text-xl font-semibold tracking-[-0.04em] text-[#1C2336]">
-                    {review.optimizedPublication.title || `${form.business_name} investment opportunity`}
-                  </h2>
-                  {review.optimizedPublication.summary ? (
-                    <p className="mt-2 text-sm leading-6 text-[#667085]">
-                      {review.optimizedPublication.summary}
-                    </p>
-                  ) : null}
-                </div>
-
-                {review.optimizedPublication.description ? (
-                  <div className="rounded-[24px] border border-[#EBEEF7] bg-white px-4 py-4 text-sm leading-6 text-[#4F5B76] shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                    {review.optimizedPublication.description}
-                  </div>
-                ) : null}
-
-                {review.optimizedPublication.highlights?.length ? (
-                  <div className="grid gap-2">
-                    {review.optimizedPublication.highlights.slice(0, 4).map((item) => (
-                      <div
-                        key={item}
-                        className="rounded-[18px] border border-[#ECEFFD] bg-[#FBFAFF] px-4 py-3 text-xs font-semibold leading-5 text-[#596277]"
-                      >
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setReview(null)}
-                    disabled={publishing}
-                    className={secondaryButtonClassName}
-                  >
-                    Edit details
-                  </button>
-                  <button
-                    type="button"
-                    onClick={publishProject}
-                    disabled={publishing}
-                    className={primaryButtonClassName}
-                  >
-                    Publish
-                  </button>
-                </div>
-              </div>
             </SectionSurface>
           ) : null}
 
@@ -1268,8 +1337,9 @@ export default function PublishPage() {
           ) : null}
         </div>
       </main>
+      )}
 
-      <BottomNav />
+      {!review ? <BottomNav /> : null}
     </>
   );
 }

@@ -1,23 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { createClient } from '@supabase/supabase-js';
-import PageFrame from '@/components/PageFrame';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
-import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
+import InvestmentOpportunityDetail, {
+  type OpportunityMetric,
+  type OpportunitySection,
+} from '@/components/InvestmentOpportunityDetail';
 import { useInvestApp } from '@/lib/investapp-context';
-import {
-  getPaymentScheduleStatusMeta,
-  normalizePaymentScheduleRecord,
-} from '@/lib/payment-schedule';
-import {
-  getProjectRepaymentTermMonths,
-  isProjectPubliclyVisible,
-} from '@/lib/project-status';
+import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
-import { fetchCurrentUserPaymentSchedule } from '@/utils/client/current-user-payment-schedule';
 import { fetchProjectById } from '@/utils/client/projects';
 
 type ProjectDetail = {
@@ -41,22 +34,8 @@ type ProjectDetail = {
   video_url: string | null;
   owner_user_id: string | null;
   owner_wallet: string | null;
+  metadata?: Record<string, unknown> | null;
 };
-
-type PaymentScheduleGroup = {
-  creditId: string;
-  nextDueDate: string | null;
-  installmentCount: number;
-  status: string | null;
-};
-
-const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://pplzpsokyytvkibhfzaa.supabase.co';
-const SUPABASE_ANON_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const formatAmount = (amount: number | null, currency: string | null) => {
   if (amount === null || amount === undefined) return 'No amount';
@@ -77,10 +56,130 @@ const normalizePhotos = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-const calculateProgress = (raised: number | null, requested: number | null) => {
-  if (!requested || requested <= 0) return 0;
-  const progress = ((raised ?? 0) / requested) * 100;
-  return Math.max(0, Math.min(100, progress));
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const coerceText = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+const coerceNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value.replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const splitBullets = (value: unknown) =>
+  coerceText(value)
+    .split(/\n|;|•/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+
+const getMetadataObject = (project: ProjectDetail | null, key: string) => {
+  const value = project?.metadata?.[key];
+  return isPlainObject(value) ? value : {};
+};
+
+const buildDetailMetrics = (
+  project: ProjectDetail,
+  formFields: Record<string, unknown>
+): OpportunityMetric[] => [
+  {
+    label: 'Funding Goal',
+    value: formatAmount(project.amount_requested, project.currency),
+    icon: 'goal',
+  },
+  {
+    label: 'Annual Rate',
+    value: project.interest_rate ? `${project.interest_rate}% EA` : 'Pending',
+    icon: 'rate',
+  },
+  {
+    label: 'Monthly Sales',
+    value: formatAmount(coerceNumber(formFields.monthly_revenue), project.currency),
+    icon: 'sales',
+  },
+  {
+    label: 'Active Clients',
+    value: coerceText(formFields.monthly_customers) || 'Pending',
+    icon: 'clients',
+  },
+];
+
+const buildDetailSections = (
+  project: ProjectDetail,
+  formFields: Record<string, unknown>,
+  optimized: Record<string, unknown>
+): OpportunitySection[] => {
+  const highlights = Array.isArray(optimized.highlights)
+    ? optimized.highlights.map(coerceText).filter(Boolean).slice(0, 5)
+    : [];
+  const achievements = [
+    ...splitBullets(formFields.achievements),
+    ...splitBullets(formFields.testimonials),
+    coerceText(formFields.monthly_revenue) ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}` : '',
+    coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
+  ]
+    .filter(Boolean)
+    .slice(0, 6);
+
+  return [
+    {
+      title: 'Overview',
+      body: coerceText(optimized.description) || project.description,
+      icon: 'overview',
+    },
+    {
+      title: 'The Problem',
+      body: coerceText(formFields.problem_solved) || 'The founder will provide more detail about the customer pain point.',
+      icon: 'problem',
+    },
+    {
+      title: 'Our Solution',
+      body: coerceText(formFields.differentiation) || coerceText(formFields.product_description) || project.description,
+      icon: 'solution',
+    },
+    {
+      title: 'Business Model',
+      body: [
+        coerceText(formFields.product_description)
+          ? `Product or service: ${coerceText(formFields.product_description)}`
+          : '',
+        coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
+        coerceText(formFields.monthly_customers)
+          ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n') || project.description,
+      icon: 'business',
+    },
+    {
+      title: 'Traction & Achievements',
+      body: coerceText(optimized.traction),
+      bullets: achievements.length ? achievements : highlights,
+      icon: 'traction',
+    },
+    {
+      title: 'Market Opportunity',
+      body:
+        coerceText(optimized.marketOpportunity) ||
+        [formFields.target_customer, formFields.market_size, formFields.competition]
+          .map(coerceText)
+          .filter(Boolean)
+          .join('\n\n') ||
+        'Market opportunity details are included in the founder publication.',
+      icon: 'market',
+    },
+    {
+      title: 'Use of Funds',
+      body: coerceText(optimized.useOfFunds) || coerceText(formFields.funds_usage),
+      bullets: splitBullets(formFields.funds_usage),
+      icon: 'funds',
+    },
+  ];
 };
 
 export default function FeedDetailPage() {
@@ -92,39 +191,8 @@ export default function FeedDetailPage() {
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
-  const [scheduleGroups, setScheduleGroups] = useState<PaymentScheduleGroup[]>([]);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
   const [shareStatus, setShareStatus] = useState('');
-
-  const supabase = useMemo(() => {
-    const authedFetch: typeof fetch = async (input, init = {}) => {
-      const token = await getAccessToken();
-      const baseHeaders = new Headers(init.headers ?? {});
-      baseHeaders.set('apikey', SUPABASE_ANON_KEY);
-      const run = (headers: Headers) => fetch(input, { ...init, headers });
-      if (!token) return run(baseHeaders);
-
-      const headersWithAuth = new Headers(baseHeaders);
-      headersWithAuth.set('Authorization', `Bearer ${token}`);
-      const response = await run(headersWithAuth);
-      if (response.ok) return response;
-
-      const raw = (await response.clone().text()).toLowerCase();
-      const shouldFallback =
-        response.status === 401 ||
-        response.status === 403 ||
-        raw.includes('no suitable key') ||
-        raw.includes('wrong key type') ||
-        raw.includes('invalid jwt');
-      if (!shouldFallback) return response;
-      return run(baseHeaders);
-    };
-
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { fetch: authedFetch },
-    });
-  }, [getAccessToken]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -173,47 +241,8 @@ export default function FeedDetailPage() {
     loadProject();
   }, [getAccessToken, projectId, rolSeleccionado]);
 
-  useEffect(() => {
-    const loadPaymentSchedule = async () => {
-      if (!projectId || !user?.id || rolSeleccionado !== 'inversor') {
-        setScheduleGroups([]);
-        setScheduleLoading(false);
-        return;
-      }
-
-      setScheduleLoading(true);
-      const { data, error } = await fetchCurrentUserPaymentSchedule(getAccessToken, { projectId });
-
-      if (error) {
-        setStatus((previous) => previous || 'Could not load the payment schedule for this venture.');
-        setScheduleGroups([]);
-        setScheduleLoading(false);
-        return;
-      }
-
-      const normalizedRecords = ((data ?? []) as Record<string, unknown>[]).map(
-        normalizePaymentScheduleRecord
-      );
-
-      setScheduleGroups(
-        normalizedRecords
-          .filter((record) => record.investor_user_id === user.id)
-          .map((record) => ({
-          creditId: record.credit_id,
-          nextDueDate: record.next_due_date,
-          installmentCount: record.installment_count,
-          status: record.status,
-          }))
-      );
-      setScheduleLoading(false);
-    };
-
-    void loadPaymentSchedule();
-  }, [getAccessToken, projectId, rolSeleccionado, supabase, user?.id]);
-
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
   const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
-  const repaymentTermMonths = getProjectRepaymentTermMonths(project ?? {});
 
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
@@ -242,236 +271,74 @@ export default function FeedDetailPage() {
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const formFields = getMetadataObject(project, 'publication_form_fields');
+  const optimizedPublication = getMetadataObject(project, 'optimized_publication');
+  const detailTitle = project
+    ? coerceText(optimizedPublication.title) || project.title
+    : '';
+  const detailSubtitle = project
+    ? coerceText(optimizedPublication.summary) ||
+      (project.business_name ? `Invest in ${project.business_name} today.` : undefined)
+    : undefined;
+  const locationLabel = project
+    ? coerceText(formFields.location) ||
+      [project.city, project.country]
+        .map((item) => coerceText(item))
+        .filter((item) => item && item.toLowerCase() !== 'not specified')
+        .join(', ') ||
+      'Location pending'
+    : '';
+  const primaryActionLabel = canEditProject ? 'Edit' : isEntrepreneurView ? 'Share' : 'Invest';
+  const secondaryActionLabel = isEntrepreneurView ? 'Share' : 'Contact Founder';
+
+  const handlePrimaryAction = () => {
+    if (!project) return;
+    if (canEditProject) {
+      router.push(`/portfolio?edit=${project.id}`);
+      return;
+    }
+    if (isEntrepreneurView) {
+      openSharePopup();
+      return;
+    }
+    router.push(`/feed/${project.id}/invest`);
+  };
+
   return (
-    <PageFrame title="Details" subtitle="Full listing">
-      {loading ? <SectionLoadingSkeleton rows={4} /> : null}
-      {status ? <p className="text-sm text-gray-500">{status}</p> : null}
+    <>
+      {loading ? (
+        <main className="min-h-screen bg-[#F8FAFE] px-4 py-8">
+          <div className="mx-auto max-w-xl">
+            <SectionLoadingSkeleton rows={4} />
+          </div>
+        </main>
+      ) : null}
+
+      {!loading && status && !project ? (
+        <main className="min-h-screen bg-[#F8FAFE] px-4 py-8">
+          <div className="mx-auto max-w-xl rounded-[28px] bg-white/88 p-5 text-sm text-[#65708A] shadow-[0_22px_64px_rgba(27,35,58,0.08)]">
+            {status}
+          </div>
+        </main>
+      ) : null}
 
       {!loading && project ? (
-        <div className="space-y-4 pb-8">
-          <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="rounded-full border border-white/25 bg-white/20 px-4 py-2 text-sm font-semibold text-gray-700 backdrop-blur-md"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (canEditProject) {
-                  router.push(`/portfolio?edit=${project.id}`);
-                  return;
-                }
-                if (isEntrepreneurView) {
-                  openSharePopup();
-                  return;
-                }
-                router.push(`/feed/${project.id}/invest`);
-              }}
-              disabled={!isEntrepreneurView && !project.owner_wallet}
-              className={`rounded-full px-5 py-2 text-sm font-semibold text-white shadow-lg transition ${
-                isEntrepreneurView || project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
-              }`}
-            >
-              {canEditProject ? 'Edit' : isEntrepreneurView ? 'Share' : 'Invest'}
-            </button>
-          </div>
-
-          <ProjectPhotoCarousel
-            images={project.photo_urls}
-            alt={project.title}
-            className="h-56 w-full rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md"
-            imageClassName="h-56 w-full object-cover"
-          />
-
-          {project.video_url ? (
-            <div className="overflow-hidden rounded-2xl border border-white/25 bg-white/20 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <video
-                controls
-                preload="metadata"
-                src={project.video_url}
-                className="h-56 w-full bg-slate-950 object-cover"
-              >
-                Your browser does not support video playback.
-              </video>
-            </div>
-          ) : null}
-
-          <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">{project.title}</h2>
-                {project.business_name ? (
-                  <p className="mt-1 text-sm text-gray-500">{project.business_name}</p>
-                ) : null}
-              </div>
-              {project.sector ? (
-                <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  {toEnglishSector(project.sector)}
-                </span>
-              ) : null}
-            </div>
-            <p className="mt-3 text-sm text-gray-700">{project.description}</p>
-          </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Funding goal</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {formatAmount(project.amount_requested, project.currency)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Raised amount</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {formatAmount(project.amount_received, project.currency)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                  <p className="text-xs text-gray-500">Installments</p>
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                {repaymentTermMonths ? `${repaymentTermMonths} months` : '--'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">EA rate</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">
-                {project.interest_rate ? `${project.interest_rate}%` : '--'}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Minimum investment</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">
-                {formatAmount(project.minimum_investment, project.currency)}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Location</p>
-              <p className="mt-1 text-sm font-semibold text-gray-900">
-                {project.city || project.country
-                  ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                  : 'Pending'}
-              </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Funding progress</span>
-                  <span>{calculateProgress(project.amount_received, project.amount_requested).toFixed(0)}%</span>
-                </div>
-                <div className="mt-3 h-2 rounded-full bg-slate-200/80">
-                  <div
-                    className="h-2 rounded-full bg-[#6B39F4]"
-                    style={{ width: `${calculateProgress(project.amount_received, project.amount_requested)}%` }}
-                  />
-                </div>
-              </div>
-
-          {project.publication_end_date ? (
-            <div className="rounded-2xl border border-white/25 bg-white/20 p-4 text-sm text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <span className="text-xs text-gray-500">Deadline</span>
-              <p className="mt-1 font-semibold text-gray-900">{project.publication_end_date}</p>
-            </div>
-          ) : null}
-
-          {!isEntrepreneurView && !project.owner_wallet ? (
-            <div className="rounded-2xl border border-amber-200/60 bg-amber-50/30 p-4 text-sm text-amber-900 backdrop-blur-md">
-              This venture does not have a configured wallet yet, so the investment cannot start right now.
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={() => {
-              if (isEntrepreneurView) {
-                openSharePopup();
-                return;
-              }
-              router.push(`/feed/${project.id}/invest`);
-            }}
-            disabled={!isEntrepreneurView && !project.owner_wallet}
-            className={`w-full rounded-2xl px-5 py-4 text-sm font-semibold text-white shadow-lg transition ${
-              isEntrepreneurView || project.owner_wallet ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
-            }`}
-          >
-            {isEntrepreneurView ? 'Share' : 'Invest in this venture'}
-          </button>
-
-          {!isEntrepreneurView ? (
-            <section className="rounded-2xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Contract</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Open the backend contract ledger and review the full amortization plan on a
-                  dedicated page.
-                </p>
-              </div>
-
-              <div className="mt-4">
-                {scheduleLoading ? (
-                  <p className="text-sm text-gray-500">Loading contract...</p>
-                ) : scheduleGroups.length === 0 ? (
-                  <p className="text-sm text-gray-500">
-                    Your contract will appear here once your investment is confirmed.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {scheduleGroups.map((group, index) => {
-                      const statusMeta = getPaymentScheduleStatusMeta(group.status);
-
-                      return (
-                        <div
-                          key={group.creditId}
-                          className="rounded-2xl border border-white/20 bg-white/25 p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">
-                                Credit {String(index + 1).padStart(2, '0')}
-                              </p>
-                              <p className="mt-2 text-sm text-gray-600">
-                                {group.nextDueDate
-                                  ? `Next due ${new Date(group.nextDueDate).toLocaleDateString('en-GB', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: '2-digit',
-                                    })}`
-                                  : 'Next due pending'}
-                              </p>
-                              <p className="mt-1 text-sm text-gray-600">
-                                {group.installmentCount} installment
-                                {group.installmentCount === 1 ? '' : 's'}
-                              </p>
-                            </div>
-
-                            <span
-                              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${statusMeta.className}`}
-                            >
-                              {statusMeta.label}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              router.push(`/contracts?credit=${encodeURIComponent(group.creditId)}`)
-                            }
-                            className="mt-4 rounded-full bg-[#6B39F4] px-4 py-2 text-sm font-semibold text-white"
-                          >
-                            View contract
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </section>
-          ) : null}
-        </div>
+        <InvestmentOpportunityDetail
+          title={detailTitle}
+          subtitle={detailSubtitle}
+          location={locationLabel}
+          category={project.sector ? toEnglishSector(project.sector) : 'Business'}
+          rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
+          images={project.photo_urls ?? []}
+          metrics={buildDetailMetrics(project, formFields)}
+          sections={buildDetailSections(project, formFields, optimizedPublication)}
+          primaryActionLabel={primaryActionLabel}
+          secondaryActionLabel={secondaryActionLabel}
+          onPrimaryAction={handlePrimaryAction}
+          onSecondaryAction={openSharePopup}
+          onBack={() => router.back()}
+          primaryDisabled={!isEntrepreneurView && !project.owner_wallet}
+        />
       ) : null}
 
       {showShareOptions && project ? (
@@ -555,6 +422,6 @@ export default function FeedDetailPage() {
           </div>
         </div>
       ) : null}
-    </PageFrame>
+    </>
   );
 }
