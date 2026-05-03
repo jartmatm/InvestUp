@@ -151,7 +151,7 @@ type InvestAppContextType = {
   walletTargets: UserWalletTarget[];
   transferLabel: string;
   transferenciaTitulo: string;
-  guardarRol: (rol: FrontRole) => Promise<void>;
+  guardarRol: (rol: FrontRole, options?: { completeOnboarding?: boolean }) => Promise<void>;
   actualizarSaldos: () => Promise<void>;
   cargarWalletsObjetivo: () => Promise<void>;
   enviarUSDC: (
@@ -976,10 +976,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   }, [smartWalletAddress]);
 
   const guardarRol = useCallback(
-    async (rolFrontend: FrontRole) => {
+    async (rolFrontend: FrontRole, options?: { completeOnboarding?: boolean }) => {
       if (!user) return;
       const rolParaDB = mapRoleToDB(rolFrontend);
       if (!rolParaDB) return;
+      const completeOnboarding = options?.completeOnboarding ?? true;
 
       try {
         const { error } = await patchCurrentUserProfile(getAccessToken, {
@@ -990,17 +991,24 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
 
         localStorage.setItem(getRolKey(user.id), rolFrontend);
-        localStorage.setItem(getOnboardingDoneKey(user.id), '1');
+        if (completeOnboarding) {
+          localStorage.setItem(getOnboardingDoneKey(user.id), '1');
+        } else {
+          localStorage.removeItem(getOnboardingDoneKey(user.id));
+          localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
+        }
         setRolSeleccionado(rolFrontend);
-        setFaseApp('dashboard');
-      } catch (error: any) {
-        const message = error?.message ?? 'We could not finish updating your role.';
+        setFaseApp(completeOnboarding ? 'dashboard' : 'onboarding');
+      } catch (error: unknown) {
+        const message =
+          error instanceof Error ? error.message : 'We could not finish updating your role.';
         console.error('Error saving role:', message);
         throw new Error(message);
       }
     },
     [
       getAccessToken,
+      getLegacyOnboardingDoneKey,
       getOnboardingDoneKey,
       getRolKey,
       smartWalletAddress,
@@ -1490,8 +1498,10 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error loading user record:', error);
-        if (onboardingDone && rolLocalValido) {
+        if (rolLocalValido) {
           setRolSeleccionado(rolLocalValido);
+        }
+        if (onboardingDone && rolLocalValido) {
           setFaseApp('dashboard');
           return;
         }
@@ -1502,26 +1512,36 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       const walletNeedsUpdate =
         !!smartWalletAddress &&
         (!data?.wallet_address || data.wallet_address.toLowerCase() !== smartWalletAddress.toLowerCase());
-      const roleNeedsBackfill = !data?.role && !!rolLocalDB;
+      const dbRoleFromData =
+        data?.role === 'investor' || data?.role === 'entrepreneur' ? data.role : null;
+      const roleNeedsBackfill = !dbRoleFromData && !!rolLocalDB;
 
       if (data && (walletNeedsUpdate || roleNeedsBackfill)) {
-        const payload: any = {
+        const payload: {
+          email: string | null;
+          wallet_address: string | null;
+          role?: 'investor' | 'entrepreneur';
+        } = {
           email: user.email?.address ?? null,
           wallet_address: smartWalletAddress ?? data?.wallet_address ?? null,
         };
-        if (data?.role) payload.role = data.role;
-        if (!data?.role && rolLocalDB) payload.role = rolLocalDB;
+        if (dbRoleFromData) payload.role = dbRoleFromData;
+        if (!dbRoleFromData && rolLocalDB) payload.role = rolLocalDB;
         const { error: upsertError } = await patchCurrentUserProfile(getAccessToken, payload);
         if (upsertError) console.error('Error syncing user:', upsertError);
       }
 
-      if (data?.role) {
-        const roleFront = mapRoleToFrontend(data.role);
+      if (dbRoleFromData) {
+        const roleFront = mapRoleToFrontend(dbRoleFromData);
         if (roleFront) {
           localStorage.setItem(getRolKey(user.id), roleFront);
-          localStorage.setItem(getOnboardingDoneKey(user.id), '1');
           setRolSeleccionado(roleFront);
-          setFaseApp('dashboard');
+          if (onboardingDone) {
+            localStorage.setItem(getOnboardingDoneKey(user.id), '1');
+            setFaseApp('dashboard');
+          } else {
+            setFaseApp('onboarding');
+          }
           return;
         }
       }
@@ -1532,6 +1552,9 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (rolLocalValido) {
+        setRolSeleccionado(rolLocalValido);
+      }
       setFaseApp('onboarding');
     };
 

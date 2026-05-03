@@ -1295,22 +1295,19 @@ export default function OnboardingPage() {
   const [stage, setStage] = useState<OnboardingStage>('slides');
   const touchStartX = useRef<number | null>(null);
   const touchCurrentX = useRef<number | null>(null);
-  const showOnboarding = faseApp === 'onboarding' || faseApp === 'login';
+  const showOnboarding = faseApp === 'onboarding';
   const activeSlide = ONBOARDING_SLIDES[currentSlide];
 
   useEffect(() => {
     if (faseApp === 'dashboard') router.replace('/home');
+    if (faseApp === 'login') router.replace('/login');
   }, [faseApp, router]);
 
   useEffect(() => {
     if (faseApp === 'onboarding') {
-      setStage('profile');
+      setStage(rolSeleccionado ? 'slides' : 'profile');
     }
-
-    if (faseApp === 'login') {
-      setStage('slides');
-    }
-  }, [faseApp]);
+  }, [faseApp, rolSeleccionado]);
 
   useEffect(() => {
     setRol(rolSeleccionado);
@@ -1320,18 +1317,30 @@ export default function OnboardingPage() {
     return <main className="min-h-screen bg-transparent" />;
   }
 
-  const completeSlides = () => {
-    if (faseApp === 'login') {
-      router.push('/login');
+  const completeSlides = async () => {
+    if (!rol) {
+      setStage('profile');
       return;
     }
 
-    setStage('profile');
+    setSavingRole(true);
+    setStatus('');
+    try {
+      await guardarRol(rol, { completeOnboarding: true });
+    } catch (error) {
+      setStatus(
+        error instanceof Error
+          ? error.message
+          : 'We could not finish updating your role.'
+      );
+    } finally {
+      setSavingRole(false);
+    }
   };
 
   const goToNext = () => {
     if (currentSlide >= ONBOARDING_SLIDES.length - 1) {
-      completeSlides();
+      void completeSlides();
       return;
     }
 
@@ -1340,10 +1349,6 @@ export default function OnboardingPage() {
 
   const goToPrevious = () => {
     setCurrentSlide((previous) => Math.max(0, previous - 1));
-  };
-
-  const skipSlides = () => {
-    router.push('/login');
   };
 
   const handleTouchStart = (clientX: number) => {
@@ -1466,14 +1471,12 @@ export default function OnboardingPage() {
               className="w-full rounded-[18px] bg-[#6B39F4] px-4 py-3 text-sm font-semibold text-white shadow-[0_16px_30px_rgba(107,57,244,0.22)] transition hover:bg-[#5c2ff0] disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
               onClick={async () => {
                 if (!rol) return;
-                if (faseApp === 'login') {
-                  router.push('/login');
-                  return;
-                }
                 setSavingRole(true);
                 setStatus('');
                 try {
-                  await guardarRol(rol);
+                  await guardarRol(rol, { completeOnboarding: false });
+                  setCurrentSlide(0);
+                  setStage('slides');
                 } catch (error) {
                   setStatus(
                     error instanceof Error
@@ -1488,13 +1491,6 @@ export default function OnboardingPage() {
               {savingRole ? 'Saving...' : 'Continue'}
             </button>
 
-            <button
-              type="button"
-              onClick={() => setStage('slides')}
-              className="w-full text-center text-sm font-medium text-slate-500 transition hover:text-slate-700"
-            >
-              Back to onboarding
-            </button>
           </div>
 
           {status ? <p className="mt-4 text-center text-sm text-rose-600">{status}</p> : null}
@@ -1554,14 +1550,13 @@ export default function OnboardingPage() {
                         <p className="mt-2 text-sm leading-6 text-slate-600">{activeSlide.description}</p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={skipSlides}
-                        className="absolute right-0 top-0 rounded-full border border-white/65 bg-white/42 px-3 py-1.5 text-xs font-semibold text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
-                      >
-                        Skip
-                      </button>
                     </div>
+
+                    {status ? (
+                      <p className="relative mt-3 text-center text-xs font-medium text-rose-600">
+                        {status}
+                      </p>
+                    ) : null}
 
                     <div className="relative mt-4 flex items-end justify-between gap-3">
                       <div className="flex items-center gap-2">
@@ -1587,7 +1582,8 @@ export default function OnboardingPage() {
                             type="button"
                             aria-label="Previous slide"
                             onClick={goToPrevious}
-                            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/65 bg-white/42 text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700"
+                            disabled={savingRole}
+                            className="flex h-11 w-11 items-center justify-center rounded-full border border-white/65 bg-white/42 text-slate-500 shadow-[0_12px_24px_rgba(15,23,42,0.06)] backdrop-blur-xl transition hover:text-slate-700 disabled:opacity-50"
                           >
                             <IconArrowLeft />
                           </button>
@@ -1601,9 +1597,16 @@ export default function OnboardingPage() {
                               : 'Next slide'
                           }
                           onClick={goToNext}
-                          className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#6B39F4_0%,#2563EB_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:scale-[1.01]"
+                          disabled={savingRole}
+                          className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#6B39F4_0%,#2563EB_100%)] px-5 py-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:scale-[1.01] disabled:opacity-60"
                         >
-                          <span>{currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Continue' : 'Next'}</span>
+                          <span>
+                            {savingRole
+                              ? 'Saving...'
+                              : currentSlide === ONBOARDING_SLIDES.length - 1
+                                ? 'Finish onboarding'
+                                : 'Next'}
+                          </span>
                           <IconArrowRight />
                         </button>
                       </div>

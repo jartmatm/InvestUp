@@ -14,7 +14,7 @@ export default function LoginClient() {
 
   useEffect(() => {
     if (ready && authenticated) {
-      router.replace('/continue');
+      router.replace('/onboarding');
     }
   }, [authenticated, ready, router]);
 
@@ -36,9 +36,17 @@ export default function LoginClient() {
     }
 
     if (hasOpenedLogin.current && hasSeenLoginModalOpen.current) {
-      router.replace('/onboarding');
+      hasOpenedLogin.current = false;
+      hasSeenLoginModalOpen.current = false;
+      const timer = window.setTimeout(() => {
+        if (!hasOpenedLogin.current) {
+          hasOpenedLogin.current = true;
+          login();
+        }
+      }, 450);
+      return () => window.clearTimeout(timer);
     }
-  }, [authenticated, isOpen, ready, router]);
+  }, [authenticated, isOpen, login, ready]);
 
   if (!ready || authenticated) {
     return <div className="min-h-screen bg-transparent" />;
