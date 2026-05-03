@@ -92,27 +92,30 @@ const buildPromptMetadata = (
   metadata: unknown
 ): Record<string, unknown> => ({
   ...(isPlainObject(metadata) ? metadata : {}),
-  schema: 'publish_variables_v1',
+  schema: 'publish_prompt_text_v2',
   form_fields: formFields,
   openai_prompt_id: OPENAI_PUBLICATION_PROMPT_ID,
   openai_prompt_version: OPENAI_PUBLICATION_PROMPT_VERSION,
 });
 
 const localOptimize = (promptText: string): OptimizedPublication => {
-  const getField = (key: string) => {
-    const match = new RegExp(`^${key}:\\s*(.+)$`, 'im').exec(promptText);
-    const value = match?.[1]?.trim() ?? '';
-    return value === 'Not provided' ? '' : value;
+  const getField = (...keys: string[]) => {
+    for (const key of keys) {
+      const match = new RegExp(`^${key}:\\s*(.+)$`, 'im').exec(promptText);
+      const value = match?.[1]?.trim() ?? '';
+      if (value && !['Not provided', 'No proporcionado'].includes(value)) return value;
+    }
+    return '';
   };
 
-  const businessName = getField('business_name') || 'Business opportunity';
-  const offer = getField('product_description');
-  const problem = getField('problem_solved');
-  const monthlyRevenue = getField('monthly_revenue');
-  const growthRate = getField('growth_rate');
-  const useOfFunds = getField('funds_usage');
-  const market = getField('target_customer');
-  const timingReason = getField('timing_reason');
+  const businessName = getField('business_name', 'Nombre') || 'Business opportunity';
+  const offer = getField('product_description', 'Producto/Servicio');
+  const problem = getField('problem_solved', 'Problema que resuelve');
+  const monthlyRevenue = getField('monthly_revenue', 'Ventas mensuales');
+  const growthRate = getField('growth_rate', 'Crecimiento');
+  const useOfFunds = getField('funds_usage', 'Uso de fondos');
+  const market = getField('target_customer', 'Cliente ideal');
+  const timingReason = getField('timing_reason', 'Momento de inversión');
   const traction = [monthlyRevenue, growthRate].filter(Boolean).join(' with ');
 
   const summary = `${businessName} is raising growth capital for a business with clear customer demand and a focused use of funds.`;
@@ -216,19 +219,6 @@ const parseJsonObject = (content: string) => {
   }
 };
 
-const buildPromptVariables = (formFields: Record<string, unknown>, promptText: string) => {
-  const variables: Record<string, string> = {
-    prompt_text: promptText,
-    form_json: JSON.stringify(formFields),
-  };
-
-  Object.entries(formFields).forEach(([key, value]) => {
-    variables[key] = typeof value === 'string' ? value : JSON.stringify(value ?? '');
-  });
-
-  return variables;
-};
-
 const extractResponseText = (payload: unknown) => {
   if (!isPlainObject(payload)) return '';
 
@@ -251,7 +241,7 @@ const extractResponseText = (payload: unknown) => {
   return chunks.join('\n').trim();
 };
 
-async function optimizeWithOpenAi(promptText: string, formFields: Record<string, unknown>) {
+async function optimizeWithOpenAi(promptText: string) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('Missing OPENAI_API_KEY on the server environment.');
@@ -264,10 +254,10 @@ async function optimizeWithOpenAi(promptText: string, formFields: Record<string,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      input: promptText,
       prompt: {
         id: OPENAI_PUBLICATION_PROMPT_ID,
         version: OPENAI_PUBLICATION_PROMPT_VERSION,
-        variables: buildPromptVariables(formFields, promptText),
       },
     }),
   });
@@ -479,7 +469,7 @@ export async function POST(request: NextRequest) {
     let optimizedPublication: OptimizedPublication | null = null;
 
     try {
-      const optimizedResult = await optimizeWithOpenAi(promptText, formFields);
+      const optimizedResult = await optimizeWithOpenAi(promptText);
       provider = optimizedResult.provider;
       optimizedPublication = optimizedResult.optimizedPublication;
     } catch (caughtError) {

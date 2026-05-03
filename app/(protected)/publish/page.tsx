@@ -226,6 +226,43 @@ const normalizeStringArray = (value: unknown, maxItems: number) =>
         .slice(0, maxItems)
     : [];
 
+const promptValue = (value: string) => value.replace(/\s+/g, ' ').trim() || 'No proporcionado';
+
+const buildPublicationPromptText = (form: PublishWizardForm) => `Genera una publicación de inversión para el siguiente negocio:
+
+Nombre: ${promptValue(form.business_name)}
+Ubicación: ${promptValue(form.location)}
+Industria: ${promptValue(form.industry)}
+Tiempo operando: ${promptValue(form.time_operating)}
+Etapa: ${promptValue(form.business_stage)}
+
+Producto/Servicio: ${promptValue(form.product_description)}
+Problema que resuelve: ${promptValue(form.problem_solved)}
+Diferenciación: ${promptValue(form.differentiation)}
+
+Ventas mensuales: ${promptValue(form.monthly_revenue)}
+Ticket promedio: ${promptValue(form.avg_ticket)}
+Clientes mensuales: ${promptValue(form.monthly_customers)}
+Crecimiento: ${promptValue(form.growth_rate)}
+Redes sociales: ${promptValue(form.social_media)}
+
+Capital requerido: ${promptValue(form.capital_needed)}
+Uso de fondos: ${promptValue(form.funds_usage)}
+Oferta de inversión: ${promptValue(form.investment_offer)}
+
+Cliente ideal: ${promptValue(form.target_customer)}
+Tamaño de mercado: ${promptValue(form.market_size)}
+Competencia: ${promptValue(form.competition)}
+
+Fundador: ${promptValue(form.founder_info)}
+Equipo: ${promptValue(form.team_info)}
+
+Testimonios: ${promptValue(form.testimonials)}
+Logros: ${promptValue(form.achievements)}
+Momento de inversión: ${promptValue(form.timing_reason)}
+
+Hazlo altamente persuasivo y listo para publicación.`;
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-[0.72rem] font-semibold text-[#596277]">{children}</label>;
 }
@@ -505,18 +542,7 @@ export default function PublishPage() {
     [form, projectPhotos.length, projectVideos.length, videoUrl]
   );
 
-  const promptText = useMemo(
-    () =>
-      promptJson.sections
-        .map((section) => {
-          const lines = section.fields.map(
-            (field) => `${field.key}: ${field.value.replace(/\s+/g, ' ').trim() || 'Not provided'}`
-          );
-          return `${section.title}\n${lines.join('\n')}`;
-        })
-        .join('\n\n'),
-    [promptJson]
-  );
+  const promptText = useMemo(() => buildPublicationPromptText(form), [form]);
 
   const draftMetadata = useMemo(
     () => ({
