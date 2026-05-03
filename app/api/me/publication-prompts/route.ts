@@ -36,7 +36,34 @@ const OPENAI_PUBLICATION_PROMPT_ID =
   process.env.OPENAI_PUBLICATION_PROMPT_ID ??
   'pmpt_69f57f7a85c081979c1668cfaa3bf80d0f79b0106d6c32c4';
 const OPENAI_PUBLICATION_PROMPT_VERSION =
-  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '2';
+  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '3';
+
+const PUBLICATION_PROMPT_VARIABLE_KEYS = [
+  'business_name',
+  'location',
+  'industry',
+  'time_operating',
+  'business_stage',
+  'product_description',
+  'problem_solved',
+  'differentiation',
+  'monthly_revenue',
+  'avg_ticket',
+  'monthly_customers',
+  'growth_rate',
+  'social_media',
+  'capital_needed',
+  'funds_usage',
+  'investment_offer',
+  'target_customer',
+  'market_size',
+  'competition',
+  'founder_info',
+  'team_info',
+  'testimonials',
+  'achievements',
+  'timing_reason',
+] as const;
 
 const jsonNoStore = (body: unknown, init?: ResponseInit) => {
   const response = NextResponse.json(body, init);
@@ -92,7 +119,7 @@ const buildPromptMetadata = (
   metadata: unknown
 ): Record<string, unknown> => ({
   ...(isPlainObject(metadata) ? metadata : {}),
-  schema: 'publish_prompt_text_v2',
+  schema: 'publish_variables_v3',
   form_fields: formFields,
   openai_prompt_id: OPENAI_PUBLICATION_PROMPT_ID,
   openai_prompt_version: OPENAI_PUBLICATION_PROMPT_VERSION,
@@ -219,6 +246,13 @@ const parseJsonObject = (content: string) => {
   }
 };
 
+const buildPromptVariables = (formFields: Record<string, unknown>) =>
+  PUBLICATION_PROMPT_VARIABLE_KEYS.reduce<Record<string, string>>((variables, key) => {
+    const value = formFields[key];
+    variables[key] = typeof value === 'string' ? value.trim() : coerceText(value);
+    return variables;
+  }, {});
+
 const extractResponseText = (payload: unknown) => {
   if (!isPlainObject(payload)) return '';
 
@@ -241,7 +275,7 @@ const extractResponseText = (payload: unknown) => {
   return chunks.join('\n').trim();
 };
 
-async function optimizeWithOpenAi(promptText: string) {
+async function optimizeWithOpenAi(promptText: string, formFields: Record<string, unknown>) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error('Missing OPENAI_API_KEY on the server environment.');
@@ -254,10 +288,10 @@ async function optimizeWithOpenAi(promptText: string) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      input: promptText,
       prompt: {
         id: OPENAI_PUBLICATION_PROMPT_ID,
         version: OPENAI_PUBLICATION_PROMPT_VERSION,
+        variables: buildPromptVariables(formFields),
       },
     }),
   });
@@ -469,7 +503,7 @@ export async function POST(request: NextRequest) {
     let optimizedPublication: OptimizedPublication | null = null;
 
     try {
-      const optimizedResult = await optimizeWithOpenAi(promptText);
+      const optimizedResult = await optimizeWithOpenAi(promptText, formFields);
       provider = optimizedResult.provider;
       optimizedPublication = optimizedResult.optimizedPublication;
     } catch (caughtError) {
