@@ -1,5 +1,6 @@
 'use client';
 
+import NextImage from 'next/image';
 import { useMemo, useState } from 'react';
 import { useInvestApp } from '@/lib/investapp-context';
 
@@ -47,7 +48,7 @@ export default function TransactionReceipt() {
       const image = new Image();
       image.onload = () => resolve(image);
       image.onerror = () => resolve(null);
-      image.src = '/investapp-splash-logo.png';
+      image.src = '/investapp-icon-512.png';
     });
 
   const createReceiptBlob = async (): Promise<Blob | null> => {
@@ -215,9 +216,11 @@ export default function TransactionReceipt() {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl">
         <div className="flex flex-col items-center text-center">
-          <img
-            src="/investapp-splash-logo.png"
+          <NextImage
+            src="/investapp-icon-512.png"
             alt="InvestApp"
+            width={80}
+            height={80}
             className="h-20 w-20 rounded-2xl bg-white/95 p-2"
           />
           <h2 className="mt-4 text-xl font-semibold">Payment Receipt</h2>

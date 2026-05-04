@@ -1531,17 +1531,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         if (upsertError) console.error('Error syncing user:', upsertError);
       }
 
-      if (dbRoleFromData) {
-        const roleFront = mapRoleToFrontend(dbRoleFromData);
+      if (data) {
+        const roleFront = dbRoleFromData ? mapRoleToFrontend(dbRoleFromData) : rolLocalValido;
         if (roleFront) {
           localStorage.setItem(getRolKey(user.id), roleFront);
+          localStorage.setItem(getOnboardingDoneKey(user.id), '1');
           setRolSeleccionado(roleFront);
-          if (onboardingDone) {
-            localStorage.setItem(getOnboardingDoneKey(user.id), '1');
-            setFaseApp('dashboard');
-          } else {
-            setFaseApp('onboarding');
-          }
+          setFaseApp('dashboard');
           return;
         }
       }
