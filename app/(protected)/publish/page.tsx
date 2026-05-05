@@ -83,6 +83,16 @@ type PromptJson = {
   };
 };
 
+type OptimizedSectionContent =
+  | string
+  | {
+      paragraph?: string | null;
+      body?: string | null;
+      content?: string | null;
+      text?: string | null;
+      description?: string | null;
+    };
+
 type OptimizedPublication = {
   title?: string;
   tittle?: string;
@@ -93,14 +103,15 @@ type OptimizedPublication = {
   useOfFunds?: string;
   marketOpportunity?: string;
   investorNotes?: string;
-  overview?: string;
-  whatWeDo?: string;
-  financialInformation?: string;
-  investment?: string;
-  target?: string;
-  team?: string;
-  gallery?: string;
-  extras?: string;
+  overview?: OptimizedSectionContent;
+  whatWeDo?: OptimizedSectionContent;
+  howWeDoIt?: OptimizedSectionContent;
+  financialInformation?: OptimizedSectionContent;
+  investment?: OptimizedSectionContent;
+  target?: OptimizedSectionContent;
+  team?: OptimizedSectionContent;
+  gallery?: OptimizedSectionContent;
+  extras?: OptimizedSectionContent;
 };
 
 type ReviewState = {
@@ -197,134 +208,166 @@ const moneyLabel = (value: string, fallback = 'Pending') => {
   }).format(amount);
 };
 
-const textOrFallback = (value: string | null | undefined, fallback = 'Pending') =>
-  value?.trim() || fallback;
-
-const splitBullets = (value: string | null | undefined) =>
-  (value ?? '')
-    .split(/\n|;|•/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-
 const getOptimizedSection = (
   optimized: OptimizedPublication,
-  keys: Array<keyof OptimizedPublication>
+  keys: string[]
 ) => {
+  const optimizedRecord = optimized as Record<string, unknown>;
   for (const key of keys) {
-    const value = optimized[key];
+    const value = optimizedRecord[key];
     if (typeof value === 'string' && value.trim()) return value.trim();
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const sectionValue = value as { paragraph?: unknown };
+      const paragraph =
+        typeof sectionValue.paragraph === 'string' ? sectionValue.paragraph.trim() : '';
+      if (paragraph) return paragraph;
+    }
   }
   return '';
 };
 
 const buildPreviewSections = (
-  form: PublishWizardForm,
   optimized: OptimizedPublication
 ): OpportunitySection[] => {
-  const useOfFunds = splitBullets(form.funds_usage);
-  const achievements = [
-    ...splitBullets(form.achievements),
-    ...splitBullets(form.testimonials),
-    form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
-    form.growth_rate ? `Growth: ${form.growth_rate}` : '',
-  ]
-    .filter(Boolean)
-    .slice(0, 6);
-
-  return [
+  const definitions: Array<{
+    title: string;
+    icon: OpportunitySection['icon'];
+    keys: string[];
+  }> = [
     {
       title: 'Overview',
-      body:
-        getOptimizedSection(optimized, ['overview', 'description', 'summary']) ||
-        form.product_description,
       icon: 'overview',
+      keys: ['overview'],
     },
     {
       title: 'What we do',
-      body:
-        getOptimizedSection(optimized, ['whatWeDo']) ||
-        [
-          form.product_description ? `Product or service: ${form.product_description}` : '',
-          form.problem_solved ? `Problem solved: ${form.problem_solved}` : '',
-          form.differentiation ? `Differentiation: ${form.differentiation}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n') ||
-        textOrFallback(form.product_description),
       icon: 'what',
+      keys: ['whatWeDo', 'what_we_do'],
+    },
+    {
+      title: 'How we do it',
+      icon: 'how',
+      keys: ['howWeDoIt', 'how_we_do_it'],
     },
     {
       title: 'Financial information',
-      body:
-        getOptimizedSection(optimized, ['financialInformation', 'traction']) ||
-        [
-          form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
-          form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
-          form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
-          form.growth_rate ? `Growth: ${form.growth_rate}` : '',
-          form.social_media ? `Social media: ${form.social_media}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      bullets: achievements.length ? achievements : optimized.highlights?.slice(0, 5),
       icon: 'financial',
+      keys: ['financialInformation', 'financial_information'],
     },
     {
       title: 'Investment',
-      body:
-        getOptimizedSection(optimized, ['investment', 'useOfFunds']) ||
-        [
-          form.capital_needed ? `Capital needed: ${form.capital_needed}` : '',
-          form.funds_usage ? `Use of funds: ${form.funds_usage}` : '',
-          form.investment_offer ? `Annual interest rate: ${form.investment_offer}% EA` : '',
-          form.timing_reason ? `Why now: ${form.timing_reason}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      bullets: useOfFunds.length ? useOfFunds : undefined,
       icon: 'investment',
+      keys: ['investment'],
     },
     {
       title: 'Target',
-      body:
-        getOptimizedSection(optimized, ['target', 'marketOpportunity']) ||
-        [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
       icon: 'target',
+      keys: ['target'],
     },
     {
       title: 'Team',
-      body:
-        getOptimizedSection(optimized, ['team']) ||
-        [
-          form.founder_info ? `Founder: ${form.founder_info}` : '',
-          form.team_info ? `Team: ${form.team_info}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
       icon: 'team',
+      keys: ['team'],
     },
     {
       title: 'Gallery',
-      body:
-        getOptimizedSection(optimized, ['gallery']) ||
-        'Review the uploaded photos and video in the publication gallery.',
       icon: 'gallery',
+      keys: ['gallery'],
     },
     {
       title: 'Extras',
-      body:
-        getOptimizedSection(optimized, ['extras', 'investorNotes']) ||
-        [
-          form.testimonials ? `Testimonials: ${form.testimonials}` : '',
-          form.achievements ? `Achievements: ${form.achievements}` : '',
-          form.timing_reason ? `Timing: ${form.timing_reason}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
       icon: 'extras',
+      keys: ['extras'],
     },
   ];
+
+  return definitions
+    .map((definition) => ({
+      title: definition.title,
+      body: getOptimizedSection(optimized, definition.keys),
+      icon: definition.icon,
+    }))
+    .filter((section) => section.body);
+};
+
+const buildFallbackPreviewSections = (form: PublishWizardForm): OpportunitySection[] => [
+  {
+    title: 'Overview',
+    body: form.product_description,
+    icon: 'overview',
+  },
+  {
+    title: 'What we do',
+    body: [
+      form.product_description ? `Product or service: ${form.product_description}` : '',
+      form.problem_solved ? `Problem solved: ${form.problem_solved}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    icon: 'what',
+  },
+  {
+    title: 'How we do it',
+    body: form.differentiation,
+    icon: 'how',
+  },
+  {
+    title: 'Financial information',
+    body: [
+      form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
+      form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
+      form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
+      form.growth_rate ? `Growth: ${form.growth_rate}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    icon: 'financial',
+  },
+  {
+    title: 'Investment',
+    body: [
+      form.capital_needed ? `Capital needed: ${form.capital_needed}` : '',
+      form.funds_usage ? `Use of funds: ${form.funds_usage}` : '',
+      form.investment_offer ? `Annual interest rate: ${form.investment_offer}% EA` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    icon: 'investment',
+  },
+  {
+    title: 'Target',
+    body: [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
+    icon: 'target',
+  },
+  {
+    title: 'Team',
+    body: [
+      form.founder_info ? `Founder: ${form.founder_info}` : '',
+      form.team_info ? `Team: ${form.team_info}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    icon: 'team',
+  },
+  {
+    title: 'Extras',
+    body: [
+      form.testimonials ? `Testimonials: ${form.testimonials}` : '',
+      form.achievements ? `Achievements: ${form.achievements}` : '',
+      form.timing_reason ? `Timing: ${form.timing_reason}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    icon: 'extras',
+  },
+].filter((section) => section.body);
+
+const buildPublicationSections = (
+  form: PublishWizardForm,
+  optimized: OptimizedPublication
+): OpportunitySection[] => {
+  const optimizedSections = buildPreviewSections(optimized);
+  return optimizedSections.length ? optimizedSections : buildFallbackPreviewSections(form);
 };
 
 const buildPreviewMetrics = (form: PublishWizardForm): OpportunityMetric[] => [
@@ -1279,7 +1322,7 @@ export default function PublishPage() {
           rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
           images={projectPhotos}
           metrics={buildPreviewMetrics(form)}
-          sections={buildPreviewSections(form, review.optimizedPublication)}
+          sections={buildPublicationSections(form, review.optimizedPublication)}
           primaryActionLabel={publishing ? 'Publishing...' : 'Publish'}
           secondaryActionLabel="Edit details"
           onPrimaryAction={publishProject}

@@ -70,17 +70,16 @@ const coerceNumber = (value: unknown) => {
   return null;
 };
 
-const splitBullets = (value: unknown) =>
-  coerceText(value)
-    .split(/\n|;|•/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 6);
-
 const getOptimizedSection = (optimized: Record<string, unknown>, keys: string[]) => {
   for (const key of keys) {
-    const value = coerceText(optimized[key]);
-    if (value) return value;
+    const value = optimized[key];
+    const textValue = coerceText(value);
+    if (textValue) return textValue;
+
+    if (isPlainObject(value)) {
+      const paragraph = coerceText(value.paragraph);
+      if (paragraph) return paragraph;
+    }
   }
   return '';
 };
@@ -116,35 +115,81 @@ const buildDetailMetrics = (
   },
 ];
 
-const buildDetailSections = (
-  project: ProjectDetail,
-  formFields: Record<string, unknown>,
-  optimized: Record<string, unknown>
-): OpportunitySection[] => {
-  const highlights = Array.isArray(optimized.highlights)
-    ? optimized.highlights.map(coerceText).filter(Boolean).slice(0, 5)
-    : [];
-  const achievements = [
-    ...splitBullets(formFields.achievements),
-    ...splitBullets(formFields.testimonials),
-    coerceText(formFields.monthly_revenue) ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}` : '',
-    coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
-  ]
-    .filter(Boolean)
-    .slice(0, 6);
-
-  return [
+const buildOptimizedDetailSections = (optimized: Record<string, unknown>): OpportunitySection[] => {
+  const definitions: Array<{
+    title: string;
+    icon: OpportunitySection['icon'];
+    keys: string[];
+  }> = [
     {
       title: 'Overview',
-      body:
-        getOptimizedSection(optimized, ['overview', 'description', 'summary']) ||
-        project.description,
+      icon: 'overview',
+      keys: ['overview'],
+    },
+    {
+      title: 'What we do',
+      icon: 'what',
+      keys: ['whatWeDo', 'what_we_do'],
+    },
+    {
+      title: 'How we do it',
+      icon: 'how',
+      keys: ['howWeDoIt', 'how_we_do_it'],
+    },
+    {
+      title: 'Financial information',
+      icon: 'financial',
+      keys: ['financialInformation', 'financial_information'],
+    },
+    {
+      title: 'Investment',
+      icon: 'investment',
+      keys: ['investment'],
+    },
+    {
+      title: 'Target',
+      icon: 'target',
+      keys: ['target'],
+    },
+    {
+      title: 'Team',
+      icon: 'team',
+      keys: ['team'],
+    },
+    {
+      title: 'Gallery',
+      icon: 'gallery',
+      keys: ['gallery'],
+    },
+    {
+      title: 'Extras',
+      icon: 'extras',
+      keys: ['extras'],
+    },
+  ];
+
+  return definitions
+    .map((definition) => ({
+      title: definition.title,
+      body: getOptimizedSection(optimized, definition.keys),
+      icon: definition.icon,
+    }))
+    .filter((section) => section.body);
+};
+
+const buildFallbackDetailSections = (
+  project: ProjectDetail,
+  formFields: Record<string, unknown>
+): OpportunitySection[] => {
+  const sections: OpportunitySection[] = [
+    {
+      title: 'Overview',
+      body: project.description,
       icon: 'overview',
     },
     {
       title: 'What we do',
       body:
-        getOptimizedSection(optimized, ['whatWeDo', 'what_we_do']) ||
         [
           coerceText(formFields.product_description)
             ? `Product or service: ${coerceText(formFields.product_description)}`
@@ -152,113 +197,86 @@ const buildDetailSections = (
           coerceText(formFields.problem_solved)
             ? `Problem solved: ${coerceText(formFields.problem_solved)}`
             : '',
-          coerceText(formFields.differentiation)
-            ? `Differentiation: ${coerceText(formFields.differentiation)}`
-            : '',
         ]
           .filter(Boolean)
-          .join('\n\n') ||
-        project.description,
+          .join('\n\n') || project.description,
       icon: 'what',
     },
     {
+      title: 'How we do it',
+      body: coerceText(formFields.differentiation),
+      icon: 'how',
+    },
+    {
       title: 'Financial information',
-      body:
-        getOptimizedSection(optimized, ['financialInformation', 'financial_information', 'traction']) ||
-        [
-          coerceText(formFields.monthly_revenue)
-            ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}`
-            : '',
-          coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
-          coerceText(formFields.monthly_customers)
-            ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
-            : '',
-          coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
-          coerceText(formFields.social_media)
-            ? `Social media: ${coerceText(formFields.social_media)}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      bullets: achievements.length ? achievements : highlights,
+      body: [
+        coerceText(formFields.monthly_revenue)
+          ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}`
+          : '',
+        coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
+        coerceText(formFields.monthly_customers)
+          ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
+          : '',
+        coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       icon: 'financial',
     },
     {
       title: 'Investment',
-      body:
-        getOptimizedSection(optimized, ['investment', 'useOfFunds', 'use_of_funds']) ||
-        [
-          project.amount_requested !== null && project.amount_requested !== undefined
-            ? `Capital needed: ${formatAmount(project.amount_requested, project.currency)}`
-            : '',
-          coerceText(formFields.funds_usage) ? `Use of funds: ${coerceText(formFields.funds_usage)}` : '',
-          project.interest_rate ? `Annual interest rate: ${project.interest_rate}% EA` : '',
-          coerceText(formFields.timing_reason)
-            ? `Why now: ${coerceText(formFields.timing_reason)}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
-      bullets: splitBullets(formFields.funds_usage),
+      body: [
+        project.amount_requested !== null && project.amount_requested !== undefined
+          ? `Capital needed: ${formatAmount(project.amount_requested, project.currency)}`
+          : '',
+        coerceText(formFields.funds_usage) ? `Use of funds: ${coerceText(formFields.funds_usage)}` : '',
+        project.interest_rate ? `Annual interest rate: ${project.interest_rate}% EA` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       icon: 'investment',
     },
     {
       title: 'Target',
-      body:
-        getOptimizedSection(optimized, ['target', 'marketOpportunity', 'market_opportunity']) ||
-        [formFields.target_customer, formFields.market_size, formFields.competition]
-          .map(coerceText)
-          .filter(Boolean)
-          .join('\n\n') ||
-        'Market opportunity details are included in the founder publication.',
+      body: [formFields.target_customer, formFields.market_size, formFields.competition]
+        .map(coerceText)
+        .filter(Boolean)
+        .join('\n\n'),
       icon: 'target',
     },
     {
       title: 'Team',
-      body:
-        getOptimizedSection(optimized, ['team']) ||
-        [
-          coerceText(formFields.founder_info) ? `Founder: ${coerceText(formFields.founder_info)}` : '',
-          coerceText(formFields.team_info) ? `Team: ${coerceText(formFields.team_info)}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n') ||
-        'Team details are included in the founder publication.',
+      body: [
+        coerceText(formFields.founder_info) ? `Founder: ${coerceText(formFields.founder_info)}` : '',
+        coerceText(formFields.team_info) ? `Team: ${coerceText(formFields.team_info)}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       icon: 'team',
     },
     {
-      title: 'Gallery',
-      body:
-        getOptimizedSection(optimized, ['gallery']) ||
-        [
-          project.photo_urls?.length ? `${project.photo_urls.length} photo${project.photo_urls.length === 1 ? '' : 's'} available.` : '',
-          project.video_url ? `Video: ${project.video_url}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n') ||
-        'Gallery media is available in the image carousel.',
-      icon: 'gallery',
-    },
-    {
       title: 'Extras',
-      body:
-        getOptimizedSection(optimized, ['extras', 'investorNotes', 'investor_notes']) ||
-        [
-          coerceText(formFields.testimonials)
-            ? `Testimonials: ${coerceText(formFields.testimonials)}`
-            : '',
-          coerceText(formFields.achievements)
-            ? `Achievements: ${coerceText(formFields.achievements)}`
-            : '',
-          coerceText(formFields.timing_reason)
-            ? `Timing: ${coerceText(formFields.timing_reason)}`
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n'),
+      body: [
+        coerceText(formFields.testimonials) ? `Testimonials: ${coerceText(formFields.testimonials)}` : '',
+        coerceText(formFields.achievements) ? `Achievements: ${coerceText(formFields.achievements)}` : '',
+        coerceText(formFields.timing_reason) ? `Timing: ${coerceText(formFields.timing_reason)}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
       icon: 'extras',
     },
   ];
+
+  return sections.filter((section) => section.body);
+};
+
+const buildDetailSections = (
+  project: ProjectDetail,
+  formFields: Record<string, unknown>,
+  optimized: Record<string, unknown>
+): OpportunitySection[] => {
+  const optimizedSections = buildOptimizedDetailSections(optimized);
+  return optimizedSections.length ? optimizedSections : buildFallbackDetailSections(project, formFields);
 };
 
 export default function FeedDetailPage() {

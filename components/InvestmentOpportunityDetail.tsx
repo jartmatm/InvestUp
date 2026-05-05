@@ -16,6 +16,7 @@ export type OpportunitySection = {
   icon:
     | 'overview'
     | 'what'
+    | 'how'
     | 'financial'
     | 'investment'
     | 'target'
@@ -72,6 +73,7 @@ const iconPaths = {
   market: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.6 9h16.8M3.6 15h16.8M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
   funds: 'M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1M16 12h6M19 9v6',
   what: 'M4 7h16M4 12h10M4 17h16',
+  how: 'M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3ZM12 12l8-4.5M12 12v9M12 12 4 7.5',
   financial: 'M4 19V5M8 17v-5M12 17V8M16 17v-7M20 17V6',
   investment: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6',
   target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2',
@@ -115,6 +117,7 @@ const sectionTone = {
   market: 'bg-[#F4EFFF] text-[#6B39F4]',
   funds: 'bg-[#EAFBF5] text-[#10A76F]',
   what: 'bg-[#EAFBF5] text-[#10A76F]',
+  how: 'bg-[#FFF5E5] text-[#F59E0B]',
   financial: 'bg-[#EEF6FF] text-[#4D8DFF]',
   investment: 'bg-[#F4EFFF] text-[#6B39F4]',
   target: 'bg-[#FFF5E5] text-[#F59E0B]',
@@ -263,16 +266,6 @@ export default function InvestmentOpportunityDetail({
                         <p key={paragraph}>{paragraph}</p>
                       ))}
                     </div>
-                  ) : null}
-                  {activeSection.bullets?.length ? (
-                    <ul className="mt-3 space-y-2 text-[0.95rem] leading-6 text-[#59657F]">
-                      {activeSection.bullets.map((bullet) => (
-                        <li key={bullet} className="flex gap-2">
-                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6B39F4]" />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
                   ) : null}
                 </div>
               </div>

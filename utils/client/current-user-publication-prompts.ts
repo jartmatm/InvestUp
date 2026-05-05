@@ -12,14 +12,15 @@ export type OptimizedPublication = {
   useOfFunds?: string;
   marketOpportunity?: string;
   investorNotes?: string;
-  overview?: string;
-  whatWeDo?: string;
-  financialInformation?: string;
-  investment?: string;
-  target?: string;
-  team?: string;
-  gallery?: string;
-  extras?: string;
+  overview?: string | { paragraph?: string | null };
+  whatWeDo?: string | { paragraph?: string | null };
+  howWeDoIt?: string | { paragraph?: string | null };
+  financialInformation?: string | { paragraph?: string | null };
+  investment?: string | { paragraph?: string | null };
+  target?: string | { paragraph?: string | null };
+  team?: string | { paragraph?: string | null };
+  gallery?: string | { paragraph?: string | null };
+  extras?: string | { paragraph?: string | null };
 };
 
 export type PublicationPromptPayload = {
