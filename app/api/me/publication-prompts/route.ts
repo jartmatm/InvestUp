@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 type OptimizedPublication = {
   title: string;
+  tittle?: string;
   summary: string;
   description: string;
   highlights: string[];
@@ -14,6 +15,14 @@ type OptimizedPublication = {
   useOfFunds: string;
   marketOpportunity: string;
   investorNotes: string;
+  overview: string;
+  whatWeDo: string;
+  financialInformation: string;
+  investment: string;
+  target: string;
+  team: string;
+  gallery: string;
+  extras: string;
 };
 
 type PublicationPromptRow = {
@@ -36,7 +45,7 @@ const OPENAI_PUBLICATION_PROMPT_ID =
   process.env.OPENAI_PUBLICATION_PROMPT_ID ??
   'pmpt_69f57f7a85c081979c1668cfaa3bf80d0f79b0106d6c32c4';
 const OPENAI_PUBLICATION_PROMPT_VERSION =
-  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '3';
+  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '4';
 
 const PUBLICATION_PROMPT_VARIABLE_KEYS = [
   'business_name',
@@ -173,6 +182,16 @@ const localOptimize = (promptText: string): OptimizedPublication => {
     useOfFunds: useOfFunds || 'Use of funds provided in the founder form.',
     marketOpportunity: market || 'Market opportunity provided in the founder form.',
     investorNotes: 'Generated from the guided publication form variables.',
+    overview: description,
+    whatWeDo: [offer, problem].filter(Boolean).join('\n\n') || description,
+    financialInformation: traction || 'Financial information provided in the founder form.',
+    investment: [useOfFunds, timingReason].filter(Boolean).join('\n\n') || 'Investment details provided in the founder form.',
+    target: market || 'Target customer details provided in the founder form.',
+    team: getField('founder_info', 'Fundador') || 'Team information provided in the founder form.',
+    gallery: 'Gallery media is provided by the founder.',
+    extras: [getField('testimonials', 'Testimonios'), getField('achievements', 'Logros'), timingReason]
+      .filter(Boolean)
+      .join('\n\n') || 'Additional details provided in the founder form.',
   };
 };
 
@@ -180,6 +199,57 @@ const normalizeOptimizedPublication = (value: unknown, fallbackText: string): Op
   if (!isPlainObject(value)) return localOptimize(fallbackText);
 
   const fallback = localOptimize(fallbackText);
+  const normalizeKey = (key: string) =>
+    key
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+  const getSectionText = (...keys: string[]) => {
+    const normalizedKeys = keys.map(normalizeKey);
+
+    for (const key of keys) {
+      const direct = coerceText(value[key]);
+      if (direct) return direct;
+    }
+
+    const sections = value.sections;
+    if (isPlainObject(sections)) {
+      for (const [sectionKey, sectionValue] of Object.entries(sections)) {
+        if (!normalizedKeys.includes(normalizeKey(sectionKey))) continue;
+        if (typeof sectionValue === 'string') return sectionValue.trim();
+        if (isPlainObject(sectionValue)) {
+          const sectionText =
+            coerceText(sectionValue.body) ||
+            coerceText(sectionValue.content) ||
+            coerceText(sectionValue.text) ||
+            coerceText(sectionValue.description);
+          if (sectionText) return sectionText;
+        }
+      }
+    }
+
+    if (Array.isArray(sections)) {
+      for (const section of sections) {
+        if (!isPlainObject(section)) continue;
+        const sectionKey =
+          coerceText(section.key) ||
+          coerceText(section.id) ||
+          coerceText(section.title) ||
+          coerceText(section.label);
+        if (!sectionKey || !normalizedKeys.includes(normalizeKey(sectionKey))) continue;
+        const sectionText =
+          coerceText(section.body) ||
+          coerceText(section.content) ||
+          coerceText(section.text) ||
+          coerceText(section.description);
+        if (sectionText) return sectionText;
+      }
+    }
+
+    return '';
+  };
+
   const getText = (...keys: string[]) => {
     for (const key of keys) {
       const text = coerceText(value[key]);
@@ -195,7 +265,7 @@ const normalizeOptimizedPublication = (value: unknown, fallbackText: string): Op
     : fallback.highlights;
 
   return {
-    title: getText('title', 'project_title', 'headline') || fallback.title,
+    title: getText('title', 'tittle', 'project_title', 'headline') || fallback.title,
     summary: getText('summary', 'short_summary', 'executive_summary') || fallback.summary,
     description: (getText('description', 'publication', 'body', 'pitch') || fallback.description).slice(0, 2500),
     highlights,
@@ -204,6 +274,30 @@ const normalizeOptimizedPublication = (value: unknown, fallbackText: string): Op
     marketOpportunity:
       getText('marketOpportunity', 'market_opportunity', 'market_summary') || fallback.marketOpportunity,
     investorNotes: getText('investorNotes', 'investor_notes', 'notes') || fallback.investorNotes,
+    overview:
+      getSectionText('overview', 'description', 'publication', 'body', 'pitch') || fallback.overview,
+    whatWeDo:
+      getSectionText('whatWeDo', 'what_we_do', 'what we do', 'what_we_sell', 'business_activity') ||
+      fallback.whatWeDo,
+    financialInformation:
+      getSectionText(
+        'financialInformation',
+        'financial_information',
+        'financial information',
+        'financials',
+        'traction'
+      ) || fallback.financialInformation,
+    investment:
+      getSectionText('investment', 'investment_offer', 'investment details', 'useOfFunds', 'use_of_funds') ||
+      fallback.investment,
+    target:
+      getSectionText('target', 'target_customer', 'target market', 'marketOpportunity', 'market_opportunity') ||
+      fallback.target,
+    team: getSectionText('team', 'founder_info', 'founder', 'team_info') || fallback.team,
+    gallery: getSectionText('gallery', 'media', 'multimedia') || fallback.gallery,
+    extras:
+      getSectionText('extras', 'extra', 'testimonials', 'achievements', 'investorNotes', 'investor_notes') ||
+      fallback.extras,
   };
 };
 
@@ -229,6 +323,14 @@ const normalizeOpenAiTextPublication = (content: string, fallbackText: string): 
     useOfFunds: fallback.useOfFunds,
     marketOpportunity: fallback.marketOpportunity,
     investorNotes: `Generated by OpenAI prompt ${OPENAI_PUBLICATION_PROMPT_ID} v${OPENAI_PUBLICATION_PROMPT_VERSION}.`,
+    overview: clean || fallback.overview,
+    whatWeDo: fallback.whatWeDo,
+    financialInformation: fallback.financialInformation,
+    investment: fallback.investment,
+    target: fallback.target,
+    team: fallback.team,
+    gallery: fallback.gallery,
+    extras: fallback.extras,
   };
 };
 

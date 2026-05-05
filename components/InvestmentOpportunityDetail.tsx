@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 
 export type OpportunityMetric = {
@@ -12,7 +13,21 @@ export type OpportunitySection = {
   title: string;
   body?: string;
   bullets?: string[];
-  icon: 'overview' | 'problem' | 'solution' | 'business' | 'traction' | 'market' | 'funds';
+  icon:
+    | 'overview'
+    | 'what'
+    | 'financial'
+    | 'investment'
+    | 'target'
+    | 'team'
+    | 'gallery'
+    | 'extras'
+    | 'problem'
+    | 'solution'
+    | 'business'
+    | 'traction'
+    | 'market'
+    | 'funds';
 };
 
 export type InvestmentOpportunityDetailProps = {
@@ -36,8 +51,6 @@ export type InvestmentOpportunityDetailProps = {
 
 const iconPaths = {
   back: 'M15 18l-6-6 6-6M9 12h12',
-  heart:
-    'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z',
   location:
     'M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0ZM12 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z',
   category:
@@ -58,6 +71,13 @@ const iconPaths = {
   traction: 'M3 17l6-6 4 4 8-10M17 5h4v4',
   market: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.6 9h16.8M3.6 15h16.8M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18',
   funds: 'M21 8V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1M16 12h6M19 9v6',
+  what: 'M4 7h16M4 12h10M4 17h16',
+  financial: 'M4 19V5M8 17v-5M12 17V8M16 17v-7M20 17V6',
+  investment: 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2',
+  team: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  gallery: 'M4 5h16v14H4V5ZM8 13l2.5-2.5L14 14l2-2 4 4M8 9h.01',
+  extras: 'M12 3l2.2 4.46 4.92.72-3.56 3.47.84 4.9L12 14.23 7.6 16.55l.84-4.9-3.56-3.47 4.92-.72L12 3Z',
 } as const;
 
 function DetailIcon({
@@ -94,6 +114,13 @@ const sectionTone = {
   traction: 'bg-[#EEF6FF] text-[#4D8DFF]',
   market: 'bg-[#F4EFFF] text-[#6B39F4]',
   funds: 'bg-[#EAFBF5] text-[#10A76F]',
+  what: 'bg-[#EAFBF5] text-[#10A76F]',
+  financial: 'bg-[#EEF6FF] text-[#4D8DFF]',
+  investment: 'bg-[#F4EFFF] text-[#6B39F4]',
+  target: 'bg-[#FFF5E5] text-[#F59E0B]',
+  team: 'bg-[#F4EFFF] text-[#6B39F4]',
+  gallery: 'bg-[#EEF6FF] text-[#4D8DFF]',
+  extras: 'bg-[#EAFBF5] text-[#10A76F]',
 } as const;
 
 export default function InvestmentOpportunityDetail({
@@ -115,6 +142,10 @@ export default function InvestmentOpportunityDetail({
   bottomOffsetClassName = 'bottom-0',
 }: InvestmentOpportunityDetailProps) {
   const normalizedImages = (images ?? []).filter(Boolean);
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+  const activeSectionIndexSafe =
+    sections.length > 0 ? Math.min(activeSectionIndex, sections.length - 1) : 0;
+  const activeSection = sections.length > 0 ? sections[activeSectionIndexSafe] ?? sections[0] : null;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(124,92,255,0.12),transparent_30%),linear-gradient(180deg,#FBFCFF_0%,#F6F8FC_45%,#FFFFFF_100%)] text-[#10172F]">
@@ -127,13 +158,6 @@ export default function InvestmentOpportunityDetail({
             className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white/86 text-[#10172F] shadow-[0_18px_45px_rgba(27,35,58,0.08)] backdrop-blur-xl transition active:scale-95"
           >
             <DetailIcon name="back" className="h-6 w-6" />
-          </button>
-          <button
-            type="button"
-            aria-label="Favorite"
-            className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white/86 text-[#10172F] shadow-[0_18px_45px_rgba(27,35,58,0.08)] backdrop-blur-xl transition active:scale-95"
-          >
-            <DetailIcon name="heart" className="h-6 w-6" />
           </button>
         </div>
 
@@ -178,13 +202,6 @@ export default function InvestmentOpportunityDetail({
                   emptyClassName="flex h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]"
                 />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/24 to-transparent" />
-                <button
-                  type="button"
-                  aria-label="Favorite"
-                  className="absolute right-4 top-4 flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-white/92 text-[#10172F] shadow-[0_18px_42px_rgba(27,35,58,0.14)] transition active:scale-95"
-                >
-                  <DetailIcon name="heart" className="h-6 w-6" />
-                </button>
               </div>
             </div>
           </div>
@@ -209,61 +226,60 @@ export default function InvestmentOpportunityDetail({
 
         <nav className="sticky top-0 z-20 -mx-4 overflow-x-auto bg-[#F8FAFE]/86 px-4 py-2 backdrop-blur-xl">
           <div className="flex min-w-max items-center gap-8 text-sm font-semibold text-[#65708A]">
-            {['Overview', 'Financials', 'Documents', 'Team', 'FAQ'].map((tab, index) => (
-              <span
-                key={tab}
-                className={`relative py-3 ${index === 0 ? 'text-[#6B39F4]' : ''}`}
+            {sections.map((section, index) => (
+              <button
+                type="button"
+                key={section.title}
+                onClick={() => setActiveSectionIndex(index)}
+                className={`relative cursor-pointer py-3 text-left transition ${
+                  index === activeSectionIndexSafe ? 'text-[#6B39F4]' : 'hover:text-[#10172F]'
+                }`}
               >
-                {tab}
-                {index === 0 ? (
+                {section.title}
+                {index === activeSectionIndexSafe ? (
                   <span className="absolute inset-x-0 bottom-0 h-1 rounded-full bg-[#6B39F4]" />
                 ) : null}
-              </span>
+              </button>
             ))}
           </div>
         </nav>
 
         <section className="rounded-[24px] bg-white/78 p-5 shadow-[0_22px_64px_rgba(27,35,58,0.06)] ring-1 ring-white/80 backdrop-blur-2xl">
-          <div className="space-y-6">
-            {sections.map((section, index) => {
-              const paragraphs = splitParagraphs(section.body);
-              return (
-                <article key={`${section.title}-${index}`} className={index > 0 ? 'border-t border-[#E6EAF2] pt-6' : ''}>
-                  <div className="flex gap-4">
-                    {index > 0 ? (
-                      <span
-                        className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] ${sectionTone[section.icon]}`}
-                      >
-                        <DetailIcon name={section.icon} className="h-5 w-5" />
-                      </span>
-                    ) : null}
-                    <div className="min-w-0 flex-1">
-                      <h2 className="text-xl font-semibold tracking-normal text-[#10172F]">
-                        {section.title}
-                      </h2>
-                      {paragraphs.length ? (
-                        <div className="mt-3 space-y-3 text-[0.95rem] leading-7 text-[#59657F]">
-                          {paragraphs.map((paragraph) => (
-                            <p key={paragraph}>{paragraph}</p>
-                          ))}
-                        </div>
-                      ) : null}
-                      {section.bullets?.length ? (
-                        <ul className="mt-3 space-y-2 text-[0.95rem] leading-6 text-[#59657F]">
-                          {section.bullets.map((bullet) => (
-                            <li key={bullet} className="flex gap-2">
-                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6B39F4]" />
-                              <span>{bullet}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
+          {activeSection ? (
+            <article>
+              <div className="flex gap-4">
+                <span
+                  className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] ${sectionTone[activeSection.icon]}`}
+                >
+                  <DetailIcon name={activeSection.icon} className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-semibold tracking-normal text-[#10172F]">
+                    {activeSection.title}
+                  </h2>
+                  {splitParagraphs(activeSection.body).length ? (
+                    <div className="mt-3 space-y-3 text-[0.95rem] leading-7 text-[#59657F]">
+                      {splitParagraphs(activeSection.body).map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
                     </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                  ) : null}
+                  {activeSection.bullets?.length ? (
+                    <ul className="mt-3 space-y-2 text-[0.95rem] leading-6 text-[#59657F]">
+                      {activeSection.bullets.map((bullet) => (
+                        <li key={bullet} className="flex gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6B39F4]" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              </div>
+            </article>
+          ) : (
+            <p className="text-sm leading-6 text-[#59657F]">Publication details will appear here.</p>
+          )}
         </section>
       </div>
 

@@ -77,6 +77,14 @@ const splitBullets = (value: unknown) =>
     .filter(Boolean)
     .slice(0, 6);
 
+const getOptimizedSection = (optimized: Record<string, unknown>, keys: string[]) => {
+  for (const key of keys) {
+    const value = coerceText(optimized[key]);
+    if (value) return value;
+  }
+  return '';
+};
+
 const getMetadataObject = (project: ProjectDetail | null, key: string) => {
   const value = project?.metadata?.[key];
   return isPlainObject(value) ? value : {};
@@ -128,56 +136,127 @@ const buildDetailSections = (
   return [
     {
       title: 'Overview',
-      body: coerceText(optimized.description) || project.description,
+      body:
+        getOptimizedSection(optimized, ['overview', 'description', 'summary']) ||
+        project.description,
       icon: 'overview',
     },
     {
-      title: 'The Problem',
-      body: coerceText(formFields.problem_solved) || 'The founder will provide more detail about the customer pain point.',
-      icon: 'problem',
-    },
-    {
-      title: 'Our Solution',
-      body: coerceText(formFields.differentiation) || coerceText(formFields.product_description) || project.description,
-      icon: 'solution',
-    },
-    {
-      title: 'Business Model',
-      body: [
-        coerceText(formFields.product_description)
-          ? `Product or service: ${coerceText(formFields.product_description)}`
-          : '',
-        coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
-        coerceText(formFields.monthly_customers)
-          ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
-          : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n') || project.description,
-      icon: 'business',
-    },
-    {
-      title: 'Traction & Achievements',
-      body: coerceText(optimized.traction),
-      bullets: achievements.length ? achievements : highlights,
-      icon: 'traction',
-    },
-    {
-      title: 'Market Opportunity',
+      title: 'What we do',
       body:
-        coerceText(optimized.marketOpportunity) ||
+        getOptimizedSection(optimized, ['whatWeDo', 'what_we_do']) ||
+        [
+          coerceText(formFields.product_description)
+            ? `Product or service: ${coerceText(formFields.product_description)}`
+            : '',
+          coerceText(formFields.problem_solved)
+            ? `Problem solved: ${coerceText(formFields.problem_solved)}`
+            : '',
+          coerceText(formFields.differentiation)
+            ? `Differentiation: ${coerceText(formFields.differentiation)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n') ||
+        project.description,
+      icon: 'what',
+    },
+    {
+      title: 'Financial information',
+      body:
+        getOptimizedSection(optimized, ['financialInformation', 'financial_information', 'traction']) ||
+        [
+          coerceText(formFields.monthly_revenue)
+            ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}`
+            : '',
+          coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
+          coerceText(formFields.monthly_customers)
+            ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
+            : '',
+          coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
+          coerceText(formFields.social_media)
+            ? `Social media: ${coerceText(formFields.social_media)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      bullets: achievements.length ? achievements : highlights,
+      icon: 'financial',
+    },
+    {
+      title: 'Investment',
+      body:
+        getOptimizedSection(optimized, ['investment', 'useOfFunds', 'use_of_funds']) ||
+        [
+          project.amount_requested !== null && project.amount_requested !== undefined
+            ? `Capital needed: ${formatAmount(project.amount_requested, project.currency)}`
+            : '',
+          coerceText(formFields.funds_usage) ? `Use of funds: ${coerceText(formFields.funds_usage)}` : '',
+          project.interest_rate ? `Annual interest rate: ${project.interest_rate}% EA` : '',
+          coerceText(formFields.timing_reason)
+            ? `Why now: ${coerceText(formFields.timing_reason)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      bullets: splitBullets(formFields.funds_usage),
+      icon: 'investment',
+    },
+    {
+      title: 'Target',
+      body:
+        getOptimizedSection(optimized, ['target', 'marketOpportunity', 'market_opportunity']) ||
         [formFields.target_customer, formFields.market_size, formFields.competition]
           .map(coerceText)
           .filter(Boolean)
           .join('\n\n') ||
         'Market opportunity details are included in the founder publication.',
-      icon: 'market',
+      icon: 'target',
     },
     {
-      title: 'Use of Funds',
-      body: coerceText(optimized.useOfFunds) || coerceText(formFields.funds_usage),
-      bullets: splitBullets(formFields.funds_usage),
-      icon: 'funds',
+      title: 'Team',
+      body:
+        getOptimizedSection(optimized, ['team']) ||
+        [
+          coerceText(formFields.founder_info) ? `Founder: ${coerceText(formFields.founder_info)}` : '',
+          coerceText(formFields.team_info) ? `Team: ${coerceText(formFields.team_info)}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n') ||
+        'Team details are included in the founder publication.',
+      icon: 'team',
+    },
+    {
+      title: 'Gallery',
+      body:
+        getOptimizedSection(optimized, ['gallery']) ||
+        [
+          project.photo_urls?.length ? `${project.photo_urls.length} photo${project.photo_urls.length === 1 ? '' : 's'} available.` : '',
+          project.video_url ? `Video: ${project.video_url}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n') ||
+        'Gallery media is available in the image carousel.',
+      icon: 'gallery',
+    },
+    {
+      title: 'Extras',
+      body:
+        getOptimizedSection(optimized, ['extras', 'investorNotes', 'investor_notes']) ||
+        [
+          coerceText(formFields.testimonials)
+            ? `Testimonials: ${coerceText(formFields.testimonials)}`
+            : '',
+          coerceText(formFields.achievements)
+            ? `Achievements: ${coerceText(formFields.achievements)}`
+            : '',
+          coerceText(formFields.timing_reason)
+            ? `Timing: ${coerceText(formFields.timing_reason)}`
+            : '',
+        ]
+          .filter(Boolean)
+          .join('\n\n'),
+      icon: 'extras',
     },
   ];
 };
@@ -274,7 +353,7 @@ export default function FeedDetailPage() {
   const formFields = getMetadataObject(project, 'publication_form_fields');
   const optimizedPublication = getMetadataObject(project, 'optimized_publication');
   const detailTitle = project
-    ? coerceText(optimizedPublication.title) || project.title
+    ? coerceText(optimizedPublication.title) || coerceText(optimizedPublication.tittle) || project.title
     : '';
   const detailSubtitle = project
     ? coerceText(optimizedPublication.summary) ||

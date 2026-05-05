@@ -4,6 +4,7 @@ type AccessTokenGetter = () => Promise<string | null | undefined>;
 
 export type OptimizedPublication = {
   title?: string;
+  tittle?: string;
   summary?: string;
   description?: string;
   highlights?: string[];
@@ -11,6 +12,14 @@ export type OptimizedPublication = {
   useOfFunds?: string;
   marketOpportunity?: string;
   investorNotes?: string;
+  overview?: string;
+  whatWeDo?: string;
+  financialInformation?: string;
+  investment?: string;
+  target?: string;
+  team?: string;
+  gallery?: string;
+  extras?: string;
 };
 
 export type PublicationPromptPayload = {
