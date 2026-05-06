@@ -275,7 +275,15 @@ const getOwnerAvatarImage = (
   ownerProfiles: Record<string, RecipientDirectoryEntry>
 ) => {
   const owner = project.owner_user_id ? ownerProfiles[project.owner_user_id] : null;
-  return owner?.avatar_url ?? getProjectCoverImage(project);
+  return owner?.avatar_url ?? null;
+};
+
+const getOwnerDisplayName = (
+  project: FeedProject,
+  ownerProfiles: Record<string, RecipientDirectoryEntry>
+) => {
+  const owner = project.owner_user_id ? ownerProfiles[project.owner_user_id] : null;
+  return [owner?.name, owner?.surname].filter(Boolean).join(' ') || owner?.email || 'InvestApp';
 };
 
 const getFeaturedSubtitle = (project: FeedProject) => {
@@ -329,6 +337,7 @@ function FeaturedReelsCarousel({
       {projects.map((project) => {
         const coverImage = getProjectCoverImage(project);
         const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
+        const ownerName = getOwnerDisplayName(project, ownerProfiles);
         const cardBackground = coverImage
           ? `linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(19,27,48,0.18)_38%,rgba(12,17,31,0.76)_100%),${toCssImageUrl(coverImage)}`
           : 'linear-gradient(145deg,#F7F8FC_0%,#ECE7FF_44%,#7C5CFF_100%)';
@@ -345,12 +354,14 @@ function FeaturedReelsCarousel({
             <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.24),transparent_42%)] opacity-90" />
 
             <span
-              className="absolute left-3 top-3 h-9 w-9 rounded-full border-2 border-white bg-[#F7F8FC] bg-cover bg-center shadow-[0_10px_22px_rgba(20,28,55,0.14)] ring-1 ring-[#EEF1F8]"
+              className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#F7F8FC] bg-cover bg-center text-[0.68rem] font-bold text-[#6B39F4] shadow-[0_10px_22px_rgba(20,28,55,0.14)] ring-1 ring-[#EEF1F8]"
               style={{
                 backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined,
               }}
               aria-hidden="true"
-            />
+            >
+              {avatarImage ? null : getInitials(ownerName)}
+            </span>
 
             <span className="absolute inset-x-3 bottom-3">
               <span className="line-clamp-3 text-[0.88rem] font-semibold leading-[1.12] tracking-[-0.04em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.36)]">
@@ -394,6 +405,87 @@ const getInitials = (value: string) => {
   if (parts.length === 0) return 'U';
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 };
+
+function DesktopCategoryIcon({ active, category }: { active: boolean; category: string }) {
+  const key = category.toLowerCase().replace(/[^a-z]/g, '');
+  const common = {
+    className: 'h-4 w-4',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+  const iconColor = active ? 'text-[#6B39F4]' : 'text-[#5D667A]';
+
+  const icon =
+    key === 'all' ? (
+      <IconSpark />
+    ) : key === 'technology' || key === 'tech' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <rect x="7" y="7" width="10" height="10" rx="2" />
+        <path d="M4 9h3M4 15h3M17 9h3M17 15h3M9 4v3M15 4v3M9 17v3M15 17v3" />
+        <path d="M10 12h4" />
+      </svg>
+    ) : key === 'commerce' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M6 8h12l-1 12H7L6 8Z" />
+        <path d="M9 8a3 3 0 0 1 6 0" />
+        <path d="M9 13h6" />
+      </svg>
+    ) : key === 'food' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M7 3v8M4.5 3v8M9.5 3v8M4.5 11h5" />
+        <path d="M7 11v10" />
+        <path d="M16 3c2 1.4 3 3.3 3 5.6V21" />
+        <path d="M16 3v10h3" />
+      </svg>
+    ) : key === 'health' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M12 20s-7-4.4-8.5-8.3C2.4 8.7 4.2 6 7 6c1.6 0 3 .8 4 2 1-1.2 2.4-2 4-2 2.8 0 4.6 2.7 3.5 5.7C17 15.6 12 20 12 20Z" />
+        <path d="M8 12h2l1-2 2 5 1-3h2" />
+      </svg>
+    ) : key === 'realestate' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 20V8l8-4 8 4v12" />
+        <path d="M9 20v-7h6v7" />
+        <path d="M8 9h.01M12 9h.01M16 9h.01" />
+      </svg>
+    ) : key === 'education' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M3 8l9-4 9 4-9 4-9-4Z" />
+        <path d="M7 10.2V15c2.8 2 7.2 2 10 0v-4.8" />
+        <path d="M20 9v6" />
+      </svg>
+    ) : key === 'sustainability' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M5 19c8 0 13-5 14-14-9 1-14 6-14 14Z" />
+        <path d="M5 19c2.8-4.8 6.2-8 10-10" />
+      </svg>
+    ) : key === 'entertainment' ? (
+      <svg viewBox="0 0 24 24" {...common}>
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <path d="M8 5v14M16 5v14M4 9h16M4 15h16" />
+      </svg>
+    ) : (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M12 3l7 5v8l-7 5-7-5V8l7-5Z" />
+        <path d="M9 12h6M12 9v6" />
+      </svg>
+    );
+
+  return (
+    <span
+      className={`grid h-7 w-7 place-items-center rounded-lg border transition ${
+        active
+          ? 'border-[#D9CCFF] bg-[#F1ECFF] text-[#6B39F4]'
+          : 'border-white/70 bg-white/72 text-[#5D667A] shadow-[0_8px_18px_rgba(21,28,44,0.05)]'
+      } ${iconColor}`}
+    >
+      {icon}
+    </span>
+  );
+}
 
 function DesktopSidebar({ role }: { role: string }) {
   const primaryItems = [
@@ -499,8 +591,8 @@ function DesktopTopbar({
   onSearchChange: (value: string) => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[74px] items-center gap-4 border-b border-[#E7EAF3] bg-white/86 px-5 backdrop-blur-xl xl:px-6">
-      <div className="relative max-w-[620px] flex-1">
+    <header className="sticky top-0 z-20 flex h-[68px] items-center gap-4 border-b border-[#E7EAF3] bg-white/86 px-5 backdrop-blur-xl xl:px-6">
+      <div className="relative w-full max-w-[540px] flex-1 2xl:max-w-[620px]">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
           <IconSearch />
         </span>
@@ -508,47 +600,49 @@ function DesktopTopbar({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
-          className="h-11 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-14 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          className="h-10 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-14 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
         />
         <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-[#E3E7F1] px-2 py-1 text-xs font-bold text-[#8A94A8] xl:flex">
           Cmd K
         </span>
       </div>
 
-      <button
-        type="button"
-        className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
-        aria-label="Notifications"
-      >
-        <IconNotification />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />
-      </button>
-
-      <button
-        type="button"
-        disabled={publishDisabled}
-        onClick={onPublish}
-        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
-          publishDisabled
-            ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
-            : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
-        }`}
-      >
-        <IconPlus />
-        Publicar proyecto
-      </button>
-
-      <div className="flex min-w-[168px] items-center gap-3">
-        <span
-          className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-          style={{ backgroundImage: avatarUrl ? toCssImageUrl(avatarUrl) : undefined }}
+      <div className="ml-auto flex items-center gap-3 pl-10 xl:pl-16 2xl:pl-24">
+        <button
+          type="button"
+          className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
+          aria-label="Notifications"
         >
-          {avatarUrl ? null : getInitials(displayName)}
-        </span>
-        <span className="min-w-0">
-          <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
-          <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
-        </span>
+          <IconNotification />
+          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />
+        </button>
+
+        <button
+          type="button"
+          disabled={publishDisabled}
+          onClick={onPublish}
+          className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
+            publishDisabled
+              ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
+              : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+          }`}
+        >
+          <IconPlus />
+          Publicar proyecto
+        </button>
+
+        <div className="flex min-w-[168px] items-center gap-3">
+          <span
+            className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+            style={{ backgroundImage: avatarUrl ? toCssImageUrl(avatarUrl) : undefined }}
+          >
+            {avatarUrl ? null : getInitials(displayName)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+            <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
+          </span>
+        </div>
       </div>
     </header>
   );
@@ -587,6 +681,7 @@ function DesktopReelsSection({
         {projects.map((project) => {
           const coverImage = getProjectCoverImage(project);
           const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
+          const ownerName = getOwnerDisplayName(project, ownerProfiles);
           const cardBackground = coverImage
             ? `linear-gradient(180deg,rgba(8,12,24,0.08)_0%,rgba(8,12,24,0.28)_44%,rgba(8,12,24,0.82)_100%),${toCssImageUrl(coverImage)}`
             : 'linear-gradient(145deg,#F7F8FC_0%,#ECE7FF_44%,#7C5CFF_100%)';
@@ -596,18 +691,20 @@ function DesktopReelsSection({
               key={`desktop-reel-${project.id}`}
               type="button"
               onClick={() => onOpenProject(project.id)}
-              className="group relative h-[clamp(190px,24vh,248px)] w-[clamp(140px,11.5vw,180px)] shrink-0 snap-start overflow-hidden rounded-[20px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
+              className="group relative h-[clamp(168px,21vh,222px)] w-[clamp(126px,10.2vw,162px)] shrink-0 snap-start overflow-hidden rounded-[18px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
               style={{ backgroundImage: cardBackground }}
             >
               <span
-                className="absolute left-3.5 top-3.5 h-9 w-9 rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center text-[0.66rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
                 style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
-              />
-              <span className="absolute inset-x-3.5 bottom-3.5">
-                <span className="line-clamp-3 text-[0.92rem] font-bold leading-tight tracking-[-0.04em] text-white">
+              >
+                {avatarImage ? null : getInitials(ownerName)}
+              </span>
+              <span className="absolute inset-x-3 bottom-3">
+                <span className="line-clamp-3 text-[0.86rem] font-bold leading-tight tracking-[-0.04em] text-white">
                   {project.title}
                 </span>
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-[0.68rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2 py-0.5 text-[0.64rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
                   <IconCrown />
                   Premium
                 </span>
@@ -632,7 +729,7 @@ function DesktopCategories({
   const options = Array.from(new Set([...DESKTOP_CATEGORY_OPTIONS, ...categories]));
 
   return (
-    <div className="mt-4 flex flex-wrap gap-2">
+    <div className="mt-3 flex flex-wrap gap-2">
       {options.map((category) => {
         const active = category === selectedCategory;
         return (
@@ -640,19 +737,20 @@ function DesktopCategories({
             key={`desktop-category-${category}`}
             type="button"
             onClick={() => onSelectCategory(category)}
-            className={`inline-flex h-10 items-center rounded-xl px-4 text-xs font-bold transition ${
+            className={`inline-flex h-9 items-center gap-2 rounded-xl px-2.5 text-[0.72rem] font-bold transition ${
               active
                 ? 'bg-white text-[#6B39F4] shadow-[0_14px_32px_rgba(107,57,244,0.12)] ring-1 ring-[#CFC3FF]'
                 : 'bg-[#F0F2F7] text-[#3E485E] hover:bg-white hover:shadow-[0_12px_28px_rgba(21,28,44,0.06)]'
             }`}
           >
+            <DesktopCategoryIcon active={active} category={category} />
             {category}
           </button>
         );
       })}
       <button
         type="button"
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-4 text-xs font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
+        className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3 text-[0.72rem] font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
       >
         Mas categorias
         <IconChevronDown />
@@ -692,7 +790,7 @@ function DesktopProjectCard({
       }}
       className="group overflow-hidden rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative h-[118px] bg-cover bg-center xl:h-[126px] 2xl:h-[136px]" style={{ backgroundImage: cardBackground }}>
+      <div className="relative h-[104px] bg-cover bg-center xl:h-[112px] 2xl:h-[122px]" style={{ backgroundImage: cardBackground }}>
         <button
           type="button"
           onClick={(event) => {
@@ -707,14 +805,14 @@ function DesktopProjectCard({
           <IconHeart filled={isWishlisted} />
         </button>
       </div>
-      <div className="p-3.5">
-        <h3 className="line-clamp-2 min-h-[40px] text-[0.95rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+      <div className="p-3">
+        <h3 className="line-clamp-2 min-h-[38px] text-[0.9rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
           {project.title}
         </h3>
         <p className="mt-1.5 line-clamp-1 text-xs font-medium text-[#6C7890]">
           {sector} - {location}
         </p>
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-2.5 flex items-center justify-between gap-3">
           <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-2.5 py-1 text-xs font-bold text-[#12895B]">
             {getRateLabel(project)}
           </span>
@@ -779,7 +877,7 @@ function DesktopMarketplaceLayout({
   const featuredProjects = projects.slice(0, 8);
 
   return (
-    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] [--desktop-sidebar-width:232px] lg:flex xl:[--desktop-sidebar-width:240px] 2xl:[--desktop-sidebar-width:248px]">
+    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] [--desktop-sidebar-width:216px] lg:flex xl:[--desktop-sidebar-width:224px] 2xl:[--desktop-sidebar-width:232px]">
       <DesktopSidebar role={profileRole === 'Emprendedor' ? 'emprendedor' : 'inversor'} />
 
       <main className="ml-[var(--desktop-sidebar-width)] flex min-h-screen min-w-0 flex-1 flex-col">
@@ -793,7 +891,7 @@ function DesktopMarketplaceLayout({
           onSearchChange={onSearchChange}
         />
 
-        <div className="mx-auto w-full max-w-[1380px] px-5 py-5 xl:px-6 2xl:px-7">
+        <div className="mx-auto w-full max-w-[1320px] px-4 py-4 xl:px-5 2xl:px-6">
           <DesktopReelsSection
             ownerProfiles={ownerProfiles}
             projects={featuredProjects}
@@ -806,15 +904,15 @@ function DesktopMarketplaceLayout({
             onSelectCategory={onSelectCategory}
           />
 
-          <section className="mt-5">
+          <section className="mt-4">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-start gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
                   <IconSpark />
                 </span>
                 <div>
-                  <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Suggested for you</h2>
-                  <p className="mt-1 text-sm font-medium text-[#65718A]">Oportunidades seleccionadas para ti</p>
+                  <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Suggested for you</h2>
+                  <p className="mt-0.5 text-sm font-medium text-[#65718A]">Oportunidades seleccionadas para ti</p>
                 </div>
               </div>
 
@@ -860,11 +958,11 @@ function DesktopMarketplaceLayout({
             </div>
 
             {loading ? (
-              <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4">
+              <div className="mt-3 grid max-h-[calc(100vh-390px)] grid-cols-4 gap-3 overflow-y-auto pr-1">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[240px] animate-pulse rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[210px] animate-pulse rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -878,7 +976,7 @@ function DesktopMarketplaceLayout({
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4">
+              <div className="mt-3 grid max-h-[calc(100vh-390px)] grid-cols-4 gap-3 overflow-y-auto pr-1">
                 {filteredProjects.map((project) => (
                   <DesktopProjectCard
                     key={`desktop-project-${project.id}`}
