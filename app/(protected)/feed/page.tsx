@@ -11,6 +11,10 @@ import { toEnglishSector } from '@/lib/sector-labels';
 import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
+import {
+  fetchRecipientDirectory,
+  type RecipientDirectoryEntry,
+} from '@/utils/client/recipient-directory';
 
 type FeedProject = {
   id: string;
@@ -143,6 +147,22 @@ function IconPlus() {
   );
 }
 
+function IconCrown() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-3 w-3"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    >
+      <path d="M4 18h16l1-11-5.2 4.2L12 4 8.2 11.2 3 7l1 11Z" />
+      <path d="M4.5 21h15" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function InvestAppWordmark() {
   return (
     <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
@@ -179,6 +199,26 @@ const normalizePhotos = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
+const toCssImageUrl = (value: string | null | undefined) => (value ? `url(${JSON.stringify(value)})` : '');
+
+const getProjectCoverImage = (project: FeedProject) => project.photo_urls?.[0] ?? null;
+
+const getOwnerAvatarImage = (
+  project: FeedProject,
+  ownerProfiles: Record<string, RecipientDirectoryEntry>
+) => {
+  const owner = project.owner_user_id ? ownerProfiles[project.owner_user_id] : null;
+  return owner?.avatar_url ?? getProjectCoverImage(project);
+};
+
+const getFeaturedSubtitle = (project: FeedProject) => {
+  const sector = toEnglishSector(project.sector);
+  if (project.city && sector) return `${sector} in ${project.city}`;
+  if (project.city) return project.city;
+  if (sector) return sector;
+  return 'Published venture';
+};
+
 const SURFACE_CLASSNAME =
   'rounded-[30px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,248,255,0.94)_100%)] shadow-[0_24px_70px_rgba(20,28,55,0.08)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl';
 
@@ -191,11 +231,84 @@ const SORT_OPTIONS: Array<{ id: SortKey; label: string }> = [
 
 const CATEGORY_PREFERRED_ORDER = ['Tech', 'Commerce', 'Food', 'Health'];
 
+function FeaturedReelsCarousel({
+  loading,
+  ownerProfiles,
+  projects,
+  onOpenProject,
+}: {
+  loading: boolean;
+  ownerProfiles: Record<string, RecipientDirectoryEntry>;
+  projects: FeedProject[];
+  onOpenProject: (projectId: string) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="-mx-1 mt-4 flex gap-2.5 overflow-x-auto px-1 pb-1">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div
+            key={`featured-reel-loading-${index}`}
+            className="h-[170px] w-[100px] shrink-0 animate-pulse rounded-[22px] bg-[#E8ECF7]"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (projects.length === 0) return null;
+
+  return (
+    <div className="-mx-1 mt-4 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {projects.map((project) => {
+        const coverImage = getProjectCoverImage(project);
+        const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
+        const cardBackground = coverImage
+          ? `linear-gradient(180deg,rgba(10,16,32,0.04)_0%,rgba(10,16,32,0.28)_38%,rgba(7,10,18,0.78)_100%),${toCssImageUrl(coverImage)}`
+          : 'linear-gradient(145deg,#1B2450_0%,#332065_54%,#111827_100%)';
+
+        return (
+          <button
+            key={`featured-reel-${project.id}`}
+            type="button"
+            onClick={() => onOpenProject(project.id)}
+            className="group relative h-[170px] w-[100px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-cover bg-center text-left shadow-[0_18px_34px_rgba(17,24,39,0.18)] ring-1 ring-black/5 transition active:scale-[0.98]"
+            style={{ backgroundImage: cardBackground }}
+          >
+            <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.16),transparent_42%)] opacity-80" />
+
+            <span
+              className="absolute left-3 top-3 h-9 w-9 rounded-full border-2 border-white bg-[#EEF2FF] bg-cover bg-center shadow-[0_10px_22px_rgba(0,0,0,0.18)]"
+              style={{
+                backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined,
+              }}
+              aria-hidden="true"
+            />
+
+            <span className="absolute inset-x-3 bottom-3">
+              <span className="line-clamp-3 text-[0.88rem] font-semibold leading-[1.12] tracking-[-0.04em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.36)]">
+                {project.title}
+              </span>
+              <span className="mt-1 line-clamp-1 block text-[0.62rem] font-medium text-white/86 drop-shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
+                {getFeaturedSubtitle(project)}
+              </span>
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] px-2.5 py-1 text-[0.58rem] font-bold text-white shadow-[0_10px_18px_rgba(107,57,244,0.32)]">
+                <IconCrown />
+                Destacado
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function FeedPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [projects, setProjects] = useState<FeedProject[]>([]);
+  const [ownerProfiles, setOwnerProfiles] = useState<Record<string, RecipientDirectoryEntry>>({});
   const [loading, setLoading] = useState(true);
   const [hasOwnProject, setHasOwnProject] = useState(false);
   const [loadingOwnProject, setLoadingOwnProject] = useState(true);
@@ -265,6 +378,40 @@ export default function FeedPage() {
     void loadOwnProject();
   }, [getAccessToken, rolSeleccionado, user?.id]);
 
+  useEffect(() => {
+    const ownerIds = Array.from(
+      new Set(projects.map((project) => project.owner_user_id).filter((id): id is string => Boolean(id)))
+    );
+
+    if (!user?.id || ownerIds.length === 0) return;
+
+    let cancelled = false;
+
+    const loadOwnerProfiles = async () => {
+      const { data } = await fetchRecipientDirectory(getAccessToken, {
+        ids: ownerIds,
+        limit: ownerIds.length,
+      });
+
+      if (cancelled) return;
+
+      const nextProfiles = ((data ?? []) as RecipientDirectoryEntry[]).reduce<
+        Record<string, RecipientDirectoryEntry>
+      >((accumulator, owner) => {
+        accumulator[owner.id] = owner;
+        return accumulator;
+      }, {});
+
+      setOwnerProfiles(nextProfiles);
+    };
+
+    void loadOwnerProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken, projects, user?.id]);
+
   const activeWishlistUserId = user?.id ?? null;
   const wishlist =
     wishlistState.userId === activeWishlistUserId
@@ -331,6 +478,8 @@ export default function FeedPage() {
 
     return next;
   }, [favoritesOnly, projects, searchQuery, selectedCategory, sortBy, wishlist]);
+
+  const featuredProjects = useMemo(() => projects.slice(0, 8), [projects]);
 
   const toggleFlip = (id: string) => {
     setFlippedId((previous) => (previous === id ? null : id));
@@ -463,6 +612,13 @@ export default function FeedPage() {
               aria-label="Search ventures"
             />
           </div>
+
+          <FeaturedReelsCarousel
+            loading={loading}
+            ownerProfiles={ownerProfiles}
+            projects={featuredProjects}
+            onOpenProject={(projectId) => router.push(`/feed/${projectId}`)}
+          />
 
           <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
             {categories.map((category) => {
