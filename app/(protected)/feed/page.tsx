@@ -8,6 +8,7 @@ import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
+import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { readWishlist, writeWishlist } from '@/lib/wishlist-storage';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
@@ -38,21 +39,6 @@ type FeedProject = {
 };
 
 type SortKey = 'latest' | 'rate' | 'progress' | 'goal';
-
-function IconBell() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    >
-      <path d="M10 2H14M10 21.2361C10.5308 21.7111 11.2316 22 12 22C12.7684 22 13.4692 21.7111 14 21.2361M5.08493 18.5C4.27945 18.5 3.75557 17.7407 4.11579 17.0954L5.43842 14.7258C6.19069 13.3781 6.58234 11.892 6.58234 10.3852V9.76471C6.58234 8.11791 7.49804 6.6627 8.89823 5.78534C8.96478 5.74364 9.03243 5.70324 9.10113 5.6642C9.93938 5.1877 10.9337 4.91176 12 4.91176C13.0663 4.91176 14.0606 5.1877 14.8989 5.6642C14.9676 5.70324 15.0352 5.74364 15.1018 5.78534C16.502 6.6627 17.4177 8.11791 17.4177 9.76471V10.3852C17.4177 11.892 17.8093 13.3781 18.5616 14.7258L19.8842 17.0954C20.2444 17.7407 19.7205 18.5 18.9151 18.5H15H9H5.08493Z" />
-    </svg>
-  );
-}
 
 function IconSearch() {
   return (
@@ -161,6 +147,87 @@ function IconCrown() {
       <path d="M4.5 21h15" strokeLinecap="round" />
     </svg>
   );
+}
+
+function IconNotification() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 4a5 5 0 0 0-5 5v2.8c0 .9-.3 1.7-.9 2.4L5 15.5h14l-1.1-1.3a3.8 3.8 0 0 1-.9-2.4V9a5 5 0 0 0-5-5Z" />
+      <path d="M10 18a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function DesktopNavIcon({ type }: { type: string }) {
+  const common = {
+    className: 'h-4 w-4',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  if (type === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M3 11.5 12 4l9 7.5" />
+        <path d="M5.5 10.5V20h13v-9.5" />
+      </svg>
+    );
+  }
+
+  if (type === 'feed') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+        <path d="M8 9h8M8 13h5" />
+      </svg>
+    );
+  }
+
+  if (type === 'portfolio') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 19V5" />
+        <path d="M8 19v-7" />
+        <path d="M12 19V8" />
+        <path d="M16 19v-4" />
+        <path d="M20 19V9" />
+      </svg>
+    );
+  }
+
+  if (type === 'messages') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 6h16v10H8l-4 4V6Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'favorites') return <IconHeart />;
+  if (type === 'notifications') return <IconNotification />;
+
+  if (type === 'learn') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
+        <path d="M4 18.5A3.5 3.5 0 0 1 7.5 15H20" />
+      </svg>
+    );
+  }
+
+  if (type === 'documents') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M7 3h7l4 4v14H7V3Z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </svg>
+    );
+  }
+
+  return <IconSpark />;
 }
 
 function InvestAppWordmark() {
@@ -304,10 +371,597 @@ function FeaturedReelsCarousel({
   );
 }
 
+const DESKTOP_CATEGORY_OPTIONS = [
+  'All',
+  'Technology',
+  'Commerce',
+  'Food',
+  'Health',
+  'Real Estate',
+  'Education',
+  'Sustainability',
+  'Entertainment',
+];
+
+const getLocationLabel = (project: FeedProject) =>
+  [project.city, project.country].filter(Boolean).join(', ') || 'Location pending';
+
+const getRateLabel = (project: FeedProject) =>
+  project.interest_rate ? `${project.interest_rate}% EA` : 'Rate pending';
+
+const getInitials = (value: string) => {
+  const parts = value.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
+};
+
+function DesktopSidebar({ role }: { role: string }) {
+  const primaryItems = [
+    { label: 'Home', icon: 'home' },
+    { label: 'Feed', icon: 'feed', active: true },
+    { label: 'Portfolio', icon: 'portfolio' },
+    { label: 'Mesages', icon: 'messages' },
+    { label: 'Favorites', icon: 'favorites' },
+    { label: 'Notifications', icon: 'notifications' },
+    { label: 'Learn', icon: 'learn' },
+  ];
+
+  const roleItems =
+    role === 'emprendedor'
+      ? [
+          { label: 'Dashboard', icon: 'portfolio' },
+          { label: 'Mis proyectos', icon: 'feed' },
+          { label: 'Rendimientos', icon: 'spark' },
+          { label: 'Documentos', icon: 'documents' },
+        ]
+      : [
+          { label: 'Dashboard', icon: 'portfolio' },
+          { label: 'Mis inversiones', icon: 'feed' },
+          { label: 'Rendimientos', icon: 'spark' },
+          { label: 'Documentos', icon: 'documents' },
+        ];
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[272px] border-r border-[#E7EAF3] bg-white/92 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex lg:flex-col">
+      <div className="flex items-center gap-3 px-1">
+        <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] text-white shadow-[0_14px_28px_rgba(107,57,244,0.24)]">
+          <span className="grid h-5 w-5 grid-cols-3 items-end gap-0.5">
+            <span className="h-2 rounded-full bg-white/72" />
+            <span className="h-4 rounded-full bg-white" />
+            <span className="h-6 rounded-full bg-white/86" />
+          </span>
+        </span>
+        <InvestAppWordmark />
+      </div>
+
+      <nav className="mt-9 space-y-1.5">
+        {primaryItems.map((item) => (
+          <button
+            key={item.label}
+            type="button"
+            className={`flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition ${
+              item.active
+                ? 'bg-[#F2EDFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
+                : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
+            }`}
+          >
+            <DesktopNavIcon type={item.icon} />
+            {item.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
+        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
+          {role === 'emprendedor' ? 'Emprendedor' : 'Inversionista'}
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {roleItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="flex h-10 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
+            >
+              <DesktopNavIcon type={item.icon} />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
+          <IconCrown />
+        </span>
+        <p className="mt-4 text-base font-bold text-[#6B39F4]">Hazte Premium</p>
+        <p className="mt-2 text-sm leading-5 text-[#74809A]">
+          Tu proyecto en los primeros lugares y mas visibilidad.
+        </p>
+        <button
+          type="button"
+          className="mt-4 h-10 w-full rounded-xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF]"
+        >
+          Ver planes
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function DesktopTopbar({
+  avatarUrl,
+  displayName,
+  profileRole,
+  publishDisabled,
+  searchQuery,
+  onPublish,
+  onSearchChange,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  profileRole: string;
+  publishDisabled: boolean;
+  searchQuery: string;
+  onPublish: () => void;
+  onSearchChange: (value: string) => void;
+}) {
+  return (
+    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-6 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
+      <div className="relative max-w-[720px] flex-1">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
+          <IconSearch />
+        </span>
+        <input
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
+          className="h-12 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-16 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+        />
+        <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-[#E3E7F1] px-2 py-1 text-xs font-bold text-[#8A94A8] xl:flex">
+          Cmd K
+        </span>
+      </div>
+
+      <button
+        type="button"
+        className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
+        aria-label="Notifications"
+      >
+        <IconNotification />
+        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />
+      </button>
+
+      <div className="flex min-w-[190px] items-center gap-3">
+        <span
+          className="grid h-11 w-11 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+          style={{ backgroundImage: avatarUrl ? toCssImageUrl(avatarUrl) : undefined }}
+        >
+          {avatarUrl ? null : getInitials(displayName)}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+          <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
+        </span>
+      </div>
+
+      <button
+        type="button"
+        disabled={publishDisabled}
+        onClick={onPublish}
+        className={`inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
+          publishDisabled
+            ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
+            : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+        }`}
+      >
+        <IconPlus />
+        Publicar proyecto
+      </button>
+    </header>
+  );
+}
+
+function DesktopReelsSection({
+  ownerProfiles,
+  projects,
+  onOpenProject,
+}: {
+  ownerProfiles: Record<string, RecipientDirectoryEntry>;
+  projects: FeedProject[];
+  onOpenProject: (projectId: string) => void;
+}) {
+  if (projects.length === 0) return null;
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Proyectos Destacados</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#EEE7FF] px-2.5 py-1 text-xs font-bold text-[#6B39F4]">
+              <IconCrown />
+              Premium
+            </span>
+          </div>
+          <p className="mt-1 text-sm font-medium text-[#65718A]">Negocios de emprendedores destacados</p>
+        </div>
+        <button type="button" className="text-sm font-bold text-[#6B39F4] transition hover:text-[#5427DA]">
+          Ver todos
+        </button>
+      </div>
+
+      <div className="mt-5 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {projects.map((project) => {
+          const coverImage = getProjectCoverImage(project);
+          const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
+          const cardBackground = coverImage
+            ? `linear-gradient(180deg,rgba(8,12,24,0.08)_0%,rgba(8,12,24,0.28)_44%,rgba(8,12,24,0.82)_100%),${toCssImageUrl(coverImage)}`
+            : 'linear-gradient(145deg,#F7F8FC_0%,#ECE7FF_44%,#7C5CFF_100%)';
+
+          return (
+            <button
+              key={`desktop-reel-${project.id}`}
+              type="button"
+              onClick={() => onOpenProject(project.id)}
+              className="group relative h-[260px] w-[188px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
+              style={{ backgroundImage: cardBackground }}
+            >
+              <span
+                className="absolute left-4 top-4 h-11 w-11 rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
+              />
+              <span className="absolute inset-x-4 bottom-4">
+                <span className="line-clamp-3 text-[1rem] font-bold leading-tight tracking-[-0.04em] text-white">
+                  {project.title}
+                </span>
+                <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-xs font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
+                  <IconCrown />
+                  Premium
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function DesktopCategories({
+  categories,
+  selectedCategory,
+  onSelectCategory,
+}: {
+  categories: string[];
+  selectedCategory: string;
+  onSelectCategory: (category: string) => void;
+}) {
+  const options = Array.from(new Set([...DESKTOP_CATEGORY_OPTIONS, ...categories]));
+
+  return (
+    <div className="mt-7 flex flex-wrap gap-3">
+      {options.map((category) => {
+        const active = category === selectedCategory;
+        return (
+          <button
+            key={`desktop-category-${category}`}
+            type="button"
+            onClick={() => onSelectCategory(category)}
+            className={`inline-flex h-11 items-center rounded-2xl px-5 text-sm font-bold transition ${
+              active
+                ? 'bg-white text-[#6B39F4] shadow-[0_14px_32px_rgba(107,57,244,0.12)] ring-1 ring-[#CFC3FF]'
+                : 'bg-[#F0F2F7] text-[#3E485E] hover:bg-white hover:shadow-[0_12px_28px_rgba(21,28,44,0.06)]'
+            }`}
+          >
+            {category}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-5 text-sm font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
+      >
+        Mas categorias
+        <IconChevronDown />
+      </button>
+    </div>
+  );
+}
+
+function DesktopProjectCard({
+  isWishlisted,
+  onOpenProject,
+  onToggleWishlist,
+  project,
+}: {
+  isWishlisted: boolean;
+  onOpenProject: (projectId: string) => void;
+  onToggleWishlist: (projectId: string) => void;
+  project: FeedProject;
+}) {
+  const coverImage = getProjectCoverImage(project);
+  const sector = toEnglishSector(project.sector) || 'Uncategorized';
+  const location = getLocationLabel(project);
+  const cardBackground = coverImage
+    ? toCssImageUrl(coverImage)
+    : 'linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)';
+
+  return (
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenProject(project.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenProject(project.id);
+        }
+      }}
+      className="group overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+    >
+      <div className="relative h-[146px] bg-cover bg-center" style={{ backgroundImage: cardBackground }}>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleWishlist(project.id);
+          }}
+          className={`absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/40 bg-black/28 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition ${
+            isWishlisted ? 'text-[#FFD1DB]' : ''
+          }`}
+          aria-label={isWishlisted ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <IconHeart filled={isWishlisted} />
+        </button>
+      </div>
+      <div className="p-4">
+        <h3 className="line-clamp-2 min-h-[44px] text-base font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+          {project.title}
+        </h3>
+        <p className="mt-2 line-clamp-1 text-sm font-medium text-[#6C7890]">
+          {sector} - {location}
+        </p>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-3 py-1.5 text-xs font-bold text-[#12895B]">
+            {getRateLabel(project)}
+          </span>
+          <span className="text-xs font-semibold text-[#8F98AA]">Interest rate</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function DesktopMarketplaceLayout({
+  avatarUrl,
+  categories,
+  displayName,
+  favoritesOnly,
+  filteredProjects,
+  loading,
+  ownerProfiles,
+  profileRole,
+  projects,
+  publishDisabled,
+  searchQuery,
+  selectedCategory,
+  showSortSelector,
+  sortBy,
+  status,
+  wishlist,
+  onOpenFilter,
+  onOpenProject,
+  onPublish,
+  onSearchChange,
+  onSelectCategory,
+  onSelectSort,
+  onToggleSort,
+  onToggleWishlist,
+}: {
+  avatarUrl: string;
+  categories: string[];
+  displayName: string;
+  favoritesOnly: boolean;
+  filteredProjects: FeedProject[];
+  loading: boolean;
+  ownerProfiles: Record<string, RecipientDirectoryEntry>;
+  profileRole: string;
+  projects: FeedProject[];
+  publishDisabled: boolean;
+  searchQuery: string;
+  selectedCategory: string;
+  showSortSelector: boolean;
+  sortBy: SortKey;
+  status: string;
+  wishlist: string[];
+  onOpenFilter: () => void;
+  onOpenProject: (projectId: string) => void;
+  onPublish: () => void;
+  onSearchChange: (value: string) => void;
+  onSelectCategory: (category: string) => void;
+  onSelectSort: (sort: SortKey) => void;
+  onToggleSort: () => void;
+  onToggleWishlist: (projectId: string) => void;
+}) {
+  const featuredProjects = projects.slice(0, 8);
+
+  return (
+    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
+      <DesktopSidebar role={profileRole === 'Emprendedor' ? 'emprendedor' : 'inversor'} />
+
+      <main className="ml-[272px] flex min-h-screen flex-1 flex-col">
+        <DesktopTopbar
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          profileRole={profileRole}
+          publishDisabled={publishDisabled}
+          searchQuery={searchQuery}
+          onPublish={onPublish}
+          onSearchChange={onSearchChange}
+        />
+
+        <div className="mx-auto w-full max-w-[1480px] px-8 py-7">
+          <div className="flex items-start justify-between gap-8">
+            <div>
+              <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.055em] text-[#111827]">
+                Oportunities
+              </h1>
+              <p className="mt-1 text-base font-medium text-[#65718A]">
+                Proyectos publicados por emprendedores
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onPublish}
+              disabled={publishDisabled}
+              className={`inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
+                publishDisabled
+                  ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
+                  : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+              }`}
+            >
+              <IconPlus />
+              Publicar proyecto
+            </button>
+          </div>
+
+          <div className="mt-7 flex gap-4">
+            <div className="relative flex-1">
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
+                <IconSearch />
+              </span>
+              <input
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
+                placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
+                className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-14 pr-5 text-sm font-medium text-[#182033] outline-none shadow-[0_14px_32px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onOpenFilter}
+              className="inline-flex h-14 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-6 text-sm font-bold text-[#273247] shadow-[0_14px_32px_rgba(21,28,44,0.04)] transition hover:-translate-y-0.5"
+            >
+              <IconFilter />
+              Filtros
+              {favoritesOnly ? <span className="h-2 w-2 rounded-full bg-[#6B39F4]" /> : null}
+            </button>
+          </div>
+
+          <DesktopReelsSection
+            ownerProfiles={ownerProfiles}
+            projects={featuredProjects}
+            onOpenProject={onOpenProject}
+          />
+
+          <DesktopCategories
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={onSelectCategory}
+          />
+
+          <section className="mt-8">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-start gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
+                  <IconSpark />
+                </span>
+                <div>
+                  <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Suggested for you</h2>
+                  <p className="mt-1 text-sm font-medium text-[#65718A]">Oportunidades seleccionadas para ti</p>
+                </div>
+              </div>
+
+              <div className="relative flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onToggleSort}
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
+                >
+                  <IconSort />
+                  Ordenar por
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenFilter}
+                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
+                >
+                  <IconFilter />
+                  Filtrar
+                </button>
+
+                {showSortSelector ? (
+                  <div className="absolute right-0 top-[calc(100%+12px)] z-30 w-[220px] rounded-[22px] border border-[#E4E8F1] bg-white p-2 shadow-[0_28px_80px_rgba(17,24,39,0.16)]">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={`desktop-sort-${option.id}`}
+                        type="button"
+                        onClick={() => onSelectSort(option.id)}
+                        className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-bold transition ${
+                          option.id === sortBy
+                            ? 'bg-[#F1ECFF] text-[#6B39F4]'
+                            : 'text-[#49536A] hover:bg-[#F7F8FB]'
+                        }`}
+                      >
+                        {option.label}
+                        {option.id === sortBy ? <IconSpark /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="mt-5 grid grid-cols-4 gap-5">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={`desktop-project-loading-${index}`}
+                    className="h-[278px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {!loading && status ? (
+              <div className="mt-5 rounded-[24px] border border-[#E7EAF3] bg-white p-10 text-center shadow-[0_18px_38px_rgba(21,28,44,0.05)]">
+                <p className="text-lg font-bold text-[#111827]">We could not load the marketplace.</p>
+                <p className="mt-2 text-sm text-[#65718A]">{status}</p>
+              </div>
+            ) : null}
+
+            {!loading && !status && filteredProjects.length > 0 ? (
+              <div className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-3 2xl:grid-cols-4">
+                {filteredProjects.map((project) => (
+                  <DesktopProjectCard
+                    key={`desktop-project-${project.id}`}
+                    isWishlisted={wishlist.includes(project.id)}
+                    project={project}
+                    onOpenProject={onOpenProject}
+                    onToggleWishlist={onToggleWishlist}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            {!loading && !status && filteredProjects.length === 0 ? (
+              <div className="mt-5 rounded-[24px] border border-[#E7EAF3] bg-white p-10 text-center shadow-[0_18px_38px_rgba(21,28,44,0.05)]">
+                <p className="text-lg font-bold text-[#111827]">No ventures match your search</p>
+                <p className="mt-2 text-sm text-[#65718A]">Try another keyword or clear your filters.</p>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function FeedPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
+  const { avatarUrl, displayName, email } = useUserProfileSummary();
   const [projects, setProjects] = useState<FeedProject[]>([]);
   const [ownerProfiles, setOwnerProfiles] = useState<Record<string, RecipientDirectoryEntry>>({});
   const [loading, setLoading] = useState(true);
@@ -520,9 +1174,16 @@ export default function FeedPage() {
     setShowFilterSheet(false);
   };
   const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
+  const profileDisplayName = displayName || email || 'InvestApp user';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
+  const openProjectDetail = (projectId: string) => router.push(`/feed/${projectId}`);
+  const openPublish = () => {
+    if (!publishDisabled) router.push('/publish');
+  };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.10),transparent_28%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_55%,#F7F8FC_100%)] text-[#162033]">
+    <>
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(124,92,255,0.10),transparent_28%),linear-gradient(180deg,#FAFAFE_0%,#F5F6FC_55%,#F7F8FC_100%)] text-[#162033] lg:hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[260px] bg-[radial-gradient(circle_at_top_left,rgba(124,92,255,0.12),transparent_52%),radial-gradient(circle_at_top_right,rgba(67,120,255,0.10),transparent_40%)]" />
       <div className="pointer-events-none absolute inset-x-8 top-24 h-40 rounded-full bg-[#C8BCFF]/16 blur-3xl" />
 
@@ -550,50 +1211,18 @@ export default function FeedPage() {
 
             <button
               type="button"
-              onClick={() => router.push('/notifications')}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition hover:scale-[1.01]"
-              aria-label="Notifications"
+              onClick={openPublish}
+              disabled={publishDisabled}
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition [&>svg]:h-5 [&>svg]:w-5 ${
+                publishDisabled
+                  ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] text-[#A9AEC0] opacity-75'
+                  : 'border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] hover:scale-[1.03]'
+              }`}
+              aria-label="Publish new project"
             >
-              <IconBell />
+              <IconPlus />
             </button>
           </div>
-
-          {rolSeleccionado === 'emprendedor' ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (!publishDisabled) router.push('/publish');
-              }}
-              disabled={publishDisabled}
-              className={`mt-2 flex w-full items-center gap-2 rounded-[15px] border px-2.5 py-2 text-left shadow-[0_10px_20px_rgba(107,57,244,0.08)] transition ${
-                publishDisabled
-                  ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] opacity-75'
-                  : 'border-[#E6DFFF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] hover:-translate-y-0.5'
-              }`}
-            >
-              <span
-                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white shadow-[0_10px_18px_rgba(107,57,244,0.18)] [&>svg]:h-3.5 [&>svg]:w-3.5 ${
-                  publishDisabled
-                    ? 'bg-[#C8CBE0]'
-                    : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)]'
-                }`}
-              >
-                <IconPlus />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[0.68rem] font-semibold leading-none tracking-[-0.02em] text-[#1C2336]">
-                  Publish project
-                </span>
-                <span className="mt-0.5 block truncate text-[0.56rem] leading-none text-[#7B879C]">
-                  {loadingOwnProject
-                    ? 'Checking current listing...'
-                    : hasOwnProject
-                      ? 'Edit it from portfolio.'
-                      : 'Add your listing.'}
-                </span>
-              </span>
-            </button>
-          ) : null}
 
           <div className="mt-2 flex items-center gap-2 rounded-[13px] border border-[#EEF0F8] bg-[#FAF9FF] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
             <span className="text-[#9AA3B6] [&>svg]:h-4 [&>svg]:w-4">
@@ -698,7 +1327,7 @@ export default function FeedPage() {
               loading={loading}
               ownerProfiles={ownerProfiles}
               projects={featuredProjects}
-              onOpenProject={(projectId) => router.push(`/feed/${projectId}`)}
+              onOpenProject={openProjectDetail}
             />
 
             {loading ? (
@@ -985,5 +1614,38 @@ export default function FeedPage() {
 
       <BottomNav />
     </div>
+    <DesktopMarketplaceLayout
+      avatarUrl={avatarUrl}
+      categories={categories}
+      displayName={profileDisplayName}
+      favoritesOnly={favoritesOnly}
+      filteredProjects={filteredProjects}
+      loading={loading}
+      ownerProfiles={ownerProfiles}
+      profileRole={profileRoleLabel}
+      projects={projects}
+      publishDisabled={publishDisabled}
+      searchQuery={searchQuery}
+      selectedCategory={selectedCategory}
+      showSortSelector={showSortSelector}
+      sortBy={sortBy}
+      status={status}
+      wishlist={wishlist}
+      onOpenFilter={() => setFavoritesOnly((value) => !value)}
+      onOpenProject={openProjectDetail}
+      onPublish={openPublish}
+      onSearchChange={setSearchQuery}
+      onSelectCategory={setSelectedCategory}
+      onSelectSort={(nextSort) => {
+        setSortBy(nextSort);
+        setShowSortSelector(false);
+      }}
+      onToggleSort={() => {
+        setShowFilterSheet(false);
+        setShowSortSelector((previous) => !previous);
+      }}
+      onToggleWishlist={toggleWishlist}
+    />
+    </>
   );
 }
