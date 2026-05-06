@@ -290,77 +290,81 @@ const buildPreviewSections = (
     .filter((section) => section.body);
 };
 
-const buildFallbackPreviewSections = (form: PublishWizardForm): OpportunitySection[] => [
-  {
-    title: 'Overview',
-    body: form.product_description,
-    icon: 'overview',
-  },
-  {
-    title: 'What we do',
-    body: [
-      form.product_description ? `Product or service: ${form.product_description}` : '',
-      form.problem_solved ? `Problem solved: ${form.problem_solved}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
-    icon: 'what',
-  },
-  {
-    title: 'How we do it',
-    body: form.differentiation,
-    icon: 'how',
-  },
-  {
-    title: 'Financial information',
-    body: [
-      form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
-      form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
-      form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
-      form.growth_rate ? `Growth: ${form.growth_rate}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
-    icon: 'financial',
-  },
-  {
-    title: 'Investment',
-    body: [
-      form.capital_needed ? `Capital needed: ${form.capital_needed}` : '',
-      form.funds_usage ? `Use of funds: ${form.funds_usage}` : '',
-      form.investment_offer ? `Annual interest rate: ${form.investment_offer}% EA` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
-    icon: 'investment',
-  },
-  {
-    title: 'Target',
-    body: [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
-    icon: 'target',
-  },
-  {
-    title: 'Team',
-    body: [
-      form.founder_info ? `Founder: ${form.founder_info}` : '',
-      form.team_info ? `Team: ${form.team_info}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
-    icon: 'team',
-  },
-  {
-    title: 'Extras',
-    body: [
-      form.testimonials ? `Testimonials: ${form.testimonials}` : '',
-      form.achievements ? `Achievements: ${form.achievements}` : '',
-      form.timing_reason ? `Timing: ${form.timing_reason}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n'),
-    icon: 'extras',
-  },
-].filter((section) => section.body);
+const buildFallbackPreviewSections = (form: PublishWizardForm): OpportunitySection[] => {
+  const sections: OpportunitySection[] = [
+    {
+      title: 'Overview',
+      body: form.product_description,
+      icon: 'overview',
+    },
+    {
+      title: 'What we do',
+      body: [
+        form.product_description ? `Product or service: ${form.product_description}` : '',
+        form.problem_solved ? `Problem solved: ${form.problem_solved}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'what',
+    },
+    {
+      title: 'How we do it',
+      body: form.differentiation,
+      icon: 'how',
+    },
+    {
+      title: 'Financial information',
+      body: [
+        form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
+        form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
+        form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
+        form.growth_rate ? `Growth: ${form.growth_rate}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'financial',
+    },
+    {
+      title: 'Investment',
+      body: [
+        form.capital_needed ? `Capital needed: ${form.capital_needed}` : '',
+        form.funds_usage ? `Use of funds: ${form.funds_usage}` : '',
+        form.investment_offer ? `Annual interest rate: ${form.investment_offer}% EA` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'investment',
+    },
+    {
+      title: 'Target',
+      body: [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
+      icon: 'target',
+    },
+    {
+      title: 'Team',
+      body: [
+        form.founder_info ? `Founder: ${form.founder_info}` : '',
+        form.team_info ? `Team: ${form.team_info}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'team',
+    },
+    {
+      title: 'Extras',
+      body: [
+        form.testimonials ? `Testimonials: ${form.testimonials}` : '',
+        form.achievements ? `Achievements: ${form.achievements}` : '',
+        form.timing_reason ? `Timing: ${form.timing_reason}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+      icon: 'extras',
+    },
+  ];
+
+  return sections.filter((section) => section.body);
+};
 
 const buildPublicationSections = (
   form: PublishWizardForm,

@@ -9,14 +9,9 @@ export default function TransactionOverlay() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-    if (loadingTx) {
-      timer = setTimeout(() => setVisible(true), 500);
-    } else {
-      setVisible(false);
-    }
+    const timer = setTimeout(() => setVisible(loadingTx), loadingTx ? 500 : 0);
     return () => {
-      if (timer) clearTimeout(timer);
+      clearTimeout(timer);
     };
   }, [loadingTx]);
 

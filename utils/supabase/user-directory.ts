@@ -12,7 +12,7 @@ const shouldFallbackToUsersTable = (message: string | undefined) => {
 };
 
 export async function runUserDirectoryQuery<T>(
-  supabase: SupabaseClient<any, 'public', any>,
+  supabase: SupabaseClient,
   buildQuery: (source: 'user_directory' | 'users') => PromiseLike<T>
 ): Promise<T> {
   const result = await buildQuery('user_directory');

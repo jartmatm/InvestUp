@@ -18,6 +18,7 @@ import {
 } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
+import type { PublicClient } from 'viem';
 import { polygon } from 'viem/chains';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
@@ -181,6 +182,17 @@ const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwbHpwc29reXl0dmtpYmhmemFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MzUyNDYsImV4cCI6MjA4NzMxMTI0Nn0.eAh-EVMAaBAEPyacvDjRuHeojCGKodBEjWZqxjq2NDI';
 
 const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+type PimlicoClientLike = {
+  getTokenQuotes: (args: { chain?: unknown; tokens: `0x${string}`[] }) => Promise<UsdcQuote[]>;
+};
+
+type SponsoredTransactionRequest = {
+  calls: Array<{ to: `0x${string}`; value: bigint; data: `0x${string}` }>;
+  paymasterContext: { token: typeof USDC_ADDRESS };
+};
+
+type SponsoredTransactionSender = (request: SponsoredTransactionRequest) => Promise<`0x${string}`>;
+
 const USDC_ABI = [
   {
     name: 'balanceOf',
@@ -228,8 +240,8 @@ const PIMLICO_BUNDLER_URL =
 const PIMLICO_QUOTE_TTL_MS = 30000;
 const ESTIMATED_USER_OP_GAS = BigInt(300000);
 const GAS_PRICE_TTL_MS = 30000;
-let publicClientPromise: Promise<any> | null = null;
-let pimlicoClientPromise: Promise<any> | null = null;
+let publicClientPromise: Promise<PublicClient> | null = null;
+let pimlicoClientPromise: Promise<PimlicoClientLike> | null = null;
 
 const getPublicClient = async () => {
   if (!publicClientPromise) {
@@ -263,7 +275,7 @@ const getPimlicoClient = async () => {
       return createPimlicoClient({
         chain: polygon,
         transport: http(PIMLICO_BUNDLER_URL),
-      });
+      }) as PimlicoClientLike;
     })();
   }
 
@@ -810,8 +822,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         });
 
         return storedTransaction;
-      } catch (error: any) {
-        console.error('Error saving transaction to Supabase:', error?.message ?? error);
+      } catch (error: unknown) {
+        console.error('Error saving transaction to Supabase:', getErrorMessage(error));
         return null;
       }
     },
@@ -867,8 +879,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           throw new Error(error);
         }
         return true;
-      } catch (error: any) {
-        console.error('Error saving investment to Supabase:', error?.message ?? error);
+      } catch (error: unknown) {
+        console.error('Error saving investment to Supabase:', getErrorMessage(error));
         return false;
       }
     },
@@ -911,8 +923,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         }
 
         return true;
-      } catch (error: any) {
-        console.error('Error saving repayment to Supabase:', error?.message ?? error);
+      } catch (error: unknown) {
+        console.error('Error saving repayment to Supabase:', getErrorMessage(error));
         return false;
       }
     },
@@ -1032,8 +1044,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw new Error(error);
       setWalletTargets((data ?? []) as UserWalletTarget[]);
-    } catch (error: any) {
-      console.error('Error loading recipient wallets:', error?.message ?? error);
+    } catch (error: unknown) {
+      console.error('Error loading recipient wallets:', getErrorMessage(error));
     } finally {
       setLoadingWallets(false);
     }
@@ -1132,10 +1144,11 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           }),
         });
 
-        const txHash = await client.sendTransaction({
+        const sendSponsoredTransaction = client.sendTransaction as SponsoredTransactionSender;
+        const txHash = await sendSponsoredTransaction({
           calls,
           paymasterContext: { token: USDC_ADDRESS },
-        } as any);
+        });
 
         const pendingInvestment =
           rolSeleccionado === 'inversor'
@@ -1284,8 +1297,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
 
         await actualizarSaldos();
         return { success: true, txHash };
-      } catch (error: any) {
-        const message = String(error?.message || error || '');
+      } catch (error: unknown) {
+        const message = getErrorMessage(error);
         if (message.includes('AA21') || message.includes("didn't pay prefund")) {
           alert('AA21 paymaster or bundler error. Please review your Pimlico configuration.');
         } else {
