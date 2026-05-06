@@ -422,24 +422,17 @@ function DesktopSidebar({ role }: { role: string }) {
         ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[272px] border-r border-[#E7EAF3] bg-white/92 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex lg:flex-col">
-      <div className="flex items-center gap-3 px-1">
-        <span className="grid h-9 w-9 place-items-center rounded-2xl bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] text-white shadow-[0_14px_28px_rgba(107,57,244,0.24)]">
-          <span className="grid h-5 w-5 grid-cols-3 items-end gap-0.5">
-            <span className="h-2 rounded-full bg-white/72" />
-            <span className="h-4 rounded-full bg-white" />
-            <span className="h-6 rounded-full bg-white/86" />
-          </span>
-        </span>
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--desktop-sidebar-width)] border-r border-[#E7EAF3] bg-white/92 px-4 py-5 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex lg:flex-col">
+      <div className="flex items-center px-1">
         <InvestAppWordmark />
       </div>
 
-      <nav className="mt-9 space-y-1.5">
+      <nav className="mt-7 space-y-1">
         {primaryItems.map((item) => (
           <button
             key={item.label}
             type="button"
-            className={`flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition ${
+            className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
               item.active
                 ? 'bg-[#F2EDFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
                 : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
@@ -451,16 +444,16 @@ function DesktopSidebar({ role }: { role: string }) {
         ))}
       </nav>
 
-      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
+      <div className="mt-5 border-t border-[#EEF1F7] pt-5">
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
           {role === 'emprendedor' ? 'Emprendedor' : 'Inversionista'}
         </p>
-        <div className="mt-3 space-y-1.5">
+        <div className="mt-3 space-y-1">
           {roleItems.map((item) => (
             <button
               key={item.label}
               type="button"
-              className="flex h-10 w-full items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
+              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A] transition hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
               <DesktopNavIcon type={item.icon} />
               {item.label}
@@ -469,17 +462,17 @@ function DesktopSidebar({ role }: { role: string }) {
         </div>
       </div>
 
-      <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
-        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
+      <div className="mt-auto rounded-[20px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-4 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
+        <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#EEE7FF] text-[#6B39F4]">
           <IconCrown />
         </span>
-        <p className="mt-4 text-base font-bold text-[#6B39F4]">Hazte Premium</p>
-        <p className="mt-2 text-sm leading-5 text-[#74809A]">
+        <p className="mt-3 text-sm font-bold text-[#6B39F4]">Hazte Premium</p>
+        <p className="mt-1.5 text-xs leading-5 text-[#74809A]">
           Tu proyecto en los primeros lugares y mas visibilidad.
         </p>
         <button
           type="button"
-          className="mt-4 h-10 w-full rounded-xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF]"
+          className="mt-3 h-9 w-full rounded-xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF]"
         >
           Ver planes
         </button>
@@ -506,8 +499,8 @@ function DesktopTopbar({
   onSearchChange: (value: string) => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-6 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-      <div className="relative max-w-[720px] flex-1">
+    <header className="sticky top-0 z-20 flex h-[74px] items-center gap-4 border-b border-[#E7EAF3] bg-white/86 px-5 backdrop-blur-xl xl:px-6">
+      <div className="relative max-w-[620px] flex-1">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
           <IconSearch />
         </span>
@@ -515,7 +508,7 @@ function DesktopTopbar({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
-          className="h-12 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-16 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          className="h-11 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-14 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
         />
         <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-[#E3E7F1] px-2 py-1 text-xs font-bold text-[#8A94A8] xl:flex">
           Cmd K
@@ -524,16 +517,30 @@ function DesktopTopbar({
 
       <button
         type="button"
-        className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
+        className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
         aria-label="Notifications"
       >
         <IconNotification />
         <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />
       </button>
 
-      <div className="flex min-w-[190px] items-center gap-3">
+      <button
+        type="button"
+        disabled={publishDisabled}
+        onClick={onPublish}
+        className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
+          publishDisabled
+            ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
+            : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+        }`}
+      >
+        <IconPlus />
+        Publicar proyecto
+      </button>
+
+      <div className="flex min-w-[168px] items-center gap-3">
         <span
-          className="grid h-11 w-11 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+          className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
           style={{ backgroundImage: avatarUrl ? toCssImageUrl(avatarUrl) : undefined }}
         >
           {avatarUrl ? null : getInitials(displayName)}
@@ -543,20 +550,6 @@ function DesktopTopbar({
           <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
         </span>
       </div>
-
-      <button
-        type="button"
-        disabled={publishDisabled}
-        onClick={onPublish}
-        className={`inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
-          publishDisabled
-            ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
-            : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
-        }`}
-      >
-        <IconPlus />
-        Publicar proyecto
-      </button>
     </header>
   );
 }
@@ -573,24 +566,24 @@ function DesktopReelsSection({
   if (projects.length === 0) return null;
 
   return (
-    <section className="mt-8">
+    <section>
       <div className="flex items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Proyectos Destacados</h2>
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#EEE7FF] px-2.5 py-1 text-xs font-bold text-[#6B39F4]">
+            <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Proyectos Destacados</h2>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#EEE7FF] px-2.5 py-1 text-[0.7rem] font-bold text-[#6B39F4]">
               <IconCrown />
               Premium
             </span>
           </div>
-          <p className="mt-1 text-sm font-medium text-[#65718A]">Negocios de emprendedores destacados</p>
+          <p className="mt-0.5 text-sm font-medium text-[#65718A]">Negocios de emprendedores destacados</p>
         </div>
         <button type="button" className="text-sm font-bold text-[#6B39F4] transition hover:text-[#5427DA]">
           Ver todos
         </button>
       </div>
 
-      <div className="mt-5 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {projects.map((project) => {
           const coverImage = getProjectCoverImage(project);
           const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
@@ -603,18 +596,18 @@ function DesktopReelsSection({
               key={`desktop-reel-${project.id}`}
               type="button"
               onClick={() => onOpenProject(project.id)}
-              className="group relative h-[260px] w-[188px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
+              className="group relative h-[clamp(190px,24vh,248px)] w-[clamp(140px,11.5vw,180px)] shrink-0 snap-start overflow-hidden rounded-[20px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
               style={{ backgroundImage: cardBackground }}
             >
               <span
-                className="absolute left-4 top-4 h-11 w-11 rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                className="absolute left-3.5 top-3.5 h-9 w-9 rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
                 style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
               />
-              <span className="absolute inset-x-4 bottom-4">
-                <span className="line-clamp-3 text-[1rem] font-bold leading-tight tracking-[-0.04em] text-white">
+              <span className="absolute inset-x-3.5 bottom-3.5">
+                <span className="line-clamp-3 text-[0.92rem] font-bold leading-tight tracking-[-0.04em] text-white">
                   {project.title}
                 </span>
-                <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-xs font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
+                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-[0.68rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
                   <IconCrown />
                   Premium
                 </span>
@@ -639,7 +632,7 @@ function DesktopCategories({
   const options = Array.from(new Set([...DESKTOP_CATEGORY_OPTIONS, ...categories]));
 
   return (
-    <div className="mt-7 flex flex-wrap gap-3">
+    <div className="mt-4 flex flex-wrap gap-2">
       {options.map((category) => {
         const active = category === selectedCategory;
         return (
@@ -647,7 +640,7 @@ function DesktopCategories({
             key={`desktop-category-${category}`}
             type="button"
             onClick={() => onSelectCategory(category)}
-            className={`inline-flex h-11 items-center rounded-2xl px-5 text-sm font-bold transition ${
+            className={`inline-flex h-10 items-center rounded-xl px-4 text-xs font-bold transition ${
               active
                 ? 'bg-white text-[#6B39F4] shadow-[0_14px_32px_rgba(107,57,244,0.12)] ring-1 ring-[#CFC3FF]'
                 : 'bg-[#F0F2F7] text-[#3E485E] hover:bg-white hover:shadow-[0_12px_28px_rgba(21,28,44,0.06)]'
@@ -659,7 +652,7 @@ function DesktopCategories({
       })}
       <button
         type="button"
-        className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-5 text-sm font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
+        className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-4 text-xs font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
       >
         Mas categorias
         <IconChevronDown />
@@ -697,16 +690,16 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group overflow-hidden rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative h-[146px] bg-cover bg-center" style={{ backgroundImage: cardBackground }}>
+      <div className="relative h-[118px] bg-cover bg-center xl:h-[126px] 2xl:h-[136px]" style={{ backgroundImage: cardBackground }}>
         <button
           type="button"
           onClick={(event) => {
             event.stopPropagation();
             onToggleWishlist(project.id);
           }}
-          className={`absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/40 bg-black/28 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition ${
+          className={`absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/40 bg-black/28 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition ${
             isWishlisted ? 'text-[#FFD1DB]' : ''
           }`}
           aria-label={isWishlisted ? 'Remove from favorites' : 'Add to favorites'}
@@ -714,15 +707,15 @@ function DesktopProjectCard({
           <IconHeart filled={isWishlisted} />
         </button>
       </div>
-      <div className="p-4">
-        <h3 className="line-clamp-2 min-h-[44px] text-base font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+      <div className="p-3.5">
+        <h3 className="line-clamp-2 min-h-[40px] text-[0.95rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
           {project.title}
         </h3>
-        <p className="mt-2 line-clamp-1 text-sm font-medium text-[#6C7890]">
+        <p className="mt-1.5 line-clamp-1 text-xs font-medium text-[#6C7890]">
           {sector} - {location}
         </p>
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-3 py-1.5 text-xs font-bold text-[#12895B]">
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-2.5 py-1 text-xs font-bold text-[#12895B]">
             {getRateLabel(project)}
           </span>
           <span className="text-xs font-semibold text-[#8F98AA]">Interest rate</span>
@@ -786,10 +779,10 @@ function DesktopMarketplaceLayout({
   const featuredProjects = projects.slice(0, 8);
 
   return (
-    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
+    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] [--desktop-sidebar-width:232px] lg:flex xl:[--desktop-sidebar-width:240px] 2xl:[--desktop-sidebar-width:248px]">
       <DesktopSidebar role={profileRole === 'Emprendedor' ? 'emprendedor' : 'inversor'} />
 
-      <main className="ml-[272px] flex min-h-screen flex-1 flex-col">
+      <main className="ml-[var(--desktop-sidebar-width)] flex min-h-screen min-w-0 flex-1 flex-col">
         <DesktopTopbar
           avatarUrl={avatarUrl}
           displayName={displayName}
@@ -800,54 +793,7 @@ function DesktopMarketplaceLayout({
           onSearchChange={onSearchChange}
         />
 
-        <div className="mx-auto w-full max-w-[1480px] px-8 py-7">
-          <div className="flex items-start justify-between gap-8">
-            <div>
-              <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.055em] text-[#111827]">
-                Oportunities
-              </h1>
-              <p className="mt-1 text-base font-medium text-[#65718A]">
-                Proyectos publicados por emprendedores
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onPublish}
-              disabled={publishDisabled}
-              className={`inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
-                publishDisabled
-                  ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
-                  : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
-              }`}
-            >
-              <IconPlus />
-              Publicar proyecto
-            </button>
-          </div>
-
-          <div className="mt-7 flex gap-4">
-            <div className="relative flex-1">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
-                <IconSearch />
-              </span>
-              <input
-                value={searchQuery}
-                onChange={(event) => onSearchChange(event.target.value)}
-                placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
-                className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-14 pr-5 text-sm font-medium text-[#182033] outline-none shadow-[0_14px_32px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={onOpenFilter}
-              className="inline-flex h-14 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-6 text-sm font-bold text-[#273247] shadow-[0_14px_32px_rgba(21,28,44,0.04)] transition hover:-translate-y-0.5"
-            >
-              <IconFilter />
-              Filtros
-              {favoritesOnly ? <span className="h-2 w-2 rounded-full bg-[#6B39F4]" /> : null}
-            </button>
-          </div>
-
+        <div className="mx-auto w-full max-w-[1380px] px-5 py-5 xl:px-6 2xl:px-7">
           <DesktopReelsSection
             ownerProfiles={ownerProfiles}
             projects={featuredProjects}
@@ -860,7 +806,7 @@ function DesktopMarketplaceLayout({
             onSelectCategory={onSelectCategory}
           />
 
-          <section className="mt-8">
+          <section className="mt-5">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
@@ -876,7 +822,7 @@ function DesktopMarketplaceLayout({
                 <button
                   type="button"
                   onClick={onToggleSort}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconSort />
                   Ordenar por
@@ -884,10 +830,11 @@ function DesktopMarketplaceLayout({
                 <button
                   type="button"
                   onClick={onOpenFilter}
-                  className="inline-flex h-11 items-center gap-2 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconFilter />
                   Filtrar
+                  {favoritesOnly ? <span className="h-2 w-2 rounded-full bg-[#6B39F4]" /> : null}
                 </button>
 
                 {showSortSelector ? (
@@ -913,11 +860,11 @@ function DesktopMarketplaceLayout({
             </div>
 
             {loading ? (
-              <div className="mt-5 grid grid-cols-4 gap-5">
+              <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[278px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[240px] animate-pulse rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -931,7 +878,7 @@ function DesktopMarketplaceLayout({
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="mt-5 grid grid-cols-2 gap-5 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-4">
                 {filteredProjects.map((project) => (
                   <DesktopProjectCard
                     key={`desktop-project-${project.id}`}
