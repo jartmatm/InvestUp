@@ -244,11 +244,11 @@ function FeaturedReelsCarousel({
 }) {
   if (loading) {
     return (
-      <div className="-mx-1 mt-4 flex gap-2.5 overflow-x-auto px-1 pb-1">
+      <div className="-mx-1 mb-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain scroll-smooth px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={`featured-reel-loading-${index}`}
-            className="h-[170px] w-[100px] shrink-0 animate-pulse rounded-[22px] bg-[#E8ECF7]"
+            className="h-[170px] w-[100px] shrink-0 snap-start animate-pulse rounded-[22px] border border-white/80 bg-[linear-gradient(180deg,#F7F8FC_0%,#ECEFFC_100%)] shadow-[0_14px_28px_rgba(20,28,55,0.07)] ring-1 ring-[#EEF1F8]"
           />
         ))}
       </div>
@@ -258,26 +258,27 @@ function FeaturedReelsCarousel({
   if (projects.length === 0) return null;
 
   return (
-    <div className="-mx-1 mt-4 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="-mx-1 mb-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain scroll-smooth px-1 pb-2 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {projects.map((project) => {
         const coverImage = getProjectCoverImage(project);
         const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
         const cardBackground = coverImage
-          ? `linear-gradient(180deg,rgba(10,16,32,0.04)_0%,rgba(10,16,32,0.28)_38%,rgba(7,10,18,0.78)_100%),${toCssImageUrl(coverImage)}`
-          : 'linear-gradient(145deg,#1B2450_0%,#332065_54%,#111827_100%)';
+          ? `linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(19,27,48,0.18)_38%,rgba(12,17,31,0.76)_100%),${toCssImageUrl(coverImage)}`
+          : 'linear-gradient(145deg,#F7F8FC_0%,#ECE7FF_44%,#7C5CFF_100%)';
 
         return (
           <button
             key={`featured-reel-${project.id}`}
             type="button"
             onClick={() => onOpenProject(project.id)}
-            className="group relative h-[170px] w-[100px] shrink-0 snap-start overflow-hidden rounded-[22px] bg-cover bg-center text-left shadow-[0_18px_34px_rgba(17,24,39,0.18)] ring-1 ring-black/5 transition active:scale-[0.98]"
+            className="group relative h-[170px] w-[100px] shrink-0 snap-start overflow-hidden rounded-[22px] border border-white/75 bg-cover bg-center text-left shadow-[0_16px_32px_rgba(20,28,55,0.14)] ring-1 ring-[#E9ECF7]/90 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[1.03] focus-visible:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8A63FF]/55"
             style={{ backgroundImage: cardBackground }}
+            aria-label={`Open featured venture ${project.title}`}
           >
-            <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.16),transparent_42%)] opacity-80" />
+            <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.24),transparent_42%)] opacity-90" />
 
             <span
-              className="absolute left-3 top-3 h-9 w-9 rounded-full border-2 border-white bg-[#EEF2FF] bg-cover bg-center shadow-[0_10px_22px_rgba(0,0,0,0.18)]"
+              className="absolute left-3 top-3 h-9 w-9 rounded-full border-2 border-white bg-[#F7F8FC] bg-cover bg-center shadow-[0_10px_22px_rgba(20,28,55,0.14)] ring-1 ring-[#EEF1F8]"
               style={{
                 backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined,
               }}
@@ -291,7 +292,7 @@ function FeaturedReelsCarousel({
               <span className="mt-1 line-clamp-1 block text-[0.62rem] font-medium text-white/86 drop-shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
                 {getFeaturedSubtitle(project)}
               </span>
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] px-2.5 py-1 text-[0.58rem] font-bold text-white shadow-[0_10px_18px_rgba(107,57,244,0.32)]">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] px-2.5 py-1 text-[0.58rem] font-bold text-white shadow-[0_10px_18px_rgba(107,57,244,0.26)] ring-1 ring-white/20">
                 <IconCrown />
                 Destacado
               </span>
@@ -613,13 +614,6 @@ export default function FeedPage() {
             />
           </div>
 
-          <FeaturedReelsCarousel
-            loading={loading}
-            ownerProfiles={ownerProfiles}
-            projects={featuredProjects}
-            onOpenProject={(projectId) => router.push(`/feed/${projectId}`)}
-          />
-
           <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
             {categories.map((category) => {
               const active = category === selectedCategory;
@@ -706,6 +700,13 @@ export default function FeedPage() {
           </div>
 
           <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-2 pr-1">
+            <FeaturedReelsCarousel
+              loading={loading}
+              ownerProfiles={ownerProfiles}
+              projects={featuredProjects}
+              onOpenProject={(projectId) => router.push(`/feed/${projectId}`)}
+            />
+
             {loading ? (
               <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 6 }).map((_, index) => (
