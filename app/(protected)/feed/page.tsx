@@ -543,15 +543,9 @@ export default function FeedPage() {
         </header>
 
         <section className={`${SURFACE_CLASSNAME} relative z-20 flex min-h-0 flex-1 flex-col overflow-visible p-3.5`}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="py-1">
               <InvestAppWordmark />
-              <h1 className="mt-3 text-[2.05rem] font-semibold tracking-[-0.06em] text-[#111827]">
-                Oportunities
-              </h1>
-              <p className="mt-1 text-[0.84rem] leading-5 text-[#858EA2]">
-                Projects published by entrepreneurs
-              </p>
             </div>
 
             <button
@@ -571,14 +565,14 @@ export default function FeedPage() {
                 if (!publishDisabled) router.push('/publish');
               }}
               disabled={publishDisabled}
-              className={`mt-4 flex w-full items-center gap-4 rounded-[24px] border px-4 py-4 text-left shadow-[0_16px_34px_rgba(107,57,244,0.10)] transition ${
+              className={`mt-2 flex w-full items-center gap-2 rounded-[15px] border px-2.5 py-2 text-left shadow-[0_10px_20px_rgba(107,57,244,0.08)] transition ${
                 publishDisabled
                   ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] opacity-75'
                   : 'border-[#E6DFFF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] hover:-translate-y-0.5'
               }`}
             >
               <span
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)] ${
+                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white shadow-[0_10px_18px_rgba(107,57,244,0.18)] [&>svg]:h-3.5 [&>svg]:w-3.5 ${
                   publishDisabled
                     ? 'bg-[#C8CBE0]'
                     : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)]'
@@ -587,34 +581,34 @@ export default function FeedPage() {
                 <IconPlus />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">
+                <span className="block text-[0.68rem] font-semibold leading-none tracking-[-0.02em] text-[#1C2336]">
                   Publish project
                 </span>
-                <span className="mt-1 block text-xs leading-5 text-[#7B879C]">
+                <span className="mt-0.5 block truncate text-[0.56rem] leading-none text-[#7B879C]">
                   {loadingOwnProject
-                    ? 'Checking your current business listing...'
+                    ? 'Checking current listing...'
                     : hasOwnProject
-                      ? 'You already have one business. Edit it from portfolio.'
-                      : 'Add your business listing with the guided flow.'}
+                      ? 'Edit it from portfolio.'
+                      : 'Add your listing.'}
                 </span>
               </span>
             </button>
           ) : null}
 
-          <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-[#EEF0F8] bg-[#FAF9FF] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-            <span className="text-[#9AA3B6]">
+          <div className="mt-2 flex items-center gap-2 rounded-[13px] border border-[#EEF0F8] bg-[#FAF9FF] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+            <span className="text-[#9AA3B6] [&>svg]:h-4 [&>svg]:w-4">
               <IconSearch />
             </span>
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search ventures, entrepreneurs or keywords..."
-              className="h-6 w-full border-none bg-transparent text-[0.84rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
+              className="h-4 w-full border-none bg-transparent text-[0.72rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
               aria-label="Search ventures"
             />
           </div>
 
-          <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1">
+          <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
             {categories.map((category) => {
               const active = category === selectedCategory;
 
@@ -623,7 +617,7 @@ export default function FeedPage() {
                   key={category}
                   type="button"
                   onClick={() => setSelectedCategory(category)}
-                  className={`shrink-0 rounded-full px-3.5 py-2 text-[0.7rem] font-semibold tracking-[-0.01em] transition ${
+                  className={`shrink-0 rounded-full px-2.5 py-1.5 text-[0.6rem] font-semibold tracking-[-0.01em] transition ${
                     active
                       ? 'border border-[#CFC3FF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] text-[#6B39F4] shadow-[0_10px_22px_rgba(107,57,244,0.12)]'
                       : 'border border-[#EEF1F8] bg-white text-[#596277] shadow-[0_8px_18px_rgba(27,36,53,0.04)]'
