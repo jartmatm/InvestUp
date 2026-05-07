@@ -515,20 +515,11 @@ function DesktopSidebar({ role }: { role: string }) {
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
 
-  const roleItems =
-    role === 'emprendedor'
-      ? [
-          { label: 'Dashboard', icon: 'portfolio' },
-          { label: 'Mis proyectos', icon: 'feed' },
-          { label: 'Rendimientos', icon: 'spark' },
-          { label: 'Documentos', icon: 'documents' },
-        ]
-      : [
-          { label: 'Dashboard', icon: 'portfolio' },
-          { label: 'Mis inversiones', icon: 'feed' },
-          { label: 'Rendimientos', icon: 'spark' },
-          { label: 'Documentos', icon: 'documents' },
-        ];
+  const utilityItems = [
+    { href: '/home?topup=1', label: 'Top up', icon: 'send' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'portfolio' },
+    { href: '/contracts', label: 'Documents', icon: 'documents' },
+  ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--desktop-sidebar-width)] border-r border-[#E7EAF3] bg-white/92 px-4 py-5 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex lg:flex-col">
@@ -558,14 +549,15 @@ function DesktopSidebar({ role }: { role: string }) {
           {role === 'emprendedor' ? 'Emprendedor' : 'Inversionista'}
         </p>
         <div className="mt-3 space-y-1">
-          {roleItems.map((item) => (
-            <div
+          {utilityItems.map((item) => (
+            <Link
               key={item.label}
-              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A]"
+              href={item.href}
+              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
               <DesktopNavIcon type={item.icon} />
               {item.label}
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -660,11 +660,10 @@ function Sidebar() {
     { href: '/feed', label: 'Feed', icon: 'feed' },
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
-  const roleItems = [
-    { label: 'Dashboard', icon: 'dashboard' },
-    { label: 'Mis inversiones', icon: 'investments' },
-    { label: 'Rendimientos', icon: 'returns' },
-    { label: 'Documentos', icon: 'documents' },
+  const utilityItems = [
+    { href: '/home?topup=1', label: 'Top up', icon: 'investments' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'returns' },
+    { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
   return (
@@ -693,14 +692,15 @@ function Sidebar() {
           Inversionista
         </p>
         <div className="mt-3 space-y-1.5">
-          {roleItems.map((item) => (
-            <div
+          {utilityItems.map((item) => (
+            <Link
               key={item.label}
-              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A]"
+              href={item.href}
+              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
               <DesktopNavIcon type={item.icon} />
               {item.label}
-            </div>
+            </Link>
           ))}
         </div>
       </div>

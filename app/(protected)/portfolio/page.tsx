@@ -424,11 +424,10 @@ function DesktopEntrepreneurSidebar() {
     { href: '/feed', label: 'Feed', icon: 'feed' },
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
-  const roleItems = [
-    { label: 'Dashboard', icon: 'projects' },
-    { label: 'Mis proyectos', icon: 'feed' },
-    { label: 'Rendimientos', icon: 'analytics' },
-    { label: 'Documentos', icon: 'documents' },
+  const utilityItems = [
+    { href: '/home?topup=1', label: 'Top up', icon: 'wallet' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'transactions' },
+    { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
   return (
@@ -457,14 +456,15 @@ function DesktopEntrepreneurSidebar() {
           Entrepreneur
         </p>
         <div className="mt-3 space-y-1.5">
-          {roleItems.map((item) => (
-            <div
+          {utilityItems.map((item) => (
+            <Link
               key={item.label}
-              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D]"
+              href={item.href}
+              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#172033]"
             >
               <DesktopNavIcon type={item.icon} />
               {item.label}
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -51,6 +51,12 @@ const mainItems = [
   { href: '/profile', label: 'Profile', icon: <IconProfile /> },
 ];
 
+const utilityItems = [
+  { href: '/home?topup=1', label: 'Top up', icon: <IconTopUp /> },
+  { href: '/withdraw', label: 'Withdraw', icon: <IconWithdraw /> },
+  { href: '/contracts', label: 'Documents', icon: <IconDocument /> },
+];
+
 const toneClasses = {
   purple: 'bg-[#F1ECFF] text-[#6B39F4]',
   green: 'bg-[#E7FBF4] text-[#0B9B72]',
@@ -118,6 +124,35 @@ function IconSend() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
       <path d="M16 17h5m0 0-2-2m2 2-2 2" />
+    </svg>
+  );
+}
+
+function IconTopUp() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 19V5" />
+      <path d="m6 11 6-6 6 6" />
+      <path d="M5 19h14" />
+    </svg>
+  );
+}
+
+function IconWithdraw() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 5v14" />
+      <path d="m6 13 6 6 6-6" />
+      <path d="M5 5h14" />
+    </svg>
+  );
+}
+
+function IconDocument() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M7 3h7l4 4v14H7V3Z" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" />
     </svg>
   );
 }
@@ -192,10 +227,6 @@ export function DesktopAppShell({
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const safeName = displayName || 'InvestApp user';
   const roleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
-  const roleItems =
-    rolSeleccionado === 'emprendedor'
-      ? ['Dashboard', 'Mis proyectos', 'Rendimientos', 'Documentos']
-      : ['Dashboard', 'Mis inversiones', 'Rendimientos', 'Documentos'];
 
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
@@ -227,14 +258,15 @@ export function DesktopAppShell({
             {roleLabel}
           </p>
           <div className="mt-3 space-y-1.5">
-            {roleItems.map((item, index) => (
-              <div
-                key={item}
-                className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A]"
+            {utilityItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
               >
-                {mainItems[index + 1]?.icon ?? <IconPortfolio />}
-                {item}
-              </div>
+                {item.icon}
+                {item.label}
+              </Link>
             ))}
           </div>
         </div>
@@ -442,4 +474,3 @@ export function DesktopEmptyState({
     </div>
   );
 }
-

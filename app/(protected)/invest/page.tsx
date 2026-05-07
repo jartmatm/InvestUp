@@ -617,20 +617,11 @@ function Sidebar({ profileRole }: { profileRole: string }) {
     { href: '/feed', label: 'Feed', icon: 'feed' },
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
-  const secondaryItems =
-    profileRole === 'Emprendedor'
-      ? [
-          { label: 'Dashboard', icon: 'portfolio' },
-          { label: 'Mis proyectos', icon: 'investments' },
-          { label: 'Rendimientos', icon: 'analytics' },
-          { label: 'Documentos', icon: 'documents' },
-        ]
-      : [
-          { label: 'Dashboard', icon: 'portfolio' },
-          { label: 'Mis inversiones', icon: 'investments' },
-          { label: 'Rendimientos', icon: 'analytics' },
-          { label: 'Documentos', icon: 'documents' },
-        ];
+  const secondaryItems = [
+    { href: '/home?topup=1', label: 'Top up', icon: 'wallet' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'transactions' },
+    { href: '/contracts', label: 'Documents', icon: 'documents' },
+  ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
@@ -659,13 +650,14 @@ function Sidebar({ profileRole }: { profileRole: string }) {
         </p>
         <div className="mt-3 space-y-1.5">
           {secondaryItems.map((item) => (
-            <div
+            <Link
               key={item.label}
-              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A]"
+              href={item.href}
+              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
               <DesktopIcon type={item.icon} />
               {item.label}
-            </div>
+            </Link>
           ))}
         </div>
       </div>

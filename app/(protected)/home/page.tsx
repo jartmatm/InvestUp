@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
@@ -412,18 +412,6 @@ function IconDocument() {
   );
 }
 
-function IconChart() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 19V5" />
-      <path d="M8 19v-6" />
-      <path d="M12 19V8" />
-      <path d="M16 19v-9" />
-      <path d="M20 19V7" />
-    </svg>
-  );
-}
-
 function IconPortfolio() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -512,20 +500,11 @@ function DesktopSidebar({ roleLabel }: { roleLabel: string }) {
     { href: '/feed', label: 'Feed', icon: <IconFeed /> },
     { href: '/profile', label: 'Profile', icon: <IconProfile /> },
   ];
-  const roleItems =
-    roleLabel === 'Entrepreneur'
-      ? [
-          { label: 'Dashboard', icon: <IconPortfolio /> },
-          { label: 'Mis proyectos', icon: <IconSend /> },
-          { label: 'Rendimientos', icon: <IconChart /> },
-          { label: 'Documentos', icon: <IconDocument /> },
-        ]
-      : [
-          { label: 'Dashboard', icon: <IconPortfolio /> },
-          { label: 'Mis inversiones', icon: <IconSend /> },
-          { label: 'Rendimientos', icon: <IconChart /> },
-          { label: 'Documentos', icon: <IconDocument /> },
-        ];
+  const utilityItems = [
+    { href: '/home?topup=1', label: 'Top up', icon: <IconPlus /> },
+    { href: '/withdraw', label: 'Withdraw', icon: <IconDownload /> },
+    { href: '/contracts', label: 'Documents', icon: <IconDocument /> },
+  ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/95 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
@@ -553,14 +532,15 @@ function DesktopSidebar({ roleLabel }: { roleLabel: string }) {
           {roleLabel}
         </p>
         <div className="mt-3 space-y-1.5">
-          {roleItems.map((item) => (
-            <div
+          {utilityItems.map((item) => (
+            <Link
               key={item.label}
-              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D]"
+              href={item.href}
+              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#172033]"
             >
               {item.icon}
               {item.label}
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -1480,6 +1460,7 @@ function DesktopHomeDashboard({
 
 export default function HomePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const {
     faseApp,
@@ -1513,6 +1494,7 @@ export default function HomePage() {
   const [missingWithdrawProfileFields, setMissingWithdrawProfileFields] = useState<string[]>([]);
   const [withdrawKycLevelLabel, setWithdrawKycLevelLabel] = useState('');
   const [checkingWithdrawRequirements, setCheckingWithdrawRequirements] = useState(false);
+  const handledTopUpRequestRef = useRef(false);
 
   const supabase = useMemo(() => {
     const authedFetch: typeof fetch = async (input, init = {}) => {
@@ -1947,7 +1929,7 @@ export default function HomePage() {
     };
   }, [getAccessToken, searchQuery, showSearch, smartWalletAddress, supabase, user?.id]);
 
-  const handleTopUpClick = async () => {
+  const handleTopUpClick = useCallback(async () => {
     if (openingTopUp) return;
 
     setOpeningTopUp(true);
@@ -1956,7 +1938,17 @@ export default function HomePage() {
     } finally {
       setOpeningTopUp(false);
     }
-  };
+  }, [abrirCompra, openingTopUp]);
+
+  const topUpRequested = searchParams.get('topup') === '1';
+
+  useEffect(() => {
+    if (!topUpRequested || handledTopUpRequestRef.current) return;
+
+    handledTopUpRequestRef.current = true;
+    router.replace('/home', { scroll: false });
+    void handleTopUpClick();
+  }, [handleTopUpClick, router, topUpRequested]);
 
   const handleWithdrawClick = async () => {
     if (checkingWithdrawRequirements) return;
