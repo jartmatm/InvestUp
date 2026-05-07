@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import {
+  DesktopAppShell,
+  DesktopEmptyState,
+  DesktopMetricCard,
+  DesktopSectionCard,
+} from '@/components/DesktopAppShell';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
@@ -594,7 +600,226 @@ export default function HistoryPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+    <>
+    <DesktopAppShell
+      title="Transaction history"
+      subtitle={subtitle}
+      eyebrow="Ledger"
+      searchPlaceholder="Search transactions, wallets or hashes..."
+    >
+      <section className="grid grid-cols-3 gap-4">
+        <DesktopMetricCard
+          icon={<IconDocument />}
+          label="Transactions"
+          value={filteredTransactions.length}
+          detail="Loaded from your recent activity"
+          tone="purple"
+        />
+        <DesktopMetricCard
+          icon={<IconArrowDown />}
+          label="Incoming"
+          value={formatTransactionAmount(sumTransactionAmounts(incomingTransactions))}
+          detail={`${incomingTransactions.length} movements`}
+          tone="green"
+        />
+        <DesktopMetricCard
+          icon={<IconArrowUp />}
+          label="Outgoing"
+          value={formatTransactionAmount(sumTransactionAmounts(outgoingTransactions))}
+          detail={`${outgoingTransactions.length} movements`}
+          tone="rose"
+        />
+      </section>
+
+      <DesktopSectionCard
+        title="Filters"
+        subtitle="Search by hash, wallet, email or movement type."
+        action={
+          hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setMovementFilter('all');
+                setStatusFilter('all');
+                setDirectionFilter('all');
+                setSortBy('latest');
+              }}
+              className="h-10 rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
+            >
+              Clear filters
+            </button>
+          ) : null
+        }
+      >
+        <div className="grid grid-cols-[minmax(260px,1.3fr)_repeat(4,minmax(150px,1fr))] gap-3">
+          <label className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A93A6]">
+              <IconSearch />
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search hash, email or ID"
+              className="h-11 w-full rounded-2xl border border-[#E2E6F0] bg-[#FAFBFF] pl-12 pr-4 text-sm font-semibold text-[#17203A] outline-none transition focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+            />
+          </label>
+
+          <select
+            value={movementFilter}
+            onChange={(event) => setMovementFilter(event.target.value as MovementFilter)}
+            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          >
+            {movementTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          >
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={directionFilter}
+            onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)}
+            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          >
+            <option value="all">All directions</option>
+            <option value="incoming">Incoming</option>
+            <option value="outgoing">Outgoing</option>
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as SortFilter)}
+            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </DesktopSectionCard>
+
+      <DesktopSectionCard
+        title="Recent movements"
+        subtitle="A production-style ledger table for wallet, investment and repayment activity."
+      >
+        {loading ? <SectionLoadingSkeleton rows={4} /> : null}
+        {statusMessage ? (
+          <div className="rounded-2xl border border-[#F5C8D1] bg-[#FFF3F6] px-4 py-3 text-sm font-semibold text-[#C42847]">
+            {statusMessage}
+          </div>
+        ) : null}
+        {!loading && !statusMessage && filteredTransactions.length === 0 ? (
+          <DesktopEmptyState
+            title="No transactions match this view"
+            description="Your wallet and investment activity will appear here once funds start moving."
+          />
+        ) : null}
+        {!loading && !statusMessage && filteredTransactions.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-[#EEF1F7]">
+            <table className="w-full border-collapse text-left">
+              <thead className="bg-[#F8F9FB] text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#8A95A8]">
+                <tr>
+                  <th className="px-5 py-4">Movement</th>
+                  <th className="px-5 py-4">Direction</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Amount</th>
+                  <th className="px-5 py-4">Date</th>
+                  <th className="px-5 py-4">Hash</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EEF1F7] bg-white">
+                {filteredTransactions.slice(0, 18).map((transaction) => {
+                  const direction = getTransactionDirection(transaction, smartWalletAddress);
+                  const incoming = direction === 'incoming';
+                  const outgoing = direction === 'outgoing';
+                  const amountPrefix = incoming ? '+' : outgoing ? '-' : '';
+                  const amountColor = incoming
+                    ? 'text-[#12895B]'
+                    : outgoing
+                      ? 'text-[#C42847]'
+                      : 'text-[#475569]';
+                  return (
+                    <tr key={`desktop-${transaction.id}`} className="transition hover:bg-[#FBFCFF]">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`grid h-10 w-10 place-items-center rounded-2xl ${
+                              incoming
+                                ? 'bg-[#E7FBF4] text-[#0B9B72]'
+                                : outgoing
+                                  ? 'bg-[#FFF1F3] text-[#C73A57]'
+                                  : 'bg-[#F1ECFF] text-[#6B39F4]'
+                            }`}
+                          >
+                            {incoming ? <IconArrowDown /> : outgoing ? <IconArrowUp /> : <IconDocument />}
+                          </span>
+                          <span>
+                            <span className="block text-sm font-bold text-[#111827]">
+                              {getTransactionTitle(transaction, smartWalletAddress)}
+                            </span>
+                            <span className="mt-1 block text-xs font-medium text-[#73809A]">
+                              {getMovementTypeLabel(transaction.movement_type)}
+                            </span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${getDirectionTone(direction)}`}>
+                          {getDirectionLabel(direction)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`rounded-full border px-3 py-1 text-xs font-bold ${getStatusTone(transaction.status)}`}>
+                          {getStatusLabel(transaction.status)}
+                        </span>
+                      </td>
+                      <td className={`px-5 py-4 text-sm font-bold ${amountColor}`}>
+                        {amountPrefix}
+                        {formatTransactionAmount(transaction.amount)}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-[#66728A]">
+                        {formatDateTime(transaction.created_at)}
+                      </td>
+                      <td className="px-5 py-4">
+                        <button
+                          type="button"
+                          onClick={() => void handleCopy(transaction)}
+                          className="rounded-xl bg-[#F5F3FF] px-3 py-2 text-xs font-bold text-[#6B39F4] transition hover:bg-[#EEE8FF]"
+                        >
+                          {copiedTransactionId === transaction.id
+                            ? 'Copied'
+                            : transaction.tx_hash
+                              ? shortenIdentifier(transaction.tx_hash, 7)
+                              : 'Copy'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </DesktopSectionCard>
+    </DesktopAppShell>
+
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
       <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
@@ -1000,5 +1225,6 @@ export default function HistoryPage() {
 
       <BottomNav />
     </main>
+    </>
   );
 }

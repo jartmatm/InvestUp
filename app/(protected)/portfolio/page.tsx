@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
+import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
@@ -922,7 +923,29 @@ export default function PortfolioPage() {
     await loadMyProjects();
   };
 
-  if (rolSeleccionado !== 'emprendedor') {
+  if (faseApp === 'loading' || !rolSeleccionado) {
+    return (
+      <>
+        <DesktopAppShell
+          title="Portfolio"
+          subtitle="Preparing the right portfolio workspace for your profile."
+          eyebrow="Loading"
+          maxWidthClassName="max-w-[980px]"
+        >
+          <DesktopSectionCard>
+            <SectionLoadingSkeleton rows={4} />
+          </DesktopSectionCard>
+        </DesktopAppShell>
+        <main className="relative min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828] lg:hidden">
+          <div className="mx-auto w-full max-w-md">
+            <SectionLoadingSkeleton rows={4} />
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (rolSeleccionado === 'inversor') {
     return <InvestorPortfolioDashboard />;
   }
 

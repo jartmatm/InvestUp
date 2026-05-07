@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import { DesktopAppShell } from '@/components/DesktopAppShell';
 
 type ProfilePageShellProps = {
   title: string;
@@ -106,7 +107,7 @@ export function ProfilePageShell({
 
   return (
     <>
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-[13.5rem] text-[#101828]">
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-[13.5rem] text-[#101828] lg:hidden">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-28 top-72 h-64 w-64 rounded-full bg-[#B9A8FF]/14 blur-3xl" />
         <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
@@ -141,7 +142,48 @@ export function ProfilePageShell({
         </div>
       </main>
 
-      <BottomNav />
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
+
+      <DesktopAppShell
+        title={title}
+        subtitle={subtitle}
+        eyebrow="Profile workspace"
+        maxWidthClassName="max-w-[1180px]"
+      >
+        <div className={`grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] ${contentClassName}`}>
+          <div className="min-w-0 space-y-5">
+            {children}
+            {footer ? <div className="flex flex-col gap-3">{footer}</div> : null}
+          </div>
+          <aside className="space-y-5">
+            <ProfileSurface className="lg:bg-[linear-gradient(160deg,#FFFFFF_0%,#F8F6FF_100%)]">
+              <div className="flex flex-col gap-3">
+                <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
+                  Account confidence
+                </p>
+                <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">
+                  Keep your investor profile complete
+                </h2>
+                <p className="text-sm leading-6 text-[#66728A]">
+                  Updated account data improves wallet security, identity checks and project discovery.
+                </p>
+              </div>
+            </ProfileSurface>
+            <ProfileInfoTile
+              title="Secure profile area"
+              description="Changes are scoped to your authenticated InvestApp account."
+              tone="purple"
+            />
+            <ProfileInfoTile
+              title="Premium dashboard styling"
+              description="Desktop settings now use the same web shell as Feed, Send and Portfolio."
+              tone="blue"
+            />
+          </aside>
+        </div>
+      </DesktopAppShell>
     </>
   );
 }
@@ -149,7 +191,7 @@ export function ProfilePageShell({
 export function ProfileSurface({ children, className = '' }: ProfileSurfaceProps) {
   return (
     <section
-      className={`rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl ${className}`}
+      className={`rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl lg:rounded-[24px] lg:border-[#E9ECF4] lg:bg-white lg:p-6 lg:shadow-[0_18px_42px_rgba(21,28,44,0.055)] lg:ring-0 lg:backdrop-blur-0 ${className}`}
     >
       {children}
     </section>

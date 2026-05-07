@@ -4,6 +4,11 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import {
+  DesktopAppShell,
+  DesktopMetricCard,
+  DesktopSectionCard,
+} from '@/components/DesktopAppShell';
 import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
@@ -633,7 +638,247 @@ export default function WithdrawPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-44 text-[#101828]">
+    <>
+    <DesktopAppShell
+      title="Withdraw funds"
+      subtitle="Request a compliant fiat payout from your InvestApp USD balance."
+      eyebrow="Payouts"
+      searchPlaceholder="Search withdrawals, wallets or bank accounts..."
+      rightRail={
+        <DesktopSectionCard title="Payout policy" subtitle="Operational guardrails for safe withdrawals.">
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-[#FFF8EA] px-4 py-3 text-sm font-semibold leading-6 text-[#8A5B1C]">
+              Minimum withdrawal: {MIN_WITHDRAWAL_USDC.toFixed(2)} USD. A {MIN_GAS_RESERVE_USDC.toFixed(2)} USD reserve is kept for network fees.
+            </div>
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Country</p>
+              <p className="mt-1 text-sm font-bold text-[#111827]">{withdrawCountryConfig.name}</p>
+            </div>
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Processing</p>
+              <p className="mt-1 text-sm font-bold text-[#111827]">1 to 2 business days</p>
+            </div>
+            {submittedTxHash ? (
+              <div className="rounded-2xl bg-[#E7FBF4] px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#12895B]">Submitted hash</p>
+                <p className="mt-1 break-all text-sm font-bold text-[#087A52]">{submittedTxHash}</p>
+              </div>
+            ) : null}
+          </div>
+        </DesktopSectionCard>
+      }
+    >
+      <section className="grid grid-cols-3 gap-4">
+        <DesktopMetricCard
+          icon={<IconWalletBalance />}
+          label="Available"
+          value={`${displayBalance} USD`}
+          detail="Wallet balance"
+          tone="purple"
+        />
+        <DesktopMetricCard
+          icon={<IconInfo />}
+          label="Withdrawable"
+          value={`${withdrawableBalance.toFixed(2)} USD`}
+          detail="After network reserve"
+          tone="green"
+        />
+        <DesktopMetricCard
+          icon={isBankMethod ? <IconBank /> : <IconKey />}
+          label="Method"
+          value={isBankMethod ? 'Bank payout' : 'Breve key'}
+          detail={withdrawCountryConfig.name}
+          tone={isBankMethod ? 'blue' : 'amber'}
+        />
+      </section>
+
+      <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
+        <DesktopSectionCard
+          title="Withdrawal request"
+          subtitle="Choose a payout method and confirm the destination details."
+        >
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              {([
+                {
+                  value: 'bank' as const,
+                  title: 'Bank',
+                  description: 'Manual bank payout',
+                  icon: <IconBank />,
+                  disabled: false,
+                },
+                {
+                  value: 'breve' as const,
+                  title: 'Breve',
+                  description: withdrawCountryConfig.breveDescription,
+                  icon: <IconKey />,
+                  disabled: !withdrawCountryConfig.breveEnabled,
+                },
+              ]).map((option) => {
+                const selected = effectiveMethod === option.value;
+                return (
+                  <button
+                    key={`desktop-method-${option.value}`}
+                    type="button"
+                    disabled={option.disabled}
+                    onClick={() => updateForm('method', option.value)}
+                    className={`rounded-2xl border p-4 text-left transition duration-200 ${
+                      selected
+                        ? 'border-[#D9CCFF] bg-[#F8F5FF] shadow-[0_18px_34px_rgba(107,57,244,0.10)]'
+                        : 'border-[#E8ECF4] bg-white hover:bg-[#F8F9FB]'
+                    } ${option.disabled ? 'cursor-not-allowed opacity-55' : ''}`}
+                  >
+                    <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
+                      {option.icon}
+                    </span>
+                    <span className="mt-4 block text-sm font-bold text-[#111827]">{option.title}</span>
+                    <span className="mt-1 block text-xs font-medium leading-5 text-[#73809A]">{option.description}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <label>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                Amount
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={form.amount}
+                onChange={(event) => updateForm('amount', event.target.value.replace(/[^0-9.]/g, ''))}
+                placeholder="0.00"
+                className="h-14 w-full rounded-2xl border border-[#E2E6F0] bg-white px-4 text-[1.8rem] font-bold tracking-[-0.06em] text-[#111827] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+              />
+            </label>
+
+            {isBankMethod ? (
+              <div className="grid grid-cols-2 gap-3">
+                {withdrawCountryConfig.bankOptions.length > 0 ? (
+                  <select
+                    value={form.bankName}
+                    onChange={(event) => updateForm('bankName', event.target.value)}
+                    className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  >
+                    <option value="">{withdrawCountryConfig.bankPlaceholder}</option>
+                    {withdrawCountryConfig.bankOptions.map((bank) => (
+                      <option key={bank} value={bank}>
+                        {bank}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    value={form.bankName}
+                    onChange={(event) => updateForm('bankName', event.target.value)}
+                    placeholder={withdrawCountryConfig.bankPlaceholder}
+                    className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  />
+                )}
+                <input
+                  value={form.accountNumber}
+                  onChange={(event) => updateForm('accountNumber', event.target.value)}
+                  placeholder={withdrawCountryConfig.accountNumberPlaceholder}
+                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                />
+                <select
+                  value={form.accountType}
+                  onChange={(event) => updateForm('accountType', event.target.value)}
+                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                >
+                  <option value="">{withdrawCountryConfig.accountTypePlaceholder}</option>
+                  {withdrawCountryConfig.accountTypes.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={form.identificationType}
+                  onChange={(event) => updateForm('identificationType', event.target.value)}
+                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                >
+                  <option value="">{withdrawCountryConfig.identificationTypePlaceholder}</option>
+                  {withdrawCountryConfig.identificationTypes.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={form.identificationNumber}
+                  onChange={(event) => updateForm('identificationNumber', event.target.value)}
+                  placeholder={withdrawCountryConfig.identificationNumberPlaceholder}
+                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                />
+                <input
+                  value={form.phoneNumber}
+                  onChange={(event) => updateForm('phoneNumber', event.target.value)}
+                  placeholder={withdrawCountryConfig.phonePlaceholder}
+                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                />
+              </div>
+            ) : (
+              <input
+                value={form.breveKey}
+                onChange={(event) => updateForm('breveKey', event.target.value)}
+                placeholder={withdrawCountryConfig.breveKeyPlaceholder}
+                className="h-12 w-full rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+              />
+            )}
+
+            {status ? (
+              <div className="rounded-2xl border border-[#F5C8D1] bg-[#FFF3F6] px-4 py-3 text-sm font-semibold text-[#C42847]">
+                {status}
+              </div>
+            ) : null}
+            {successMessage ? (
+              <div className="rounded-2xl border border-[#BEE8D2] bg-[#EEF9F2] px-4 py-3 text-sm font-semibold text-[#177B58]">
+                {successMessage}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={withdrawDisabled}
+              className={`inline-flex h-14 w-full items-center justify-center rounded-2xl text-sm font-bold text-white shadow-[0_20px_42px_rgba(107,57,244,0.28)] transition ${
+                withdrawDisabled
+                  ? 'bg-[#C8CBE0]'
+                  : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+              }`}
+            >
+              {savingRequest || loadingTx ? 'Processing withdrawal...' : 'Confirm withdrawal'}
+            </button>
+          </div>
+        </DesktopSectionCard>
+
+        <DesktopSectionCard title="Compliance check" subtitle="KYC and wallet readiness for this request.">
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Wallet</p>
+              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
+                {smartWalletAddress ? `${smartWalletAddress.slice(0, 10)}...${smartWalletAddress.slice(-8)}` : 'Waiting for wallet'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Safe balance</p>
+              <p className="mt-1 text-sm font-bold text-[#111827]">{withdrawableBalance.toFixed(2)} USD</p>
+            </div>
+            <div className={`rounded-2xl px-4 py-3 ${canSubmit ? 'bg-[#E7FBF4]' : 'bg-[#FFF8EA]'}`}>
+              <p className={`text-xs font-bold uppercase tracking-[0.14em] ${canSubmit ? 'text-[#12895B]' : 'text-[#A46A00]'}`}>
+                Request state
+              </p>
+              <p className={`mt-1 text-sm font-bold ${canSubmit ? 'text-[#087A52]' : 'text-[#8A5B1C]'}`}>
+                {canSubmit ? 'Ready to submit' : 'Missing required details'}
+              </p>
+            </div>
+          </div>
+        </DesktopSectionCard>
+      </section>
+    </DesktopAppShell>
+
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-44 text-[#101828] lg:hidden">
       <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
@@ -1003,5 +1248,6 @@ export default function WithdrawPage() {
 
       <BottomNav />
     </main>
+    </>
   );
 }

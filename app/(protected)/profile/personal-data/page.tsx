@@ -5,6 +5,11 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
+import {
+  DesktopAppShell,
+  DesktopMetricCard,
+  DesktopSectionCard,
+} from '@/components/DesktopAppShell';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
 import {
@@ -783,7 +788,122 @@ export default function PersonalDataPage() {
 
   return (
     <>
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+      <DesktopAppShell
+        title="Personal Data"
+        subtitle="Update identity, contact details and compliance documents in one secure workspace."
+        eyebrow="Profile workspace"
+        maxWidthClassName="max-w-[1360px]"
+      >
+        <section className="grid grid-cols-3 gap-4">
+          <DesktopMetricCard
+            icon={<IconLimit />}
+            label="Current limit"
+            value={loadingKyc ? 'Checking' : kycLimitLabel}
+            detail="Based on your approved KYC tier"
+            tone="purple"
+          />
+          <DesktopMetricCard
+            icon={<IconBriefcase />}
+            label="Role"
+            value={roleBadge}
+            detail={isRoleSelectionLocked ? 'Role change locked' : 'Role can be reviewed'}
+            tone="blue"
+          />
+          <DesktopMetricCard
+            icon={<IconDocument />}
+            label="KYC"
+            value={loadingKyc ? 'Updating' : kycBadgeLabel}
+            detail="Compliance status"
+            tone={(kycSummary?.approvedLevel ?? 0) > 0 ? 'green' : 'amber'}
+          />
+        </section>
+
+        <section className="grid grid-cols-[360px_minmax(0,1fr)] gap-6">
+          <DesktopSectionCard title="Identity profile" subtitle="Avatar, role and wallet identity.">
+            <div className="flex flex-col items-center text-center">
+              <div className="relative h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
+                {form.avatar_url ? (
+                  <span
+                    className="block h-full w-full rounded-full bg-cover bg-center"
+                    style={{ backgroundImage: `url("${form.avatar_url}")` }}
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center rounded-full text-[2.2rem] font-semibold text-[#5D35E8]">
+                    {avatarInitial}
+                  </span>
+                )}
+                <span className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_24px_rgba(107,57,244,0.28)]">
+                  <IconCamera />
+                </span>
+              </div>
+              <label
+                htmlFor="desktop-personal-data-avatar"
+                className="mt-5 inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] px-5 text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
+              >
+                Change avatar
+              </label>
+              <input
+                id="desktop-personal-data-avatar"
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => onAvatarFile(event.target.files?.[0] ?? null)}
+              />
+              <h2 className="mt-5 text-xl font-bold tracking-[-0.045em] text-[#111827]">{displayName}</h2>
+              <p className="mt-1 text-sm font-medium text-[#73809A]">{displayEmail}</p>
+              <div className="mt-5 w-full rounded-2xl bg-[#F8F9FB] px-4 py-3 text-left">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Wallet</p>
+                <p className="mt-1 break-all text-sm font-bold text-[#111827]">
+                  {smartWalletAddress || 'Wallet not synced yet'}
+                </p>
+              </div>
+            </div>
+          </DesktopSectionCard>
+
+          <DesktopSectionCard title="Account information" subtitle="Keep your investor or entrepreneur profile verified and current.">
+            <div className="grid grid-cols-2 gap-4">
+              <input value={form.name} onChange={(event) => updateForm('name', event.target.value)} placeholder="Name" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.surname} onChange={(event) => updateForm('surname', event.target.value)} placeholder="Surname" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.email} onChange={(event) => updateForm('email', event.target.value)} disabled={!canEditEmail} placeholder="Email" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]" />
+              <input value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} placeholder="Phone number" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <select value={form.country} onChange={(event) => onCountryChange(event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
+                <option value="">Country</option>
+                {COUNTRY_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>{option.name}</option>
+                ))}
+              </select>
+              <select value={form.gender} onChange={(event) => updateForm('gender', event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
+                <option value="">Gender</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="non_binary">Non-binary</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+              <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} placeholder="Address" className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <select value={form.role} onChange={(event) => updateForm('role', event.target.value)} disabled={loadingRoleEligibility || isRoleSelectionLocked} className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]">
+                <option value="">Role</option>
+                <option value="investor">Investor</option>
+                <option value="entrepreneur">Entrepreneur</option>
+              </select>
+            </div>
+            {status ? (
+              <div className={`mt-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${statusClassName}`}>
+                {status}
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void saveProfile()}
+              disabled={saving || loadingProfile}
+              className="mt-5 h-12 rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save profile'}
+            </button>
+          </DesktopSectionCard>
+        </section>
+      </DesktopAppShell>
+
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-28 top-72 h-64 w-64 rounded-full bg-[#B9A8FF]/14 blur-3xl" />
 
@@ -1161,7 +1281,9 @@ export default function PersonalDataPage() {
         </div>
       </main>
 
-      <BottomNav />
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </>
   );
 }

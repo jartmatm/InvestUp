@@ -4,6 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import {
+  DesktopAppShell,
+  DesktopEmptyState,
+  DesktopMetricCard,
+  DesktopSectionCard,
+} from '@/components/DesktopAppShell';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   clearPendingInvestment,
@@ -536,7 +542,212 @@ export default function WalletTransferPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.08),transparent_36%),linear-gradient(180deg,#F8F8FD_0%,#F5F6FB_100%)] pb-32 text-[#0F172A]">
+    <>
+    <DesktopAppShell
+      title={transferMode === 'repayment' ? 'Send repayment' : 'Send money'}
+      subtitle="Move funds to an InvestApp user, wallet address or saved contact."
+      eyebrow="Wallet transfer"
+      searchPlaceholder="Search contacts, wallets or transfers..."
+      actions={
+        <button
+          type="button"
+          onClick={() => void handleRefresh()}
+          disabled={!canRefresh}
+          className="h-11 rounded-2xl border border-[#D9CCFF] bg-white px-4 text-sm font-bold text-[#6B39F4] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#F8F5FF] disabled:opacity-60"
+        >
+          Refresh
+        </button>
+      }
+      rightRail={
+        <DesktopSectionCard title="Transfer readiness" subtitle="A quick operational check before sending.">
+          <div className="space-y-3">
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Source</p>
+              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
+                {smartWalletAddress ? `${smartWalletAddress.slice(0, 8)}...${smartWalletAddress.slice(-6)}` : 'Wallet syncing'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Recipient</p>
+              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
+                {resolvedRecipient?.displayName || walletDestino || 'Pending recipient'}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Destination</p>
+              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
+                {resolvedDestinationWallet
+                  ? `${resolvedDestinationWallet.slice(0, 8)}...${resolvedDestinationWallet.slice(-6)}`
+                  : looksLikeEmail(walletDestino)
+                    ? 'Email lookup on send'
+                    : 'Not resolved'}
+              </p>
+            </div>
+          </div>
+        </DesktopSectionCard>
+      }
+    >
+      <section className="grid grid-cols-3 gap-4">
+        <DesktopMetricCard
+          icon={<CurrencyIcon />}
+          label="Available"
+          value={`${safeBalanceValue.toFixed(2)} USD`}
+          detail="Current wallet balance"
+          tone="purple"
+        />
+        <DesktopMetricCard
+          icon={<WalletIcon />}
+          label="Amount"
+          value={`${formatAmount(monto) || '0.00'} USD`}
+          detail={transferMode === 'repayment' ? 'Repayment transfer' : 'Manual transfer'}
+          tone="green"
+        />
+        <DesktopMetricCard
+          icon={<PaperPlaneIcon />}
+          label="Status"
+          value={canSubmit ? 'Ready' : 'Incomplete'}
+          detail={canSubmit ? 'Recipient and amount are valid' : 'Complete recipient and amount'}
+          tone={canSubmit ? 'green' : 'amber'}
+        />
+      </section>
+
+      <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
+        <DesktopSectionCard
+          title="Transfer details"
+          subtitle="Enter a recipient email or wallet address and confirm the transfer amount."
+        >
+          <div className="grid gap-5">
+            <label>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                Send to
+              </span>
+              <div className="flex h-14 items-center gap-3 rounded-2xl border border-[#E2E6F0] bg-[#FAFBFF] px-4 transition focus-within:border-[#BBA7FF] focus-within:ring-4 focus-within:ring-[#6B39F4]/10">
+                <span className="grid h-10 w-10 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4]">
+                  <WalletIcon />
+                </span>
+                <input
+                  type="text"
+                  value={walletDestino}
+                  onChange={(event) => setWalletDestino(event.target.value)}
+                  placeholder="Enter an InvestApp email or wallet"
+                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111827] outline-none placeholder:text-[#9BA5B8]"
+                />
+              </div>
+            </label>
+
+            <label>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                Amount
+              </span>
+              <div className="flex h-20 items-center gap-4 rounded-2xl border border-[#E2E6F0] bg-white px-5 shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition focus-within:border-[#BBA7FF] focus-within:ring-4 focus-within:ring-[#6B39F4]/10">
+                <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
+                  <CurrencyIcon />
+                </span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={monto}
+                  onChange={(event) => setMonto(event.target.value.replace(/[^0-9.]/g, ''))}
+                  onBlur={() => setMonto(formatAmount(monto))}
+                  className="min-w-0 flex-1 bg-transparent text-[2rem] font-bold tracking-[-0.06em] text-[#111827] outline-none"
+                  placeholder="0.00"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMonto(safeBalanceValue.toFixed(2))}
+                  className="h-10 rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
+                >
+                  MAX
+                </button>
+              </div>
+            </label>
+
+            <div>
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                Suggested values
+              </p>
+              <div className="grid grid-cols-6 gap-2">
+                {suggestedValues.map((value) => {
+                  const selected = amountNumber === value;
+                  return (
+                    <button
+                      key={`desktop-suggested-${value}`}
+                      type="button"
+                      onClick={() => setMonto(value.toFixed(2))}
+                      className={`h-11 rounded-xl border text-sm font-bold transition ${
+                        selected
+                          ? 'border-transparent bg-[#6B39F4] text-white shadow-[0_14px_28px_rgba(107,57,244,0.20)]'
+                          : 'border-[#E2E6F0] bg-white text-[#3E485E] hover:bg-[#F8F9FB]'
+                      }`}
+                    >
+                      ${value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={!canSubmit || loadingTx}
+              className={`inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-sm font-bold text-white shadow-[0_20px_42px_rgba(107,57,244,0.28)] transition ${
+                !canSubmit || loadingTx
+                  ? 'bg-[#C8CBE0]'
+                  : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
+              }`}
+            >
+              <PaperPlaneIcon />
+              {loadingTx ? 'Processing...' : transferMode === 'repayment' ? 'Send repayment' : 'Send money'}
+            </button>
+          </div>
+        </DesktopSectionCard>
+
+        <DesktopSectionCard title="Recent users" subtitle="Choose a verified InvestApp contact.">
+          <div className="space-y-3">
+            {loadingWallets || loadingRecentWallets ? (
+              <div className="h-24 animate-pulse rounded-2xl bg-[#F8F9FB]" />
+            ) : recentWallets.length > 0 ? (
+              recentWallets.slice(0, 5).map((wallet) => {
+                const isSelected =
+                  normalizeRecipientIdentifier(walletDestino) ===
+                  normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
+                return (
+                  <button
+                    key={`desktop-wallet-${wallet.id}`}
+                    type="button"
+                    onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
+                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                      isSelected
+                        ? 'border-[#D9CCFF] bg-[#F8F5FF]'
+                        : 'border-[#EEF1F7] bg-white hover:bg-[#F8F9FB]'
+                    }`}
+                  >
+                    <ContactAvatar avatarUrl={wallet.avatarUrl} label={wallet.displayName} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-bold text-[#111827]">{wallet.displayName}</span>
+                      <span className="mt-1 block truncate text-xs font-medium text-[#73809A]">
+                        {wallet.email || `${wallet.walletAddress.slice(0, 8)}...${wallet.walletAddress.slice(-6)}`}
+                      </span>
+                    </span>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-[#6B39F4] text-white' : 'bg-[#F1ECFF] text-[#6B39F4]'}`}>
+                      {isSelected ? 'Selected' : 'Select'}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <DesktopEmptyState
+                title="No recent contacts yet"
+                description="Type an InvestApp email manually to start a new transfer."
+              />
+            )}
+          </div>
+        </DesktopSectionCard>
+      </section>
+    </DesktopAppShell>
+
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(123,92,255,0.08),transparent_36%),linear-gradient(180deg,#F8F8FD_0%,#F5F6FB_100%)] pb-32 text-[#0F172A] lg:hidden">
       <div className="mx-auto w-full max-w-xl px-4 pb-6 pt-4 sm:px-5">
         <header className="mb-7 flex items-start gap-4">
           <div className="min-w-0">
@@ -811,5 +1022,6 @@ export default function WalletTransferPage() {
 
       <BottomNav />
     </main>
+    </>
   );
 }

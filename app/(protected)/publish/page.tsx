@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import {
+  DesktopAppShell,
+  DesktopMetricCard,
+  DesktopSectionCard,
+} from '@/components/DesktopAppShell';
 import PageBackButton from '@/components/PageBackButton';
 import TransactionLoader from '@/components/TransactionLoader';
 import InvestmentOpportunityDetail, {
@@ -1296,7 +1301,24 @@ export default function PublishPage() {
   if (rolSeleccionado !== 'emprendedor') {
     return (
       <>
-        <main className="min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828]">
+        <DesktopAppShell
+          title="Publish project"
+          subtitle="This workspace is available for entrepreneur profiles."
+          eyebrow="Access"
+          maxWidthClassName="max-w-[980px]"
+        >
+          <DesktopSectionCard title="Entrepreneur-only area" subtitle="Switch to an entrepreneur profile to create or manage a venture publication.">
+            <button
+              type="button"
+              onClick={() => router.push('/feed')}
+              className="h-11 rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-4 text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
+            >
+              Back to Feed
+            </button>
+          </DesktopSectionCard>
+        </DesktopAppShell>
+
+        <main className="min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828] lg:hidden">
           <div className="mx-auto w-full max-w-md">
             <PageBackButton fallbackHref="/feed" label="Back" />
             <SectionSurface className="mt-4 text-sm leading-6 text-[#667085]">
@@ -1304,7 +1326,9 @@ export default function PublishPage() {
             </SectionSurface>
           </div>
         </main>
-        <BottomNav />
+        <div className="lg:hidden">
+          <BottomNav />
+        </div>
       </>
     );
   }
@@ -1314,29 +1338,205 @@ export default function PublishPage() {
       {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? 'Sending...' : 'Publishing...'} /> : null}
 
       {!hasExistingProject && review ? (
-        <InvestmentOpportunityDetail
-          title={
-            review.optimizedPublication.title ||
-            review.optimizedPublication.tittle ||
-            `${form.business_name} investment opportunity`
-          }
-          subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
-          location={form.location || profile?.country || 'Location pending'}
-          category={form.industry || 'Business'}
-          rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
-          images={projectPhotos}
-          metrics={buildPreviewMetrics(form)}
-          sections={buildPublicationSections(form, review.optimizedPublication)}
-          primaryActionLabel={publishing ? 'Publishing...' : 'Publish'}
-          secondaryActionLabel="Edit details"
-          onPrimaryAction={publishProject}
-          onSecondaryAction={() => setReview(null)}
-          onBack={() => setReview(null)}
-          primaryDisabled={publishing}
-          secondaryDisabled={publishing}
-        />
+        <>
+          <div className="lg:hidden">
+            <InvestmentOpportunityDetail
+              title={
+                review.optimizedPublication.title ||
+                review.optimizedPublication.tittle ||
+                `${form.business_name} investment opportunity`
+              }
+              subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
+              location={form.location || profile?.country || 'Location pending'}
+              category={form.industry || 'Business'}
+              rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
+              images={projectPhotos}
+              metrics={buildPreviewMetrics(form)}
+              sections={buildPublicationSections(form, review.optimizedPublication)}
+              primaryActionLabel={publishing ? 'Publishing...' : 'Publish'}
+              secondaryActionLabel="Edit details"
+              onPrimaryAction={publishProject}
+              onSecondaryAction={() => setReview(null)}
+              onBack={() => setReview(null)}
+              primaryDisabled={publishing}
+              secondaryDisabled={publishing}
+            />
+          </div>
+
+          <DesktopAppShell
+            title={review.optimizedPublication.title || review.optimizedPublication.tittle || `${form.business_name} investment opportunity`}
+            subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
+            eyebrow="Publication review"
+            maxWidthClassName="max-w-[1360px]"
+          >
+            <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
+              <DesktopSectionCard title="Optimized investor story" subtitle="Review the publication generated from your prompt before it goes live.">
+                <div className="space-y-5">
+                  <div
+                    className="h-[320px] overflow-hidden rounded-[24px] bg-[#F1ECFF] bg-cover bg-center shadow-[0_24px_58px_rgba(21,28,44,0.10)]"
+                    style={{ backgroundImage: projectPhotos[0] ? `url(${JSON.stringify(projectPhotos[0])})` : undefined }}
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    {buildPreviewMetrics(form).map((metric) => (
+                      <div key={metric.label} className="rounded-2xl border border-[#E9ECF4] bg-[#FAFBFF] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{metric.label}</p>
+                        <p className="mt-2 text-lg font-bold tracking-[-0.04em] text-[#111827]">{metric.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="space-y-4">
+                    {buildPublicationSections(form, review.optimizedPublication).slice(0, 4).map((section) => (
+                      <div key={section.title} className="rounded-2xl border border-[#E9ECF4] bg-white p-4">
+                        <h3 className="text-sm font-bold text-[#111827]">{section.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-[#66728A]">{section.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </DesktopSectionCard>
+              <DesktopSectionCard title="Publish controls" subtitle="Keep editing or send it live to the marketplace.">
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    onClick={publishProject}
+                    disabled={publishing}
+                    className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
+                  >
+                    {publishing ? 'Publishing...' : 'Publish project'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReview(null)}
+                    disabled={publishing}
+                    className="h-12 w-full rounded-2xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF] disabled:opacity-60"
+                  >
+                    Edit details
+                  </button>
+                </div>
+              </DesktopSectionCard>
+            </section>
+          </DesktopAppShell>
+        </>
       ) : (
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+      <>
+      <DesktopAppShell
+        title="Publish project"
+        subtitle="Complete each section and review the optimized version before publishing."
+        eyebrow="Guided publish"
+        maxWidthClassName="max-w-[1360px]"
+      >
+        <section className="grid grid-cols-3 gap-4">
+          <DesktopMetricCard label="Progress" value={`${progress}%`} detail={`Step ${stepIndex + 1} of ${steps.length}`} tone="purple" />
+          <DesktopMetricCard label="Media" value={projectPhotos.length + projectVideos.length} detail="Assets attached" tone="blue" />
+          <DesktopMetricCard label="Draft" value={draftId || savedDraft ? 'Saved' : 'New'} detail="Publication workspace" tone={draftId || savedDraft ? 'green' : 'amber'} />
+        </section>
+
+        <section className="grid grid-cols-[280px_minmax(0,1fr)_340px] gap-6">
+          <DesktopSectionCard title="Steps" subtitle="Structured for a high-quality marketplace listing.">
+            <div className="space-y-2">
+              {steps.map((step, index) => (
+                <button
+                  key={`desktop-step-${step}`}
+                  type="button"
+                  onClick={() => setStepIndex(index)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                    index === stepIndex ? 'bg-[#F1ECFF] text-[#6B39F4]' : 'text-[#59657D] hover:bg-[#F8F9FB]'
+                  }`}
+                >
+                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold shadow-[0_8px_18px_rgba(21,28,44,0.05)]">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-bold">{step}</span>
+                </button>
+              ))}
+            </div>
+          </DesktopSectionCard>
+
+          <DesktopSectionCard
+            title={currentStep}
+            subtitle="Use specific numbers, business context and clear investor language."
+          >
+            {checkingProject ? (
+              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-5 text-sm font-semibold text-[#66728A]">
+                Checking your current business...
+              </div>
+            ) : null}
+            {!checkingProject && hasExistingProject ? (
+              <div className="rounded-2xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 py-5 text-sm font-semibold leading-6 text-[#5B2FF4]">
+                You already have a published venture. Edit it from portfolio; the rule is one project per entrepreneur.
+                <button
+                  type="button"
+                  onClick={() => router.push('/portfolio')}
+                  className="mt-4 h-11 rounded-xl bg-[#6B39F4] px-4 text-sm font-bold text-white"
+                >
+                  Go to portfolio
+                </button>
+              </div>
+            ) : null}
+            {!hasExistingProject ? (
+              <div className="space-y-5">
+                <div className="h-2 overflow-hidden rounded-full bg-[#ECEFFD]">
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                {renderStep()}
+                <div className="grid grid-cols-4 gap-3">
+                  <button type="button" onClick={goBack} disabled={stepIndex === 0 || finalizing || savingDraft} className={secondaryButtonClassName}>
+                    Previous
+                  </button>
+                  <button type="button" onClick={() => void saveDraft()} disabled={savingDraft || finalizing || checkingProject} className={secondaryButtonClassName}>
+                    {savingDraft ? 'Saving...' : 'Save draft'}
+                  </button>
+                  {stepIndex === steps.length - 1 ? (
+                    <button type="button" onClick={finalizePrompt} disabled={finalizing || checkingProject} className={`${primaryButtonClassName} col-span-2`}>
+                      Finish
+                    </button>
+                  ) : (
+                    <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
+                      Next
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </DesktopSectionCard>
+
+          <DesktopSectionCard title="Listing health" subtitle="What improves conversion in the marketplace.">
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Business</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{form.business_name || 'Pending name'}</p>
+              </div>
+              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Capital</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{form.capital_needed || 'Pending amount'}</p>
+              </div>
+              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Photos</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{projectPhotos.length} uploaded</p>
+              </div>
+              {savedDraft && !draftId && !review ? (
+                <button
+                  type="button"
+                  onClick={() => resumeDraft(savedDraft)}
+                  className="h-11 w-full rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
+                >
+                  Resume saved draft
+                </button>
+              ) : null}
+              {status ? (
+                <div className="rounded-2xl border border-[#E9ECF4] bg-[#FAFBFF] px-4 py-3 text-xs leading-5 text-[#66728A]">
+                  {status}
+                </div>
+              ) : null}
+            </div>
+          </DesktopSectionCard>
+        </section>
+      </DesktopAppShell>
+
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
@@ -1460,9 +1660,10 @@ export default function PublishPage() {
           ) : null}
         </div>
       </main>
+      </>
       )}
 
-      {!review ? <BottomNav /> : null}
+      {!review ? <div className="lg:hidden"><BottomNav /></div> : null}
     </>
   );
 }
