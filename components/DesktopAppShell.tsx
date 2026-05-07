@@ -17,6 +17,7 @@ type DesktopAppShellProps = {
   contentClassName?: string;
   maxWidthClassName?: string;
   searchPlaceholder?: string;
+  hideHeader?: boolean;
 };
 
 type DesktopMetricCardProps = {
@@ -147,6 +148,7 @@ export function DesktopAppShell({
   contentClassName = '',
   maxWidthClassName = 'max-w-[1500px]',
   searchPlaceholder = 'Buscar emprendimientos, emprendedores o palabras clave...',
+  hideHeader = false,
 }: DesktopAppShellProps) {
   const pathname = usePathname();
   const activeHref = getActiveHref(pathname);
@@ -264,21 +266,23 @@ export function DesktopAppShell({
 
         <main className="px-8 py-7 xl:px-10">
           <div className={`mx-auto w-full ${maxWidthClassName} ${contentClassName}`}>
-            <div className="mb-6 flex items-start justify-between gap-6">
-              <div>
-                {eyebrow ? (
-                  <p className="mb-2 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#8A95A8]">
-                    {eyebrow}
-                  </p>
-                ) : null}
-                <h1 className="text-[2.25rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
-                  {title}
-                </h1>
-                {subtitle ? (
-                  <p className="mt-1.5 max-w-2xl text-base font-medium text-[#66728A]">{subtitle}</p>
-                ) : null}
+            {hideHeader ? null : (
+              <div className="mb-6 flex items-start justify-between gap-6">
+                <div>
+                  {eyebrow ? (
+                    <p className="mb-2 text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#8A95A8]">
+                      {eyebrow}
+                    </p>
+                  ) : null}
+                  <h1 className="text-[2.25rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
+                    {title}
+                  </h1>
+                  {subtitle ? (
+                    <p className="mt-1.5 max-w-2xl text-base font-medium text-[#66728A]">{subtitle}</p>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            )}
 
             {rightRail ? (
               <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">

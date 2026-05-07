@@ -263,7 +263,7 @@ export default function ContractPage() {
   }, [creditId, getAccessToken, supabase, user?.id]);
 
   return (
-    <PageFrame title="Contract ledger" subtitle="Backend contract and internal audit trail">
+    <PageFrame title="Contract ledger" subtitle="Backend contract and internal audit trail" hideDesktopHeader>
       {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="text-sm text-slate-500">{status}</p> : null}
 

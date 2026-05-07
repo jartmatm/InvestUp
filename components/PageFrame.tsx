@@ -14,6 +14,7 @@ type PageFrameProps = {
   showBackButton?: boolean;
   backHref?: string;
   backLabel?: string;
+  hideDesktopHeader?: boolean;
   children: React.ReactNode;
 };
 
@@ -26,6 +27,7 @@ export default function PageFrame({
   showBackButton = false,
   backHref = '/profile',
   backLabel = 'Back',
+  hideDesktopHeader = false,
   children,
 }: PageFrameProps) {
   return (
@@ -49,6 +51,7 @@ export default function PageFrame({
         subtitle={subtitle}
         eyebrow="InvestApp workspace"
         maxWidthClassName="max-w-[1320px]"
+        hideHeader={hideDesktopHeader}
       >
         {showBackButton ? (
           <div className="mb-2">

@@ -693,13 +693,6 @@ function Topbar({
 }) {
   return (
     <header className="sticky top-0 z-20 flex h-[86px] items-center justify-between gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-      <div>
-        <h1 className="text-[1.7rem] font-bold leading-tight tracking-[-0.055em] text-[#111827]">
-          Send money
-        </h1>
-        <p className="mt-1 text-sm font-medium text-[#66728A]">Move funds, invest and track activity securely.</p>
-      </div>
-
       <div className="ml-auto flex items-center gap-4">
         <label className="relative block w-[360px]">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">

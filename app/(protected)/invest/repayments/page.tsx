@@ -200,7 +200,7 @@ export default function RepaymentsPage() {
   }, [getAccessToken, rolSeleccionado, user?.id]);
 
   return (
-    <PageFrame title="Repayments" subtitle="Review each investor and launch the payment flow">
+    <PageFrame title="Repayments" subtitle="Review each investor and launch the payment flow" hideDesktopHeader>
       {rolSeleccionado !== 'emprendedor' ? (
         <div className="rounded-[20px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
           Repayments are available only for entrepreneur accounts.

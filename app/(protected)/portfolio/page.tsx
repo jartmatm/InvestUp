@@ -844,6 +844,7 @@ export default function PortfolioPage() {
           subtitle="Preparing the right portfolio workspace for your profile."
           eyebrow="Loading"
           maxWidthClassName="max-w-[980px]"
+          hideHeader
         >
           <DesktopSectionCard>
             <SectionLoadingSkeleton rows={4} />

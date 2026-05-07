@@ -686,19 +686,6 @@ function DashboardLayout({
   );
 }
 
-function PortfolioHeader() {
-  return (
-    <div>
-      <h1 className="text-[2.35rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
-        My investments
-      </h1>
-      <p className="mt-1.5 text-base font-medium text-[#66728A]">
-        Track your portfolio performance and growth
-      </p>
-    </div>
-  );
-}
-
 function DesktopPortfolioDonut({ value }: { value: number }) {
   const radius = 66;
   const circumference = 2 * Math.PI * radius;
@@ -1288,8 +1275,6 @@ export default function InvestorPortfolioDashboard() {
   return (
     <>
       <DashboardLayout avatarUrl={avatarUrl} displayName={profileName} profileRole="Inversionista">
-        <PortfolioHeader />
-
         {loading ? (
           <DesktopPortfolioLoading />
         ) : (

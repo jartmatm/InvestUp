@@ -421,17 +421,6 @@ function Topbar({
   );
 }
 
-function ProfileHeader() {
-  return (
-    <div>
-      <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.055em] text-[#111827]">Profile</h1>
-      <p className="mt-2 text-base font-medium text-[#66728A]">
-        Manage your account settings and preferences
-      </p>
-    </div>
-  );
-}
-
 function ProfileCard({
   avatarUrl,
   displayName,
@@ -702,7 +691,6 @@ function DesktopProfileDashboard({
       <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
         <div className="mx-auto w-full max-w-[1440px] space-y-6 px-8 py-7">
-          <ProfileHeader />
           <ProfileCard
             avatarUrl={avatarUrl}
             displayName={displayName}

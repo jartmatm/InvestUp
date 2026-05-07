@@ -644,6 +644,7 @@ export default function WithdrawPage() {
       subtitle="Request a compliant fiat payout from your InvestApp USD balance."
       eyebrow="Payouts"
       searchPlaceholder="Search withdrawals, wallets or bank accounts..."
+      hideHeader
       rightRail={
         <DesktopSectionCard title="Payout policy" subtitle="Operational guardrails for safe withdrawals.">
           <div className="space-y-3">
