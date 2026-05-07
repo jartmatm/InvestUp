@@ -62,6 +62,58 @@ body {
   background-attachment: fixed;
 }
 
+@media (min-width: 1024px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.84;
+    min-height: calc(100vh / var(--investapp-desktop-zoom));
+    overflow-x: hidden;
+  }
+
+  @supports (zoom: 1) {
+    .investapp-desktop-autofit {
+      zoom: var(--investapp-desktop-zoom);
+    }
+  }
+
+  @supports not (zoom: 1) {
+    .investapp-desktop-autofit {
+      width: calc(100% / var(--investapp-desktop-zoom));
+      transform: scale(var(--investapp-desktop-zoom));
+      transform-origin: top left;
+    }
+  }
+}
+
+@media (min-width: 1440px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.88;
+  }
+}
+
+@media (min-width: 1680px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.92;
+  }
+}
+
+@media (min-width: 1920px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.96;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 820px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.82;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 740px) {
+  .investapp-desktop-autofit {
+    --investapp-desktop-zoom: 0.78;
+  }
+}
+
 body.investapp-dark {
   color: #eef2ff;
   background-color: #08111f;

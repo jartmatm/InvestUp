@@ -817,7 +817,7 @@ function DesktopProfileDashboard({
   showFavorites: boolean;
 }) {
   return (
-    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
+    <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
       <Sidebar profileRole={profileRole} />
       <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />

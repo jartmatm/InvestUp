@@ -1382,7 +1382,7 @@ function DesktopHomeDashboard({
   onToggleBalance: () => void;
 }) {
   return (
-    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
+    <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
       <DesktopSidebar roleLabel={roleLabel} />
       <div className="min-w-0 pl-[260px]">
         <DesktopTopbar

@@ -555,7 +555,7 @@ function DesktopEntrepreneurDashboardShell({
   onNotifications: () => void;
 }) {
   return (
-    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
+    <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
       <DesktopEntrepreneurSidebar />
       <div className="min-w-0 pl-[260px]">
         <DesktopEntrepreneurTopbar
