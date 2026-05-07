@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -214,119 +215,6 @@ function IconVerifiedShield() {
   );
 }
 
-function DesktopNavIcon({ type }: { type: string }) {
-  const common = {
-    className: 'h-5 w-5',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: '2',
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-
-  if (type === 'home') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
-        <path d="M9 20v-6h6v6" />
-      </svg>
-    );
-  }
-
-  if (type === 'feed') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <rect x="5" y="4" width="14" height="16" rx="3" />
-        <path d="M8 9h8M8 13h5" />
-      </svg>
-    );
-  }
-
-  if (type === 'explore') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <circle cx="12" cy="12" r="8" />
-        <path d="m14.8 9.2-1.6 4-4 1.6 1.6-4 4-1.6Z" />
-      </svg>
-    );
-  }
-
-  if (type === 'portfolio' || type === 'returns') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 19V5" />
-        <path d="M8 19v-7" />
-        <path d="M12 19V8" />
-        <path d="M16 19v-4" />
-        <path d="M20 19V9" />
-      </svg>
-    );
-  }
-
-  if (type === 'send') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
-        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
-      </svg>
-    );
-  }
-
-  if (type === 'profile') return <IconPersonalData />;
-
-  if (type === 'messages') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 6h16v10H8l-4 4V6Z" />
-      </svg>
-    );
-  }
-
-  if (type === 'favorites') return <IconFavorites />;
-
-  if (type === 'alerts') return <DesktopBellIcon />;
-
-  if (type === 'learn') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
-        <path d="M4 18.5A3.5 3.5 0 0 1 7.5 15H20" />
-      </svg>
-    );
-  }
-
-  if (type === 'dashboard') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <rect x="4" y="4" width="6" height="6" rx="1.5" />
-        <rect x="14" y="4" width="6" height="6" rx="1.5" />
-        <rect x="4" y="14" width="6" height="6" rx="1.5" />
-        <rect x="14" y="14" width="6" height="6" rx="1.5" />
-      </svg>
-    );
-  }
-
-  if (type === 'investments') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 17 9 12l4 4 7-8" />
-        <path d="M14 8h6v6" />
-      </svg>
-    );
-  }
-
-  if (type === 'documents') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M7 3h7l4 4v14H7V3Z" />
-        <path d="M14 3v5h5M9 13h6M9 17h6" />
-      </svg>
-    );
-  }
-
-  return <IconPersonalData />;
-}
-
 function Section({ title, children }: SectionProps) {
   return (
     <section className="space-y-3">
@@ -420,8 +308,8 @@ function Sidebar({ profileRole }: { profileRole: string }) {
     { href: '/profile', label: 'Profile', icon: 'profile', active: true },
   ];
   const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'send' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'returns' },
+    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
     { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
@@ -440,7 +328,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
                 : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
             }`}
           >
-            <DesktopNavIcon type={item.icon} />
+            <DesktopSidebarIcon type={item.icon} />
             {item.label}
           </Link>
         ))}
@@ -457,7 +345,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
               href={item.href}
               className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
-              <DesktopNavIcon type={item.icon} />
+              <DesktopSidebarIcon type={item.icon} />
               {item.label}
             </Link>
           ))}
@@ -466,7 +354,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
 
       <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
         <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
-          <DesktopNavIcon type="investments" />
+          <DesktopSidebarIcon type="portfolio" className="h-5 w-5" />
         </span>
         <p className="mt-4 text-base font-bold text-[#6B39F4]">Hazte Premium</p>
         <p className="mt-2 text-sm leading-5 text-[#74809A]">

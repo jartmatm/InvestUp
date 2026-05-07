@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getPendingInvestment } from '@/lib/pending-investment';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -618,8 +619,8 @@ function Sidebar({ profileRole }: { profileRole: string }) {
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
   const secondaryItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'wallet' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'transactions' },
+    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
     { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
@@ -638,7 +639,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
                 : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
             }`}
           >
-            <DesktopIcon type={item.icon} />
+            <DesktopSidebarIcon type={item.icon} />
             {item.label}
           </Link>
         ))}
@@ -655,7 +656,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
               href={item.href}
               className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
-              <DesktopIcon type={item.icon} />
+              <DesktopSidebarIcon type={item.icon} />
               {item.label}
             </Link>
           ))}
@@ -664,7 +665,7 @@ function Sidebar({ profileRole }: { profileRole: string }) {
 
       <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
         <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
-          <DesktopIcon type="investments" />
+          <DesktopSidebarIcon type="portfolio" className="h-5 w-5" />
         </span>
         <p className="mt-4 text-base font-bold text-[#6B39F4]">Upgrade to Premium</p>
         <p className="mt-2 text-sm leading-5 text-[#74809A]">

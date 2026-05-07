@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -44,17 +45,17 @@ type DesktopListRowProps = {
 };
 
 const mainItems = [
-  { href: '/home', label: 'Home', icon: <IconHome /> },
-  { href: '/portfolio', label: 'Portfolio', icon: <IconPortfolio /> },
-  { href: '/invest', label: 'Send', icon: <IconSend /> },
-  { href: '/feed', label: 'Feed', icon: <IconFeed /> },
-  { href: '/profile', label: 'Profile', icon: <IconProfile /> },
+  { href: '/home', label: 'Home', icon: 'home' },
+  { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
+  { href: '/invest', label: 'Send', icon: 'send' },
+  { href: '/feed', label: 'Feed', icon: 'feed' },
+  { href: '/profile', label: 'Profile', icon: 'profile' },
 ];
 
 const utilityItems = [
-  { href: '/home?topup=1', label: 'Top up', icon: <IconTopUp /> },
-  { href: '/withdraw', label: 'Withdraw', icon: <IconWithdraw /> },
-  { href: '/contracts', label: 'Documents', icon: <IconDocument /> },
+  { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
+  { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
+  { href: '/contracts', label: 'Documents', icon: 'documents' },
 ];
 
 const toneClasses = {
@@ -98,80 +99,6 @@ function InvestAppLogo() {
       <span className="text-[#6B39F4]">App</span>
       <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
     </div>
-  );
-}
-
-function IconHome() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
-      <path d="M9 20v-6h6v6" />
-    </svg>
-  );
-}
-
-function IconPortfolio() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 17 9 12l4 4 7-8" />
-      <path d="M14 8h6v6" />
-    </svg>
-  );
-}
-
-function IconSend() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
-      <path d="M16 17h5m0 0-2-2m2 2-2 2" />
-    </svg>
-  );
-}
-
-function IconTopUp() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 19V5" />
-      <path d="m6 11 6-6 6 6" />
-      <path d="M5 19h14" />
-    </svg>
-  );
-}
-
-function IconWithdraw() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 5v14" />
-      <path d="m6 13 6 6 6-6" />
-      <path d="M5 5h14" />
-    </svg>
-  );
-}
-
-function IconDocument() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M7 3h7l4 4v14H7V3Z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  );
-}
-
-function IconFeed() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="5" y="4" width="14" height="16" rx="3" />
-      <path d="M8 9h8M8 13h5" />
-    </svg>
-  );
-}
-
-function IconProfile() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M5 20a7 7 0 0 1 14 0" />
-    </svg>
   );
 }
 
@@ -246,7 +173,7 @@ export function DesktopAppShell({
                     : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
                 }`}
               >
-                {item.icon}
+                <DesktopSidebarIcon type={item.icon} />
                 {item.label}
               </Link>
             );
@@ -264,7 +191,7 @@ export function DesktopAppShell({
                 href={item.href}
                 className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
               >
-                {item.icon}
+                <DesktopSidebarIcon type={item.icon} />
                 {item.label}
               </Link>
             ))}

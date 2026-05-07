@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } fro
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
+import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -157,96 +158,6 @@ function IconNotification() {
       <path d="M10 18a2 2 0 0 0 4 0" />
     </svg>
   );
-}
-
-function DesktopNavIcon({ type }: { type: string }) {
-  const common = {
-    className: 'h-4 w-4',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: '2',
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-
-  if (type === 'home') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M3 11.5 12 4l9 7.5" />
-        <path d="M5.5 10.5V20h13v-9.5" />
-      </svg>
-    );
-  }
-
-  if (type === 'feed') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
-        <path d="M8 9h8M8 13h5" />
-      </svg>
-    );
-  }
-
-  if (type === 'portfolio') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 19V5" />
-        <path d="M8 19v-7" />
-        <path d="M12 19V8" />
-        <path d="M16 19v-4" />
-        <path d="M20 19V9" />
-      </svg>
-    );
-  }
-
-  if (type === 'send') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
-        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
-      </svg>
-    );
-  }
-
-  if (type === 'profile') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M5 20a7 7 0 0 1 14 0" />
-      </svg>
-    );
-  }
-
-  if (type === 'messages') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 6h16v10H8l-4 4V6Z" />
-      </svg>
-    );
-  }
-
-  if (type === 'favorites') return <IconHeart />;
-  if (type === 'notifications') return <IconNotification />;
-
-  if (type === 'learn') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
-        <path d="M4 18.5A3.5 3.5 0 0 1 7.5 15H20" />
-      </svg>
-    );
-  }
-
-  if (type === 'documents') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M7 3h7l4 4v14H7V3Z" />
-        <path d="M14 3v5h5M9 13h6M9 17h6" />
-      </svg>
-    );
-  }
-
-  return <IconSpark />;
 }
 
 function InvestAppWordmark() {
@@ -516,8 +427,8 @@ function DesktopSidebar({ role }: { role: string }) {
   ];
 
   const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'send' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'portfolio' },
+    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
     { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
@@ -538,7 +449,7 @@ function DesktopSidebar({ role }: { role: string }) {
                 : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
             }`}
           >
-            <DesktopNavIcon type={item.icon} />
+            <DesktopSidebarIcon type={item.icon} />
             {item.label}
           </Link>
         ))}
@@ -555,7 +466,7 @@ function DesktopSidebar({ role }: { role: string }) {
               href={item.href}
               className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
-              <DesktopNavIcon type={item.icon} />
+              <DesktopSidebarIcon type={item.icon} />
               {item.label}
             </Link>
           ))}

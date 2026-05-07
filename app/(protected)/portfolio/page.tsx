@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
+import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
@@ -295,94 +296,6 @@ function DesktopBellIcon() {
   );
 }
 
-function DesktopNavIcon({ type }: { type: string }) {
-  const common = {
-    className: 'h-5 w-5',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: '2',
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-
-  if (type === 'home') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
-        <path d="M9 20v-6h6v6" />
-      </svg>
-    );
-  }
-
-  if (type === 'portfolio' || type === 'projects' || type === 'analytics') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M4 17 9 12l4 4 7-8" />
-        <path d="M14 8h6v6" />
-      </svg>
-    );
-  }
-
-  if (type === 'send' || type === 'wallet') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
-        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
-      </svg>
-    );
-  }
-
-  if (type === 'profile') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <circle cx="12" cy="8" r="4" />
-        <path d="M5 20a7 7 0 0 1 14 0" />
-      </svg>
-    );
-  }
-
-  if (type === 'feed') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <rect x="5" y="4" width="14" height="16" rx="3" />
-        <path d="M8 9h8M8 13h5" />
-      </svg>
-    );
-  }
-
-  if (type === 'documents') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M7 3h7l4 4v14H7V3Z" />
-        <path d="M14 3v5h5M9 13h6M9 17h6" />
-      </svg>
-    );
-  }
-
-  if (type === 'alerts') return <DesktopBellIcon />;
-
-  if (type === 'transactions') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M8 7h12M8 17h12" />
-        <path d="M4 7h.01M4 17h.01" />
-        <path d="m16 11 4-4-4-4M8 13l-4 4 4 4" />
-      </svg>
-    );
-  }
-
-  if (type === 'settings') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-        <path d="M19.4 15a1.8 1.8 0 0 0 .4 2l.1.1a2.1 2.1 0 0 1-3 3l-.1-.1a1.8 1.8 0 0 0-2-.4 1.8 1.8 0 0 0-1.1 1.7V21a2.1 2.1 0 0 1-4.2 0v-.2a1.8 1.8 0 0 0-1.1-1.7 1.8 1.8 0 0 0-2 .4l-.1.1a2.1 2.1 0 0 1-3-3l.1-.1a1.8 1.8 0 0 0 .4-2 1.8 1.8 0 0 0-1.7-1.1H2a2.1 2.1 0 0 1 0-4.2h.2a1.8 1.8 0 0 0 1.7-1.1 1.8 1.8 0 0 0-.4-2l-.1-.1a2.1 2.1 0 1 1 3-3l.1.1a1.8 1.8 0 0 0 2 .4h.1A1.8 1.8 0 0 0 9.7 2V2a2.1 2.1 0 0 1 4.2 0v.2A1.8 1.8 0 0 0 15 3.9a1.8 1.8 0 0 0 2-.4l.1-.1a2.1 2.1 0 1 1 3 3l-.1.1a1.8 1.8 0 0 0-.4 2v.1a1.8 1.8 0 0 0 1.7 1.1H21a2.1 2.1 0 0 1 0 4.2h-.2a1.8 1.8 0 0 0-1.4 1.1Z" />
-      </svg>
-    );
-  }
-
-  return <DesktopSearchIcon />;
-}
-
 function DesktopInvestAppLogo() {
   return (
     <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
@@ -425,8 +338,8 @@ function DesktopEntrepreneurSidebar() {
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
   const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'wallet' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'transactions' },
+    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
+    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
     { href: '/contracts', label: 'Documents', icon: 'documents' },
   ];
 
@@ -445,7 +358,7 @@ function DesktopEntrepreneurSidebar() {
                 : 'text-[#59657D] hover:bg-[#F7F8FB] hover:text-[#172033]'
             }`}
           >
-            <DesktopNavIcon type={item.icon} />
+            <DesktopSidebarIcon type={item.icon} />
             {item.label}
           </Link>
         ))}
@@ -462,7 +375,7 @@ function DesktopEntrepreneurSidebar() {
               href={item.href}
               className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#172033]"
             >
-              <DesktopNavIcon type={item.icon} />
+              <DesktopSidebarIcon type={item.icon} />
               {item.label}
             </Link>
           ))}
