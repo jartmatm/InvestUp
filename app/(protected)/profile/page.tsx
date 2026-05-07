@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
@@ -17,6 +18,15 @@ type SettingItemProps = {
   danger?: boolean;
   onClick?: () => void;
   icon: ReactNode;
+};
+
+type DesktopProfileOption = {
+  href?: string;
+  icon: ReactNode;
+  label: string;
+  subtitle: string;
+  danger?: boolean;
+  onClick?: () => void;
 };
 
 function IconChevronRight({ className }: { className?: string }) {
@@ -168,6 +178,155 @@ function IconLogout() {
   );
 }
 
+function DesktopSearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M16.7 16.7A7.5 7.5 0 1 0 5.3 5.3a7.5 7.5 0 0 0 11.4 11.4Z" />
+      <path d="M16.7 16.7 21 21" />
+    </svg>
+  );
+}
+
+function DesktopBellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 4a5 5 0 0 0-5 5v3c0 .9-.3 1.8-.9 2.5L5 16h14l-1.1-1.5A4 4 0 0 1 17 12V9a5 5 0 0 0-5-5Z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function IconCalendar() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="5" width="16" height="15" rx="3" />
+      <path d="M8 3v4M16 3v4M4 10h16" />
+    </svg>
+  );
+}
+
+function IconVerifiedShield() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 3l7 3v5c0 5.2-3.2 8.7-7 10-3.8-1.3-7-4.8-7-10V6l7-3Z" />
+      <path d="m9.5 12 1.7 1.7 3.8-4" />
+    </svg>
+  );
+}
+
+function DesktopNavIcon({ type }: { type: string }) {
+  const common = {
+    className: 'h-5 w-5',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  if (type === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
+        <path d="M9 20v-6h6v6" />
+      </svg>
+    );
+  }
+
+  if (type === 'feed') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <rect x="5" y="4" width="14" height="16" rx="3" />
+        <path d="M8 9h8M8 13h5" />
+      </svg>
+    );
+  }
+
+  if (type === 'explore') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <circle cx="12" cy="12" r="8" />
+        <path d="m14.8 9.2-1.6 4-4 1.6 1.6-4 4-1.6Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'portfolio' || type === 'returns') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 19V5" />
+        <path d="M8 19v-7" />
+        <path d="M12 19V8" />
+        <path d="M16 19v-4" />
+        <path d="M20 19V9" />
+      </svg>
+    );
+  }
+
+  if (type === 'send') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
+        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
+      </svg>
+    );
+  }
+
+  if (type === 'profile') return <IconPersonalData />;
+
+  if (type === 'messages') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 6h16v10H8l-4 4V6Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'favorites') return <IconFavorites />;
+
+  if (type === 'alerts') return <DesktopBellIcon />;
+
+  if (type === 'learn') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H20v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
+        <path d="M4 18.5A3.5 3.5 0 0 1 7.5 15H20" />
+      </svg>
+    );
+  }
+
+  if (type === 'dashboard') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <rect x="4" y="4" width="6" height="6" rx="1.5" />
+        <rect x="14" y="4" width="6" height="6" rx="1.5" />
+        <rect x="4" y="14" width="6" height="6" rx="1.5" />
+        <rect x="14" y="14" width="6" height="6" rx="1.5" />
+      </svg>
+    );
+  }
+
+  if (type === 'investments') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 17 9 12l4 4 7-8" />
+        <path d="M14 8h6v6" />
+      </svg>
+    );
+  }
+
+  if (type === 'documents') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M7 3h7l4 4v14H7V3Z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </svg>
+    );
+  }
+
+  return <IconPersonalData />;
+}
+
 function Section({ title, children }: SectionProps) {
   return (
     <section className="space-y-3">
@@ -234,12 +393,463 @@ function SettingItem({ label, value, danger, onClick, icon }: SettingItemProps) 
   return <div className={baseClasses}>{content}</div>;
 }
 
+const initialsFrom = (value: string) =>
+  value
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || 'U';
+
+function DesktopInvestAppLogo() {
+  return (
+    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
+      <span>Invest</span>
+      <span className="text-[#6B39F4]">App</span>
+      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
+    </div>
+  );
+}
+
+function Sidebar({ profileRole }: { profileRole: string }) {
+  const primaryItems = [
+    { href: '/home', label: 'Home', icon: 'home' },
+    { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
+    { href: '/invest', label: 'Send', icon: 'send' },
+    { href: '/feed', label: 'Feed', icon: 'feed' },
+    { href: '/profile', label: 'Profile', icon: 'profile', active: true },
+  ];
+  const roleItems =
+    profileRole === 'Emprendedor'
+      ? [
+          { label: 'Dashboard', icon: 'dashboard' },
+          { label: 'Mis proyectos', icon: 'investments' },
+          { label: 'Rendimientos', icon: 'returns' },
+          { label: 'Documentos', icon: 'documents' },
+        ]
+      : [
+          { label: 'Dashboard', icon: 'dashboard' },
+          { label: 'Mis inversiones', icon: 'investments' },
+          { label: 'Rendimientos', icon: 'returns' },
+          { label: 'Documentos', icon: 'documents' },
+        ];
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex">
+      <DesktopInvestAppLogo />
+
+      <nav className="mt-9 space-y-1.5">
+        {primaryItems.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition ${
+              item.active
+                ? 'bg-[#F1ECFF] text-[#6B39F4]'
+                : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
+            }`}
+          >
+            <DesktopNavIcon type={item.icon} />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
+        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
+          {profileRole}
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {roleItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A]"
+            >
+              <DesktopNavIcon type={item.icon} />
+              {item.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
+          <DesktopNavIcon type="investments" />
+        </span>
+        <p className="mt-4 text-base font-bold text-[#6B39F4]">Hazte Premium</p>
+        <p className="mt-2 text-sm leading-5 text-[#74809A]">
+          Tu proyecto en los primeros lugares y mas visibilidad.
+        </p>
+        <Link
+          href="/profile"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
+        >
+          Ver planes
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
+function Topbar({
+  avatarUrl,
+  displayName,
+  profileRole,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  profileRole: string;
+}) {
+  return (
+    <header className="sticky top-0 z-20 hidden h-[80px] items-center gap-6 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl lg:flex">
+      <label className="relative block w-full max-w-[720px]">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
+          <DesktopSearchIcon />
+        </span>
+        <input
+          placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
+          className="h-12 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+        />
+      </label>
+
+      <div className="ml-auto flex items-center gap-5">
+        <button
+          type="button"
+          className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
+          aria-label="Notifications"
+        >
+          <DesktopBellIcon />
+          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
+        </button>
+
+        <div className="h-9 w-px bg-[#E7EAF3]" />
+
+        <div className="flex min-w-[190px] items-center gap-3">
+          <span
+            className="grid h-11 w-11 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+            style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
+          >
+            {avatarUrl ? null : initialsFrom(displayName)}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+            <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
+          </span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function ProfileHeader() {
+  return (
+    <div>
+      <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.055em] text-[#111827]">Profile</h1>
+      <p className="mt-2 text-base font-medium text-[#66728A]">
+        Manage your account settings and preferences
+      </p>
+    </div>
+  );
+}
+
+function ProfileCard({
+  avatarUrl,
+  displayName,
+  email,
+  loading,
+  profileRole,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  email: string;
+  loading: boolean;
+  profileRole: string;
+}) {
+  return (
+    <section className="rounded-[24px] border border-[#E9ECF4] bg-[linear-gradient(135deg,#FFFFFF_0%,#F8F6FF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
+      <div className="flex items-center justify-between gap-8">
+        <div className="flex min-w-0 items-center gap-6">
+          <button
+            type="button"
+            aria-label="Edit profile photo"
+            className="relative shrink-0 rounded-full transition hover:scale-[1.02]"
+          >
+            <span className="block h-[112px] w-[112px] overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]">
+              {avatarUrl ? (
+                <span
+                  className="block h-full w-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${JSON.stringify(avatarUrl)})` }}
+                />
+              ) : loading ? (
+                <span className="block h-full w-full animate-pulse bg-[#ECE7FF]" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-3xl font-semibold text-[#6B39F4]">
+                  {initialsFrom(displayName)}
+                </span>
+              )}
+            </span>
+            <span className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_28px_rgba(107,57,244,0.32)]">
+              <IconEditProfile />
+            </span>
+          </button>
+
+          <div className="min-w-0">
+            <h2 className="text-[1.8rem] font-bold tracking-[-0.055em] text-[#111827]">{displayName}</h2>
+            <p className="mt-1 text-base font-semibold text-[#63708A]">{profileRole}</p>
+            <p className="mt-2 text-sm font-medium text-[#63708A]">{email}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-7">
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#6B39F4] shadow-[0_12px_28px_rgba(21,28,44,0.06)]">
+              <IconCalendar />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-[#718096]">Member since</span>
+              <span className="mt-1 block text-sm font-bold text-[#111827]">Jan 15, 2024</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#64708A] shadow-[0_12px_28px_rgba(21,28,44,0.06)]">
+              <IconVerifiedShield />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold text-[#718096]">Account status</span>
+              <span className="mt-1 inline-flex rounded-full bg-[#DDFBEA] px-3 py-1 text-xs font-bold text-[#14985F]">
+                Verified
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DesktopOptionItem({ danger, href, icon, label, onClick, subtitle }: DesktopProfileOption) {
+  const content = (
+    <>
+      <div className="flex min-w-0 items-center gap-4">
+        <span
+          className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${
+            danger ? 'bg-[#FFF1F3] text-[#EF4444]' : 'bg-[#F1ECFF] text-[#6B39F4]'
+          }`}
+        >
+          {icon}
+        </span>
+        <span className="min-w-0">
+          <span className={`block text-sm font-bold ${danger ? 'text-[#EF4444]' : 'text-[#111827]'}`}>
+            {label}
+          </span>
+          <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">{subtitle}</span>
+        </span>
+      </div>
+      <IconChevronRight className="h-4 w-4 shrink-0 text-[#A7B0C0] transition group-hover:translate-x-0.5" />
+    </>
+  );
+  const className = `group flex min-h-[70px] w-full items-center justify-between rounded-2xl px-4 py-3 text-left transition ${
+    danger ? 'bg-[#FFF7F7] hover:bg-[#FFF0F0]' : 'hover:bg-[#F8F9FB]'
+  }`;
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={href ?? '/profile'} className={className}>
+      {content}
+    </Link>
+  );
+}
+
+function DesktopSectionCard({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="rounded-[24px] border border-[#E9ECF4] bg-white p-5 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
+      <h2 className="px-1 text-lg font-bold tracking-[-0.04em] text-[#111827]">{title}</h2>
+      <div className="mt-4 divide-y divide-[#EEF1F7]">{children}</div>
+    </section>
+  );
+}
+
+function AccountSection() {
+  return (
+    <DesktopSectionCard title="Account">
+      <DesktopOptionItem
+        href="/profile/personal-data"
+        icon={<IconPersonalData />}
+        label="Personal Data"
+        subtitle="Manage your personal information"
+      />
+      <DesktopOptionItem
+        href="/profile/social-media"
+        icon={<IconSocialMedia />}
+        label="Social Media"
+        subtitle="Connect and manage your social accounts"
+      />
+      <DesktopOptionItem
+        href="/profile/referral-code"
+        icon={<IconReferralCode />}
+        label="Referral Code"
+        subtitle="Invite friends and earn rewards"
+      />
+    </DesktopSectionCard>
+  );
+}
+
+function TransactionsSection({ showFavorites }: { showFavorites: boolean }) {
+  return (
+    <DesktopSectionCard title="Transactions">
+      <DesktopOptionItem
+        href="/profile/bank-account"
+        icon={<IconBankAccount />}
+        label="Bank Account"
+        subtitle="Manage your bank and payout information"
+      />
+      {showFavorites ? (
+        <DesktopOptionItem
+          href="/profile/favorites"
+          icon={<IconFavorites />}
+          label="Favorites"
+          subtitle="Your favorite projects and entrepreneurs"
+        />
+      ) : null}
+    </DesktopSectionCard>
+  );
+}
+
+function PreferencesSection({ languageLabel, onLogout }: { languageLabel: string; onLogout: () => void }) {
+  const leftItems: DesktopProfileOption[] = [
+    {
+      href: '/profile/settings',
+      icon: <IconSettings />,
+      label: 'Settings',
+      subtitle: 'Manage app settings and preferences',
+    },
+    {
+      href: '/profile/language',
+      icon: <IconLanguage />,
+      label: 'Language',
+      subtitle: languageLabel,
+    },
+    {
+      href: '/profile/help-center',
+      icon: <IconHelpCenter />,
+      label: 'Help Center',
+      subtitle: 'Get help and support',
+    },
+    {
+      href: '/profile/faq',
+      icon: <IconFaq />,
+      label: 'FAQ',
+      subtitle: 'Frequently asked questions',
+    },
+  ];
+  const rightItems: DesktopProfileOption[] = [
+    {
+      href: '/profile/privacy-policy',
+      icon: <IconPrivacyPolicy />,
+      label: 'Privacy Policy',
+      subtitle: 'Read our privacy policy',
+    },
+    {
+      href: '/profile/terms-conditions',
+      icon: <IconTerms />,
+      label: 'Terms & Conditions',
+      subtitle: 'View terms and conditions',
+    },
+    {
+      href: '/profile/about',
+      icon: <IconAboutApp />,
+      label: 'About App',
+      subtitle: 'Learn more about InvestApp',
+    },
+    {
+      icon: <IconLogout />,
+      label: 'Log out',
+      subtitle: 'Sign out from your account',
+      danger: true,
+      onClick: onLogout,
+    },
+  ];
+
+  return (
+    <section className="rounded-[24px] border border-[#E9ECF4] bg-white p-5 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
+      <h2 className="px-1 text-lg font-bold tracking-[-0.04em] text-[#111827]">Preferences</h2>
+      <div className="mt-4 grid grid-cols-2 gap-8">
+        <div className="divide-y divide-[#EEF1F7]">
+          {leftItems.map((item) => (
+            <DesktopOptionItem key={item.label} {...item} />
+          ))}
+        </div>
+        <div className="divide-y divide-[#EEF1F7]">
+          {rightItems.map((item) => (
+            <DesktopOptionItem key={item.label} {...item} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DesktopProfileDashboard({
+  avatarUrl,
+  displayName,
+  email,
+  languageLabel,
+  loading,
+  logoutApp,
+  profileRole,
+  showFavorites,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  email: string;
+  languageLabel: string;
+  loading: boolean;
+  logoutApp: () => void;
+  profileRole: string;
+  showFavorites: boolean;
+}) {
+  return (
+    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
+      <Sidebar profileRole={profileRole} />
+      <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
+        <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
+        <div className="mx-auto w-full max-w-[1440px] space-y-6 px-8 py-7">
+          <ProfileHeader />
+          <ProfileCard
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            email={email}
+            loading={loading}
+            profileRole={profileRole}
+          />
+          <div className="grid grid-cols-2 gap-6">
+            <AccountSection />
+            <TransactionsSection showFavorites={showFavorites} />
+          </div>
+          <PreferencesSection languageLabel={languageLabel} onLogout={logoutApp} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const { faseApp, logoutApp, rolSeleccionado } = useInvestApp();
-  const { avatarUrl, displayName, loading } = useUserProfileSummary();
+  const { avatarUrl, displayName, email, loading } = useUserProfileSummary();
   const languageLabel = 'English (US)';
-  const safeName = displayName || 'User';
+  const mobileSafeName = displayName || 'User';
+  const desktopDisplayName = displayName || 'Maria Gonzalez';
+  const desktopEmail = email || 'maria.gonzalez@email.com';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -247,7 +857,8 @@ export default function ProfilePage() {
   }, [faseApp, router]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+    <>
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
       <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
@@ -280,7 +891,7 @@ export default function ProfilePage() {
                 <span className="block h-full w-full animate-pulse bg-[#ECE7FF]" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#6B39F4]">
-                  {safeName.slice(0, 1).toUpperCase()}
+                  {mobileSafeName.slice(0, 1).toUpperCase()}
                 </span>
               )}
             </span>
@@ -379,5 +990,16 @@ export default function ProfilePage() {
 
       <BottomNav />
     </main>
+    <DesktopProfileDashboard
+      avatarUrl={avatarUrl}
+      displayName={desktopDisplayName}
+      email={desktopEmail}
+      languageLabel={languageLabel}
+      loading={loading}
+      logoutApp={logoutApp}
+      profileRole={profileRoleLabel}
+      showFavorites={rolSeleccionado === 'inversor'}
+    />
+    </>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
@@ -194,6 +195,24 @@ function DesktopNavIcon({ type }: { type: string }) {
         <path d="M12 19V8" />
         <path d="M16 19v-4" />
         <path d="M20 19V9" />
+      </svg>
+    );
+  }
+
+  if (type === 'send') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
+        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
+      </svg>
+    );
+  }
+
+  if (type === 'profile') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
       </svg>
     );
   }
@@ -489,13 +508,11 @@ function DesktopCategoryIcon({ active, category }: { active: boolean; category: 
 
 function DesktopSidebar({ role }: { role: string }) {
   const primaryItems = [
-    { label: 'Home', icon: 'home' },
-    { label: 'Feed', icon: 'feed', active: true },
-    { label: 'Portfolio', icon: 'portfolio' },
-    { label: 'Mesages', icon: 'messages' },
-    { label: 'Favorites', icon: 'favorites' },
-    { label: 'Notifications', icon: 'notifications' },
-    { label: 'Learn', icon: 'learn' },
+    { href: '/home', label: 'Home', icon: 'home' },
+    { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
+    { href: '/invest', label: 'Send', icon: 'send' },
+    { href: '/feed', label: 'Feed', icon: 'feed', active: true },
+    { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
 
   const roleItems =
@@ -521,9 +538,9 @@ function DesktopSidebar({ role }: { role: string }) {
 
       <nav className="mt-7 space-y-1">
         {primaryItems.map((item) => (
-          <button
+          <Link
             key={item.label}
-            type="button"
+            href={item.href}
             className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
               item.active
                 ? 'bg-[#F2EDFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
@@ -532,7 +549,7 @@ function DesktopSidebar({ role }: { role: string }) {
           >
             <DesktopNavIcon type={item.icon} />
             {item.label}
-          </button>
+          </Link>
         ))}
       </nav>
 
@@ -542,14 +559,13 @@ function DesktopSidebar({ role }: { role: string }) {
         </p>
         <div className="mt-3 space-y-1">
           {roleItems.map((item) => (
-            <button
+            <div
               key={item.label}
-              type="button"
-              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A] transition hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
+              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A]"
             >
               <DesktopNavIcon type={item.icon} />
               {item.label}
-            </button>
+            </div>
           ))}
         </div>
       </div>

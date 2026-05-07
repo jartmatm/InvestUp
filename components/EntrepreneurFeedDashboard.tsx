@@ -506,6 +506,130 @@ function FundingGauge({
   );
 }
 
+function DesktopFundingGauge({
+  raised,
+  target,
+  remaining,
+  currency,
+  daysRemainingLabel,
+}: {
+  raised: number;
+  target: number;
+  remaining: number;
+  currency: string;
+  daysRemainingLabel: string;
+}) {
+  const gaugeId = useId().replace(/:/g, '');
+  const progressRatio = target > 0 ? Math.max(0, Math.min(1, raised / target)) : 0;
+  const [animatedRatio, setAnimatedRatio] = useState(0);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setAnimatedRatio(progressRatio));
+    return () => window.cancelAnimationFrame(frame);
+  }, [progressRatio]);
+
+  const progressColor = interpolateGaugeColor(animatedRatio);
+  const leadingColor = mixColors(progressColor, '#FFFFFF', 0.24);
+  const trailingColor =
+    animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
+  const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+
+  return (
+    <section className="relative overflow-hidden rounded-[28px] border border-[#E8EBF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8F6FF_58%,#F5FAFF_100%)] p-8 shadow-[0_24px_58px_rgba(21,28,44,0.07)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,92,255,0.14),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(53,201,130,0.08),transparent_32%)]" />
+      <div className="pointer-events-none absolute -left-20 top-10 h-52 w-52 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -right-14 bottom-8 h-44 w-44 rounded-full bg-[#35C982]/9 blur-3xl" />
+
+      <div className="relative mx-auto max-w-[880px]">
+        <div className="grid grid-cols-[1fr_340px_1fr] items-start gap-8">
+          <div className="pt-8">
+            <p className="text-[0.78rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
+              Capital levantado
+            </p>
+            <p className="mt-3 text-[2rem] font-bold tracking-[-0.055em] text-[#111827]">
+              {money(raised, currency)}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-[#66728A]">
+              de {money(target, currency)} objetivo
+            </p>
+          </div>
+
+          <div className="relative">
+            <svg viewBox="0 0 320 220" className="mx-auto h-[260px] w-full">
+              <defs>
+                <linearGradient id={`desktop-gauge-gradient-${gaugeId}`} x1="32" y1="176" x2="288" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor={leadingColor} />
+                  <stop offset="55%" stopColor={progressColor} />
+                  <stop offset="100%" stopColor={trailingColor} />
+                </linearGradient>
+                <filter id={`desktop-gauge-glow-${gaugeId}`} x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="9" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <path
+                d={buildArcPath(180, 0, 116, 160, 176)}
+                pathLength={100}
+                fill="none"
+                stroke="rgba(124,92,255,0.14)"
+                strokeWidth="22"
+                strokeLinecap="round"
+              />
+              <path
+                d={buildArcPath(180, 0, 116, 160, 176)}
+                pathLength={100}
+                fill="none"
+                stroke={`url(#desktop-gauge-gradient-${gaugeId})`}
+                strokeWidth="22"
+                strokeLinecap="round"
+                strokeDasharray="100"
+                strokeDashoffset={100 - animatedRatio * 100}
+                filter={`url(#desktop-gauge-glow-${gaugeId})`}
+                className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              />
+              <text x="38" y="198" className="fill-[#9BA5B8] text-[12px] font-bold">
+                0%
+              </text>
+              <text x="151" y="44" className="fill-[#9BA5B8] text-[12px] font-bold">
+                50%
+              </text>
+              <text x="263" y="198" className="fill-[#9BA5B8] text-[12px] font-bold">
+                100%
+              </text>
+            </svg>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-10 text-center">
+              <p className="text-[3rem] font-bold tracking-[-0.06em] text-[#111827]">{percentageLabel}</p>
+              <p className="mt-2 text-[0.76rem] font-bold uppercase tracking-[0.2em] text-[#8A93A8]">
+                Funding progress
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-8 text-right">
+            <p className="text-[0.78rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
+              Restante
+            </p>
+            <p className="mt-3 text-[2rem] font-bold tracking-[-0.055em] text-[#111827]">
+              {money(remaining, currency)}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-[#66728A]">por levantar</p>
+          </div>
+        </div>
+
+        <div className="-mt-2 flex justify-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/90 bg-white/78 px-4 py-2 text-sm font-bold text-[#4F5B76] shadow-[0_12px_28px_rgba(31,38,64,0.08)] backdrop-blur-xl">
+            <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/70" />
+            {daysRemainingLabel} left
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function MetricTile({
   icon,
   label,
@@ -555,7 +679,167 @@ function MetricTile({
   );
 }
 
-export default function EntrepreneurFeedDashboard({ embedded = false }: { embedded?: boolean }) {
+function DesktopMetricTile({
+  icon,
+  label,
+  value,
+  accent = 'purple',
+  badgeClassName = '',
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent?: 'purple' | 'blue' | 'green' | 'amber';
+  badgeClassName?: string;
+}) {
+  const accentClassMap = {
+    purple: 'bg-[#F1ECFF] text-[#6B39F4]',
+    blue: 'bg-[#EEF4FF] text-[#4C6EF5]',
+    green: 'bg-[#E7FBF4] text-[#0B9B72]',
+    amber: 'bg-[#FFF7E8] text-[#B76E00]',
+  } as const;
+
+  return (
+    <article className="group flex min-h-[126px] items-center gap-5 rounded-[22px] border border-[#E8EBF4] bg-white p-5 shadow-[0_18px_42px_rgba(21,28,44,0.055)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.08)]">
+      <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${accentClassMap[accent]}`}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[0.74rem] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+          {label}
+        </span>
+        <span
+          className={`mt-2 inline-flex text-[1.18rem] font-bold tracking-[-0.04em] text-[#111827] ${
+            badgeClassName ? `rounded-full border px-3 py-1 text-sm ${badgeClassName}` : ''
+          }`}
+        >
+          {value}
+        </span>
+      </span>
+    </article>
+  );
+}
+
+function DesktopSummarySection({
+  currency,
+  projectId,
+  router,
+  summaryItems,
+}: {
+  currency: string;
+  projectId: string | number;
+  router: ReturnType<typeof useRouter>;
+  summaryItems: SummaryItem[];
+}) {
+  return (
+    <section className="rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">Summary</h2>
+          <p className="mt-1 text-sm font-medium text-[#66728A]">
+            {summaryItems.length} investor{summaryItems.length === 1 ? '' : 's'} supporting this venture
+          </p>
+        </div>
+        <span className="rounded-full bg-[#F1ECFF] px-3 py-1.5 text-xs font-bold text-[#6B39F4]">
+          Live funding
+        </span>
+      </div>
+
+      <div className="mt-6 overflow-hidden">
+        <div className="grid grid-cols-[minmax(260px,1.5fr)_1fr_1fr_1fr_220px] border-b border-[#E8EBF4] px-1 pb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#7C879D]">
+          <span>Investor</span>
+          <span>Due date</span>
+          <span>Installment</span>
+          <span>Status</span>
+          <span className="text-right">Actions</span>
+        </div>
+
+        {summaryItems.length === 0 ? (
+          <div className="rounded-2xl bg-[#F8F9FB] px-4 py-8 text-center text-sm font-medium text-[#66728A]">
+            No investors yet. Once funding starts, each investor will appear here with the next payment due date.
+          </div>
+        ) : (
+          <div className="divide-y divide-[#EEF1F7]">
+            {summaryItems.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[minmax(260px,1.5fr)_1fr_1fr_1fr_220px] items-center px-1 py-5"
+              >
+                <span className="flex min-w-0 items-center gap-4">
+                  <Avatar
+                    imageUrl={item.avatarUrl}
+                    label={item.displayName}
+                    className="h-12 w-12 shrink-0 border border-white shadow-[0_10px_20px_rgba(31,38,64,0.08)]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-[#111827]">
+                      {item.displayName}
+                    </span>
+                    <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">
+                      {item.country || 'Country pending'}
+                    </span>
+                  </span>
+                </span>
+
+                <span className="text-sm font-semibold text-[#66728A]">{item.nextDueLabel}</span>
+                <span className={`text-sm font-bold ${item.healthTone.textClass}`}>
+                  {money(item.installmentAmount, currency)}
+                </span>
+                <span>
+                  <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold ${item.healthTone.badgeClass}`}>
+                    {item.healthTone.label}
+                  </span>
+                </span>
+                <span className="flex justify-end gap-2">
+                  {item.creditId ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/contracts?credit=${encodeURIComponent(item.creditId ?? '')}`)}
+                      className="inline-flex h-10 items-center rounded-xl border border-[#E4E8F1] bg-white px-3 text-xs font-bold text-[#273247] shadow-[0_10px_22px_rgba(21,28,44,0.04)] transition hover:bg-[#F8F9FB]"
+                    >
+                      Contract
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        `/invest/wallet?mode=repayment${
+                          item.email ? `&email=${encodeURIComponent(item.email)}` : ''
+                        }&wallet=${encodeURIComponent(item.walletAddress)}&amount=${encodeURIComponent(
+                          item.installmentAmount.toFixed(2)
+                        )}&name=${encodeURIComponent(item.displayName)}&projectId=${encodeURIComponent(
+                          String(projectId)
+                        )}&investorUserId=${encodeURIComponent(item.investorUserId ?? '')}`
+                      )
+                    }
+                    disabled={!item.walletAddress}
+                    className={`inline-flex h-10 items-center rounded-xl px-4 text-xs font-bold transition ${
+                      item.walletAddress
+                        ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_14px_24px_rgba(107,57,244,0.22)] hover:-translate-y-0.5'
+                        : 'bg-[#E7E4F7] text-[#A39FB7]'
+                    }`}
+                  >
+                    Pay
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function EntrepreneurFeedDashboard({
+  embedded = false,
+  desktop = false,
+}: {
+  embedded?: boolean;
+  desktop?: boolean;
+}) {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const [project, setProject] = useState<EntrepreneurProjectRow | null>(null);
@@ -793,6 +1077,89 @@ export default function EntrepreneurFeedDashboard({ embedded = false }: { embedd
       badgeClassName: project ? getProjectStatusTone(project) : '',
     },
   ];
+
+  if (desktop) {
+    return (
+      <div className="space-y-5">
+        <header className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="text-[2.35rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
+              Entrepreneur dashboard
+            </h1>
+            <p className="mt-1.5 text-base font-medium text-[#66728A]">
+              Funding progress, financing data and investor summary
+            </p>
+          </div>
+          {project ? (
+            <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold ${getProjectStatusTone(project)}`}>
+              {getProjectStatusLabel(project)}
+            </span>
+          ) : null}
+        </header>
+
+        {loading ? (
+          <div className="space-y-4">
+            <div className="h-[370px] animate-pulse rounded-[28px] bg-white shadow-[0_22px_52px_rgba(21,28,44,0.06)]" />
+            <div className="grid grid-cols-3 gap-4">
+              {[0, 1, 2, 3, 4, 5].map((item) => (
+                <div key={item} className="h-32 animate-pulse rounded-[22px] bg-white" />
+              ))}
+            </div>
+            <div className="h-72 animate-pulse rounded-[24px] bg-white" />
+          </div>
+        ) : null}
+
+        {status ? (
+          <section className="rounded-[22px] border border-[#E8EBF4] bg-white px-5 py-4 text-sm font-medium text-[#66728A] shadow-[0_18px_42px_rgba(21,28,44,0.05)]">
+            {status}
+          </section>
+        ) : null}
+
+        {!loading && !project ? (
+          <section className="rounded-[24px] border border-dashed border-[#C9B8FF] bg-white p-10 text-center shadow-[0_22px_52px_rgba(21,28,44,0.05)]">
+            <p className="text-xl font-bold tracking-[-0.045em] text-[#111827]">
+              Publish your venture first
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[#66728A]">
+              Once your venture is active, this dashboard will show capital raised, financing metrics and investor summary.
+            </p>
+          </section>
+        ) : null}
+
+        {!loading && project ? (
+          <>
+            <DesktopFundingGauge
+              raised={raisedAmount}
+              target={targetAmount}
+              remaining={remainingAmount}
+              currency={currency}
+              daysRemainingLabel={daysRemainingLabel}
+            />
+
+            <section className="grid grid-cols-3 gap-4">
+              {infoRows.map((row) => (
+                <DesktopMetricTile
+                  key={row.label}
+                  icon={row.icon}
+                  label={row.label}
+                  value={row.value}
+                  accent={row.accent}
+                  badgeClassName={row.badgeClassName}
+                />
+              ))}
+            </section>
+
+            <DesktopSummarySection
+              currency={currency}
+              projectId={project.id}
+              router={router}
+              summaryItems={summaryItems}
+            />
+          </>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <>

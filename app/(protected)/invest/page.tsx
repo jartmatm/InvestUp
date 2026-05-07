@@ -446,6 +446,15 @@ function DesktopIcon({ type }: { type: string }) {
     strokeLinejoin: 'round' as const,
   };
 
+  if (type === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
+        <path d="M9 20v-6h6v6" />
+      </svg>
+    );
+  }
+
   if (type === 'feed') {
     return (
       <svg viewBox="0 0 24 24" {...common}>
@@ -591,7 +600,7 @@ function DashboardLayout({
 }) {
   return (
     <div className="hidden min-h-screen bg-[#F8F9FB] text-[#111827] lg:flex">
-      <Sidebar />
+      <Sidebar profileRole={profileRole} />
       <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
         {children}
@@ -600,22 +609,28 @@ function DashboardLayout({
   );
 }
 
-function Sidebar() {
+function Sidebar({ profileRole }: { profileRole: string }) {
   const primaryItems = [
-    { href: '/feed', label: 'Feed', icon: 'feed' },
-    { href: '/feed', label: 'Explorar', icon: 'explore' },
+    { href: '/home', label: 'Home', icon: 'home' },
     { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
-    { href: '/invest', label: 'Investments', icon: 'investments', active: true },
-    { href: '/contracts', label: 'Documents', icon: 'documents' },
-    { href: '/history', label: 'Analytics', icon: 'analytics' },
+    { href: '/invest', label: 'Send', icon: 'transfer', active: true },
+    { href: '/feed', label: 'Feed', icon: 'feed' },
     { href: '/profile', label: 'Profile', icon: 'profile' },
   ];
-  const secondaryItems = [
-    { href: '/history', label: 'Transactions', icon: 'transactions' },
-    { href: '/invest/wallet', label: 'Wallet', icon: 'wallet' },
-    { href: '/invest/wallet?mode=transfer', label: 'Transfer', icon: 'transfer' },
-    { href: '/profile/settings', label: 'Settings', icon: 'settings' },
-  ];
+  const secondaryItems =
+    profileRole === 'Emprendedor'
+      ? [
+          { label: 'Dashboard', icon: 'portfolio' },
+          { label: 'Mis proyectos', icon: 'investments' },
+          { label: 'Rendimientos', icon: 'analytics' },
+          { label: 'Documentos', icon: 'documents' },
+        ]
+      : [
+          { label: 'Dashboard', icon: 'portfolio' },
+          { label: 'Mis inversiones', icon: 'investments' },
+          { label: 'Rendimientos', icon: 'analytics' },
+          { label: 'Documentos', icon: 'documents' },
+        ];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
@@ -640,18 +655,17 @@ function Sidebar() {
 
       <div className="mt-7 border-t border-[#EEF1F7] pt-6">
         <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
-          Money
+          {profileRole}
         </p>
         <div className="mt-3 space-y-1.5">
           {secondaryItems.map((item) => (
-            <Link
+            <div
               key={item.label}
-              href={item.href}
-              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
+              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A]"
             >
               <DesktopIcon type={item.icon} />
               {item.label}
-            </Link>
+            </div>
           ))}
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
@@ -19,6 +20,7 @@ import {
 } from '@/lib/project-status';
 import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
 import { getMinimumInvestmentValue } from '@/lib/supabase-minimum-investment';
+import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import {
   createCurrentUserProject,
   deleteCurrentUserProject,
@@ -258,11 +260,326 @@ function IconDelete() {
   );
 }
 
+const initialsFrom = (value: string) =>
+  value
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || 'U';
+
+function DesktopChevronRightIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function DesktopSearchIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M16.7 16.7A7.5 7.5 0 1 0 5.3 5.3a7.5 7.5 0 0 0 11.4 11.4Z" />
+      <path d="M16.7 16.7 21 21" />
+    </svg>
+  );
+}
+
+function DesktopBellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 4a5 5 0 0 0-5 5v3c0 .9-.3 1.8-.9 2.5L5 16h14l-1.1-1.5A4 4 0 0 1 17 12V9a5 5 0 0 0-5-5Z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function DesktopNavIcon({ type }: { type: string }) {
+  const common = {
+    className: 'h-5 w-5',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: '2',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  if (type === 'home') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
+        <path d="M9 20v-6h6v6" />
+      </svg>
+    );
+  }
+
+  if (type === 'portfolio' || type === 'projects' || type === 'analytics') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M4 17 9 12l4 4 7-8" />
+        <path d="M14 8h6v6" />
+      </svg>
+    );
+  }
+
+  if (type === 'send' || type === 'wallet') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M21 12v-2M13 19H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3" />
+        <path d="M16 17h5M21 17l-2-2M21 17l-2 2" />
+      </svg>
+    );
+  }
+
+  if (type === 'profile') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
+      </svg>
+    );
+  }
+
+  if (type === 'feed') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <rect x="5" y="4" width="14" height="16" rx="3" />
+        <path d="M8 9h8M8 13h5" />
+      </svg>
+    );
+  }
+
+  if (type === 'documents') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M7 3h7l4 4v14H7V3Z" />
+        <path d="M14 3v5h5M9 13h6M9 17h6" />
+      </svg>
+    );
+  }
+
+  if (type === 'alerts') return <DesktopBellIcon />;
+
+  if (type === 'transactions') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M8 7h12M8 17h12" />
+        <path d="M4 7h.01M4 17h.01" />
+        <path d="m16 11 4-4-4-4M8 13l-4 4 4 4" />
+      </svg>
+    );
+  }
+
+  if (type === 'settings') {
+    return (
+      <svg viewBox="0 0 24 24" {...common}>
+        <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+        <path d="M19.4 15a1.8 1.8 0 0 0 .4 2l.1.1a2.1 2.1 0 0 1-3 3l-.1-.1a1.8 1.8 0 0 0-2-.4 1.8 1.8 0 0 0-1.1 1.7V21a2.1 2.1 0 0 1-4.2 0v-.2a1.8 1.8 0 0 0-1.1-1.7 1.8 1.8 0 0 0-2 .4l-.1.1a2.1 2.1 0 0 1-3-3l.1-.1a1.8 1.8 0 0 0 .4-2 1.8 1.8 0 0 0-1.7-1.1H2a2.1 2.1 0 0 1 0-4.2h.2a1.8 1.8 0 0 0 1.7-1.1 1.8 1.8 0 0 0-.4-2l-.1-.1a2.1 2.1 0 1 1 3-3l.1.1a1.8 1.8 0 0 0 2 .4h.1A1.8 1.8 0 0 0 9.7 2V2a2.1 2.1 0 0 1 4.2 0v.2A1.8 1.8 0 0 0 15 3.9a1.8 1.8 0 0 0 2-.4l.1-.1a2.1 2.1 0 1 1 3 3l-.1.1a1.8 1.8 0 0 0-.4 2v.1a1.8 1.8 0 0 0 1.7 1.1H21a2.1 2.1 0 0 1 0 4.2h-.2a1.8 1.8 0 0 0-1.4 1.1Z" />
+      </svg>
+    );
+  }
+
+  return <DesktopSearchIcon />;
+}
+
+function DesktopInvestAppLogo() {
+  return (
+    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
+      <span>Invest</span>
+      <span className="text-[#6B39F4]">App</span>
+      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
+    </div>
+  );
+}
+
+function DesktopAvatar({
+  avatarUrl,
+  displayName,
+  loading,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loading: boolean;
+}) {
+  return (
+    <span
+      className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+      style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
+    >
+      {avatarUrl ? null : loading ? (
+        <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
+      ) : (
+        initialsFrom(displayName)
+      )}
+    </span>
+  );
+}
+
+function DesktopEntrepreneurSidebar() {
+  const mainItems = [
+    { href: '/home', label: 'Home', icon: 'home' },
+    { href: '/portfolio', label: 'Portfolio', icon: 'portfolio', active: true },
+    { href: '/invest', label: 'Send', icon: 'send' },
+    { href: '/feed', label: 'Feed', icon: 'feed' },
+    { href: '/profile', label: 'Profile', icon: 'profile' },
+  ];
+  const roleItems = [
+    { label: 'Dashboard', icon: 'projects' },
+    { label: 'Mis proyectos', icon: 'feed' },
+    { label: 'Rendimientos', icon: 'analytics' },
+    { label: 'Documentos', icon: 'documents' },
+  ];
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/95 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
+      <DesktopInvestAppLogo />
+
+      <nav className="mt-10 space-y-1.5">
+        {mainItems.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`flex h-12 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold transition duration-200 ${
+              item.active
+                ? 'bg-[#F1ECFF] text-[#6B39F4]'
+                : 'text-[#59657D] hover:bg-[#F7F8FB] hover:text-[#172033]'
+            }`}
+          >
+            <DesktopNavIcon type={item.icon} />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
+        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#8C96AA]">
+          Entrepreneur
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {roleItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D]"
+            >
+              <DesktopNavIcon type={item.icon} />
+              {item.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
+          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="m5 9 3.2 8h7.6L19 9l-4.2 3.1L12 6 9.2 12.1 5 9Z" />
+            <path d="M8 20h8" />
+          </svg>
+        </span>
+        <p className="mt-4 text-base font-bold text-[#6B39F4]">Upgrade to Premium</p>
+        <p className="mt-2 text-sm leading-5 text-[#74809A]">
+          More visibility for your venture and advanced analytics.
+        </p>
+        <Link
+          href="/profile"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition duration-200 hover:-translate-y-0.5"
+        >
+          Upgrade now
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
+function DesktopEntrepreneurTopbar({
+  avatarUrl,
+  displayName,
+  loadingProfileSummary,
+  onNotifications,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loadingProfileSummary: boolean;
+  onNotifications: () => void;
+}) {
+  return (
+    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
+      <label className="relative block w-full max-w-[760px]">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8F9AB0]">
+          <DesktopSearchIcon />
+        </span>
+        <input
+          placeholder="Search funding, investors or project activity..."
+          className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-semibold text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#8F9AB0] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+        />
+      </label>
+
+      <div className="ml-auto flex min-w-[360px] items-center justify-end gap-5">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={onNotifications}
+          className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 hover:text-[#6B39F4]"
+        >
+          <DesktopBellIcon />
+          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
+        </button>
+
+        <div className="h-9 w-px bg-[#E7EAF3]" />
+
+        <Link href="/profile" className="flex min-w-[190px] items-center gap-3">
+          <DesktopAvatar
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            loading={loadingProfileSummary}
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+            <span className="block text-xs font-medium text-[#73809A]">Entrepreneur</span>
+          </span>
+          <DesktopChevronRightIcon className="h-4 w-4 rotate-90 text-[#73809A]" />
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+function DesktopEntrepreneurDashboardShell({
+  avatarUrl,
+  displayName,
+  loadingProfileSummary,
+  onNotifications,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loadingProfileSummary: boolean;
+  onNotifications: () => void;
+}) {
+  return (
+    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
+      <DesktopEntrepreneurSidebar />
+      <div className="min-w-0 pl-[260px]">
+        <DesktopEntrepreneurTopbar
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          loadingProfileSummary={loadingProfileSummary}
+          onNotifications={onNotifications}
+        />
+        <main className="px-8 py-8 xl:px-10">
+          <div className="mx-auto max-w-[1500px]">
+            <EntrepreneurFeedDashboard embedded desktop />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 export default function PortfolioPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado, smartWalletAddress } = useInvestApp();
+  const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
   const [showPublisher, setShowPublisher] = useState(false);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [form, setForm] = useState<PublishForm>(emptyForm);
@@ -609,9 +926,18 @@ export default function PortfolioPage() {
     return <InvestorPortfolioDashboard />;
   }
 
+  const desktopDisplayName = profileName || 'Entrepreneur';
+
   return (
     <>
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+      <DesktopEntrepreneurDashboardShell
+        avatarUrl={avatarUrl}
+        displayName={desktopDisplayName}
+        loadingProfileSummary={loadingProfileSummary}
+        onNotifications={() => router.push('/notifications')}
+      />
+
+      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
         <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
         <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
@@ -952,7 +1278,9 @@ export default function PortfolioPage() {
         </div>
       </main>
 
-      <BottomNav />
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </>
   );
 }

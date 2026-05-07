@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
@@ -137,7 +138,7 @@ function IconClock() {
 
 type ActionItem = {
   label: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   onClick: () => void;
 };
 
@@ -350,6 +351,1132 @@ const matchesSearchUser = (user: SearchUserRow, normalizedQuery: string) => {
   ];
   return fields.some((field) => field?.toLowerCase().includes(normalizedQuery));
 };
+
+const initialsFrom = (value: string) =>
+  value
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('') || 'U';
+
+const formatDesktopTransactionDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Now';
+
+  return `${date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  })} ${date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  })}`;
+};
+
+const getTransactionStatusMeta = (status: TransactionRow['status']) => {
+  if (status === 'confirmed') {
+    return {
+      label: 'Completed',
+      className: 'bg-[#DDFBEA] text-[#087A52]',
+    };
+  }
+
+  if (status === 'failed') {
+    return {
+      label: 'Failed',
+      className: 'bg-[#FFF1F3] text-[#DF1C41]',
+    };
+  }
+
+  return {
+    label: 'Pending',
+    className: 'bg-[#FFF7E8] text-[#B76E00]',
+  };
+};
+
+function IconChevronRight({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+function IconDocument() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M7 3h7l4 4v14H7V3Z" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" />
+    </svg>
+  );
+}
+
+function IconChart() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 19V5" />
+      <path d="M8 19v-6" />
+      <path d="M12 19V8" />
+      <path d="M16 19v-9" />
+      <path d="M20 19V7" />
+    </svg>
+  );
+}
+
+function IconPortfolio() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 17 9 12l4 4 7-8" />
+      <path d="M14 8h6v6" />
+    </svg>
+  );
+}
+
+function IconHome() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  );
+}
+
+function IconProfile() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M5 20a7 7 0 0 1 14 0" />
+    </svg>
+  );
+}
+
+function IconFeed() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="5" y="4" width="14" height="16" rx="3" />
+      <path d="M8 9h8M8 13h5" />
+    </svg>
+  );
+}
+
+function IconPremium() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m5 9 3.2 8h7.6L19 9l-4.2 3.1L12 6 9.2 12.1 5 9Z" />
+      <path d="M8 20h8" />
+    </svg>
+  );
+}
+
+function DesktopInvestAppLogo() {
+  return (
+    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
+      <span>Invest</span>
+      <span className="text-[#6B39F4]">App</span>
+      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
+    </div>
+  );
+}
+
+function DesktopAvatar({
+  avatarUrl,
+  displayName,
+  loading,
+  sizeClassName = 'h-11 w-11',
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loading: boolean;
+  sizeClassName?: string;
+}) {
+  return (
+    <span
+      className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)] ${sizeClassName}`}
+      style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
+    >
+      {avatarUrl ? null : loading ? (
+        <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
+      ) : (
+        initialsFrom(displayName)
+      )}
+    </span>
+  );
+}
+
+function DesktopSidebar({ roleLabel }: { roleLabel: string }) {
+  const mainItems = [
+    { href: '/home', label: 'Home', icon: <IconHome />, active: true },
+    { href: '/portfolio', label: 'Portfolio', icon: <IconPortfolio /> },
+    { href: '/invest', label: 'Send', icon: <IconSend /> },
+    { href: '/feed', label: 'Feed', icon: <IconFeed /> },
+    { href: '/profile', label: 'Profile', icon: <IconProfile /> },
+  ];
+  const roleItems =
+    roleLabel === 'Entrepreneur'
+      ? [
+          { label: 'Dashboard', icon: <IconPortfolio /> },
+          { label: 'Mis proyectos', icon: <IconSend /> },
+          { label: 'Rendimientos', icon: <IconChart /> },
+          { label: 'Documentos', icon: <IconDocument /> },
+        ]
+      : [
+          { label: 'Dashboard', icon: <IconPortfolio /> },
+          { label: 'Mis inversiones', icon: <IconSend /> },
+          { label: 'Rendimientos', icon: <IconChart /> },
+          { label: 'Documentos', icon: <IconDocument /> },
+        ];
+
+  return (
+    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/95 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
+      <DesktopInvestAppLogo />
+
+      <nav className="mt-10 space-y-1.5">
+        {mainItems.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`flex h-12 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold transition duration-200 ${
+              item.active
+                ? 'bg-[#F1ECFF] text-[#6B39F4]'
+                : 'text-[#59657D] hover:bg-[#F7F8FB] hover:text-[#172033]'
+            }`}
+          >
+            {item.icon}
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
+        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#8C96AA]">
+          {roleLabel}
+        </p>
+        <div className="mt-3 space-y-1.5">
+          {roleItems.map((item) => (
+            <div
+              key={item.label}
+              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D]"
+            >
+              {item.icon}
+              {item.label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
+        <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
+          <IconPremium />
+        </span>
+        <p className="mt-4 text-base font-bold text-[#6B39F4]">Upgrade to Premium</p>
+        <p className="mt-2 text-sm leading-5 text-[#74809A]">
+          Unlock exclusive opportunities and advanced analytics.
+        </p>
+        <Link
+          href="/profile"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition duration-200 hover:-translate-y-0.5"
+        >
+          Upgrade now
+        </Link>
+      </div>
+    </aside>
+  );
+}
+
+function DesktopSearchResults({
+  displayName,
+  onClear,
+  onClose,
+  onOpenProject,
+  onOpenTransaction,
+  onOpenUser,
+  searchError,
+  searchProjects,
+  searchQuery,
+  searching,
+  searchTransactions,
+  searchUsers,
+  totalSearchResults,
+}: {
+  displayName: string;
+  onClear: () => void;
+  onClose: () => void;
+  onOpenProject: (id: string) => void;
+  onOpenTransaction: (id: string) => void;
+  onOpenUser: (entry: SearchUserResult) => void;
+  searchError: string | null;
+  searchProjects: SearchProjectResult[];
+  searchQuery: string;
+  searching: boolean;
+  searchTransactions: SearchTransactionResult[];
+  searchUsers: SearchUserResult[];
+  totalSearchResults: number;
+}) {
+  const trimmed = normalizeSearchQuery(searchQuery);
+
+  return (
+    <div className="absolute left-0 top-[calc(100%+12px)] z-40 w-full overflow-hidden rounded-[24px] border border-[#E4E8F1] bg-white p-3 shadow-[0_28px_80px_rgba(17,24,39,0.16)]">
+      <div className="mb-3 flex items-center justify-between gap-3 px-2">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+          Search InvestApp
+        </p>
+        <button type="button" onClick={onClose} className="text-xs font-bold text-[#6B39F4]">
+          Close
+        </button>
+      </div>
+
+      {trimmed.length < 2 ? (
+        <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
+          Search ventures, people, emails, wallets, project IDs or transaction hashes.
+        </div>
+      ) : searching ? (
+        <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
+          Searching for {trimmed}...
+        </div>
+      ) : searchError ? (
+        <div className="rounded-2xl bg-[#FFF1F3] px-4 py-4 text-sm font-semibold text-[#DF1C41]">
+          We could not load search results right now.
+        </div>
+      ) : totalSearchResults === 0 ? (
+        <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
+          No matches found for <span className="font-bold text-[#111827]">{trimmed}</span>.
+        </div>
+      ) : (
+        <div className="max-h-[460px] space-y-5 overflow-y-auto pr-1">
+          {searchProjects.length > 0 ? (
+            <section className="space-y-2">
+              <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
+                Ventures
+              </p>
+              {searchProjects.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => onOpenProject(project.id)}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition duration-200 hover:bg-[#F8F9FB]"
+                >
+                  <span
+                    className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#F1ECFF] bg-cover bg-center text-xs font-bold text-[#6B39F4]"
+                    style={{ backgroundImage: project.imageUrl ? `url(${JSON.stringify(project.imageUrl)})` : undefined }}
+                  >
+                    {project.imageUrl ? null : '#'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-[#111827]">{project.title}</span>
+                    <span className="mt-0.5 block truncate text-xs font-medium text-[#66728A]">
+                      {project.subtitle}
+                    </span>
+                  </span>
+                  <span className="text-xs font-bold text-[#6B39F4]">Open</span>
+                </button>
+              ))}
+            </section>
+          ) : null}
+
+          {searchUsers.length > 0 ? (
+            <section className="space-y-2">
+              <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
+                People
+              </p>
+              {searchUsers.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => onOpenUser(entry)}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition duration-200 hover:bg-[#F8F9FB]"
+                >
+                  <span
+                    className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#F1ECFF] bg-cover bg-center text-xs font-bold text-[#6B39F4]"
+                    style={{ backgroundImage: entry.avatarUrl ? `url(${JSON.stringify(entry.avatarUrl)})` : undefined }}
+                  >
+                    {entry.avatarUrl ? null : initialsFrom(entry.displayName || displayName)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-bold text-[#111827]">{entry.displayName}</span>
+                    <span className="mt-0.5 block truncate text-xs font-medium text-[#66728A]">
+                      {entry.subtitle}
+                    </span>
+                  </span>
+                  <span className="text-xs font-bold text-[#6B39F4]">
+                    {entry.linkedProjectId ? 'Venture' : 'Send'}
+                  </span>
+                </button>
+              ))}
+            </section>
+          ) : null}
+
+          {searchTransactions.length > 0 ? (
+            <section className="space-y-2">
+              <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
+                Hashes
+              </p>
+              {searchTransactions.map((transaction) => (
+                <button
+                  key={transaction.id}
+                  type="button"
+                  onClick={() => onOpenTransaction(transaction.txHash ?? transaction.id)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition duration-200 hover:bg-[#F8F9FB]"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold text-[#111827]">
+                      {shortenIdentifier(transaction.txHash ?? transaction.id, 10)}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs font-medium text-[#66728A]">
+                      {transaction.movementType} / {formatTransactionDate(transaction.createdAt)}
+                    </span>
+                  </span>
+                  <span className="text-xs font-bold text-[#6B39F4]">
+                    {formatTransactionAmount(transaction.amount)}
+                  </span>
+                </button>
+              ))}
+            </section>
+          ) : null}
+        </div>
+      )}
+
+      {searchQuery ? (
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-3 w-full rounded-2xl bg-[#F5F3FF] px-4 py-3 text-sm font-bold text-[#6B39F4] transition duration-200 hover:bg-[#EEE8FF]"
+        >
+          Clear search
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function DesktopTopbar({
+  avatarUrl,
+  displayName,
+  loadingProfileSummary,
+  notificationsEnabled,
+  onBellClick,
+  onClearSearch,
+  onCloseSearch,
+  onOpenProject,
+  onOpenTransaction,
+  onOpenUser,
+  roleLabel,
+  searchError,
+  searchProjects,
+  searchQuery,
+  searching,
+  searchTransactions,
+  searchUsers,
+  setSearchQuery,
+  setShowSearch,
+  showSearch,
+  totalSearchResults,
+  unreadNotificationsCount,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loadingProfileSummary: boolean;
+  notificationsEnabled: boolean;
+  onBellClick: () => void;
+  onClearSearch: () => void;
+  onCloseSearch: () => void;
+  onOpenProject: (id: string) => void;
+  onOpenTransaction: (id: string) => void;
+  onOpenUser: (entry: SearchUserResult) => void;
+  roleLabel: string;
+  searchError: string | null;
+  searchProjects: SearchProjectResult[];
+  searchQuery: string;
+  searching: boolean;
+  searchTransactions: SearchTransactionResult[];
+  searchUsers: SearchUserResult[];
+  setSearchQuery: (value: string) => void;
+  setShowSearch: (value: boolean) => void;
+  showSearch: boolean;
+  totalSearchResults: number;
+  unreadNotificationsCount: number;
+}) {
+  return (
+    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
+      <div className="relative w-full max-w-[760px]">
+        <label className="relative block">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8F9AB0]">
+            <IconSearch />
+          </span>
+          <input
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setShowSearch(true);
+            }}
+            onFocus={() => setShowSearch(true)}
+            placeholder="Search for ventures, entrepreneurs or keywords..."
+            className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-semibold text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#8F9AB0] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+          />
+        </label>
+
+        {showSearch ? (
+          <DesktopSearchResults
+            displayName={displayName}
+            onClear={onClearSearch}
+            onClose={onCloseSearch}
+            onOpenProject={onOpenProject}
+            onOpenTransaction={onOpenTransaction}
+            onOpenUser={onOpenUser}
+            searchError={searchError}
+            searchProjects={searchProjects}
+            searchQuery={searchQuery}
+            searching={searching}
+            searchTransactions={searchTransactions}
+            searchUsers={searchUsers}
+            totalSearchResults={totalSearchResults}
+          />
+        ) : null}
+      </div>
+
+      <div className="ml-auto flex min-w-[360px] items-center justify-end gap-5">
+        <button
+          type="button"
+          aria-label="Notifications"
+          onClick={onBellClick}
+          className={`relative grid h-11 w-11 place-items-center rounded-2xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
+            notificationsEnabled
+              ? 'border-[#E7EAF3] bg-white text-[#1F2A44] hover:text-[#6B39F4]'
+              : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
+          }`}
+        >
+          <IconBell />
+          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
+          {unreadNotificationsCount > 0 ? (
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B39F4] px-1 text-[10px] font-semibold text-white">
+              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+            </span>
+          ) : null}
+        </button>
+
+        <div className="h-9 w-px bg-[#E7EAF3]" />
+
+        <Link href="/profile" className="flex min-w-[190px] items-center gap-3">
+          <DesktopAvatar
+            avatarUrl={avatarUrl}
+            displayName={displayName}
+            loading={loadingProfileSummary}
+            sizeClassName="h-12 w-12 text-sm"
+          />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+            <span className="block text-xs font-medium text-[#73809A]">{roleLabel}</span>
+          </span>
+          <IconChevronRight className="h-4 w-4 rotate-90 text-[#73809A]" />
+        </Link>
+      </div>
+    </header>
+  );
+}
+
+function DesktopBalanceCard({
+  availableBalanceLabel,
+  balanceCurrencyLabel,
+  investorAverageRate,
+  investorEarnings,
+  lastProject,
+  role,
+  showBalance,
+  activeCount,
+  onToggleBalance,
+}: {
+  availableBalanceLabel: string;
+  balanceCurrencyLabel: string;
+  investorAverageRate: number;
+  investorEarnings: number;
+  lastProject: LastProject | null;
+  role: string | null;
+  showBalance: boolean;
+  activeCount: number;
+  onToggleBalance: () => void;
+}) {
+  return (
+    <section className="relative min-h-[300px] overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_72%_20%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#5E2CFF_0%,#4B27F0_52%,#334EFF_100%)] p-8 text-white shadow-[0_26px_60px_rgba(91,72,255,0.28)] transition duration-300 hover:-translate-y-0.5">
+      <div className="pointer-events-none absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/14 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-5rem] left-[-4rem] h-48 w-48 rounded-full bg-[#9CF3E5]/12 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-32 opacity-30">
+        <svg viewBox="0 0 520 140" className="h-full w-full">
+          <path
+            d="M0 116C44 104 64 91 105 99C159 110 190 74 248 84C302 93 318 105 365 72C416 36 434 78 520 14"
+            fill="none"
+            stroke="rgba(255,255,255,0.34)"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <circle cx="500" cy="23" r="7" fill="#FFFFFF" />
+        </svg>
+      </div>
+
+      <div className="relative flex h-full flex-col justify-between gap-8">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className="text-base font-medium text-white/78">Available</p>
+            <h2 className="mt-6 text-[3.35rem] font-semibold leading-none tracking-[-0.07em]">
+              {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
+              <span className="align-baseline text-[1.35rem] font-semibold tracking-[-0.04em] text-white/78">
+                {balanceCurrencyLabel}
+              </span>
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleBalance}
+            className="grid h-14 w-14 place-items-center rounded-2xl bg-white/16 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl transition duration-200 hover:bg-white/24"
+            aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+          >
+            <IconEye hidden={!showBalance} />
+          </button>
+        </div>
+
+        {role === 'emprendedor' ? (
+          <div className="relative inline-flex w-fit max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-3 text-sm font-bold tracking-[-0.02em] text-[#198F79] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
+            <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
+            <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
+            <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+          </div>
+        ) : (
+          <div className="relative inline-flex w-fit max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-3 text-sm font-bold tracking-[-0.02em] text-[#198F79] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
+            <span>{`Active: ${activeCount}`}</span>
+            <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
+            <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
+            <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
+            <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DesktopActiveInvestmentCard({
+  investment,
+  loading,
+  onOpenPortfolio,
+  onOpenProject,
+}: {
+  investment: HomeActiveInvestment | null;
+  loading: boolean;
+  onOpenPortfolio: () => void;
+  onOpenProject: (projectId: string) => void;
+}) {
+  if (loading) {
+    return <section className="min-h-[300px] animate-pulse rounded-[24px] bg-[#111C2E]" />;
+  }
+
+  if (!investment) {
+    return (
+      <section className="flex min-h-[300px] flex-col justify-between rounded-[24px] bg-[#111C2E] p-7 text-white shadow-[0_26px_60px_rgba(15,23,42,0.18)]">
+        <div>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold tracking-[-0.045em]">Active investments</h2>
+            <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#8A68FF]">
+              View all
+            </button>
+          </div>
+          <p className="mt-9 max-w-sm text-sm leading-6 text-white/64">
+            Your active investment cards will appear here once you fund a venture.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenPortfolio}
+          className="w-fit rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white transition duration-200 hover:bg-white/16"
+        >
+          Review portfolio
+        </button>
+      </section>
+    );
+  }
+
+  const project = investment.project;
+  const projectTitle = project?.business_name || project?.title || investment.project_title || 'Business';
+  const tone = getInvestmentHealthMeta(
+    getInvestmentHealth(getNextRepaymentDate(investment.created_at, investment.term_months))
+  );
+  const statusClassName =
+    tone.label === 'Up to date'
+      ? 'bg-[#DDFBEA] text-[#087A52]'
+      : tone.label === 'Due soon'
+        ? 'bg-[#FFF7E8] text-[#B76E00]'
+        : 'bg-[#FFF1F3] text-[#DF1C41]';
+
+  return (
+    <section className="relative min-h-[300px] overflow-hidden rounded-[24px] bg-[linear-gradient(145deg,#111C2E_0%,#0E1726_100%)] p-7 text-white shadow-[0_26px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-0.5">
+      <div className="pointer-events-none absolute inset-x-0 top-[55%] h-px bg-white/10" />
+      <div className="pointer-events-none absolute inset-x-0 top-[72%] h-px bg-white/10" />
+      <div className="relative flex h-full flex-col justify-between gap-7">
+        <div>
+          <div className="flex items-start justify-between gap-5">
+            <div>
+              <div className="mb-5 flex items-center justify-between gap-6">
+                <h2 className="text-xl font-bold tracking-[-0.045em]">Active investments</h2>
+                <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#8A68FF]">
+                  View all
+                </button>
+              </div>
+              <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${statusClassName}`}>
+                {tone.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => onOpenProject(investment.project_id)}
+                className="mt-3 block text-left text-[1.35rem] font-bold leading-tight tracking-[-0.045em] transition hover:text-white/82"
+              >
+                {projectTitle}
+              </button>
+              <p className="mt-1 text-sm font-medium text-white/64">
+                {investment.ownerName} / Investment
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenProject(investment.project_id)}
+              className="h-20 w-20 shrink-0 overflow-hidden rounded-full bg-white/12 bg-cover bg-center ring-2 ring-white/18"
+              style={{ backgroundImage: project?.photo_urls?.[0] ? `url(${JSON.stringify(project.photo_urls[0])})` : undefined }}
+              aria-label={`Open ${projectTitle}`}
+            >
+              {project?.photo_urls?.[0] ? null : (
+                <span className="grid h-full w-full place-items-center text-sm font-bold text-white">
+                  {initialsFrom(projectTitle)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        <p className="text-[1.1rem] font-semibold tracking-[0.32em] text-white/90">
+          {investment.id.slice(0, 4).toUpperCase()} {investment.project_id.slice(0, 4).toUpperCase()} PROJECT
+        </p>
+
+        <div className="grid grid-cols-4 gap-5">
+          <div>
+            <p className="text-sm text-white/62">Investor</p>
+            <p className="mt-2 truncate text-sm font-bold">{investment.ownerName}</p>
+          </div>
+          <div>
+            <p className="text-sm text-white/62">Date</p>
+            <p className="mt-2 text-sm font-bold">
+              {formatInvestmentCardDate(getNextRepaymentDate(investment.created_at, investment.term_months))}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-white/62">Invested</p>
+            <p className="mt-2 text-sm font-bold">{formatInvestmentCardAmount(investment.amount ?? 0)}</p>
+          </div>
+          <div>
+            <p className="text-sm text-white/62">Return</p>
+            <p className="mt-2 text-sm font-bold text-[#27D6A4]">
+              +{Number(investment.interest_rate_ea ?? 0).toFixed(1)}%
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DesktopBusinessCard({
+  fundingProgress,
+  lastProject,
+  loading,
+  onOpenProject,
+  onOpenPortfolio,
+}: {
+  fundingProgress: number;
+  lastProject: LastProject | null;
+  loading: boolean;
+  onOpenProject: (projectId: string) => void;
+  onOpenPortfolio: () => void;
+}) {
+  if (loading) {
+    return <section className="min-h-[300px] animate-pulse rounded-[24px] bg-white" />;
+  }
+
+  return (
+    <section className="min-h-[300px] rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.07)]">
+      <div className="flex items-center justify-between gap-5">
+        <h2 className="text-xl font-bold tracking-[-0.045em]">My Business</h2>
+        <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#6B39F4]">
+          Edit
+        </button>
+      </div>
+
+      {lastProject ? (
+        <button
+          type="button"
+          onClick={() => onOpenProject(lastProject.id)}
+          className="mt-6 block w-full overflow-hidden rounded-[20px] border border-[#E8EBF4] text-left transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(21,28,44,0.08)]"
+        >
+          <span
+            className="block h-28 w-full bg-[#F4F0FF] bg-cover bg-center"
+            style={{ backgroundImage: lastProject.photo_urls?.[0] ? `url(${JSON.stringify(lastProject.photo_urls[0])})` : undefined }}
+          />
+          <span className="block p-4">
+            <span className="block text-base font-bold text-[#111827]">{lastProject.title}</span>
+            <span className="mt-1 block text-sm font-medium text-[#66728A]">
+              {`Raised ${formatMoney(lastProject.amount_received ?? 0, lastProject.currency ?? 'USD')} of ${formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD')}`}
+            </span>
+            <span className="mt-4 block h-2 rounded-full bg-[#EEF1F7]">
+              <span className="block h-2 rounded-full bg-[#6B39F4]" style={{ width: `${fundingProgress}%` }} />
+            </span>
+          </span>
+        </button>
+      ) : (
+        <div className="mt-6 rounded-[20px] border border-dashed border-[#C9B8FF] bg-[#F8F5FF] p-7 text-center">
+          <p className="text-base font-bold text-[#111827]">No active project yet</p>
+          <p className="mt-2 text-sm font-medium text-[#66728A]">
+            Your listings will appear here once they are active.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DesktopNewVentureCard({ role, onClick }: { role: string | null; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#C9B8FF] bg-white/70 p-8 text-center shadow-[0_22px_52px_rgba(21,28,44,0.045)] transition duration-300 hover:-translate-y-1 hover:border-[#8A68FF] hover:bg-[#FAF8FF]"
+    >
+      <span className="grid h-16 w-16 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4]">
+        <IconPlus />
+      </span>
+      <span className="mt-6 max-w-[170px] text-[1.45rem] font-bold leading-tight tracking-[-0.055em] text-[#5B2FF4]">
+        {role === 'emprendedor' ? '+ Publish a new project' : '+ Invest in a new venture'}
+      </span>
+    </button>
+  );
+}
+
+function DesktopActionRail({ actions }: { actions: ActionItem[] }) {
+  return (
+    <section className="grid grid-cols-4 overflow-hidden rounded-[24px] border border-[#E8EBF4] bg-white shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
+      {actions.map((action, index) => (
+        <button
+          key={action.label}
+          type="button"
+          onClick={action.onClick}
+          className={`group flex min-h-[150px] flex-col items-center justify-center gap-4 transition duration-200 hover:bg-[#F8F5FF] ${
+            index > 0 ? 'border-l border-[#E8EBF4]' : ''
+          }`}
+        >
+          <span className="grid h-16 w-16 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)] transition duration-200 group-hover:-translate-y-0.5">
+            {action.icon}
+          </span>
+          <span className="text-sm font-bold text-[#111827]">{action.label}</span>
+        </button>
+      ))}
+    </section>
+  );
+}
+
+function DesktopTransactionsTable({
+  avatarUrl,
+  displayName,
+  loadingProfileSummary,
+  loadingTransactions,
+  onOpenHistory,
+  smartWalletAddress,
+  transactions,
+}: {
+  avatarUrl: string;
+  displayName: string;
+  loadingProfileSummary: boolean;
+  loadingTransactions: boolean;
+  onOpenHistory: () => void;
+  smartWalletAddress?: string | null;
+  transactions: TransactionRow[];
+}) {
+  return (
+    <section className="rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">Recent transactions</h2>
+        <button type="button" onClick={onOpenHistory} className="text-sm font-bold text-[#6B39F4]">
+          View all
+        </button>
+      </div>
+
+      <div className="mt-6 overflow-hidden">
+        <div className="grid grid-cols-[minmax(260px,1.3fr)_0.8fr_1fr_1fr_0.8fr_32px] border-b border-[#E8EBF4] px-1 pb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#7C879D]">
+          <span>Contact</span>
+          <span>Type</span>
+          <span>Amount</span>
+          <span>Date</span>
+          <span>Status</span>
+          <span />
+        </div>
+
+        {loadingTransactions ? (
+          <div className="space-y-3 py-5">
+            {[0, 1].map((item) => (
+              <div key={item} className="h-16 animate-pulse rounded-2xl bg-[#F6F7FB]" />
+            ))}
+          </div>
+        ) : null}
+
+        {!loadingTransactions && transactions.length === 0 ? (
+          <div className="rounded-2xl bg-[#F8F9FB] px-4 py-8 text-center text-sm font-medium text-[#66728A]">
+            Your activity will appear here.
+          </div>
+        ) : null}
+
+        {!loadingTransactions ? (
+          <div className="divide-y divide-[#EEF1F7]">
+            {transactions.slice(0, 5).map((transaction) => {
+              const incoming = isIncomingTransaction(transaction, smartWalletAddress ?? undefined);
+              const amountColor = incoming ? 'text-[#0B9B72]' : 'text-[#E33A24]';
+              const amountPrefix = incoming ? '+' : '-';
+              const statusMeta = getTransactionStatusMeta(transaction.status);
+
+              return (
+                <div
+                  key={transaction.id}
+                  className="grid grid-cols-[minmax(260px,1.3fr)_0.8fr_1fr_1fr_0.8fr_32px] items-center px-1 py-5"
+                >
+                  <span className="flex min-w-0 items-center gap-4">
+                    <DesktopAvatar
+                      avatarUrl={avatarUrl}
+                      displayName={displayName}
+                      loading={loadingProfileSummary}
+                      sizeClassName="h-12 w-12 text-sm"
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
+                      <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">
+                        @{displayName.toLowerCase().replace(/\s+/g, '')}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#66728A]">
+                    <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
+                      {incoming ? <IconDownload /> : <IconSend />}
+                    </span>
+                    {getTransactionTypeLabel(transaction, smartWalletAddress ?? undefined)}
+                  </span>
+                  <span className={`text-sm font-bold ${amountColor}`}>
+                    {amountPrefix}
+                    {formatTransactionAmount(transaction.amount)}
+                  </span>
+                  <span className="text-sm font-medium text-[#66728A]">
+                    {formatDesktopTransactionDate(transaction.created_at)}
+                  </span>
+                  <span>
+                    <span className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold ${statusMeta.className}`}>
+                      {statusMeta.label}
+                    </span>
+                  </span>
+                  <span className="text-right text-[#8D98AA]">...</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {!loadingTransactions && transactions.length > 0 ? (
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            className="mx-auto mt-5 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-[#6B39F4] transition duration-200 hover:bg-[#F5F3FF]"
+          >
+            View all transactions
+            <IconChevronRight />
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function DesktopHomeDashboard({
+  actions,
+  activeInvestments,
+  availableBalanceLabel,
+  avatarUrl,
+  balanceCurrencyLabel,
+  displayName,
+  fundingProgress,
+  investorAverageRate,
+  investorEarnings,
+  lastProject,
+  loadingActiveInvestments,
+  loadingProfileSummary,
+  loadingProject,
+  loadingTransactions,
+  notificationsEnabled,
+  onBellClick,
+  onClearSearch,
+  onCloseSearch,
+  onNewVenture,
+  onOpenHistory,
+  onOpenPortfolio,
+  onOpenProject,
+  onOpenSearchProject,
+  onOpenSearchTransaction,
+  onOpenSearchUser,
+  role,
+  roleLabel,
+  searchError,
+  searchProjects,
+  searchQuery,
+  searching,
+  searchTransactions,
+  searchUsers,
+  setSearchQuery,
+  setShowSearch,
+  showBalance,
+  showSearch,
+  smartWalletAddress,
+  totalSearchResults,
+  transactions,
+  unreadNotificationsCount,
+  onToggleBalance,
+}: {
+  actions: ActionItem[];
+  activeInvestments: HomeActiveInvestment[];
+  availableBalanceLabel: string;
+  avatarUrl: string;
+  balanceCurrencyLabel: string;
+  displayName: string;
+  fundingProgress: number;
+  investorAverageRate: number;
+  investorEarnings: number;
+  lastProject: LastProject | null;
+  loadingActiveInvestments: boolean;
+  loadingProfileSummary: boolean;
+  loadingProject: boolean;
+  loadingTransactions: boolean;
+  notificationsEnabled: boolean;
+  onBellClick: () => void;
+  onClearSearch: () => void;
+  onCloseSearch: () => void;
+  onNewVenture: () => void;
+  onOpenHistory: () => void;
+  onOpenPortfolio: () => void;
+  onOpenProject: (projectId: string) => void;
+  onOpenSearchProject: (id: string) => void;
+  onOpenSearchTransaction: (id: string) => void;
+  onOpenSearchUser: (entry: SearchUserResult) => void;
+  role: string | null;
+  roleLabel: string;
+  searchError: string | null;
+  searchProjects: SearchProjectResult[];
+  searchQuery: string;
+  searching: boolean;
+  searchTransactions: SearchTransactionResult[];
+  searchUsers: SearchUserResult[];
+  setSearchQuery: (value: string) => void;
+  setShowSearch: (value: boolean) => void;
+  showBalance: boolean;
+  showSearch: boolean;
+  smartWalletAddress?: string | null;
+  totalSearchResults: number;
+  transactions: TransactionRow[];
+  unreadNotificationsCount: number;
+  onToggleBalance: () => void;
+}) {
+  return (
+    <div className="hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
+      <DesktopSidebar roleLabel={roleLabel} />
+      <div className="min-w-0 pl-[260px]">
+        <DesktopTopbar
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          loadingProfileSummary={loadingProfileSummary}
+          notificationsEnabled={notificationsEnabled}
+          onBellClick={onBellClick}
+          onClearSearch={onClearSearch}
+          onCloseSearch={onCloseSearch}
+          onOpenProject={onOpenSearchProject}
+          onOpenTransaction={onOpenSearchTransaction}
+          onOpenUser={onOpenSearchUser}
+          roleLabel={roleLabel}
+          searchError={searchError}
+          searchProjects={searchProjects}
+          searchQuery={searchQuery}
+          searching={searching}
+          searchTransactions={searchTransactions}
+          searchUsers={searchUsers}
+          setSearchQuery={setSearchQuery}
+          setShowSearch={setShowSearch}
+          showSearch={showSearch}
+          totalSearchResults={totalSearchResults}
+          unreadNotificationsCount={unreadNotificationsCount}
+        />
+
+        <main className="px-8 py-8 xl:px-10">
+          <div className="mx-auto max-w-[1500px] space-y-6">
+            <section className="flex items-center gap-5">
+              <DesktopAvatar
+                avatarUrl={avatarUrl}
+                displayName={displayName}
+                loading={loadingProfileSummary}
+                sizeClassName="h-16 w-16 text-base"
+              />
+              <div>
+                <p className="text-lg font-semibold text-[#66728A]">Hello, {roleLabel}</p>
+                <h1 className="mt-1 text-[2rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
+                  {displayName}
+                </h1>
+              </div>
+            </section>
+
+            <section className="grid grid-cols-[1fr_1fr_300px] gap-5">
+              <DesktopBalanceCard
+                activeCount={activeInvestments.length}
+                availableBalanceLabel={availableBalanceLabel}
+                balanceCurrencyLabel={balanceCurrencyLabel}
+                investorAverageRate={investorAverageRate}
+                investorEarnings={investorEarnings}
+                lastProject={lastProject}
+                role={role}
+                showBalance={showBalance}
+                onToggleBalance={onToggleBalance}
+              />
+
+              {role === 'emprendedor' ? (
+                <DesktopBusinessCard
+                  fundingProgress={fundingProgress}
+                  lastProject={lastProject}
+                  loading={loadingProject}
+                  onOpenPortfolio={onOpenPortfolio}
+                  onOpenProject={onOpenProject}
+                />
+              ) : (
+                <DesktopActiveInvestmentCard
+                  investment={activeInvestments[0] ?? null}
+                  loading={loadingActiveInvestments}
+                  onOpenPortfolio={onOpenPortfolio}
+                  onOpenProject={onOpenProject}
+                />
+              )}
+
+              <DesktopNewVentureCard role={role} onClick={onNewVenture} />
+            </section>
+
+            <DesktopActionRail actions={actions} />
+
+            <DesktopTransactionsTable
+              avatarUrl={avatarUrl}
+              displayName={displayName}
+              loadingProfileSummary={loadingProfileSummary}
+              loadingTransactions={loadingTransactions}
+              onOpenHistory={onOpenHistory}
+              smartWalletAddress={smartWalletAddress}
+              transactions={transactions}
+            />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
@@ -902,8 +2029,116 @@ export default function HomePage() {
     { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
   ];
 
+  const closeSearch = () => {
+    setShowSearch(false);
+    setSearchError(null);
+    setSearching(false);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setSearchProjects([]);
+    setSearchUsers([]);
+    setSearchTransactions([]);
+    setSearchError(null);
+    setSearching(false);
+  };
+
+  const closeAndClearSearch = () => {
+    closeSearch();
+    clearSearch();
+  };
+
+  const openSearchProject = (id: string) => {
+    closeAndClearSearch();
+    router.push(`/feed/${id}`);
+  };
+
+  const openSearchUser = (entry: SearchUserResult) => {
+    const userHref = entry.linkedProjectId
+      ? `/feed/${entry.linkedProjectId}`
+      : entry.walletAddress
+        ? `/invest/wallet?mode=transfer${
+            entry.subtitle && entry.subtitle !== 'Email pending'
+              ? `&email=${encodeURIComponent(entry.subtitle)}`
+              : ''
+          }&wallet=${encodeURIComponent(entry.walletAddress)}`
+        : null;
+
+    if (!userHref) return;
+    closeAndClearSearch();
+    router.push(userHref);
+  };
+
+  const openSearchTransaction = (id: string) => {
+    closeAndClearSearch();
+    router.push(`/history?q=${encodeURIComponent(id)}`);
+  };
+
+  const openProject = (projectId: string) => {
+    router.push(`/feed/${projectId}`);
+  };
+
+  const openPortfolio = () => {
+    router.push('/portfolio');
+  };
+
+  const openHistory = () => {
+    router.push('/history');
+  };
+
+  const openNewVenture = () => {
+    router.push(rolSeleccionado === 'emprendedor' ? '/publish' : '/feed');
+  };
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828]">
+    <>
+      <DesktopHomeDashboard
+        actions={actions}
+        activeInvestments={activeInvestments}
+        availableBalanceLabel={availableBalanceLabel}
+        avatarUrl={avatarUrl}
+        balanceCurrencyLabel={balanceCurrencyLabel}
+        displayName={displayName}
+        fundingProgress={fundingProgress}
+        investorAverageRate={investorAverageRate}
+        investorEarnings={investorEarnings}
+        lastProject={lastProject}
+        loadingActiveInvestments={loadingActiveInvestments}
+        loadingProfileSummary={loadingProfileSummary}
+        loadingProject={loadingProject}
+        loadingTransactions={loadingTransactions}
+        notificationsEnabled={notificationsEnabled}
+        onBellClick={() => router.push('/notifications')}
+        onClearSearch={clearSearch}
+        onCloseSearch={closeSearch}
+        onNewVenture={openNewVenture}
+        onOpenHistory={openHistory}
+        onOpenPortfolio={openPortfolio}
+        onOpenProject={openProject}
+        onOpenSearchProject={openSearchProject}
+        onOpenSearchTransaction={openSearchTransaction}
+        onOpenSearchUser={openSearchUser}
+        role={rolSeleccionado}
+        roleLabel={roleLabel}
+        searchError={searchError}
+        searchProjects={searchProjects}
+        searchQuery={searchQuery}
+        searching={searching}
+        searchTransactions={searchTransactions}
+        searchUsers={searchUsers}
+        setSearchQuery={setSearchQuery}
+        setShowSearch={setShowSearch}
+        showBalance={showBalance}
+        showSearch={showSearch}
+        smartWalletAddress={smartWalletAddress}
+        totalSearchResults={totalSearchResults}
+        transactions={transactions}
+        unreadNotificationsCount={unreadNotificationsCount}
+        onToggleBalance={() => setShowBalance((prev) => !prev)}
+      />
+
+    <main className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.12),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
       <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
       <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
@@ -1526,5 +2761,6 @@ export default function HomePage() {
         </div>
       ) : null}
     </main>
+    </>
   );
 }
