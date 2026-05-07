@@ -602,9 +602,6 @@ function DesktopTopbar({
           placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
           className="h-10 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-14 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
         />
-        <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-[#E3E7F1] px-2 py-1 text-xs font-bold text-[#8A94A8] xl:flex">
-          Cmd K
-        </span>
       </div>
 
       <div className="ml-auto flex items-center gap-3 pl-10 xl:pl-16 2xl:pl-24">
