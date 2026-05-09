@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
+import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -473,21 +474,7 @@ function DesktopSidebar({ role }: { role: string }) {
         </div>
       </div>
 
-      <div className="mt-auto rounded-[20px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-4 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
-        <span className="mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#EEE7FF] text-[#6B39F4]">
-          <IconCrown />
-        </span>
-        <p className="mt-3 text-sm font-bold text-[#6B39F4]">Hazte Premium</p>
-        <p className="mt-1.5 text-xs leading-5 text-[#74809A]">
-          Tu proyecto en los primeros lugares y mas visibilidad.
-        </p>
-        <button
-          type="button"
-          className="mt-3 h-9 w-full rounded-xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF]"
-        >
-          Ver planes
-        </button>
-      </div>
+      <DesktopUpgradeCard />
     </aside>
   );
 }
