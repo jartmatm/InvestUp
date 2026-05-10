@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getPendingInvestment } from '@/lib/pending-investment';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -708,18 +709,7 @@ function Topbar({
           <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
         </button>
 
-        <div className="flex min-w-[190px] items-center gap-3">
-          <span
-            className="grid h-11 w-11 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-            style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-          >
-            {avatarUrl ? null : initialsFrom(displayName)}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
-            <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
-          </span>
-        </div>
+        <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} roleLabel={profileRole} />
       </div>
     </header>
   );

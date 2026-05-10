@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopUserMenu from '@/components/DesktopUserMenu';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -534,18 +535,7 @@ function DesktopTopbar({
           Publicar proyecto
         </button>
 
-        <div className="flex min-w-[168px] items-center gap-3">
-          <span
-            className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-            style={{ backgroundImage: avatarUrl ? toCssImageUrl(avatarUrl) : undefined }}
-          >
-            {avatarUrl ? null : getInitials(displayName)}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
-            <span className="block text-xs font-medium text-[#73809A]">{profileRole}</span>
-          </span>
-        </div>
+        <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} roleLabel={profileRole} />
       </div>
     </header>
   );

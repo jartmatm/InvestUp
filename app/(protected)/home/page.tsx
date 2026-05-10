@@ -7,6 +7,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import InvestorWalletCard from '@/components/InvestorWalletCard';
 import {
@@ -814,19 +815,12 @@ function DesktopTopbar({
 
         <div className="h-9 w-px bg-[#E7EAF3]" />
 
-        <Link href="/profile" className="flex min-w-[190px] items-center gap-3">
-          <DesktopAvatar
-            avatarUrl={avatarUrl}
-            displayName={displayName}
-            loading={loadingProfileSummary}
-            sizeClassName="h-12 w-12 text-sm"
-          />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
-            <span className="block text-xs font-medium text-[#73809A]">{roleLabel}</span>
-          </span>
-          <IconChevronRight className="h-4 w-4 rotate-90 text-[#73809A]" />
-        </Link>
+        <DesktopUserMenu
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          loading={loadingProfileSummary}
+          roleLabel={roleLabel}
+        />
       </div>
     </header>
   );

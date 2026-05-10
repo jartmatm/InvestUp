@@ -9,6 +9,7 @@ import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
@@ -263,22 +264,6 @@ function IconDelete() {
   );
 }
 
-const initialsFrom = (value: string) =>
-  value
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('') || 'U';
-
-function DesktopChevronRightIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-
 function DesktopSearchIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -304,29 +289,6 @@ function DesktopInvestAppLogo() {
       <span className="text-[#6B39F4]">App</span>
       <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
     </div>
-  );
-}
-
-function DesktopAvatar({
-  avatarUrl,
-  displayName,
-  loading,
-}: {
-  avatarUrl: string;
-  displayName: string;
-  loading: boolean;
-}) {
-  return (
-    <span
-      className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-      style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-    >
-      {avatarUrl ? null : loading ? (
-        <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
-      ) : (
-        initialsFrom(displayName)
-      )}
-    </span>
   );
 }
 
@@ -424,18 +386,12 @@ function DesktopEntrepreneurTopbar({
 
         <div className="h-9 w-px bg-[#E7EAF3]" />
 
-        <Link href="/profile" className="flex min-w-[190px] items-center gap-3">
-          <DesktopAvatar
-            avatarUrl={avatarUrl}
-            displayName={displayName}
-            loading={loadingProfileSummary}
-          />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-[#111827]">{displayName}</span>
-            <span className="block text-xs font-medium text-[#73809A]">Entrepreneur</span>
-          </span>
-          <DesktopChevronRightIcon className="h-4 w-4 rotate-90 text-[#73809A]" />
-        </Link>
+        <DesktopUserMenu
+          avatarUrl={avatarUrl}
+          displayName={displayName}
+          loading={loadingProfileSummary}
+          roleLabel="Entrepreneur"
+        />
       </div>
     </header>
   );

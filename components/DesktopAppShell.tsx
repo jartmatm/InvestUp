@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -68,17 +69,6 @@ const toneClasses = {
   rose: 'bg-[#FFF1F3] text-[#C73A57]',
   dark: 'bg-[#111827] text-white',
 } as const;
-
-function getInitials(value: string) {
-  return (
-    value
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('') || 'U'
-  );
-}
 
 function getActiveHref(pathname: string) {
   if (pathname.startsWith('/profile')) return '/profile';
@@ -220,25 +210,12 @@ export function DesktopAppShell({
 
             <div className="h-9 w-px bg-[#E7EAF3]" />
 
-            <Link href="/profile" className="flex min-w-[190px] items-center gap-3">
-              <span
-                className="grid h-11 w-11 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-                style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-              >
-                {avatarUrl ? null : loading ? (
-                  <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
-                ) : (
-                  getInitials(safeName)
-                )}
-              </span>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-bold text-[#111827]">{safeName}</span>
-                <span className="block text-xs font-medium text-[#73809A]">{roleLabel}</span>
-              </span>
-              <span className="rotate-90 text-[#73809A]">
-                <IconChevron />
-              </span>
-            </Link>
+            <DesktopUserMenu
+              avatarUrl={avatarUrl}
+              displayName={safeName}
+              loading={loading}
+              roleLabel={roleLabel}
+            />
           </div>
         </header>
 
