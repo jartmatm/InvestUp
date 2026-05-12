@@ -1305,7 +1305,7 @@ export default function PublishPage() {
           title="Publish project"
           subtitle="This workspace is available for entrepreneur profiles."
           eyebrow="Access"
-          maxWidthClassName="max-w-[980px]"
+          maxWidthClassName="max-w-none"
         >
           <DesktopSectionCard title="Entrepreneur-only area" subtitle="Switch to an entrepreneur profile to create or manage a venture publication.">
             <button
@@ -1367,7 +1367,7 @@ export default function PublishPage() {
             title={review.optimizedPublication.title || review.optimizedPublication.tittle || `${form.business_name} investment opportunity`}
             subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
             eyebrow="Publication review"
-            maxWidthClassName="max-w-[1360px]"
+            maxWidthClassName="max-w-none"
           >
             <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
               <DesktopSectionCard title="Optimized investor story" subtitle="Review the publication generated from your prompt before it goes live.">
@@ -1423,7 +1423,7 @@ export default function PublishPage() {
         title="Publish project"
         subtitle="Complete each section and review the optimized version before publishing."
         eyebrow="Guided publish"
-        maxWidthClassName="max-w-[1360px]"
+        maxWidthClassName="max-w-none"
       >
         <section className="grid grid-cols-3 gap-4">
           <DesktopMetricCard label="Progress" value={`${progress}%`} detail={`Step ${stepIndex + 1} of ${steps.length}`} tone="purple" />

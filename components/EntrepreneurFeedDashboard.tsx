@@ -574,7 +574,7 @@ function DesktopFundingGauge({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(124,92,255,0.10),transparent_36%),radial-gradient(circle_at_82%_72%,rgba(72,211,154,0.08),transparent_32%)]" />
 
       <div className="relative mx-auto max-w-[1280px]">
-        <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-10">
+        <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-[43px]">
           <div className="pt-8 text-center">
             <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
               Capital levantado
@@ -744,7 +744,7 @@ function DesktopMetricTile({
   } as const;
 
   return (
-    <article className="group flex min-h-[132px] items-center gap-6 rounded-[24px] border border-[#E1E6F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFDFF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.09)]">
+    <article className="group flex min-h-[132px] items-center gap-[27px] rounded-[24px] border border-[#E1E6F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFDFF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.09)]">
       <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-[24px] [&>svg]:scale-[1.65] ${accentClassMap[accent]}`}>
         {icon}
       </span>

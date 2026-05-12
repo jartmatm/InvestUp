@@ -792,7 +792,7 @@ export default function PersonalDataPage() {
         title="Personal Data"
         subtitle="Update identity, contact details and compliance documents in one secure workspace."
         eyebrow="Profile workspace"
-        maxWidthClassName="max-w-[1360px]"
+        maxWidthClassName="max-w-none"
       >
         <section className="grid grid-cols-3 gap-4">
           <DesktopMetricCard

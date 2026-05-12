@@ -150,7 +150,7 @@ export function ProfilePageShell({
         title={title}
         subtitle={subtitle}
         eyebrow="Profile workspace"
-        maxWidthClassName="max-w-[1180px]"
+        maxWidthClassName="max-w-none"
       >
         <div className={`grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] ${contentClassName}`}>
           <div className="min-w-0 space-y-5">

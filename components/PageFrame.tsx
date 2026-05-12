@@ -50,7 +50,7 @@ export default function PageFrame({
         title={title}
         subtitle={subtitle}
         eyebrow="InvestApp workspace"
-        maxWidthClassName="max-w-[1320px]"
+        maxWidthClassName="max-w-none"
         hideHeader={hideDesktopHeader}
       >
         {showBackButton ? (

@@ -319,7 +319,7 @@ function DesktopEntrepreneurDashboardShell({
           publishDisabled={publishDisabled}
         />
         <main className="px-5 py-5 xl:px-7 2xl:px-9">
-          <div className="mx-auto max-w-[1500px]">
+          <div className="w-full">
             <EntrepreneurFeedDashboard embedded desktop />
           </div>
         </main>
@@ -683,7 +683,7 @@ export default function PortfolioPage() {
           title="Portfolio"
           subtitle="Preparing the right portfolio workspace for your profile."
           eyebrow="Loading"
-          maxWidthClassName="max-w-[980px]"
+          maxWidthClassName="max-w-none"
           hideHeader
         >
           <DesktopSectionCard>

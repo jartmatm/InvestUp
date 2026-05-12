@@ -1196,7 +1196,7 @@ function DesktopHomeDashboard({
         />
 
         <main className="px-5 py-5 xl:px-7 2xl:px-9">
-          <div className="mx-auto max-w-[1500px] space-y-6">
+          <div className="w-full space-y-6">
             <section className="flex items-center gap-5">
               <DesktopAvatar
                 avatarUrl={avatarUrl}

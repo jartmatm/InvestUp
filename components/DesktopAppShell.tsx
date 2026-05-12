@@ -70,7 +70,7 @@ export function DesktopAppShell({
   actions,
   rightRail,
   contentClassName = '',
-  maxWidthClassName = 'max-w-[1500px]',
+  maxWidthClassName = 'max-w-none',
   searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
   hideHeader = false,
 }: DesktopAppShellProps) {
