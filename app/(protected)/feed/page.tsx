@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import DesktopUserMenu from '@/components/DesktopUserMenu';
+import DesktopTopbar from '@/components/DesktopTopbar';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -147,15 +147,6 @@ function IconCrown() {
     >
       <path d="M4 18h16l1-11-5.2 4.2L12 4 8.2 11.2 3 7l1 11Z" />
       <path d="M4.5 21h15" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconNotification() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 4a5 5 0 0 0-5 5v2.8c0 .9-.3 1.7-.9 2.4L5 15.5h14l-1.1-1.3a3.8 3.8 0 0 1-.9-2.4V9a5 5 0 0 0-5-5Z" />
-      <path d="M10 18a2 2 0 0 0 4 0" />
     </svg>
   );
 }
@@ -417,67 +408,6 @@ function DesktopCategoryIcon({ active, category }: { active: boolean; category: 
   );
 }
 
-function DesktopTopbar({
-  avatarUrl,
-  displayName,
-  profileRole,
-  publishDisabled,
-  searchQuery,
-  onPublish,
-  onSearchChange,
-}: {
-  avatarUrl: string;
-  displayName: string;
-  profileRole: string;
-  publishDisabled: boolean;
-  searchQuery: string;
-  onPublish: () => void;
-  onSearchChange: (value: string) => void;
-}) {
-  return (
-    <header className="sticky top-0 z-20 flex h-[68px] items-center gap-4 border-b border-[#E7EAF3] bg-white/86 px-5 backdrop-blur-xl xl:px-6">
-      <div className="relative w-full max-w-[540px] flex-1 2xl:max-w-[620px]">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
-          <IconSearch />
-        </span>
-        <input
-          value={searchQuery}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
-          className="h-10 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-14 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-        />
-      </div>
-
-      <div className="ml-auto flex items-center gap-3 pl-10 xl:pl-16 2xl:pl-24">
-        <button
-          type="button"
-          className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition hover:-translate-y-0.5"
-          aria-label="Notifications"
-        >
-          <IconNotification />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />
-        </button>
-
-        <button
-          type="button"
-          disabled={publishDisabled}
-          onClick={onPublish}
-          className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition ${
-            publishDisabled
-              ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
-              : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
-          }`}
-        >
-          <IconPlus />
-          Publicar proyecto
-        </button>
-
-        <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} roleLabel={profileRole} />
-      </div>
-    </header>
-  );
-}
-
 function DesktopReelsSection({
   ownerProfiles,
   projects,
@@ -707,16 +637,16 @@ function DesktopMarketplaceLayout({
   const featuredProjects = projects.slice(0, 8);
 
   return (
-    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] lg:flex">
+    <div className="investapp-desktop-autofit hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] lg:flex">
       <DesktopSidebar roleLabel={profileRole} />
 
       <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <DesktopTopbar
           avatarUrl={avatarUrl}
           displayName={displayName}
-          profileRole={profileRole}
+          roleLabel={profileRole}
           publishDisabled={publishDisabled}
-          searchQuery={searchQuery}
+          searchValue={searchQuery}
           onPublish={onPublish}
           onSearchChange={onSearchChange}
         />

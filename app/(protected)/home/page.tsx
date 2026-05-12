@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import DesktopUserMenu from '@/components/DesktopUserMenu';
+import SharedDesktopTopbar from '@/components/DesktopTopbar';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import InvestorWalletCard from '@/components/InvestorWalletCard';
 import {
@@ -642,25 +642,15 @@ function DesktopTopbar({
   unreadNotificationsCount: number;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-      <div className="relative w-full max-w-[760px]">
-        <label className="relative block">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8F9AB0]">
-            <IconSearch />
-          </span>
-          <input
-            value={searchQuery}
-            onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setShowSearch(true);
-            }}
-            onFocus={() => setShowSearch(true)}
-            placeholder="Search for ventures, entrepreneurs or keywords..."
-            className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-semibold text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#8F9AB0] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-          />
-        </label>
-
-        {showSearch ? (
+    <SharedDesktopTopbar
+      avatarUrl={avatarUrl}
+      displayName={displayName}
+      loading={loadingProfileSummary}
+      notificationOnClick={onBellClick}
+      notificationsEnabled={notificationsEnabled}
+      roleLabel={roleLabel}
+      searchOverlay={
+        showSearch ? (
           <DesktopSearchResults
             displayName={displayName}
             onClear={onClearSearch}
@@ -676,39 +666,17 @@ function DesktopTopbar({
             searchUsers={searchUsers}
             totalSearchResults={totalSearchResults}
           />
-        ) : null}
-      </div>
-
-      <div className="ml-auto flex min-w-[360px] items-center justify-end gap-5">
-        <button
-          type="button"
-          aria-label="Notifications"
-          onClick={onBellClick}
-          className={`relative grid h-11 w-11 place-items-center rounded-2xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
-            notificationsEnabled
-              ? 'border-[#E7EAF3] bg-white text-[#1F2A44] hover:text-[#6B39F4]'
-              : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
-          }`}
-        >
-          <IconBell />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
-          {unreadNotificationsCount > 0 ? (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B39F4] px-1 text-[10px] font-semibold text-white">
-              {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
-            </span>
-          ) : null}
-        </button>
-
-        <div className="h-9 w-px bg-[#E7EAF3]" />
-
-        <DesktopUserMenu
-          avatarUrl={avatarUrl}
-          displayName={displayName}
-          loading={loadingProfileSummary}
-          roleLabel={roleLabel}
-        />
-      </div>
-    </header>
+        ) : null
+      }
+      searchPlaceholder="Search for ventures, entrepreneurs or keywords..."
+      searchValue={searchQuery}
+      unreadNotificationsCount={unreadNotificationsCount}
+      onSearchChange={(value) => {
+        setSearchQuery(value);
+        setShowSearch(true);
+      }}
+      onSearchFocus={() => setShowSearch(true)}
+    />
   );
 }
 

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import DesktopUserMenu from '@/components/DesktopUserMenu';
+import DesktopTopbar from '@/components/DesktopTopbar';
 import {
   formatNextRepaymentDate,
   getInvestmentHealth,
@@ -512,24 +512,6 @@ function PerformanceMiniChart() {
   );
 }
 
-function DesktopSearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16.7 16.7A7.5 7.5 0 1 0 5.3 5.3a7.5 7.5 0 0 0 11.4 11.4Z" />
-      <path d="M16.7 16.7 21 21" />
-    </svg>
-  );
-}
-
-function DesktopBellIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 4a5 5 0 0 0-5 5v3c0 .9-.3 1.8-.9 2.5L5 16h14l-1.1-1.5A4 4 0 0 1 17 12V9a5 5 0 0 0-5-5Z" />
-      <path d="M10 19a2 2 0 0 0 4 0" />
-    </svg>
-  );
-}
-
 function Topbar({
   avatarUrl,
   displayName,
@@ -540,32 +522,7 @@ function Topbar({
   profileRole: string;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[80px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-      <label className="relative block w-full max-w-[760px]">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
-          <DesktopSearchIcon />
-        </span>
-        <input
-          placeholder="Buscar emprendimientos, emprendedores o palabras clave..."
-          className="h-12 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-        />
-      </label>
-
-      <div className="ml-auto flex min-w-[380px] items-center justify-end gap-5">
-        <button
-          type="button"
-          className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5"
-          aria-label="Notifications"
-        >
-          <DesktopBellIcon />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
-        </button>
-
-        <div className="h-9 w-px bg-[#E7EAF3]" />
-
-        <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} roleLabel={profileRole} />
-      </div>
-    </header>
+    <DesktopTopbar avatarUrl={avatarUrl} displayName={displayName} roleLabel={profileRole} />
   );
 }
 

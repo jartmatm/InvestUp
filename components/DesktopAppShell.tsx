@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import DesktopUserMenu from '@/components/DesktopUserMenu';
+import DesktopTopbar from '@/components/DesktopTopbar';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -54,24 +54,6 @@ const toneClasses = {
   dark: 'bg-[#111827] text-white',
 } as const;
 
-function IconSearch() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m16 16 4 4" />
-    </svg>
-  );
-}
-
-function IconBell() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M6.5 9.5a5.5 5.5 0 1 1 11 0c0 5.2 2 6.5 2 6.5h-15s2-1.3 2-6.5" />
-      <path d="M10 18.5a2.2 2.2 0 0 0 4 0" />
-    </svg>
-  );
-}
-
 function IconChevron() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
@@ -102,38 +84,14 @@ export function DesktopAppShell({
       <DesktopSidebar roleLabel={roleLabel} />
 
       <div className="min-w-0 pl-[260px]">
-        <header className="sticky top-0 z-20 flex h-[80px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-          <label className="relative block w-full max-w-[720px]">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9AA4B7]">
-              <IconSearch />
-            </span>
-            <input
-              placeholder={searchPlaceholder}
-              className="h-12 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-            />
-          </label>
-
-          <div className="ml-auto flex min-w-[390px] items-center justify-end gap-5">
-            {actions}
-            <Link
-              href="/notifications"
-              className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 hover:text-[#6B39F4]"
-              aria-label="Notifications"
-            >
-              <IconBell />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
-            </Link>
-
-            <div className="h-9 w-px bg-[#E7EAF3]" />
-
-            <DesktopUserMenu
-              avatarUrl={avatarUrl}
-              displayName={safeName}
-              loading={loading}
-              roleLabel={roleLabel}
-            />
-          </div>
-        </header>
+        <DesktopTopbar
+          actions={actions}
+          avatarUrl={avatarUrl}
+          displayName={safeName}
+          loading={loading}
+          roleLabel={roleLabel}
+          searchPlaceholder={searchPlaceholder}
+        />
 
         <main className="px-8 py-7 xl:px-10">
           <div className={`mx-auto w-full ${maxWidthClassName} ${contentClassName}`}>

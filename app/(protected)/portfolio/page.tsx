@@ -7,7 +7,7 @@ import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import DesktopSidebar from '@/components/DesktopSidebar';
-import DesktopUserMenu from '@/components/DesktopUserMenu';
+import DesktopTopbar from '@/components/DesktopTopbar';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
@@ -262,68 +262,29 @@ function IconDelete() {
   );
 }
 
-function DesktopSearchIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M16.7 16.7A7.5 7.5 0 1 0 5.3 5.3a7.5 7.5 0 0 0 11.4 11.4Z" />
-      <path d="M16.7 16.7 21 21" />
-    </svg>
-  );
-}
-
-function DesktopBellIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 4a5 5 0 0 0-5 5v3c0 .9-.3 1.8-.9 2.5L5 16h14l-1.1-1.5A4 4 0 0 1 17 12V9a5 5 0 0 0-5-5Z" />
-      <path d="M10 19a2 2 0 0 0 4 0" />
-    </svg>
-  );
-}
-
 function DesktopEntrepreneurTopbar({
   avatarUrl,
   displayName,
   loadingProfileSummary,
   onNotifications,
+  onPublish,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
+  onPublish: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-20 flex h-[88px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">
-      <label className="relative block w-full max-w-[760px]">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8F9AB0]">
-          <DesktopSearchIcon />
-        </span>
-        <input
-          placeholder="Search funding, investors or project activity..."
-          className="h-14 w-full rounded-2xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-semibold text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#8F9AB0] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-        />
-      </label>
-
-      <div className="ml-auto flex min-w-[360px] items-center justify-end gap-5">
-        <button
-          type="button"
-          aria-label="Notifications"
-          onClick={onNotifications}
-          className="relative grid h-11 w-11 place-items-center rounded-2xl border border-[#E7EAF3] bg-white text-[#1F2A44] shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 hover:text-[#6B39F4]"
-        >
-          <DesktopBellIcon />
-          <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[#6B39F4]" />
-        </button>
-
-        <div className="h-9 w-px bg-[#E7EAF3]" />
-
-        <DesktopUserMenu
-          avatarUrl={avatarUrl}
-          displayName={displayName}
-          loading={loadingProfileSummary}
-          roleLabel="Entrepreneur"
-        />
-      </div>
-    </header>
+    <DesktopTopbar
+      avatarUrl={avatarUrl}
+      displayName={displayName}
+      loading={loadingProfileSummary}
+      notificationOnClick={onNotifications}
+      roleLabel="Entrepreneur"
+      searchPlaceholder="Search funding, investors or project activity..."
+      onPublish={onPublish}
+    />
   );
 }
 
@@ -332,11 +293,13 @@ function DesktopEntrepreneurDashboardShell({
   displayName,
   loadingProfileSummary,
   onNotifications,
+  onPublish,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
+  onPublish: () => void;
 }) {
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
@@ -347,6 +310,7 @@ function DesktopEntrepreneurDashboardShell({
           displayName={displayName}
           loadingProfileSummary={loadingProfileSummary}
           onNotifications={onNotifications}
+          onPublish={onPublish}
         />
         <main className="px-8 py-8 xl:px-10">
           <div className="mx-auto max-w-[1500px]">
@@ -742,6 +706,10 @@ export default function PortfolioPage() {
         displayName={desktopDisplayName}
         loadingProfileSummary={loadingProfileSummary}
         onNotifications={() => router.push('/notifications')}
+        onPublish={() => {
+          setEditingProjectId(null);
+          setShowPublisher(true);
+        }}
       />
 
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
