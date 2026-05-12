@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
+import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 
 type DesktopTopbarProps = {
@@ -54,6 +55,15 @@ function PlusIcon() {
   );
 }
 
+function InvestIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M5 17 10 12l4 4 5-8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 8h4v4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function NotificationBadge({ count }: { count: number }) {
   if (count <= 0) return <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#6B39F4]" />;
 
@@ -85,7 +95,9 @@ export default function DesktopTopbar({
   unreadNotificationsCount = 0,
 }: DesktopTopbarProps) {
   const { getAccessToken, user } = usePrivy();
-  const shouldResolvePublishState = publishDisabled === undefined;
+  const { rolSeleccionado } = useInvestApp();
+  const isEntrepreneur = rolSeleccionado === 'emprendedor';
+  const shouldResolvePublishState = isEntrepreneur && publishDisabled === undefined;
   const [hasCurrentProject, setHasCurrentProject] = useState(false);
   const [loadingProjectState, setLoadingProjectState] = useState(false);
 
@@ -115,8 +127,12 @@ export default function DesktopTopbar({
     };
   }, [getAccessToken, shouldResolvePublishState, user?.id]);
 
-  const effectivePublishDisabled =
-    publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id);
+  const effectivePublishDisabled = isEntrepreneur
+    ? publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id)
+    : false;
+  const primaryCtaLabel = isEntrepreneur ? publishLabel : 'Invertir en un negocio';
+  const primaryCtaHref = isEntrepreneur ? publishHref : '/feed';
+  const primaryCtaOnClick = isEntrepreneur ? onPublish : undefined;
   const notificationClassName = `relative grid h-10 w-10 place-items-center rounded-xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
     notificationsEnabled
       ? 'border-[#E7EAF3] bg-white text-[#1F2A44] hover:text-[#6B39F4]'
@@ -169,22 +185,22 @@ export default function DesktopTopbar({
           </Link>
         )}
 
-        {onPublish ? (
-          <button type="button" disabled={effectivePublishDisabled} onClick={onPublish} className={publishClassName}>
-            <PlusIcon />
-            {publishLabel}
+        {primaryCtaOnClick ? (
+          <button type="button" disabled={effectivePublishDisabled} onClick={primaryCtaOnClick} className={publishClassName}>
+            {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
+            {primaryCtaLabel}
           </button>
         ) : (
           <Link
-            href={effectivePublishDisabled ? '#' : publishHref}
+            href={effectivePublishDisabled ? '#' : primaryCtaHref}
             aria-disabled={effectivePublishDisabled}
             className={publishClassName}
             onClick={(event) => {
               if (effectivePublishDisabled) event.preventDefault();
             }}
           >
-            <PlusIcon />
-            {publishLabel}
+            {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
+            {primaryCtaLabel}
           </Link>
         )}
 
