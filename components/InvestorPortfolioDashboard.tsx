@@ -5,8 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
-import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
-import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
 import {
   formatNextRepaymentDate,
@@ -531,74 +530,6 @@ function DesktopBellIcon() {
   );
 }
 
-function DesktopInvestAppLogo() {
-  return (
-    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
-      <span>Invest</span>
-      <span className="text-[#6B39F4]">App</span>
-      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
-    </div>
-  );
-}
-
-function Sidebar() {
-  const primaryItems = [
-    { href: '/home', label: 'Home', icon: 'home' },
-    { href: '/portfolio', label: 'Portfolio', icon: 'portfolio', active: true },
-    { href: '/invest', label: 'Send', icon: 'send' },
-    { href: '/feed', label: 'Feed', icon: 'feed' },
-    { href: '/profile', label: 'Profile', icon: 'profile' },
-  ];
-  const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
-    { href: '/contracts', label: 'Documents', icon: 'documents' },
-  ];
-
-  return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
-      <DesktopInvestAppLogo />
-
-      <nav className="mt-9 space-y-1.5">
-        {primaryItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition ${
-              item.active
-                ? 'bg-[#F1ECFF] text-[#6B39F4]'
-                : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
-            }`}
-          >
-            <DesktopSidebarIcon type={item.icon} />
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
-        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
-          Inversionista
-        </p>
-        <div className="mt-3 space-y-1.5">
-          {utilityItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
-            >
-              <DesktopSidebarIcon type={item.icon} />
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <DesktopUpgradeCard />
-    </aside>
-  );
-}
-
 function Topbar({
   avatarUrl,
   displayName,
@@ -651,7 +582,7 @@ function DashboardLayout({
 }) {
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
-      <Sidebar />
+      <DesktopSidebar roleLabel="Inversionista" />
       <div className="min-w-0 pl-[260px]">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
         <main className="px-8 py-7 xl:px-10">

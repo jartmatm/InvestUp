@@ -1,12 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
 import BottomNav from '@/components/BottomNav';
-import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import InvestorWalletCard from '@/components/InvestorWalletCard';
@@ -405,61 +404,6 @@ function IconChevronRight({ className = 'h-4 w-4' }: { className?: string }) {
   );
 }
 
-function IconDocument() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M7 3h7l4 4v14H7V3Z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  );
-}
-
-function IconPortfolio() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 17 9 12l4 4 7-8" />
-      <path d="M14 8h6v6" />
-    </svg>
-  );
-}
-
-function IconHome() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M4 10.5 12 4l8 6.5V20H5.5A1.5 1.5 0 0 1 4 18.5v-8Z" />
-      <path d="M9 20v-6h6v6" />
-    </svg>
-  );
-}
-
-function IconProfile() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M5 20a7 7 0 0 1 14 0" />
-    </svg>
-  );
-}
-
-function IconFeed() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="5" y="4" width="14" height="16" rx="3" />
-      <path d="M8 9h8M8 13h5" />
-    </svg>
-  );
-}
-
-function DesktopInvestAppLogo() {
-  return (
-    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
-      <span>Invest</span>
-      <span className="text-[#6B39F4]">App</span>
-      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
-    </div>
-  );
-}
-
 function DesktopAvatar({
   avatarUrl,
   displayName,
@@ -482,64 +426,6 @@ function DesktopAvatar({
         initialsFrom(displayName)
       )}
     </span>
-  );
-}
-
-function DesktopSidebar({ roleLabel }: { roleLabel: string }) {
-  const mainItems = [
-    { href: '/home', label: 'Home', icon: <IconHome />, active: true },
-    { href: '/portfolio', label: 'Portfolio', icon: <IconPortfolio /> },
-    { href: '/invest', label: 'Send', icon: <IconSend /> },
-    { href: '/feed', label: 'Feed', icon: <IconFeed /> },
-    { href: '/profile', label: 'Profile', icon: <IconProfile /> },
-  ];
-  const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: <IconPlus /> },
-    { href: '/withdraw', label: 'Withdraw', icon: <IconDownload /> },
-    { href: '/contracts', label: 'Documents', icon: <IconDocument /> },
-  ];
-
-  return (
-    <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/95 px-5 py-7 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
-      <DesktopInvestAppLogo />
-
-      <nav className="mt-10 space-y-1.5">
-        {mainItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex h-12 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold transition duration-200 ${
-              item.active
-                ? 'bg-[#F1ECFF] text-[#6B39F4]'
-                : 'text-[#59657D] hover:bg-[#F7F8FB] hover:text-[#172033]'
-            }`}
-          >
-            {item.icon}
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-7 border-t border-[#EEF1F7] pt-6">
-        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#8C96AA]">
-          {roleLabel}
-        </p>
-        <div className="mt-3 space-y-1.5">
-          {utilityItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold text-[#59657D] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#172033]"
-            >
-              {item.icon}
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <DesktopUpgradeCard />
-    </aside>
   );
 }
 

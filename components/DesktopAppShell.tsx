@@ -1,10 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
-import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -47,20 +45,6 @@ type DesktopListRowProps = {
   onClick?: () => void;
 };
 
-const mainItems = [
-  { href: '/home', label: 'Home', icon: 'home' },
-  { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
-  { href: '/invest', label: 'Send', icon: 'send' },
-  { href: '/feed', label: 'Feed', icon: 'feed' },
-  { href: '/profile', label: 'Profile', icon: 'profile' },
-];
-
-const utilityItems = [
-  { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
-  { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
-  { href: '/contracts', label: 'Documents', icon: 'documents' },
-];
-
 const toneClasses = {
   purple: 'bg-[#F1ECFF] text-[#6B39F4]',
   green: 'bg-[#E7FBF4] text-[#0B9B72]',
@@ -69,30 +53,6 @@ const toneClasses = {
   rose: 'bg-[#FFF1F3] text-[#C73A57]',
   dark: 'bg-[#111827] text-white',
 } as const;
-
-function getActiveHref(pathname: string) {
-  if (pathname.startsWith('/profile')) return '/profile';
-  if (pathname.startsWith('/portfolio') || pathname.startsWith('/contracts')) return '/portfolio';
-  if (pathname.startsWith('/feed') || pathname.startsWith('/publish')) return '/feed';
-  if (
-    pathname.startsWith('/invest') ||
-    pathname.startsWith('/withdraw') ||
-    pathname.startsWith('/history')
-  ) {
-    return '/invest';
-  }
-  return '/home';
-}
-
-function InvestAppLogo() {
-  return (
-    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
-      <span>Invest</span>
-      <span className="text-[#6B39F4]">App</span>
-      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
-    </div>
-  );
-}
 
 function IconSearch() {
   return (
@@ -132,8 +92,6 @@ export function DesktopAppShell({
   searchPlaceholder = 'Buscar emprendimientos, emprendedores o palabras clave...',
   hideHeader = false,
 }: DesktopAppShellProps) {
-  const pathname = usePathname();
-  const activeHref = getActiveHref(pathname);
   const { rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const safeName = displayName || 'InvestApp user';
@@ -141,49 +99,7 @@ export function DesktopAppShell({
 
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
-        <InvestAppLogo />
-
-        <nav className="mt-9 space-y-1.5">
-          {mainItems.map((item) => {
-            const active = item.href === activeHref;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition duration-200 ${
-                  active
-                    ? 'bg-[#F1ECFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
-                    : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
-                }`}
-              >
-                <DesktopSidebarIcon type={item.icon} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="mt-7 border-t border-[#EEF1F7] pt-6">
-          <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
-            {roleLabel}
-          </p>
-          <div className="mt-3 space-y-1.5">
-            {utilityItems.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
-              >
-                <DesktopSidebarIcon type={item.icon} />
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        <DesktopUpgradeCard />
-      </aside>
+      <DesktopSidebar roleLabel={roleLabel} />
 
       <div className="min-w-0 pl-[260px]">
         <header className="sticky top-0 z-20 flex h-[80px] items-center gap-8 border-b border-[#E7EAF3] bg-white/86 px-8 backdrop-blur-xl">

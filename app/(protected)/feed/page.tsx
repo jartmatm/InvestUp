@@ -1,12 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import BottomNav from '@/components/BottomNav';
-import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
-import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -419,67 +417,6 @@ function DesktopCategoryIcon({ active, category }: { active: boolean; category: 
   );
 }
 
-function DesktopSidebar({ role }: { role: string }) {
-  const primaryItems = [
-    { href: '/home', label: 'Home', icon: 'home' },
-    { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
-    { href: '/invest', label: 'Send', icon: 'send' },
-    { href: '/feed', label: 'Feed', icon: 'feed', active: true },
-    { href: '/profile', label: 'Profile', icon: 'profile' },
-  ];
-
-  const utilityItems = [
-    { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
-    { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
-    { href: '/contracts', label: 'Documents', icon: 'documents' },
-  ];
-
-  return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[var(--desktop-sidebar-width)] border-r border-[#E7EAF3] bg-white/92 px-4 py-5 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl lg:flex lg:flex-col">
-      <div className="flex items-center px-1">
-        <InvestAppWordmark />
-      </div>
-
-      <nav className="mt-7 space-y-1">
-        {primaryItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex h-10 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold transition ${
-              item.active
-                ? 'bg-[#F2EDFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
-                : 'text-[#64708A] hover:bg-[#F7F8FB] hover:text-[#1F2A44]'
-            }`}
-          >
-            <DesktopSidebarIcon type={item.icon} />
-            {item.label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-5 border-t border-[#EEF1F7] pt-5">
-        <p className="px-3 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">
-          {role === 'emprendedor' ? 'Emprendedor' : 'Inversionista'}
-        </p>
-        <div className="mt-3 space-y-1">
-          {utilityItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex h-9 w-full items-center gap-3 rounded-xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
-            >
-              <DesktopSidebarIcon type={item.icon} />
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <DesktopUpgradeCard />
-    </aside>
-  );
-}
-
 function DesktopTopbar({
   avatarUrl,
   displayName,
@@ -770,10 +707,10 @@ function DesktopMarketplaceLayout({
   const featuredProjects = projects.slice(0, 8);
 
   return (
-    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] [--desktop-sidebar-width:216px] lg:flex xl:[--desktop-sidebar-width:224px] 2xl:[--desktop-sidebar-width:232px]">
-      <DesktopSidebar role={profileRole === 'Emprendedor' ? 'emprendedor' : 'inversor'} />
+    <div className="hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] lg:flex">
+      <DesktopSidebar roleLabel={profileRole} />
 
-      <main className="ml-[var(--desktop-sidebar-width)] flex min-h-screen min-w-0 flex-1 flex-col">
+      <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <DesktopTopbar
           avatarUrl={avatarUrl}
           displayName={displayName}
