@@ -247,7 +247,7 @@ function DesktopMenuItem({
 
 function MenuSection({ items, onSelect, title }: { items: MenuItem[]; onSelect: () => void; title: string }) {
   return (
-    <section>
+    <section className="rounded-[22px] border border-[#EEF1F7] bg-white p-2 shadow-[0_12px_30px_rgba(21,28,44,0.035)]">
       <p className="px-2 text-[0.64rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">{title}</p>
       <div className="mt-2 space-y-1">
         {items.map((item) => (
@@ -445,11 +445,9 @@ export default function DesktopUserMenu({
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 space-y-2.5">
             <MenuSection items={accountItems} onSelect={() => setOpen(false)} title="Account" />
             <MenuSection items={transactionItems} onSelect={() => setOpen(false)} title="Transactions" />
-          </div>
-          <div className="mt-3">
             <MenuSection items={preferenceItems} onSelect={() => setOpen(false)} title="Preferences" />
           </div>
         </div>
