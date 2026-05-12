@@ -645,44 +645,15 @@ export default function WithdrawPage() {
       eyebrow="Payouts"
       searchPlaceholder="Search withdrawals, wallets or bank accounts..."
       hideHeader
-      rightRail={
-        <DesktopSectionCard title="Payout policy" subtitle="Operational guardrails for safe withdrawals.">
-          <div className="space-y-3">
-            <div className="rounded-2xl bg-[#FFF8EA] px-4 py-3 text-sm font-semibold leading-6 text-[#8A5B1C]">
-              Minimum withdrawal: {MIN_WITHDRAWAL_USDC.toFixed(2)} USD. A {MIN_GAS_RESERVE_USDC.toFixed(2)} USD reserve is kept for network fees.
-            </div>
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Country</p>
-              <p className="mt-1 text-sm font-bold text-[#111827]">{withdrawCountryConfig.name}</p>
-            </div>
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Processing</p>
-              <p className="mt-1 text-sm font-bold text-[#111827]">1 to 2 business days</p>
-            </div>
-            {submittedTxHash ? (
-              <div className="rounded-2xl bg-[#E7FBF4] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#12895B]">Submitted hash</p>
-                <p className="mt-1 break-all text-sm font-bold text-[#087A52]">{submittedTxHash}</p>
-              </div>
-            ) : null}
-          </div>
-        </DesktopSectionCard>
-      }
+      maxWidthClassName="max-w-none"
     >
-      <section className="grid grid-cols-3 gap-4">
+      <section className="grid grid-cols-2 gap-5">
         <DesktopMetricCard
           icon={<IconWalletBalance />}
           label="Available"
           value={`${displayBalance} USD`}
           detail="Wallet balance"
           tone="purple"
-        />
-        <DesktopMetricCard
-          icon={<IconInfo />}
-          label="Withdrawable"
-          value={`${withdrawableBalance.toFixed(2)} USD`}
-          detail="After network reserve"
-          tone="green"
         />
         <DesktopMetricCard
           icon={isBankMethod ? <IconBank /> : <IconKey />}
@@ -693,13 +664,14 @@ export default function WithdrawPage() {
         />
       </section>
 
-      <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
+      <section>
         <DesktopSectionCard
           title="Withdrawal request"
           subtitle="Choose a payout method and confirm the destination details."
+          className="min-h-[calc(100vh-270px)] p-8"
         >
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
               {([
                 {
                   value: 'bank' as const,
@@ -723,7 +695,7 @@ export default function WithdrawPage() {
                     type="button"
                     disabled={option.disabled}
                     onClick={() => updateForm('method', option.value)}
-                    className={`rounded-2xl border p-4 text-left transition duration-200 ${
+                    className={`rounded-[22px] border p-5 text-left transition duration-200 ${
                       selected
                         ? 'border-[#D9CCFF] bg-[#F8F5FF] shadow-[0_18px_34px_rgba(107,57,244,0.10)]'
                         : 'border-[#E8ECF4] bg-white hover:bg-[#F8F9FB]'
@@ -754,12 +726,12 @@ export default function WithdrawPage() {
             </label>
 
             {isBankMethod ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                 {withdrawCountryConfig.bankOptions.length > 0 ? (
                   <select
                     value={form.bankName}
                     onChange={(event) => updateForm('bankName', event.target.value)}
-                    className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                    className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                   >
                     <option value="">{withdrawCountryConfig.bankPlaceholder}</option>
                     {withdrawCountryConfig.bankOptions.map((bank) => (
@@ -773,19 +745,19 @@ export default function WithdrawPage() {
                     value={form.bankName}
                     onChange={(event) => updateForm('bankName', event.target.value)}
                     placeholder={withdrawCountryConfig.bankPlaceholder}
-                    className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                    className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                   />
                 )}
                 <input
                   value={form.accountNumber}
                   onChange={(event) => updateForm('accountNumber', event.target.value)}
                   placeholder={withdrawCountryConfig.accountNumberPlaceholder}
-                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 />
                 <select
                   value={form.accountType}
                   onChange={(event) => updateForm('accountType', event.target.value)}
-                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 >
                   <option value="">{withdrawCountryConfig.accountTypePlaceholder}</option>
                   {withdrawCountryConfig.accountTypes.map((option) => (
@@ -797,7 +769,7 @@ export default function WithdrawPage() {
                 <select
                   value={form.identificationType}
                   onChange={(event) => updateForm('identificationType', event.target.value)}
-                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 >
                   <option value="">{withdrawCountryConfig.identificationTypePlaceholder}</option>
                   {withdrawCountryConfig.identificationTypes.map((option) => (
@@ -810,13 +782,13 @@ export default function WithdrawPage() {
                   value={form.identificationNumber}
                   onChange={(event) => updateForm('identificationNumber', event.target.value)}
                   placeholder={withdrawCountryConfig.identificationNumberPlaceholder}
-                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 />
                 <input
                   value={form.phoneNumber}
                   onChange={(event) => updateForm('phoneNumber', event.target.value)}
                   placeholder={withdrawCountryConfig.phonePlaceholder}
-                  className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 />
               </div>
             ) : (
@@ -824,7 +796,7 @@ export default function WithdrawPage() {
                 value={form.breveKey}
                 onChange={(event) => updateForm('breveKey', event.target.value)}
                 placeholder={withdrawCountryConfig.breveKeyPlaceholder}
-                className="h-12 w-full rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
+                className="h-14 w-full rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
               />
             )}
 
@@ -851,29 +823,6 @@ export default function WithdrawPage() {
             >
               {savingRequest || loadingTx ? 'Processing withdrawal...' : 'Confirm withdrawal'}
             </button>
-          </div>
-        </DesktopSectionCard>
-
-        <DesktopSectionCard title="Compliance check" subtitle="KYC and wallet readiness for this request.">
-          <div className="space-y-3">
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Wallet</p>
-              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {smartWalletAddress ? `${smartWalletAddress.slice(0, 10)}...${smartWalletAddress.slice(-8)}` : 'Waiting for wallet'}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Safe balance</p>
-              <p className="mt-1 text-sm font-bold text-[#111827]">{withdrawableBalance.toFixed(2)} USD</p>
-            </div>
-            <div className={`rounded-2xl px-4 py-3 ${canSubmit ? 'bg-[#E7FBF4]' : 'bg-[#FFF8EA]'}`}>
-              <p className={`text-xs font-bold uppercase tracking-[0.14em] ${canSubmit ? 'text-[#12895B]' : 'text-[#A46A00]'}`}>
-                Request state
-              </p>
-              <p className={`mt-1 text-sm font-bold ${canSubmit ? 'text-[#087A52]' : 'text-[#8A5B1C]'}`}>
-                {canSubmit ? 'Ready to submit' : 'Missing required details'}
-              </p>
-            </div>
           </div>
         </DesktopSectionCard>
       </section>
