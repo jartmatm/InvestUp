@@ -952,7 +952,7 @@ function DesktopActionRail({ actions }: { actions: ActionItem[] }) {
           key={action.label}
           type="button"
           onClick={action.onClick}
-          className="group rounded-[22px] border border-[#E9ECF4] bg-white p-5 text-left shadow-[0_18px_38px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.11)]"
+          className="group flex min-h-[132px] flex-col items-center justify-center rounded-[22px] border border-[#E9ECF4] bg-white p-5 text-center shadow-[0_18px_38px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.11)]"
         >
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F2EDFF] text-[#6B39F4] transition duration-200 group-hover:scale-105">
             {action.icon}

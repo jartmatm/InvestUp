@@ -307,6 +307,28 @@ function IconClock() {
   );
 }
 
+function IconCalendar() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px]"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="4" y="5" width="16" height="15" rx="3" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+      <path d="M4 10h16" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+    </svg>
+  );
+}
+
 function IconPercent() {
   return (
     <svg
@@ -554,10 +576,10 @@ function DesktopFundingGauge({
       <div className="relative mx-auto max-w-[1280px]">
         <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-10">
           <div className="pt-8 text-center">
-            <p className="text-[0.78rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
+            <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
               Capital levantado
             </p>
-            <p className="mt-6 text-[2.9rem] font-bold tracking-[-0.065em] text-[#090F22]">
+            <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
               {money(raised, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full" style={{ backgroundColor: progressColor }} />
@@ -609,29 +631,29 @@ function DesktopFundingGauge({
                 fill={progressColor}
                 className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
               />
-              <text x="48" y="226" className="fill-[#7D879C] text-[12px] font-bold">
+              <text x="48" y="226" className="fill-[#7D879C] text-[12px] font-medium">
                 0%
               </text>
-              <text x="169" y="36" className="fill-[#7D879C] text-[12px] font-bold">
+              <text x="169" y="36" className="fill-[#7D879C] text-[12px] font-medium">
                 50%
               </text>
-              <text x="292" y="226" className="fill-[#7D879C] text-[12px] font-bold">
+              <text x="292" y="226" className="fill-[#7D879C] text-[12px] font-medium">
                 100%
               </text>
             </svg>
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-16 text-center">
-              <p className="text-[4.25rem] font-bold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
-              <p className="mt-3 text-[0.82rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
+              <p className="text-[4.25rem] font-semibold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
+              <p className="mt-3 text-[0.82rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
                 Progreso de financiación
               </p>
             </div>
           </div>
 
           <div className="pt-8 text-center">
-            <p className="text-[0.78rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
+            <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
               Restante
             </p>
-            <p className="mt-6 text-[2.9rem] font-bold tracking-[-0.065em] text-[#090F22]">
+            <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
               {money(remaining, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-[#75DDBA]" />
@@ -639,10 +661,10 @@ function DesktopFundingGauge({
           </div>
         </div>
 
-        <div className="-mt-5 flex justify-center">
-          <span className="inline-flex items-center gap-3 rounded-[22px] border border-[#E1E6F0] bg-white/90 px-7 py-3 text-lg font-bold text-[#111827] shadow-[0_16px_32px_rgba(21,28,44,0.10)] backdrop-blur-xl">
+        <div className="mt-2 flex justify-center">
+          <span className="inline-flex items-center gap-3 rounded-[22px] border border-[#E1E6F0] bg-white/90 px-7 py-3 text-lg font-semibold text-[#111827] shadow-[0_16px_32px_rgba(21,28,44,0.10)] backdrop-blur-xl">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
-              <IconClock />
+              <IconCalendar />
             </span>
             {daysRemainingPillLabel}
           </span>
@@ -723,16 +745,16 @@ function DesktopMetricTile({
 
   return (
     <article className="group flex min-h-[132px] items-center gap-6 rounded-[24px] border border-[#E1E6F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFDFF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.09)]">
-      <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[20px] ${accentClassMap[accent]}`}>
+      <span className={`grid h-20 w-20 shrink-0 place-items-center rounded-[24px] [&>svg]:scale-[1.65] ${accentClassMap[accent]}`}>
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[0.82rem] font-bold uppercase tracking-[0.2em] text-[#7D879C]">
+        <span className="block text-[0.82rem] font-medium uppercase tracking-[0.2em] text-[#7D879C]">
           {label}
         </span>
         <span
-          className={`mt-3 inline-flex text-[1.65rem] font-bold tracking-[-0.055em] text-[#090F22] ${
-            badgeClassName ? `rounded-full border px-5 py-2 text-base ${badgeClassName}` : ''
+          className={`mt-3 inline-flex text-[1.65rem] font-semibold tracking-[-0.055em] text-[#090F22] ${
+            badgeClassName ? `rounded-full border px-5 py-2 text-base font-semibold ${badgeClassName}` : ''
           }`}
         >
           {value}
@@ -1087,13 +1109,13 @@ export default function EntrepreneurFeedDashboard({
     {
       label: 'Días restantes',
       value: daysRemainingLabel,
-      icon: <IconClock />,
+      icon: <IconCalendar />,
       accent: 'blue' as const,
     },
     {
       label: 'Monto restante',
       value: money(remainingAmount, currency),
-      icon: <IconChart />,
+      icon: <IconClock />,
       accent: 'purple' as const,
     },
     {
@@ -1108,22 +1130,6 @@ export default function EntrepreneurFeedDashboard({
   if (desktop) {
     return (
       <div className="space-y-5">
-        <header className="flex items-start justify-between gap-6">
-          <div>
-            <h1 className="text-[2.35rem] font-bold leading-tight tracking-[-0.06em] text-[#111827]">
-              Entrepreneur dashboard
-            </h1>
-            <p className="mt-1.5 text-base font-medium text-[#66728A]">
-              Funding progress, financing data and investor summary
-            </p>
-          </div>
-          {project ? (
-            <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold ${getProjectStatusTone(project)}`}>
-              {getProjectStatusLabel(project)}
-            </span>
-          ) : null}
-        </header>
-
         {loading ? (
           <div className="space-y-4">
             <div className="h-[370px] animate-pulse rounded-[28px] bg-white shadow-[0_22px_52px_rgba(21,28,44,0.06)]" />

@@ -437,7 +437,7 @@ function DesktopReelsSection({
         </button>
       </div>
 
-      <div className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-5 flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {projects.map((project) => {
           const coverImage = getProjectCoverImage(project);
           const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
@@ -451,20 +451,20 @@ function DesktopReelsSection({
               key={`desktop-reel-${project.id}`}
               type="button"
               onClick={() => onOpenProject(project.id)}
-              className="group relative h-[clamp(168px,21vh,222px)] w-[clamp(126px,10.2vw,162px)] shrink-0 snap-start overflow-hidden rounded-[18px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
+              className="group relative h-[clamp(230px,27vh,306px)] w-[clamp(168px,13.2vw,218px)] shrink-0 snap-start overflow-hidden rounded-[18px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
               style={{ backgroundImage: cardBackground }}
             >
               <span
-                className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center text-[0.66rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center text-[0.7rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
                 style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
               >
                 {avatarImage ? null : getInitials(ownerName)}
               </span>
-              <span className="absolute inset-x-3 bottom-3">
-                <span className="line-clamp-3 text-[0.86rem] font-bold leading-tight tracking-[-0.04em] text-white">
+              <span className="absolute inset-x-4 bottom-4">
+                <span className="line-clamp-3 text-[1rem] font-bold leading-tight tracking-[-0.04em] text-white">
                   {project.title}
                 </span>
-                <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2 py-0.5 text-[0.64rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
+                <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-[0.68rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
                   <IconCrown />
                   Premium
                 </span>
@@ -489,7 +489,7 @@ function DesktopCategories({
   const options = Array.from(new Set([...DESKTOP_CATEGORY_OPTIONS, ...categories]));
 
   return (
-    <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-4 flex flex-wrap gap-3">
       {options.map((category) => {
         const active = category === selectedCategory;
         return (
@@ -497,7 +497,7 @@ function DesktopCategories({
             key={`desktop-category-${category}`}
             type="button"
             onClick={() => onSelectCategory(category)}
-            className={`inline-flex h-9 items-center gap-2 rounded-xl px-2.5 text-[0.72rem] font-bold transition ${
+            className={`inline-flex h-11 items-center gap-2 rounded-xl px-3.5 text-[0.78rem] font-bold transition ${
               active
                 ? 'bg-white text-[#6B39F4] shadow-[0_14px_32px_rgba(107,57,244,0.12)] ring-1 ring-[#CFC3FF]'
                 : 'bg-[#F0F2F7] text-[#3E485E] hover:bg-white hover:shadow-[0_12px_28px_rgba(21,28,44,0.06)]'
@@ -510,7 +510,7 @@ function DesktopCategories({
       })}
       <button
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3 text-[0.72rem] font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
+        className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-4 text-[0.78rem] font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
       >
         Mas categorias
         <IconChevronDown />
@@ -548,9 +548,9 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group overflow-hidden rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative h-[104px] bg-cover bg-center xl:h-[112px] 2xl:h-[122px]" style={{ backgroundImage: cardBackground }}>
+      <div className="relative h-[clamp(150px,16vh,178px)] bg-cover bg-center" style={{ backgroundImage: cardBackground }}>
         <button
           type="button"
           onClick={(event) => {
@@ -565,15 +565,15 @@ function DesktopProjectCard({
           <IconHeart filled={isWishlisted} />
         </button>
       </div>
-      <div className="p-3">
-        <h3 className="line-clamp-2 min-h-[38px] text-[0.9rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+      <div className="p-4">
+        <h3 className="line-clamp-2 min-h-[48px] text-[1rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
           {project.title}
         </h3>
-        <p className="mt-1.5 line-clamp-1 text-xs font-medium text-[#6C7890]">
+        <p className="mt-1.5 line-clamp-1 text-sm font-medium text-[#6C7890]">
           {sector} - {location}
         </p>
-        <div className="mt-2.5 flex items-center justify-between gap-3">
-          <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-2.5 py-1 text-xs font-bold text-[#12895B]">
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-3 py-1.5 text-xs font-bold text-[#12895B]">
             {getRateLabel(project)}
           </span>
           <span className="text-xs font-semibold text-[#8F98AA]">Interest rate</span>
@@ -651,7 +651,7 @@ function DesktopMarketplaceLayout({
           onSearchChange={onSearchChange}
         />
 
-        <div className="mx-auto w-full max-w-[1320px] px-4 py-4 xl:px-5 2xl:px-6">
+        <div className="w-full px-5 py-5 xl:px-7 2xl:px-9">
           <DesktopReelsSection
             ownerProfiles={ownerProfiles}
             projects={featuredProjects}
@@ -664,7 +664,7 @@ function DesktopMarketplaceLayout({
             onSelectCategory={onSelectCategory}
           />
 
-          <section className="mt-4">
+          <section className="mt-5">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-start gap-3">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
@@ -718,11 +718,11 @@ function DesktopMarketplaceLayout({
             </div>
 
             {loading ? (
-              <div className="mt-3 grid max-h-[calc(100vh-390px)] grid-cols-4 gap-3 overflow-y-auto pr-1">
+              <div className="mt-4 grid max-h-[calc(100vh-470px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[210px] animate-pulse rounded-[16px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[300px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -736,7 +736,7 @@ function DesktopMarketplaceLayout({
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="mt-3 grid max-h-[calc(100vh-390px)] grid-cols-4 gap-3 overflow-y-auto pr-1">
+              <div className="mt-4 grid max-h-[calc(100vh-470px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
                 {filteredProjects.map((project) => (
                   <DesktopProjectCard
                     key={`desktop-project-${project.id}`}
