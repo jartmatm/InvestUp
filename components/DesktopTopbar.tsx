@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 
 type DesktopTopbarProps = {
   actions?: ReactNode;
@@ -72,22 +75,55 @@ export default function DesktopTopbar({
   onPublish,
   onSearchChange,
   onSearchFocus,
-  publishDisabled = false,
+  publishDisabled,
   publishHref = '/publish',
   publishLabel = 'Publicar proyecto',
   roleLabel,
   searchOverlay,
-  searchPlaceholder = 'Buscar emprendimientos, emprendedores o palabras clave...',
+  searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
   searchValue,
   unreadNotificationsCount = 0,
 }: DesktopTopbarProps) {
+  const { getAccessToken, user } = usePrivy();
+  const shouldResolvePublishState = publishDisabled === undefined;
+  const [hasCurrentProject, setHasCurrentProject] = useState(false);
+  const [loadingProjectState, setLoadingProjectState] = useState(false);
+
+  useEffect(() => {
+    if (!shouldResolvePublishState) return;
+
+    let cancelled = false;
+
+    const loadProjectState = async () => {
+      if (!user?.id) {
+        setHasCurrentProject(false);
+        setLoadingProjectState(false);
+        return;
+      }
+
+      setLoadingProjectState(true);
+      const { data, error } = await fetchCurrentUserProjects(getAccessToken, { limit: 1 });
+      if (cancelled) return;
+      setHasCurrentProject(error ? true : Boolean(data?.length));
+      setLoadingProjectState(false);
+    };
+
+    void loadProjectState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getAccessToken, shouldResolvePublishState, user?.id]);
+
+  const effectivePublishDisabled =
+    publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id);
   const notificationClassName = `relative grid h-10 w-10 place-items-center rounded-xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
     notificationsEnabled
       ? 'border-[#E7EAF3] bg-white text-[#1F2A44] hover:text-[#6B39F4]'
       : 'border-[#F6B7C3] bg-[#FFF1F3] text-[#DF1C41]'
   }`;
   const publishClassName = `inline-flex h-10 shrink-0 items-center gap-2 rounded-xl px-4 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition duration-200 ${
-    publishDisabled
+    effectivePublishDisabled
       ? 'cursor-not-allowed bg-[#C8CBE0] opacity-70'
       : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
   }`;
@@ -134,17 +170,17 @@ export default function DesktopTopbar({
         )}
 
         {onPublish ? (
-          <button type="button" disabled={publishDisabled} onClick={onPublish} className={publishClassName}>
+          <button type="button" disabled={effectivePublishDisabled} onClick={onPublish} className={publishClassName}>
             <PlusIcon />
             {publishLabel}
           </button>
         ) : (
           <Link
-            href={publishDisabled ? '#' : publishHref}
-            aria-disabled={publishDisabled}
+            href={effectivePublishDisabled ? '#' : publishHref}
+            aria-disabled={effectivePublishDisabled}
             className={publishClassName}
             onClick={(event) => {
-              if (publishDisabled) event.preventDefault();
+              if (effectivePublishDisabled) event.preventDefault();
             }}
           >
             <PlusIcon />

@@ -71,7 +71,7 @@ export function DesktopAppShell({
   rightRail,
   contentClassName = '',
   maxWidthClassName = 'max-w-[1500px]',
-  searchPlaceholder = 'Buscar emprendimientos, emprendedores o palabras clave...',
+  searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
   hideHeader = false,
 }: DesktopAppShellProps) {
   const { rolSeleccionado } = useInvestApp();

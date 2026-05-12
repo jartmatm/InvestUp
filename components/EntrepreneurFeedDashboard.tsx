@@ -116,16 +116,16 @@ const formatDate = (value: Date | null) => {
 };
 
 const getDaysRemaining = (value: string | null | undefined) => {
-  if (!value) return 'No deadline';
+  if (!value) return 'Sin fecha';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Pending';
+  if (Number.isNaN(date.getTime())) return 'Pendiente';
 
   const diffMs = date.getTime() - Date.now();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return 'Expired';
-  if (diffDays === 0) return 'Ends today';
-  if (diffDays === 1) return '1 day';
-  return `${diffDays} days`;
+  if (diffDays < 0) return 'Vencido';
+  if (diffDays === 0) return 'Vence hoy';
+  if (diffDays === 1) return '1 día';
+  return `${diffDays} días`;
 };
 
 const getNextInstallmentDate = (createdAt: string, termMonths: number | null | undefined) => {
@@ -394,6 +394,9 @@ function FundingGauge({
   const glowOpacity = 0.28 + animatedRatio * 0.42;
   const glowBlur = 6 + animatedRatio * 4;
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+  const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
+    ? `${daysRemainingLabel} restantes`
+    : daysRemainingLabel;
 
   return (
     <DashboardCard className="overflow-hidden border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,243,255,0.90)_55%,rgba(241,246,255,0.96)_100%)] p-5 text-[#1C2336] shadow-[0_26px_64px_rgba(31,38,64,0.10)] ring-1 ring-[#EEF1FF]/80">
@@ -498,7 +501,7 @@ function FundingGauge({
         <div className="-mt-4 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-xs font-semibold text-[#4F5B76] shadow-[0_10px_24px_rgba(31,38,64,0.08)] backdrop-blur-xl">
             <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/65" />
-            {daysRemainingLabel} left
+            {daysRemainingPillLabel}
           </span>
         </div>
       </div>
@@ -529,35 +532,44 @@ function DesktopFundingGauge({
   }, [progressRatio]);
 
   const progressColor = interpolateGaugeColor(animatedRatio);
-  const leadingColor = mixColors(progressColor, '#FFFFFF', 0.24);
+  const leadingColor = mixColors(progressColor, '#FFFFFF', 0.18);
   const trailingColor =
     animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+  const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
+    ? `${daysRemainingLabel} restantes`
+    : daysRemainingLabel;
+  const markerAngle = ((180 - animatedRatio * 180) * Math.PI) / 180;
+  const markerX = 180 + 132 * Math.cos(markerAngle);
+  const markerY = 198 - 132 * Math.sin(markerAngle);
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-[#E8EBF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#F8F6FF_58%,#F5FAFF_100%)] p-8 shadow-[0_24px_58px_rgba(21,28,44,0.07)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(124,92,255,0.14),transparent_36%),radial-gradient(circle_at_50%_100%,rgba(53,201,130,0.08),transparent_32%)]" />
-      <div className="pointer-events-none absolute -left-20 top-10 h-52 w-52 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-14 bottom-8 h-44 w-44 rounded-full bg-[#35C982]/9 blur-3xl" />
+    <section className="relative min-h-[360px] overflow-hidden rounded-[28px] border border-[#DDE3F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_52%,#F7FAFF_100%)] px-10 py-10 shadow-[0_26px_70px_rgba(21,28,44,0.08)]">
+      <div className="pointer-events-none absolute left-8 top-7 h-36 w-36 opacity-40 [background-image:radial-gradient(circle,#AFA1FF_1.3px,transparent_1.3px)] [background-size:18px_18px]" />
+      <div className="pointer-events-none absolute bottom-7 right-12 h-28 w-28 opacity-45 [background-image:radial-gradient(circle,#8EA3FF_1.3px,transparent_1.3px)] [background-size:18px_18px]" />
+      <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-96 rounded-[50%] border border-[#BBA7FF]/20" />
+      <div className="pointer-events-none absolute -bottom-16 -right-20 h-64 w-[460px] rounded-[50%] border border-[#82E6C2]/20" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(124,92,255,0.10),transparent_36%),radial-gradient(circle_at_82%_72%,rgba(72,211,154,0.08),transparent_32%)]" />
 
-      <div className="relative mx-auto max-w-[880px]">
-        <div className="grid grid-cols-[1fr_340px_1fr] items-start gap-8">
-          <div className="pt-8">
-            <p className="text-[0.78rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
+      <div className="relative mx-auto max-w-[1280px]">
+        <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-10">
+          <div className="pt-8 text-center">
+            <p className="text-[0.78rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
               Capital levantado
             </p>
-            <p className="mt-3 text-[2rem] font-bold tracking-[-0.055em] text-[#111827]">
+            <p className="mt-6 text-[2.9rem] font-bold tracking-[-0.065em] text-[#090F22]">
               {money(raised, currency)}
             </p>
-            <p className="mt-2 text-sm font-semibold text-[#66728A]">
+            <span className="mx-auto mt-5 block h-1 w-12 rounded-full" style={{ backgroundColor: progressColor }} />
+            <p className="mt-5 text-base font-medium text-[#6F7C96]">
               de {money(target, currency)} objetivo
             </p>
           </div>
 
           <div className="relative">
-            <svg viewBox="0 0 320 220" className="mx-auto h-[260px] w-full">
+            <svg viewBox="0 0 360 240" className="mx-auto h-[280px] w-full">
               <defs>
-                <linearGradient id={`desktop-gauge-gradient-${gaugeId}`} x1="32" y1="176" x2="288" y2="40" gradientUnits="userSpaceOnUse">
+                <linearGradient id={`desktop-gauge-gradient-${gaugeId}`} x1="50" y1="198" x2="310" y2="44" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stopColor={leadingColor} />
                   <stop offset="55%" stopColor={progressColor} />
                   <stop offset="100%" stopColor={trailingColor} />
@@ -571,58 +583,68 @@ function DesktopFundingGauge({
                 </filter>
               </defs>
               <path
-                d={buildArcPath(180, 0, 116, 160, 176)}
+                d={buildArcPath(180, 0, 132, 180, 198)}
                 pathLength={100}
                 fill="none"
                 stroke="rgba(124,92,255,0.14)"
-                strokeWidth="22"
+                strokeWidth="24"
                 strokeLinecap="round"
               />
               <path
-                d={buildArcPath(180, 0, 116, 160, 176)}
+                d={buildArcPath(180, 0, 132, 180, 198)}
                 pathLength={100}
                 fill="none"
                 stroke={`url(#desktop-gauge-gradient-${gaugeId})`}
-                strokeWidth="22"
+                strokeWidth="24"
                 strokeLinecap="round"
                 strokeDasharray="100"
                 strokeDashoffset={100 - animatedRatio * 100}
                 filter={`url(#desktop-gauge-glow-${gaugeId})`}
                 className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
               />
-              <text x="38" y="198" className="fill-[#9BA5B8] text-[12px] font-bold">
+              <circle
+                cx={markerX}
+                cy={markerY}
+                r="7.5"
+                fill={progressColor}
+                className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              />
+              <text x="48" y="226" className="fill-[#7D879C] text-[12px] font-bold">
                 0%
               </text>
-              <text x="151" y="44" className="fill-[#9BA5B8] text-[12px] font-bold">
+              <text x="169" y="36" className="fill-[#7D879C] text-[12px] font-bold">
                 50%
               </text>
-              <text x="263" y="198" className="fill-[#9BA5B8] text-[12px] font-bold">
+              <text x="292" y="226" className="fill-[#7D879C] text-[12px] font-bold">
                 100%
               </text>
             </svg>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-10 text-center">
-              <p className="text-[3rem] font-bold tracking-[-0.06em] text-[#111827]">{percentageLabel}</p>
-              <p className="mt-2 text-[0.76rem] font-bold uppercase tracking-[0.2em] text-[#8A93A8]">
-                Funding progress
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-16 text-center">
+              <p className="text-[4.25rem] font-bold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
+              <p className="mt-3 text-[0.82rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
+                Progreso de financiación
               </p>
             </div>
           </div>
 
-          <div className="pt-8 text-right">
-            <p className="text-[0.78rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
+          <div className="pt-8 text-center">
+            <p className="text-[0.78rem] font-bold uppercase tracking-[0.24em] text-[#6F7C96]">
               Restante
             </p>
-            <p className="mt-3 text-[2rem] font-bold tracking-[-0.055em] text-[#111827]">
+            <p className="mt-6 text-[2.9rem] font-bold tracking-[-0.065em] text-[#090F22]">
               {money(remaining, currency)}
             </p>
-            <p className="mt-2 text-sm font-semibold text-[#66728A]">por levantar</p>
+            <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-[#75DDBA]" />
+            <p className="mt-5 text-base font-medium text-[#6F7C96]">por levantar</p>
           </div>
         </div>
 
-        <div className="-mt-2 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/90 bg-white/78 px-4 py-2 text-sm font-bold text-[#4F5B76] shadow-[0_12px_28px_rgba(31,38,64,0.08)] backdrop-blur-xl">
-            <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/70" />
-            {daysRemainingLabel} left
+        <div className="-mt-5 flex justify-center">
+          <span className="inline-flex items-center gap-3 rounded-[22px] border border-[#E1E6F0] bg-white/90 px-7 py-3 text-lg font-bold text-[#111827] shadow-[0_16px_32px_rgba(21,28,44,0.10)] backdrop-blur-xl">
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
+              <IconClock />
+            </span>
+            {daysRemainingPillLabel}
           </span>
         </div>
       </div>
@@ -700,17 +722,17 @@ function DesktopMetricTile({
   } as const;
 
   return (
-    <article className="group flex min-h-[126px] items-center gap-5 rounded-[22px] border border-[#E8EBF4] bg-white p-5 shadow-[0_18px_42px_rgba(21,28,44,0.055)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.08)]">
-      <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl ${accentClassMap[accent]}`}>
+    <article className="group flex min-h-[132px] items-center gap-6 rounded-[24px] border border-[#E1E6F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFDFF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.09)]">
+      <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[20px] ${accentClassMap[accent]}`}>
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[0.74rem] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+        <span className="block text-[0.82rem] font-bold uppercase tracking-[0.2em] text-[#7D879C]">
           {label}
         </span>
         <span
-          className={`mt-2 inline-flex text-[1.18rem] font-bold tracking-[-0.04em] text-[#111827] ${
-            badgeClassName ? `rounded-full border px-3 py-1 text-sm ${badgeClassName}` : ''
+          className={`mt-3 inline-flex text-[1.65rem] font-bold tracking-[-0.055em] text-[#090F22] ${
+            badgeClassName ? `rounded-full border px-5 py-2 text-base ${badgeClassName}` : ''
           }`}
         >
           {value}
@@ -1037,41 +1059,46 @@ export default function EntrepreneurFeedDashboard({
   const remainingAmount = Math.max(targetAmount - raisedAmount, 0);
   const currency = project?.currency ?? 'USD';
   const daysRemainingLabel = getDaysRemaining(project?.publication_end_date);
+  const statusLabel = project
+    ? getProjectStatusLabel(project) === 'Financing in progress'
+      ? 'Financiación en progreso'
+      : getProjectStatusLabel(project)
+    : '--';
 
   const infoRows = [
     {
-      label: 'Funding goal',
+      label: 'Meta de financiación',
       value: money(targetAmount, currency),
       icon: <IconTarget />,
       accent: 'purple' as const,
     },
     {
-      label: 'Funds raised',
+      label: 'Fondos recaudados',
       value: money(raisedAmount, currency),
       icon: <IconWallet />,
       accent: 'green' as const,
     },
     {
-      label: 'Interest rate',
+      label: 'Tasa de interés',
       value: project?.interest_rate ? `${project.interest_rate}% EA` : '--',
       icon: <IconPercent />,
       accent: 'amber' as const,
     },
     {
-      label: 'Days remaining',
+      label: 'Días restantes',
       value: daysRemainingLabel,
       icon: <IconClock />,
       accent: 'blue' as const,
     },
     {
-      label: 'Remaining amount',
+      label: 'Monto restante',
       value: money(remainingAmount, currency),
       icon: <IconChart />,
       accent: 'purple' as const,
     },
     {
-      label: 'Status',
-      value: project ? getProjectStatusLabel(project) : '--',
+      label: 'Estado',
+      value: statusLabel,
       icon: <IconChart />,
       accent: 'green' as const,
       badgeClassName: project ? getProjectStatusTone(project) : '',

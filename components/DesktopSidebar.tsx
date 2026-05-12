@@ -36,10 +36,10 @@ export function getDesktopSidebarActiveHref(pathname: string) {
 
 function InvestAppLogo() {
   return (
-    <div className="flex items-center gap-0.5 text-[1.55rem] font-semibold tracking-[-0.07em] text-[#111827]">
+    <div className="flex w-full items-center justify-center gap-0.5 text-[2.02rem] font-semibold tracking-[-0.07em] text-[#111827]">
       <span>Invest</span>
       <span className="text-[#6B39F4]">App</span>
-      <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
+      <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
     </div>
   );
 }

@@ -268,12 +268,14 @@ function DesktopEntrepreneurTopbar({
   loadingProfileSummary,
   onNotifications,
   onPublish,
+  publishDisabled,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
   onPublish: () => void;
+  publishDisabled: boolean;
 }) {
   return (
     <DesktopTopbar
@@ -281,6 +283,7 @@ function DesktopEntrepreneurTopbar({
       displayName={displayName}
       loading={loadingProfileSummary}
       notificationOnClick={onNotifications}
+      publishDisabled={publishDisabled}
       roleLabel="Entrepreneur"
       searchPlaceholder="Search funding, investors or project activity..."
       onPublish={onPublish}
@@ -294,12 +297,14 @@ function DesktopEntrepreneurDashboardShell({
   loadingProfileSummary,
   onNotifications,
   onPublish,
+  publishDisabled,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
   onPublish: () => void;
+  publishDisabled: boolean;
 }) {
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
@@ -311,6 +316,7 @@ function DesktopEntrepreneurDashboardShell({
           loadingProfileSummary={loadingProfileSummary}
           onNotifications={onNotifications}
           onPublish={onPublish}
+          publishDisabled={publishDisabled}
         />
         <main className="px-8 py-8 xl:px-10">
           <div className="mx-auto max-w-[1500px]">
@@ -710,6 +716,7 @@ export default function PortfolioPage() {
           setEditingProjectId(null);
           setShowPublisher(true);
         }}
+        publishDisabled={loadingProjects || myProjects.length >= 1}
       />
 
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">

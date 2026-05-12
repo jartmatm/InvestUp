@@ -522,45 +522,6 @@ function DesktopIcon({ type }: { type: string }) {
   );
 }
 
-function QuickActionIcon({ type }: { type: string }) {
-  const common = {
-    className: 'h-5 w-5',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: '2',
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
-
-  if (type === 'send') return <ArrowLaunchIcon />;
-  if (type === 'receive') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M12 4v12" />
-        <path d="m6 10 6 6 6-6" />
-        <path d="M5 20h14" />
-      </svg>
-    );
-  }
-  if (type === 'withdraw') {
-    return (
-      <svg viewBox="0 0 24 24" {...common}>
-        <path d="M12 20V8" />
-        <path d="m6 14 6-6 6 6" />
-        <path d="M5 4h14" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 24 24" {...common}>
-      <path d="M5 5v6h6" />
-      <path d="M19 19v-6h-6" />
-      <path d="M19 13a7 7 0 0 0-12-5l-2 3" />
-      <path d="M5 11a7 7 0 0 0 12 5l2-3" />
-    </svg>
-  );
-}
-
 function DashboardLayout({
   avatarUrl,
   children,
@@ -687,33 +648,6 @@ function InvestCard({
         </div>
       </div>
     </Link>
-  );
-}
-
-function QuickActions({ walletHref }: { walletHref: string }) {
-  const actions = [
-    { href: walletHref, label: 'Send Money', detail: 'Wallet or contact', icon: 'send' },
-    { href: '/invest/wallet', label: 'Receive', detail: 'Share wallet', icon: 'receive' },
-    { href: '/withdraw', label: 'Withdraw', detail: 'Off-ramp funds', icon: 'withdraw' },
-    { href: '/history', label: 'Transfer History', detail: 'Review activity', icon: 'history' },
-  ];
-
-  return (
-    <section className="grid grid-cols-4 gap-4">
-      {actions.map((action) => (
-        <Link
-          key={action.label}
-          href={action.href}
-          className="group rounded-[22px] border border-[#E9ECF4] bg-white p-5 shadow-[0_18px_38px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.11)]"
-        >
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F2EDFF] text-[#6B39F4] transition group-hover:scale-105">
-            <QuickActionIcon type={action.icon} />
-          </span>
-          <p className="mt-4 text-sm font-bold text-[#111827]">{action.label}</p>
-          <p className="mt-1 text-xs font-medium text-[#77839A]">{action.detail}</p>
-        </Link>
-      ))}
-    </section>
   );
 }
 
@@ -902,7 +836,6 @@ function SendDashboard({
           />
         </section>
 
-        <QuickActions walletHref={walletHref} />
         <RecentContacts contacts={contacts} loading={loadingContacts} walletHref={walletHref} />
         <SecurityCard />
         <TransactionsTable />

@@ -944,39 +944,20 @@ function DesktopBusinessCard({
   );
 }
 
-function DesktopNewVentureCard({ role, onClick }: { role: string | null; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-h-[300px] flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#C9B8FF] bg-white/70 p-8 text-center shadow-[0_22px_52px_rgba(21,28,44,0.045)] transition duration-300 hover:-translate-y-1 hover:border-[#8A68FF] hover:bg-[#FAF8FF]"
-    >
-      <span className="grid h-16 w-16 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4]">
-        <IconPlus />
-      </span>
-      <span className="mt-6 max-w-[170px] text-[1.45rem] font-bold leading-tight tracking-[-0.055em] text-[#5B2FF4]">
-        {role === 'emprendedor' ? '+ Publish a new project' : '+ Invest in a new venture'}
-      </span>
-    </button>
-  );
-}
-
 function DesktopActionRail({ actions }: { actions: ActionItem[] }) {
   return (
-    <section className="grid grid-cols-4 overflow-hidden rounded-[24px] border border-[#E8EBF4] bg-white shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
-      {actions.map((action, index) => (
+    <section className="grid grid-cols-4 gap-4">
+      {actions.map((action) => (
         <button
           key={action.label}
           type="button"
           onClick={action.onClick}
-          className={`group flex min-h-[150px] flex-col items-center justify-center gap-4 transition duration-200 hover:bg-[#F8F5FF] ${
-            index > 0 ? 'border-l border-[#E8EBF4]' : ''
-          }`}
+          className="group rounded-[22px] border border-[#E9ECF4] bg-white p-5 text-left shadow-[0_18px_38px_rgba(21,28,44,0.06)] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_58px_rgba(21,28,44,0.11)]"
         >
-          <span className="grid h-16 w-16 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)] transition duration-200 group-hover:-translate-y-0.5">
+          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F2EDFF] text-[#6B39F4] transition duration-200 group-hover:scale-105">
             {action.icon}
           </span>
-          <span className="text-sm font-bold text-[#111827]">{action.label}</span>
+          <span className="mt-4 block text-sm font-bold text-[#111827]">{action.label}</span>
         </button>
       ))}
     </section>
@@ -1119,7 +1100,6 @@ function DesktopHomeDashboard({
   onBellClick,
   onClearSearch,
   onCloseSearch,
-  onNewVenture,
   onOpenHistory,
   onOpenPortfolio,
   onOpenProject,
@@ -1162,7 +1142,6 @@ function DesktopHomeDashboard({
   onBellClick: () => void;
   onClearSearch: () => void;
   onCloseSearch: () => void;
-  onNewVenture: () => void;
   onOpenHistory: () => void;
   onOpenPortfolio: () => void;
   onOpenProject: (projectId: string) => void;
@@ -1233,7 +1212,7 @@ function DesktopHomeDashboard({
               </div>
             </section>
 
-            <section className="grid grid-cols-[1fr_1fr_300px] gap-5">
+            <section className="grid grid-cols-2 gap-5">
               <DesktopBalanceCard
                 activeCount={activeInvestments.length}
                 availableBalanceLabel={availableBalanceLabel}
@@ -1263,7 +1242,6 @@ function DesktopHomeDashboard({
                 />
               )}
 
-              <DesktopNewVentureCard role={role} onClick={onNewVenture} />
             </section>
 
             <DesktopActionRail actions={actions} />
@@ -1905,10 +1883,6 @@ export default function HomePage() {
     router.push('/history');
   };
 
-  const openNewVenture = () => {
-    router.push(rolSeleccionado === 'emprendedor' ? '/publish' : '/feed');
-  };
-
   return (
     <>
       <DesktopHomeDashboard
@@ -1930,7 +1904,6 @@ export default function HomePage() {
         onBellClick={() => router.push('/notifications')}
         onClearSearch={clearSearch}
         onCloseSearch={closeSearch}
-        onNewVenture={openNewVenture}
         onOpenHistory={openHistory}
         onOpenPortfolio={openPortfolio}
         onOpenProject={openProject}
