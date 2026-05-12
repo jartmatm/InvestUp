@@ -277,8 +277,8 @@ const buildSmoothPath = (points: number[]) => {
 const buildDesktopTrendPath = (points: number[]) => {
   if (points.length === 0) return '';
 
-  const width = 640;
-  const baseline = 112;
+  const width = 960;
+  const baseline = 142;
   const stepX = points.length === 1 ? 0 : width / (points.length - 1);
   const coordinates = points.map((point, index) => ({
     x: index * stepX,
@@ -606,64 +606,99 @@ function DesktopPortfolioDonut({ value }: { value: number }) {
 function DesktopPerformanceTrend({ points }: { points: number[] }) {
   const linePath = buildDesktopTrendPath(points);
   const lastPoint = points.at(-1) ?? 0;
-  const lastX = points.length > 1 ? 640 : 0;
-  const lastY = 112 - lastPoint;
-  const areaPath = `${linePath} L 640 118 L 0 118 Z`;
+  const lastX = points.length > 1 ? 960 : 0;
+  const lastY = 142 - lastPoint;
+  const areaPath = `${linePath} L 960 154 L 0 154 Z`;
 
   return (
-    <svg viewBox="0 0 640 142" className="h-[132px] w-full overflow-visible">
+    <svg viewBox="0 0 960 190" className="block h-auto w-full overflow-visible">
       <defs>
         <linearGradient id="desktop-portfolio-chart-fill" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.26)" />
+          <stop offset="0%" stopColor="rgba(255,255,255,0.30)" />
+          <stop offset="48%" stopColor="rgba(255,255,255,0.12)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0)" />
         </linearGradient>
-        <filter id="desktop-portfolio-chart-glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="5" result="blurred" />
+        <filter id="desktop-portfolio-chart-area-blur" x="-12%" y="-35%" width="124%" height="180%">
+          <feGaussianBlur stdDeviation="10" />
+        </filter>
+        <filter id="desktop-portfolio-chart-glow" x="-40%" y="-80%" width="180%" height="260%">
+          <feGaussianBlur stdDeviation="6" result="blurred" />
           <feMerge>
             <feMergeNode in="blurred" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
-      <path d="M0 118H640" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-      <path d={areaPath} fill="url(#desktop-portfolio-chart-fill)" opacity="0.94" />
+      {[58, 106, 154].map((gridY) => (
+        <path
+          key={`desktop-portfolio-grid-${gridY}`}
+          d={`M0 ${gridY}H960`}
+          stroke="rgba(255,255,255,0.11)"
+          strokeDasharray={gridY === 154 ? undefined : '3 12'}
+          strokeWidth="1"
+        />
+      ))}
+      <path
+        d={areaPath}
+        fill="url(#desktop-portfolio-chart-fill)"
+        filter="url(#desktop-portfolio-chart-area-blur)"
+        opacity="0.72"
+      />
+      <path d={areaPath} fill="url(#desktop-portfolio-chart-fill)" opacity="0.88" />
+      <path
+        d={linePath}
+        fill="none"
+        filter="url(#desktop-portfolio-chart-glow)"
+        pathLength="100"
+        stroke="rgba(224,232,255,0.52)"
+        strokeDasharray="100"
+        strokeDashoffset="0"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="8"
+      >
+        <animate attributeName="stroke-dashoffset" from="100" to="0" dur="950ms" fill="freeze" />
+      </path>
       <path
         d={linePath}
         fill="none"
         stroke="rgba(255,255,255,0.92)"
-        strokeDasharray="760"
+        pathLength="100"
+        strokeDasharray="100"
         strokeDashoffset="0"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="3"
+        strokeWidth="3.25"
       >
-        <animate attributeName="stroke-dashoffset" from="760" to="0" dur="950ms" fill="freeze" />
+        <animate attributeName="stroke-dashoffset" from="100" to="0" dur="950ms" fill="freeze" />
       </path>
       <line
         x1={lastX}
         x2={lastX}
         y1={lastY}
-        y2="118"
-        stroke="rgba(255,255,255,0.18)"
-        strokeWidth="2"
+        y2="154"
+        stroke="rgba(255,255,255,0.20)"
+        strokeWidth="1.5"
       />
+      <circle cx={lastX} cy={lastY} r="18" fill="rgba(255,255,255,0.20)" filter="url(#desktop-portfolio-chart-glow)" />
       <circle
         cx={lastX}
         cy={lastY}
-        r="7"
+        r="8"
         fill="#FFFFFF"
         stroke="#BFA8FF"
         strokeWidth="4"
         filter="url(#desktop-portfolio-chart-glow)"
       />
+      <circle cx={lastX} cy={lastY} r="3" fill="#FFFFFF" />
       {[
-        ['May 1', 12],
-        ['May 8', 150],
-        ['May 15', 294],
-        ['May 22', 438],
-        ['May 29', 580],
+        ['May 1', 18],
+        ['May 8', 240],
+        ['May 15', 480],
+        ['May 22', 720],
+        ['May 29', 922],
       ].map(([label, x]) => (
-        <text key={label} x={Number(x)} y="138" fill="rgba(255,255,255,0.72)" fontSize="13">
+        <text key={label} x={Number(x)} y="184" fill="rgba(255,255,255,0.70)" fontSize="13">
           {label}
         </text>
       ))}
@@ -686,8 +721,8 @@ function PortfolioHero({
 
   return (
     <section className="overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_70%_15%,rgba(255,255,255,0.22),transparent_26%),linear-gradient(135deg,#765AFF_0%,#6246F5_48%,#5135DB_100%)] p-8 shadow-[0_26px_60px_rgba(91,72,255,0.28)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_32px_78px_rgba(91,72,255,0.32)]">
-      <div className="grid min-h-[290px] grid-cols-[minmax(0,1.6fr)_260px] items-center gap-9">
-        <div className="min-w-0">
+      <div className="grid min-h-[330px] grid-cols-[minmax(0,1fr)_270px] grid-rows-[auto_1fr] items-center gap-x-8 gap-y-5">
+        <div className="min-w-0 self-start">
           <p className="text-[0.8rem] font-bold uppercase tracking-[0.18em] text-white/78">
             Portfolio Value
           </p>
@@ -704,12 +739,13 @@ function PortfolioHero({
             </span>
             <span className="text-sm font-medium text-white/72">vs last month</span>
           </div>
-          <div className="mt-6">
-            <DesktopPerformanceTrend points={points} />
-          </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className="col-start-1 row-start-2 min-w-0 self-end pr-1">
+          <DesktopPerformanceTrend points={points} />
+        </div>
+
+        <div className="col-start-2 row-span-2 flex justify-center self-center">
           <DesktopPortfolioDonut value={averageRate} />
         </div>
       </div>
