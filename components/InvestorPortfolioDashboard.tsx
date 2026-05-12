@@ -542,7 +542,7 @@ function DashboardLayout({
       <DesktopSidebar roleLabel="Inversionista" />
       <div className="min-w-0 pl-[260px]">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
-        <main className="px-8 py-7 xl:px-10">
+        <main className="px-5 py-5 xl:px-7 2xl:px-9">
           <div className="mx-auto max-w-[1500px] space-y-5">{children}</div>
         </main>
       </div>

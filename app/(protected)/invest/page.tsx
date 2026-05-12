@@ -825,7 +825,7 @@ function SendDashboard({
 }) {
   return (
     <DashboardLayout avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole}>
-      <div className="mx-auto w-full max-w-[1480px] space-y-7 px-8 py-8">
+      <div className="mx-auto w-full max-w-[1480px] space-y-7 px-5 py-5 xl:px-7 2xl:px-9">
         <section className="grid grid-cols-2 gap-6">
           <SendWalletCard contacts={contacts} href={walletHref} totalCount={totalContactCount} />
           <InvestCard

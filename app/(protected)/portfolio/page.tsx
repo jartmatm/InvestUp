@@ -318,7 +318,7 @@ function DesktopEntrepreneurDashboardShell({
           onPublish={onPublish}
           publishDisabled={publishDisabled}
         />
-        <main className="px-8 py-8 xl:px-10">
+        <main className="px-5 py-5 xl:px-7 2xl:px-9">
           <div className="mx-auto max-w-[1500px]">
             <EntrepreneurFeedDashboard embedded desktop />
           </div>

@@ -93,7 +93,7 @@ export function DesktopAppShell({
           searchPlaceholder={searchPlaceholder}
         />
 
-        <main className="px-8 py-7 xl:px-10">
+        <main className="px-5 py-5 xl:px-7 2xl:px-9">
           <div className={`mx-auto w-full ${maxWidthClassName} ${contentClassName}`}>
             {hideHeader ? null : (
               <div className="mb-6 flex items-start justify-between gap-6">

@@ -555,7 +555,7 @@ function DesktopProfileDashboard({
       <DesktopSidebar roleLabel={profileRole} />
       <main className="ml-[260px] flex min-h-screen min-w-0 flex-1 flex-col">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
-        <div className="mx-auto w-full max-w-[1440px] space-y-6 px-8 py-7">
+        <div className="mx-auto w-full max-w-[1440px] space-y-6 px-5 py-5 xl:px-7 2xl:px-9">
           <ProfileCard
             avatarUrl={avatarUrl}
             displayName={displayName}
