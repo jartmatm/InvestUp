@@ -87,7 +87,7 @@ export default function DesktopTopbar({
   onSearchFocus,
   publishDisabled,
   publishHref = '/publish',
-  publishLabel = 'Publicar proyecto',
+  publishLabel = 'Publish project',
   roleLabel,
   searchOverlay,
   searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
@@ -130,7 +130,7 @@ export default function DesktopTopbar({
   const effectivePublishDisabled = isEntrepreneur
     ? publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id)
     : false;
-  const primaryCtaLabel = isEntrepreneur ? publishLabel : 'Invertir en un negocio';
+  const primaryCtaLabel = isEntrepreneur ? publishLabel : 'Invest in a business';
   const primaryCtaHref = isEntrepreneur ? publishHref : '/feed';
   const primaryCtaOnClick = isEntrepreneur ? onPublish : undefined;
   const notificationClassName = `relative grid h-10 w-10 place-items-center rounded-xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${

@@ -151,8 +151,8 @@ export default function InvestmentOpportunityDetail({
   const activeSection = sections.length > 0 ? sections[activeSectionIndexSafe] ?? sections[0] : null;
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(124,92,255,0.12),transparent_30%),linear-gradient(180deg,#FBFCFF_0%,#F6F8FC_45%,#FFFFFF_100%)] text-[#10172F]">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-40 pt-8">
+    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(124,92,255,0.12),transparent_30%),linear-gradient(180deg,#FBFCFF_0%,#F6F8FC_45%,#FFFFFF_100%)] text-[#10172F] lg:min-h-0 lg:bg-transparent">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 pb-40 pt-8 lg:max-w-none lg:px-0 lg:pb-0 lg:pt-0">
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -227,7 +227,7 @@ export default function InvestmentOpportunityDetail({
           </div>
         </section>
 
-        <nav className="sticky top-0 z-20 -mx-4 overflow-x-auto bg-[#F8FAFE]/86 px-4 py-2 backdrop-blur-xl">
+        <nav className="sticky top-0 z-20 -mx-4 overflow-x-auto bg-[#F8FAFE]/86 px-4 py-2 backdrop-blur-xl lg:top-[68px] lg:rounded-2xl lg:border lg:border-[#E9ECF4] lg:bg-white/88 lg:shadow-[0_18px_42px_rgba(21,28,44,0.045)]">
           <div className="flex min-w-max items-center gap-8 text-sm font-semibold text-[#65708A]">
             {sections.map((section, index) => (
               <button
@@ -277,7 +277,7 @@ export default function InvestmentOpportunityDetail({
       </div>
 
       <div
-        className={`fixed inset-x-0 ${bottomOffsetClassName} z-50 mx-auto max-w-3xl px-4 pb-[max(env(safe-area-inset-bottom),1rem)]`}
+        className={`fixed inset-x-0 ${bottomOffsetClassName} z-50 mx-auto max-w-3xl px-4 pb-[max(env(safe-area-inset-bottom),1rem)] lg:static lg:mx-0 lg:max-w-none lg:px-0 lg:pb-0`}
       >
         <div className="rounded-[24px] bg-white/90 p-4 shadow-[0_-18px_60px_rgba(27,35,58,0.12)] ring-1 ring-white/80 backdrop-blur-2xl">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[0.9fr_1.1fr]">

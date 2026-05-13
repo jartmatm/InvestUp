@@ -18,21 +18,21 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-transparent px-6 py-10 text-gray-900">
       <div className="mx-auto w-full max-w-md rounded-2xl border border-white/25 bg-white/20 p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Crear cuenta</h1>
-        <p className="mb-6 text-sm text-gray-500">Empeza a invertir en minutos.</p>
+        <h1 className="mb-1 text-2xl font-semibold tracking-tight">Create account</h1>
+        <p className="mb-6 text-sm text-gray-500">Start investing in minutes.</p>
         <div className="space-y-4">
-          <Input placeholder="Correo electronico" />
-          <Input placeholder="Contrasena" type="password" />
-          <Input placeholder="Confirmar contrasena" type="password" />
+          <Input placeholder="Email" />
+          <Input placeholder="Password" type="password" />
+          <Input placeholder="Confirm password" type="password" />
         </div>
         <div className="mt-6">
-          <Button onClick={login}>Crear cuenta</Button>
+          <Button onClick={login}>Create account</Button>
         </div>
         <button
           onClick={() => router.push('/login')}
           className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
         >
-          Ya tengo cuenta
+          I already have an account
         </button>
       </div>
     </main>

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'InvestApp',
     short_name: 'InvestApp',
-    description: 'Plataforma fintech para inversiones y repayments descentralizados',
+    description: 'Fintech platform for decentralized investments and repayments',
     start_url: '/splash',
     display: 'standalone',
     background_color: '#F4F1FF',

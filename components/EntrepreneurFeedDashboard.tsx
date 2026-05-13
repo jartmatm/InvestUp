@@ -116,16 +116,16 @@ const formatDate = (value: Date | null) => {
 };
 
 const getDaysRemaining = (value: string | null | undefined) => {
-  if (!value) return 'Sin fecha';
+  if (!value) return 'No date';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Pendiente';
+  if (Number.isNaN(date.getTime())) return 'Pending';
 
   const diffMs = date.getTime() - Date.now();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return 'Vencido';
-  if (diffDays === 0) return 'Vence hoy';
-  if (diffDays === 1) return '1 día';
-  return `${diffDays} días`;
+  if (diffDays < 0) return 'Expired';
+  if (diffDays === 0) return 'Due today';
+  if (diffDays === 1) return '1 day';
+  return `${diffDays} days`;
 };
 
 const getNextInstallmentDate = (createdAt: string, termMonths: number | null | undefined) => {
@@ -417,7 +417,7 @@ function FundingGauge({
   const glowBlur = 6 + animatedRatio * 4;
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? `${daysRemainingLabel} restantes`
+    ? `${daysRemainingLabel} remaining`
     : daysRemainingLabel;
 
   return (
@@ -559,7 +559,7 @@ function DesktopFundingGauge({
     animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? `${daysRemainingLabel} restantes`
+    ? `${daysRemainingLabel} remaining`
     : daysRemainingLabel;
   const markerAngle = ((180 - animatedRatio * 180) * Math.PI) / 180;
   const markerX = 180 + 132 * Math.cos(markerAngle);
@@ -577,14 +577,14 @@ function DesktopFundingGauge({
         <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-[43px]">
           <div className="pt-8 text-center">
             <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-              Capital levantado
+              Capital raised
             </p>
             <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
               {money(raised, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full" style={{ backgroundColor: progressColor }} />
             <p className="mt-5 text-base font-medium text-[#6F7C96]">
-              de {money(target, currency)} objetivo
+              of {money(target, currency)} target
             </p>
           </div>
 
@@ -644,7 +644,7 @@ function DesktopFundingGauge({
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-16 text-center">
               <p className="text-[4.25rem] font-semibold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
               <p className="mt-3 text-[0.82rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-                Progreso de financiación
+                Funding progress
               </p>
             </div>
           </div>
@@ -657,7 +657,7 @@ function DesktopFundingGauge({
               {money(remaining, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-[#75DDBA]" />
-            <p className="mt-5 text-base font-medium text-[#6F7C96]">por levantar</p>
+            <p className="mt-5 text-base font-medium text-[#6F7C96]">left to raise</p>
           </div>
         </div>
 
@@ -1083,43 +1083,43 @@ export default function EntrepreneurFeedDashboard({
   const daysRemainingLabel = getDaysRemaining(project?.publication_end_date);
   const statusLabel = project
     ? getProjectStatusLabel(project) === 'Financing in progress'
-      ? 'Financiación en progreso'
+      ? 'Financing in progress'
       : getProjectStatusLabel(project)
     : '--';
 
   const infoRows = [
     {
-      label: 'Meta de financiación',
+      label: 'Funding goal',
       value: money(targetAmount, currency),
       icon: <IconTarget />,
       accent: 'purple' as const,
     },
     {
-      label: 'Fondos recaudados',
+      label: 'Funds raised',
       value: money(raisedAmount, currency),
       icon: <IconWallet />,
       accent: 'green' as const,
     },
     {
-      label: 'Tasa de interés',
+      label: 'Interest rate',
       value: project?.interest_rate ? `${project.interest_rate}% EA` : '--',
       icon: <IconPercent />,
       accent: 'amber' as const,
     },
     {
-      label: 'Días restantes',
+      label: 'Days remaining',
       value: daysRemainingLabel,
       icon: <IconCalendar />,
       accent: 'blue' as const,
     },
     {
-      label: 'Monto restante',
+      label: 'Amount remaining',
       value: money(remainingAmount, currency),
       icon: <IconClock />,
       accent: 'purple' as const,
     },
     {
-      label: 'Estado',
+      label: 'Status',
       value: statusLabel,
       icon: <IconChart />,
       accent: 'green' as const,

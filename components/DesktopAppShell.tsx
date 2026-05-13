@@ -77,7 +77,7 @@ export function DesktopAppShell({
   const { rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const safeName = displayName || 'InvestApp user';
-  const roleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
+  const roleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
 
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">

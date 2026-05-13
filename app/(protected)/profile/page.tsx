@@ -582,7 +582,7 @@ export default function ProfilePage() {
   const mobileSafeName = displayName || 'User';
   const desktopDisplayName = displayName || 'Maria Gonzalez';
   const desktopEmail = email || 'maria.gonzalez@email.com';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { DesktopAppShell } from '@/components/DesktopAppShell';
 import InvestmentOpportunityDetail, {
   type OpportunityMetric,
   type OpportunitySection,
@@ -401,41 +402,78 @@ export default function FeedDetailPage() {
     router.push(`/feed/${project.id}/invest`);
   };
 
+  const renderLoadingState = (desktop = false) => (
+    <div className={desktop ? 'rounded-[24px] border border-[#E9ECF4] bg-white p-6 shadow-[0_18px_42px_rgba(21,28,44,0.055)]' : 'mx-auto max-w-xl'}>
+      <SectionLoadingSkeleton rows={4} />
+    </div>
+  );
+
+  const renderStatusState = (desktop = false) => (
+    <div
+      className={
+        desktop
+          ? 'rounded-[24px] border border-[#E9ECF4] bg-white p-6 text-sm font-medium text-[#65708A] shadow-[0_18px_42px_rgba(21,28,44,0.055)]'
+          : 'mx-auto max-w-xl rounded-[28px] bg-white/88 p-5 text-sm text-[#65708A] shadow-[0_22px_64px_rgba(27,35,58,0.08)]'
+      }
+    >
+      {status}
+    </div>
+  );
+
+  const renderProjectDetail = () => {
+    if (!project) return null;
+
+    return (
+      <InvestmentOpportunityDetail
+        title={detailTitle}
+        subtitle={detailSubtitle}
+        location={locationLabel}
+        category={project.sector ? toEnglishSector(project.sector) : 'Business'}
+        rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
+        images={project.photo_urls ?? []}
+        metrics={buildDetailMetrics(project, formFields)}
+        sections={buildDetailSections(project, formFields, optimizedPublication)}
+        primaryActionLabel={primaryActionLabel}
+        secondaryActionLabel={secondaryActionLabel}
+        onPrimaryAction={handlePrimaryAction}
+        onSecondaryAction={openSharePopup}
+        onBack={() => router.back()}
+        primaryDisabled={!isEntrepreneurView && !project.owner_wallet}
+      />
+    );
+  };
+
   return (
     <>
       {loading ? (
-        <main className="min-h-screen bg-[#F8FAFE] px-4 py-8">
-          <div className="mx-auto max-w-xl">
-            <SectionLoadingSkeleton rows={4} />
-          </div>
-        </main>
+        <>
+          <main className="min-h-screen bg-[#F8FAFE] px-4 py-8 lg:hidden">
+            {renderLoadingState()}
+          </main>
+          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+            {renderLoadingState(true)}
+          </DesktopAppShell>
+        </>
       ) : null}
 
       {!loading && status && !project ? (
-        <main className="min-h-screen bg-[#F8FAFE] px-4 py-8">
-          <div className="mx-auto max-w-xl rounded-[28px] bg-white/88 p-5 text-sm text-[#65708A] shadow-[0_22px_64px_rgba(27,35,58,0.08)]">
-            {status}
-          </div>
-        </main>
+        <>
+          <main className="min-h-screen bg-[#F8FAFE] px-4 py-8 lg:hidden">
+            {renderStatusState()}
+          </main>
+          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+            {renderStatusState(true)}
+          </DesktopAppShell>
+        </>
       ) : null}
 
       {!loading && project ? (
-        <InvestmentOpportunityDetail
-          title={detailTitle}
-          subtitle={detailSubtitle}
-          location={locationLabel}
-          category={project.sector ? toEnglishSector(project.sector) : 'Business'}
-          rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
-          images={project.photo_urls ?? []}
-          metrics={buildDetailMetrics(project, formFields)}
-          sections={buildDetailSections(project, formFields, optimizedPublication)}
-          primaryActionLabel={primaryActionLabel}
-          secondaryActionLabel={secondaryActionLabel}
-          onPrimaryAction={handlePrimaryAction}
-          onSecondaryAction={openSharePopup}
-          onBack={() => router.back()}
-          primaryDisabled={!isEntrepreneurView && !project.owner_wallet}
-        />
+        <>
+          <div className="lg:hidden">{renderProjectDetail()}</div>
+          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+            {renderProjectDetail()}
+          </DesktopAppShell>
+        </>
       ) : null}
 
       {showShareOptions && project ? (

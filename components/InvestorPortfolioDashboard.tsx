@@ -539,7 +539,7 @@ function DashboardLayout({
 }) {
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
-      <DesktopSidebar roleLabel="Inversionista" />
+      <DesktopSidebar roleLabel={profileRole} />
       <div className="min-w-0 pl-[260px]">
         <Topbar avatarUrl={avatarUrl} displayName={displayName} profileRole={profileRole} />
         <main className="px-5 py-5 xl:px-7 2xl:px-9">
@@ -1174,7 +1174,7 @@ export default function InvestorPortfolioDashboard() {
 
   return (
     <>
-      <DashboardLayout avatarUrl={avatarUrl} displayName={profileName} profileRole="Inversionista">
+      <DashboardLayout avatarUrl={avatarUrl} displayName={profileName} profileRole="Investor">
         {loading ? (
           <DesktopPortfolioLoading />
         ) : (

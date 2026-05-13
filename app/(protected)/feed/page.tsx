@@ -424,16 +424,16 @@ function DesktopReelsSection({
       <div className="flex items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Proyectos Destacados</h2>
+            <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Featured projects</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#EEE7FF] px-2.5 py-1 text-[0.7rem] font-bold text-[#6B39F4]">
               <IconCrown />
               Premium
             </span>
           </div>
-          <p className="mt-0.5 text-sm font-medium text-[#65718A]">Negocios de emprendedores destacados</p>
+          <p className="mt-0.5 text-sm font-medium text-[#65718A]">Highlighted founder stories</p>
         </div>
         <button type="button" className="text-sm font-bold text-[#6B39F4] transition hover:text-[#5427DA]">
-          Ver todos
+          View all
         </button>
       </div>
 
@@ -512,7 +512,7 @@ function DesktopCategories({
         type="button"
         className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-4 text-[0.78rem] font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
       >
-        Mas categorias
+        More categories
         <IconChevronDown />
       </button>
     </div>
@@ -672,7 +672,7 @@ function DesktopMarketplaceLayout({
                 </span>
                 <div>
                   <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Suggested for you</h2>
-                  <p className="mt-0.5 text-sm font-medium text-[#65718A]">Oportunidades seleccionadas para ti</p>
+                  <p className="mt-0.5 text-sm font-medium text-[#65718A]">Opportunities selected for you</p>
                 </div>
               </div>
 
@@ -683,7 +683,7 @@ function DesktopMarketplaceLayout({
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconSort />
-                  Ordenar por
+                  Sort by
                 </button>
                 <button
                   type="button"
@@ -691,7 +691,7 @@ function DesktopMarketplaceLayout({
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconFilter />
-                  Filtrar
+                  Filter
                   {favoritesOnly ? <span className="h-2 w-2 rounded-full bg-[#6B39F4]" /> : null}
                 </button>
 
@@ -980,7 +980,7 @@ export default function FeedPage() {
   };
   const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
   const profileDisplayName = displayName || email || 'InvestApp user';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
   const openProjectDetail = (projectId: string) => router.push(`/feed/${projectId}`);
   const openPublish = () => {
     if (!publishDisabled) router.push('/publish');

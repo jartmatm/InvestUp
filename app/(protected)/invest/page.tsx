@@ -915,7 +915,7 @@ export default function InvestPage() {
   const desktopContacts = recentContacts.length > 0 ? recentContacts : MOCK_DESKTOP_CONTACTS;
   const desktopContactCount = recentContacts.length > 0 ? recentContacts.length : 12;
   const profileDisplayName = displayName || email || 'InvestApp user';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Emprendedor' : 'Inversionista';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
 
   if (hasPendingInvestment) {
     return (

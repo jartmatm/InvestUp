@@ -4,7 +4,7 @@ import { AppThemeProvider } from '@/lib/app-theme';
 
 export const metadata: Metadata = {
   title: 'InvestApp',
-  description: 'Plataforma fintech para inversiones y repayments descentralizados',
+  description: 'Fintech platform for decentralized investments and repayments',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <AppThemeProvider>{children}</AppThemeProvider>
       </body>
