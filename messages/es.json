@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "Atrás",
+    "loading": "Cargando",
+    "viewAll": "Ver todo",
+    "profile": "Perfil"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "changeLanguage": "Cambiar idioma",
+    "currentLanguage": "Idioma actual"
+  },
+  "Navigation": {
+    "home": "Inicio",
+    "portfolio": "Portafolio",
+    "send": "Enviar",
+    "feed": "Feed",
+    "profile": "Perfil",
+    "topUp": "Recargar",
+    "withdraw": "Retirar",
+    "documents": "Documentos"
+  },
+  "Roles": {
+    "investor": "Inversionista",
+    "entrepreneur": "Emprendedor"
+  },
+  "Topbar": {
+    "searchPlaceholder": "Buscar proyectos, emprendedores o palabras clave...",
+    "notifications": "Notificaciones",
+    "publishProject": "Publicar proyecto",
+    "investInBusiness": "Invertir en un negocio"
+  },
+  "Upgrade": {
+    "title": "Hazte Premium",
+    "description": "Desbloquea oportunidades exclusivas y analítica avanzada.",
+    "cta": "Mejorar ahora"
+  },
+  "PageFrame": {
+    "eyebrow": "Espacio de trabajo InvestApp"
+  },
+  "UserMenu": {
+    "account": "Cuenta",
+    "transactions": "Transacciones",
+    "preferences": "Preferencias",
+    "investAppUser": "Usuario InvestApp",
+    "personalData": "Datos personales",
+    "personalDataSubtitle": "Identidad y datos de contacto",
+    "socialMedia": "Redes sociales",
+    "socialMediaSubtitle": "Señales públicas de confianza",
+    "referralCode": "Código de referido",
+    "referralCodeSubtitle": "Invita amigos y gana recompensas",
+    "bankAccount": "Cuenta bancaria",
+    "bankAccountSubtitle": "Información de pagos",
+    "favorites": "Favoritos",
+    "favoritesSubtitle": "Proyectos y fundadores guardados",
+    "settings": "Configuración",
+    "settingsSubtitle": "Preferencias de la app",
+    "language": "Idioma",
+    "helpCenter": "Centro de ayuda",
+    "helpCenterSubtitle": "Espacio de soporte",
+    "faq": "Preguntas frecuentes",
+    "faqSubtitle": "Preguntas comunes",
+    "privacyPolicy": "Política de privacidad",
+    "privacyPolicySubtitle": "Datos y manejo de wallet",
+    "terms": "Términos y condiciones",
+    "termsSubtitle": "Responsabilidades de la plataforma",
+    "aboutApp": "Acerca de la app",
+    "aboutAppSubtitle": "Misión de InvestApp",
+    "logout": "Cerrar sesión",
+    "logoutSubtitle": "Salir de forma segura"
+  }
+}

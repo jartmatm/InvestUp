@@ -1,6 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale, useTranslations } from 'next-intl';
+import { isLocale, type AppLocale } from '@/i18n/locales';
+import { localizePath } from '@/i18n/pathnames';
 
 function IconPremium() {
   return (
@@ -12,20 +15,22 @@ function IconPremium() {
 }
 
 export default function DesktopUpgradeCard() {
+  const t = useTranslations('Upgrade');
+  const locale = useLocale();
+  const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
+
   return (
     <div className="mt-auto rounded-[24px] border border-[#ECE7FF] bg-[linear-gradient(145deg,#FFFFFF_0%,#F4F0FF_100%)] p-5 text-center shadow-[0_24px_60px_rgba(107,57,244,0.10)]">
       <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#EEE7FF] text-[#6B39F4]">
         <IconPremium />
       </span>
-      <p className="mt-4 text-base font-bold text-[#6B39F4]">Upgrade to Premium</p>
-      <p className="mt-2 text-sm leading-5 text-[#74809A]">
-        Unlock exclusive opportunities and advanced analytics.
-      </p>
+      <p className="mt-4 text-base font-bold text-[#6B39F4]">{t('title')}</p>
+      <p className="mt-2 text-sm leading-5 text-[#74809A]">{t('description')}</p>
       <Link
-        href="/profile"
+        href={localizePath('/profile', activeLocale)}
         className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition duration-200 hover:-translate-y-0.5"
       >
-        Upgrade now
+        {t('cta')}
       </Link>
     </div>
   );

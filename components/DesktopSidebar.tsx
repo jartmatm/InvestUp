@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { DesktopSidebarIcon } from '@/components/DesktopSidebarIcon';
 import DesktopUpgradeCard from '@/components/DesktopUpgradeCard';
+import { isLocale, type AppLocale } from '@/i18n/locales';
+import { localizePath, stripLocalePrefix } from '@/i18n/pathnames';
 
 type DesktopSidebarProps = {
   activeHref?: string;
@@ -11,18 +14,18 @@ type DesktopSidebarProps = {
 };
 
 const primaryItems = [
-  { href: '/home', label: 'Home', icon: 'home' },
-  { href: '/portfolio', label: 'Portfolio', icon: 'portfolio' },
-  { href: '/invest', label: 'Send', icon: 'transfer' },
-  { href: '/feed', label: 'Feed', icon: 'feed' },
-  { href: '/profile', label: 'Profile', icon: 'profile' },
-];
+  { href: '/home', labelKey: 'home', icon: 'home' },
+  { href: '/portfolio', labelKey: 'portfolio', icon: 'portfolio' },
+  { href: '/invest', labelKey: 'send', icon: 'transfer' },
+  { href: '/feed', labelKey: 'feed', icon: 'feed' },
+  { href: '/profile', labelKey: 'profile', icon: 'profile' },
+] as const;
 
 const secondaryItems = [
-  { href: '/home?topup=1', label: 'Top up', icon: 'topup' },
-  { href: '/withdraw', label: 'Withdraw', icon: 'withdraw' },
-  { href: '/contracts', label: 'Documents', icon: 'documents' },
-];
+  { href: '/home?topup=1', labelKey: 'topUp', icon: 'topup' },
+  { href: '/withdraw', labelKey: 'withdraw', icon: 'withdraw' },
+  { href: '/contracts', labelKey: 'documents', icon: 'documents' },
+] as const;
 
 export function getDesktopSidebarActiveHref(pathname: string) {
   if (pathname.startsWith('/profile')) return '/profile';
@@ -46,7 +49,11 @@ function InvestAppLogo() {
 
 export default function DesktopSidebar({ activeHref, roleLabel }: DesktopSidebarProps) {
   const pathname = usePathname();
-  const resolvedActiveHref = activeHref ?? getDesktopSidebarActiveHref(pathname);
+  const locale = useLocale();
+  const t = useTranslations('Navigation');
+  const activePathname = stripLocalePrefix(pathname);
+  const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
+  const resolvedActiveHref = activeHref ?? getDesktopSidebarActiveHref(activePathname);
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 flex w-[260px] flex-col border-r border-[#E7EAF3] bg-white/94 px-5 py-6 shadow-[12px_0_50px_rgba(21,28,44,0.04)] backdrop-blur-xl">
@@ -57,8 +64,8 @@ export default function DesktopSidebar({ activeHref, roleLabel }: DesktopSidebar
           const active = item.href === resolvedActiveHref;
           return (
             <Link
-              key={item.label}
-              href={item.href}
+              key={item.labelKey}
+              href={localizePath(item.href, activeLocale)}
               className={`flex h-11 items-center gap-3 rounded-2xl px-3 text-sm font-semibold transition duration-200 ${
                 active
                   ? 'bg-[#F2EDFF] text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)]'
@@ -66,7 +73,7 @@ export default function DesktopSidebar({ activeHref, roleLabel }: DesktopSidebar
               }`}
             >
               <DesktopSidebarIcon type={item.icon} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -79,12 +86,12 @@ export default function DesktopSidebar({ activeHref, roleLabel }: DesktopSidebar
         <div className="mt-3 space-y-1.5">
           {secondaryItems.map((item) => (
             <Link
-              key={item.label}
-              href={item.href}
+              key={item.labelKey}
+              href={localizePath(item.href, activeLocale)}
               className="flex h-10 items-center gap-3 rounded-2xl px-3 text-sm font-semibold text-[#64708A] transition duration-200 hover:bg-[#F7F8FB] hover:text-[#1F2A44]"
             >
               <DesktopSidebarIcon type={item.icon} />
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ))}
         </div>

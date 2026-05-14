@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
+import { isLocale, type AppLocale } from '@/i18n/locales';
+import { localizePath, stripLocalePrefix } from '@/i18n/pathnames';
 
 function IconNavHome() {
   return (
@@ -59,11 +62,15 @@ function IconNavProfile() {
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const locale = useLocale();
+  const t = useTranslations('Navigation');
+  const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
+  const activePathname = stripLocalePrefix(pathname);
   const items = [
-    { href: '/home', label: 'Home', icon: <IconNavHome /> },
-    { href: '/portfolio', label: 'Portfolio', icon: <IconNavActivity /> },
-    { href: '/feed', label: 'Feed', icon: <IconNavPayments /> },
-    { href: '/profile', label: 'Profile', icon: <IconNavProfile /> },
+    { href: '/home', label: t('home'), icon: <IconNavHome /> },
+    { href: '/portfolio', label: t('portfolio'), icon: <IconNavActivity /> },
+    { href: '/feed', label: t('feed'), icon: <IconNavPayments /> },
+    { href: '/profile', label: t('profile'), icon: <IconNavProfile /> },
   ];
   const navSlots: Array<(typeof items)[number] | null> = [items[0], items[1], null, items[2], items[3]];
 
@@ -72,10 +79,10 @@ export default function BottomNav() {
       <div className="mx-auto w-full max-w-xl px-4 pb-4">
         <div className="relative rounded-[32px] border border-white/80 bg-white/88 px-3 pb-3 pt-3.5 shadow-[0_24px_60px_rgba(15,23,42,0.16)] backdrop-blur-xl">
           <Link
-            href="/invest"
-            aria-label="Send"
+            href={localizePath('/invest', activeLocale)}
+            aria-label={t('send')}
             className={`absolute left-1/2 top-2 z-10 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_24px_42px_rgba(107,57,244,0.34)] transition ${
-              pathname.startsWith('/invest') ? 'scale-[1.02]' : 'hover:scale-[1.02]'
+              activePathname.startsWith('/invest') ? 'scale-[1.02]' : 'hover:scale-[1.02]'
             }`}
           >
             <span className="translate-y-px">
@@ -92,17 +99,17 @@ export default function BottomNav() {
                     aria-hidden="true"
                   >
                     <span className="text-[11px] font-semibold tracking-[-0.02em] text-slate-400">
-                      Send
+                      {t('send')}
                     </span>
                   </div>
                 );
               }
 
-              const active = pathname.startsWith(item.href);
+              const active = activePathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={localizePath(item.href, activeLocale)}
                   aria-label={item.label}
                   className={`flex min-h-[72px] w-full flex-col items-center justify-end gap-1 rounded-[20px] px-2 py-1.5 transition ${
                     active ? 'text-[#6B39F4]' : 'text-slate-400 hover:text-[#5A27E0]'

@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "वापस",
+    "loading": "लोड हो रहा है",
+    "viewAll": "सभी देखें",
+    "profile": "प्रोफ़ाइल"
+  },
+  "Locale": {
+    "label": "भाषा",
+    "changeLanguage": "भाषा बदलें",
+    "currentLanguage": "वर्तमान भाषा"
+  },
+  "Navigation": {
+    "home": "होम",
+    "portfolio": "पोर्टफोलियो",
+    "send": "भेजें",
+    "feed": "फ़ीड",
+    "profile": "प्रोफ़ाइल",
+    "topUp": "टॉप अप",
+    "withdraw": "निकासी",
+    "documents": "दस्तावेज़"
+  },
+  "Roles": {
+    "investor": "निवेशक",
+    "entrepreneur": "उद्यमी"
+  },
+  "Topbar": {
+    "searchPlaceholder": "वेंचर्स, उद्यमियों या कीवर्ड खोजें...",
+    "notifications": "सूचनाएँ",
+    "publishProject": "प्रोजेक्ट प्रकाशित करें",
+    "investInBusiness": "किसी व्यवसाय में निवेश करें"
+  },
+  "Upgrade": {
+    "title": "प्रीमियम में अपग्रेड करें",
+    "description": "विशेष अवसर और उन्नत एनालिटिक्स अनलॉक करें।",
+    "cta": "अभी अपग्रेड करें"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp कार्यक्षेत्र"
+  },
+  "UserMenu": {
+    "account": "खाता",
+    "transactions": "लेनदेन",
+    "preferences": "प्राथमिकताएँ",
+    "investAppUser": "InvestApp उपयोगकर्ता",
+    "personalData": "व्यक्तिगत डेटा",
+    "personalDataSubtitle": "पहचान और संपर्क विवरण",
+    "socialMedia": "सोशल मीडिया",
+    "socialMediaSubtitle": "सार्वजनिक भरोसे के संकेत",
+    "referralCode": "रेफ़रल कोड",
+    "referralCodeSubtitle": "दोस्तों को आमंत्रित करें और पुरस्कार पाएँ",
+    "bankAccount": "बैंक खाता",
+    "bankAccountSubtitle": "भुगतान जानकारी",
+    "favorites": "पसंदीदा",
+    "favoritesSubtitle": "सहेजे गए वेंचर्स और संस्थापक",
+    "settings": "सेटिंग्स",
+    "settingsSubtitle": "ऐप प्राथमिकताएँ",
+    "language": "भाषा",
+    "helpCenter": "सहायता केंद्र",
+    "helpCenterSubtitle": "सपोर्ट कार्यक्षेत्र",
+    "faq": "FAQ",
+    "faqSubtitle": "सामान्य प्रश्न",
+    "privacyPolicy": "गोपनीयता नीति",
+    "privacyPolicySubtitle": "डेटा और वॉलेट प्रबंधन",
+    "terms": "नियम और शर्तें",
+    "termsSubtitle": "प्लेटफ़ॉर्म ज़िम्मेदारियाँ",
+    "aboutApp": "ऐप के बारे में",
+    "aboutAppSubtitle": "InvestApp का मिशन",
+    "logout": "लॉग आउट",
+    "logoutSubtitle": "सुरक्षित रूप से साइन आउट करें"
+  }
+}

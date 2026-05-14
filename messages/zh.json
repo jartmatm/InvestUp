@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "返回",
+    "loading": "加载中",
+    "viewAll": "查看全部",
+    "profile": "个人资料"
+  },
+  "Locale": {
+    "label": "语言",
+    "changeLanguage": "切换语言",
+    "currentLanguage": "当前语言"
+  },
+  "Navigation": {
+    "home": "首页",
+    "portfolio": "投资组合",
+    "send": "发送",
+    "feed": "动态",
+    "profile": "个人资料",
+    "topUp": "充值",
+    "withdraw": "提现",
+    "documents": "文件"
+  },
+  "Roles": {
+    "investor": "投资者",
+    "entrepreneur": "创业者"
+  },
+  "Topbar": {
+    "searchPlaceholder": "搜索项目、创业者或关键词...",
+    "notifications": "通知",
+    "publishProject": "发布项目",
+    "investInBusiness": "投资一个业务"
+  },
+  "Upgrade": {
+    "title": "升级到 Premium",
+    "description": "解锁专属机会和高级分析。",
+    "cta": "立即升级"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp 工作区"
+  },
+  "UserMenu": {
+    "account": "账户",
+    "transactions": "交易",
+    "preferences": "偏好设置",
+    "investAppUser": "InvestApp 用户",
+    "personalData": "个人数据",
+    "personalDataSubtitle": "身份和联系方式",
+    "socialMedia": "社交媒体",
+    "socialMediaSubtitle": "公开信任信号",
+    "referralCode": "推荐码",
+    "referralCodeSubtitle": "邀请朋友并获得奖励",
+    "bankAccount": "银行账户",
+    "bankAccountSubtitle": "收款信息",
+    "favorites": "收藏",
+    "favoritesSubtitle": "已保存的项目和创始人",
+    "settings": "设置",
+    "settingsSubtitle": "应用偏好",
+    "language": "语言",
+    "helpCenter": "帮助中心",
+    "helpCenterSubtitle": "支持工作区",
+    "faq": "常见问题",
+    "faqSubtitle": "常见问题解答",
+    "privacyPolicy": "隐私政策",
+    "privacyPolicySubtitle": "数据和钱包处理",
+    "terms": "条款和条件",
+    "termsSubtitle": "平台责任",
+    "aboutApp": "关于应用",
+    "aboutAppSubtitle": "InvestApp 使命",
+    "logout": "退出登录",
+    "logoutSubtitle": "安全退出账户"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "Zurück",
+    "loading": "Wird geladen",
+    "viewAll": "Alle anzeigen",
+    "profile": "Profil"
+  },
+  "Locale": {
+    "label": "Sprache",
+    "changeLanguage": "Sprache ändern",
+    "currentLanguage": "Aktuelle Sprache"
+  },
+  "Navigation": {
+    "home": "Home",
+    "portfolio": "Portfolio",
+    "send": "Senden",
+    "feed": "Feed",
+    "profile": "Profil",
+    "topUp": "Aufladen",
+    "withdraw": "Auszahlen",
+    "documents": "Dokumente"
+  },
+  "Roles": {
+    "investor": "Investor",
+    "entrepreneur": "Unternehmer"
+  },
+  "Topbar": {
+    "searchPlaceholder": "Ventures, Unternehmer oder Schlüsselwörter suchen...",
+    "notifications": "Benachrichtigungen",
+    "publishProject": "Projekt veröffentlichen",
+    "investInBusiness": "In ein Unternehmen investieren"
+  },
+  "Upgrade": {
+    "title": "Auf Premium upgraden",
+    "description": "Schalten Sie exklusive Chancen und erweiterte Analysen frei.",
+    "cta": "Jetzt upgraden"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp Arbeitsbereich"
+  },
+  "UserMenu": {
+    "account": "Konto",
+    "transactions": "Transaktionen",
+    "preferences": "Einstellungen",
+    "investAppUser": "InvestApp Nutzer",
+    "personalData": "Persönliche Daten",
+    "personalDataSubtitle": "Identität und Kontaktdaten",
+    "socialMedia": "Soziale Medien",
+    "socialMediaSubtitle": "Öffentliche Vertrauenssignale",
+    "referralCode": "Empfehlungscode",
+    "referralCodeSubtitle": "Freunde einladen und Prämien verdienen",
+    "bankAccount": "Bankkonto",
+    "bankAccountSubtitle": "Auszahlungsinformationen",
+    "favorites": "Favoriten",
+    "favoritesSubtitle": "Gespeicherte Ventures und Gründer",
+    "settings": "Einstellungen",
+    "settingsSubtitle": "App-Präferenzen",
+    "language": "Sprache",
+    "helpCenter": "Hilfezentrum",
+    "helpCenterSubtitle": "Supportbereich",
+    "faq": "FAQ",
+    "faqSubtitle": "Häufige Fragen",
+    "privacyPolicy": "Datenschutzrichtlinie",
+    "privacyPolicySubtitle": "Daten- und Wallet-Verwaltung",
+    "terms": "Geschäftsbedingungen",
+    "termsSubtitle": "Plattformverantwortung",
+    "aboutApp": "Über die App",
+    "aboutAppSubtitle": "Mission von InvestApp",
+    "logout": "Abmelden",
+    "logoutSubtitle": "Sicher abmelden"
+  }
+}

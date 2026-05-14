@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "Back",
+    "loading": "Loading",
+    "viewAll": "View all",
+    "profile": "Profile"
+  },
+  "Locale": {
+    "label": "Language",
+    "changeLanguage": "Change language",
+    "currentLanguage": "Current language"
+  },
+  "Navigation": {
+    "home": "Home",
+    "portfolio": "Portfolio",
+    "send": "Send",
+    "feed": "Feed",
+    "profile": "Profile",
+    "topUp": "Top up",
+    "withdraw": "Withdraw",
+    "documents": "Documents"
+  },
+  "Roles": {
+    "investor": "Investor",
+    "entrepreneur": "Entrepreneur"
+  },
+  "Topbar": {
+    "searchPlaceholder": "Search ventures, entrepreneurs or keywords...",
+    "notifications": "Notifications",
+    "publishProject": "Publish project",
+    "investInBusiness": "Invest in a business"
+  },
+  "Upgrade": {
+    "title": "Upgrade to Premium",
+    "description": "Unlock exclusive opportunities and advanced analytics.",
+    "cta": "Upgrade now"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp workspace"
+  },
+  "UserMenu": {
+    "account": "Account",
+    "transactions": "Transactions",
+    "preferences": "Preferences",
+    "investAppUser": "InvestApp user",
+    "personalData": "Personal Data",
+    "personalDataSubtitle": "Identity and contact details",
+    "socialMedia": "Social Media",
+    "socialMediaSubtitle": "Public trust signals",
+    "referralCode": "Referral Code",
+    "referralCodeSubtitle": "Invite friends and earn rewards",
+    "bankAccount": "Bank Account",
+    "bankAccountSubtitle": "Payout information",
+    "favorites": "Favorites",
+    "favoritesSubtitle": "Saved ventures and founders",
+    "settings": "Settings",
+    "settingsSubtitle": "App preferences",
+    "language": "Language",
+    "helpCenter": "Help Center",
+    "helpCenterSubtitle": "Support workspace",
+    "faq": "FAQ",
+    "faqSubtitle": "Common questions",
+    "privacyPolicy": "Privacy Policy",
+    "privacyPolicySubtitle": "Data and wallet handling",
+    "terms": "Terms & Conditions",
+    "termsSubtitle": "Platform responsibilities",
+    "aboutApp": "About App",
+    "aboutAppSubtitle": "InvestApp mission",
+    "logout": "Log out",
+    "logoutSubtitle": "Sign out securely"
+  }
+}

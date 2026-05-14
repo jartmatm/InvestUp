@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "Voltar",
+    "loading": "Carregando",
+    "viewAll": "Ver tudo",
+    "profile": "Perfil"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "changeLanguage": "Alterar idioma",
+    "currentLanguage": "Idioma atual"
+  },
+  "Navigation": {
+    "home": "Início",
+    "portfolio": "Portfólio",
+    "send": "Enviar",
+    "feed": "Feed",
+    "profile": "Perfil",
+    "topUp": "Adicionar fundos",
+    "withdraw": "Sacar",
+    "documents": "Documentos"
+  },
+  "Roles": {
+    "investor": "Investidor",
+    "entrepreneur": "Empreendedor"
+  },
+  "Topbar": {
+    "searchPlaceholder": "Buscar negócios, empreendedores ou palavras-chave...",
+    "notifications": "Notificações",
+    "publishProject": "Publicar projeto",
+    "investInBusiness": "Investir em um negócio"
+  },
+  "Upgrade": {
+    "title": "Fazer upgrade para Premium",
+    "description": "Desbloqueie oportunidades exclusivas e análises avançadas.",
+    "cta": "Fazer upgrade"
+  },
+  "PageFrame": {
+    "eyebrow": "Área de trabalho InvestApp"
+  },
+  "UserMenu": {
+    "account": "Conta",
+    "transactions": "Transações",
+    "preferences": "Preferências",
+    "investAppUser": "Usuário InvestApp",
+    "personalData": "Dados pessoais",
+    "personalDataSubtitle": "Identidade e contato",
+    "socialMedia": "Redes sociais",
+    "socialMediaSubtitle": "Sinais públicos de confiança",
+    "referralCode": "Código de indicação",
+    "referralCodeSubtitle": "Convide amigos e ganhe recompensas",
+    "bankAccount": "Conta bancária",
+    "bankAccountSubtitle": "Informações de pagamento",
+    "favorites": "Favoritos",
+    "favoritesSubtitle": "Negócios e fundadores salvos",
+    "settings": "Configurações",
+    "settingsSubtitle": "Preferências do app",
+    "language": "Idioma",
+    "helpCenter": "Central de ajuda",
+    "helpCenterSubtitle": "Área de suporte",
+    "faq": "FAQ",
+    "faqSubtitle": "Perguntas comuns",
+    "privacyPolicy": "Política de privacidade",
+    "privacyPolicySubtitle": "Dados e gestão da carteira",
+    "terms": "Termos e condições",
+    "termsSubtitle": "Responsabilidades da plataforma",
+    "aboutApp": "Sobre o app",
+    "aboutAppSubtitle": "Missão da InvestApp",
+    "logout": "Sair",
+    "logoutSubtitle": "Encerrar sessão com segurança"
+  }
+}

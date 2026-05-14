@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
+import LanguageSelector from '@/components/LanguageSelector';
+import { isLocale, type AppLocale } from '@/i18n/locales';
+import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 
@@ -87,15 +91,18 @@ export default function DesktopTopbar({
   onSearchFocus,
   publishDisabled,
   publishHref = '/publish',
-  publishLabel = 'Publish project',
+  publishLabel,
   roleLabel,
   searchOverlay,
-  searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
+  searchPlaceholder,
   searchValue,
   unreadNotificationsCount = 0,
 }: DesktopTopbarProps) {
+  const t = useTranslations('Topbar');
+  const locale = useLocale();
   const { getAccessToken, user } = usePrivy();
   const { rolSeleccionado } = useInvestApp();
+  const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
   const isEntrepreneur = rolSeleccionado === 'emprendedor';
   const shouldResolvePublishState = isEntrepreneur && publishDisabled === undefined;
   const [hasCurrentProject, setHasCurrentProject] = useState(false);
@@ -130,8 +137,8 @@ export default function DesktopTopbar({
   const effectivePublishDisabled = isEntrepreneur
     ? publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id)
     : false;
-  const primaryCtaLabel = isEntrepreneur ? publishLabel : 'Invest in a business';
-  const primaryCtaHref = isEntrepreneur ? publishHref : '/feed';
+  const primaryCtaLabel = isEntrepreneur ? publishLabel || t('publishProject') : t('investInBusiness');
+  const primaryCtaHref = localizePath(isEntrepreneur ? publishHref : '/feed', activeLocale);
   const primaryCtaOnClick = isEntrepreneur ? onPublish : undefined;
   const notificationClassName = `relative grid h-10 w-10 place-items-center rounded-xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
     notificationsEnabled
@@ -162,7 +169,7 @@ export default function DesktopTopbar({
           {...searchProps}
           onChange={onSearchChange ? (event) => onSearchChange(event.target.value) : undefined}
           onFocus={onSearchFocus}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder || t('searchPlaceholder')}
           className="h-10 w-full rounded-xl border border-[#DDE2EE] bg-white pl-12 pr-4 text-sm font-medium text-[#182033] outline-none shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition placeholder:text-[#9BA5B8] focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
         />
         {searchOverlay}
@@ -173,17 +180,19 @@ export default function DesktopTopbar({
         {notificationOnClick ? (
           <button
             type="button"
-            aria-label="Notifications"
+            aria-label={t('notifications')}
             onClick={notificationOnClick}
             className={notificationClassName}
           >
             {notificationContent}
           </button>
         ) : (
-          <Link href={notificationHref} aria-label="Notifications" className={notificationClassName}>
+          <Link href={localizePath(notificationHref, activeLocale)} aria-label={t('notifications')} className={notificationClassName}>
             {notificationContent}
           </Link>
         )}
+
+        <LanguageSelector variant="desktop" />
 
         {primaryCtaOnClick ? (
           <button type="button" disabled={effectivePublishDisabled} onClick={primaryCtaOnClick} className={publishClassName}>

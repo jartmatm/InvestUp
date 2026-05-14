@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "Indietro",
+    "loading": "Caricamento",
+    "viewAll": "Vedi tutto",
+    "profile": "Profilo"
+  },
+  "Locale": {
+    "label": "Lingua",
+    "changeLanguage": "Cambia lingua",
+    "currentLanguage": "Lingua attuale"
+  },
+  "Navigation": {
+    "home": "Home",
+    "portfolio": "Portafoglio",
+    "send": "Invia",
+    "feed": "Feed",
+    "profile": "Profilo",
+    "topUp": "Ricarica",
+    "withdraw": "Preleva",
+    "documents": "Documenti"
+  },
+  "Roles": {
+    "investor": "Investitore",
+    "entrepreneur": "Imprenditore"
+  },
+  "Topbar": {
+    "searchPlaceholder": "Cerca venture, imprenditori o parole chiave...",
+    "notifications": "Notifiche",
+    "publishProject": "Pubblica progetto",
+    "investInBusiness": "Investi in un business"
+  },
+  "Upgrade": {
+    "title": "Passa a Premium",
+    "description": "Sblocca opportunità esclusive e analisi avanzate.",
+    "cta": "Aggiorna ora"
+  },
+  "PageFrame": {
+    "eyebrow": "Workspace InvestApp"
+  },
+  "UserMenu": {
+    "account": "Account",
+    "transactions": "Transazioni",
+    "preferences": "Preferenze",
+    "investAppUser": "Utente InvestApp",
+    "personalData": "Dati personali",
+    "personalDataSubtitle": "Identità e contatti",
+    "socialMedia": "Social media",
+    "socialMediaSubtitle": "Segnali pubblici di fiducia",
+    "referralCode": "Codice referral",
+    "referralCodeSubtitle": "Invita amici e guadagna premi",
+    "bankAccount": "Conto bancario",
+    "bankAccountSubtitle": "Informazioni di pagamento",
+    "favorites": "Preferiti",
+    "favoritesSubtitle": "Venture e founder salvati",
+    "settings": "Impostazioni",
+    "settingsSubtitle": "Preferenze dell'app",
+    "language": "Lingua",
+    "helpCenter": "Centro assistenza",
+    "helpCenterSubtitle": "Spazio supporto",
+    "faq": "FAQ",
+    "faqSubtitle": "Domande comuni",
+    "privacyPolicy": "Informativa privacy",
+    "privacyPolicySubtitle": "Gestione dati e wallet",
+    "terms": "Termini e condizioni",
+    "termsSubtitle": "Responsabilità della piattaforma",
+    "aboutApp": "Informazioni sull'app",
+    "aboutAppSubtitle": "Missione di InvestApp",
+    "logout": "Esci",
+    "logoutSubtitle": "Esci in sicurezza"
+  }
+}

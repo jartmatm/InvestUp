@@ -1,0 +1,72 @@
+{
+  "Common": {
+    "back": "رجوع",
+    "loading": "جار التحميل",
+    "viewAll": "عرض الكل",
+    "profile": "الملف الشخصي"
+  },
+  "Locale": {
+    "label": "اللغة",
+    "changeLanguage": "تغيير اللغة",
+    "currentLanguage": "اللغة الحالية"
+  },
+  "Navigation": {
+    "home": "الرئيسية",
+    "portfolio": "المحفظة",
+    "send": "إرسال",
+    "feed": "الموجز",
+    "profile": "الملف الشخصي",
+    "topUp": "إضافة رصيد",
+    "withdraw": "سحب",
+    "documents": "المستندات"
+  },
+  "Roles": {
+    "investor": "مستثمر",
+    "entrepreneur": "رائد أعمال"
+  },
+  "Topbar": {
+    "searchPlaceholder": "ابحث عن مشاريع أو رواد أعمال أو كلمات مفتاحية...",
+    "notifications": "الإشعارات",
+    "publishProject": "نشر مشروع",
+    "investInBusiness": "استثمر في عمل تجاري"
+  },
+  "Upgrade": {
+    "title": "الترقية إلى Premium",
+    "description": "افتح فرصا حصرية وتحليلات متقدمة.",
+    "cta": "الترقية الآن"
+  },
+  "PageFrame": {
+    "eyebrow": "مساحة عمل InvestApp"
+  },
+  "UserMenu": {
+    "account": "الحساب",
+    "transactions": "المعاملات",
+    "preferences": "التفضيلات",
+    "investAppUser": "مستخدم InvestApp",
+    "personalData": "البيانات الشخصية",
+    "personalDataSubtitle": "الهوية وبيانات التواصل",
+    "socialMedia": "وسائل التواصل",
+    "socialMediaSubtitle": "إشارات الثقة العامة",
+    "referralCode": "رمز الإحالة",
+    "referralCodeSubtitle": "ادع الأصدقاء واكسب مكافآت",
+    "bankAccount": "الحساب البنكي",
+    "bankAccountSubtitle": "معلومات الدفع",
+    "favorites": "المفضلة",
+    "favoritesSubtitle": "المشاريع والمؤسسون المحفوظون",
+    "settings": "الإعدادات",
+    "settingsSubtitle": "تفضيلات التطبيق",
+    "language": "اللغة",
+    "helpCenter": "مركز المساعدة",
+    "helpCenterSubtitle": "مساحة الدعم",
+    "faq": "الأسئلة الشائعة",
+    "faqSubtitle": "أسئلة متكررة",
+    "privacyPolicy": "سياسة الخصوصية",
+    "privacyPolicySubtitle": "إدارة البيانات والمحفظة",
+    "terms": "الشروط والأحكام",
+    "termsSubtitle": "مسؤوليات المنصة",
+    "aboutApp": "حول التطبيق",
+    "aboutAppSubtitle": "مهمة InvestApp",
+    "logout": "تسجيل الخروج",
+    "logoutSubtitle": "الخروج بأمان"
+  }
+}

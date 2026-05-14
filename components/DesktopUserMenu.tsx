@@ -2,6 +2,9 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import { getLanguageOption, isLocale, type AppLocale } from '@/i18n/locales';
+import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
 
 type DesktopUserMenuProps = {
@@ -201,7 +204,8 @@ function DesktopMenuItem({
   onClick,
   onSelect,
   subtitle,
-}: MenuItem & { onSelect: () => void }) {
+  locale,
+}: MenuItem & { onSelect: () => void; locale: AppLocale }) {
   const content = (
     <>
       <div className="flex min-w-0 items-center gap-3">
@@ -239,19 +243,29 @@ function DesktopMenuItem({
   }
 
   return (
-    <Link href={href ?? '/profile'} role="menuitem" onClick={onSelect} className={className}>
+    <Link href={localizePath(href ?? '/profile', locale)} role="menuitem" onClick={onSelect} className={className}>
       {content}
     </Link>
   );
 }
 
-function MenuSection({ items, onSelect, title }: { items: MenuItem[]; onSelect: () => void; title: string }) {
+function MenuSection({
+  items,
+  locale,
+  onSelect,
+  title,
+}: {
+  items: MenuItem[];
+  locale: AppLocale;
+  onSelect: () => void;
+  title: string;
+}) {
   return (
     <section className="rounded-[22px] border border-[#EEF1F7] bg-white p-2 shadow-[0_12px_30px_rgba(21,28,44,0.035)]">
       <p className="px-2 text-[0.64rem] font-bold uppercase tracking-[0.18em] text-[#98A1B5]">{title}</p>
       <div className="mt-2 space-y-1">
         {items.map((item) => (
-          <DesktopMenuItem key={item.label} {...item} onSelect={onSelect} />
+          <DesktopMenuItem key={item.label} {...item} locale={locale} onSelect={onSelect} />
         ))}
       </div>
     </section>
@@ -265,12 +279,17 @@ export default function DesktopUserMenu({
   roleLabel,
   showFavorites,
 }: DesktopUserMenuProps) {
-  const { logoutApp } = useInvestApp();
+  const t = useTranslations('UserMenu');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
+  const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
+  const { logoutApp, rolSeleccionado } = useInvestApp();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
-  const safeName = displayName || 'InvestApp user';
-  const canShowFavorites = showFavorites ?? /invers|investor/i.test(roleLabel);
+  const safeName = displayName || t('investAppUser');
+  const canShowFavorites = showFavorites ?? rolSeleccionado !== 'emprendedor';
+  const activeLanguage = getLanguageOption(activeLocale);
 
   useEffect(() => {
     if (!open) return;
@@ -295,36 +314,36 @@ export default function DesktopUserMenu({
     {
       href: '/profile/personal-data',
       icon: <IconPersonalData />,
-      label: 'Personal Data',
-      subtitle: 'Identity and contact details',
+      label: t('personalData'),
+      subtitle: t('personalDataSubtitle'),
     },
     {
       href: '/profile/social-media',
       icon: <IconSocialMedia />,
-      label: 'Social Media',
-      subtitle: 'Public trust signals',
+      label: t('socialMedia'),
+      subtitle: t('socialMediaSubtitle'),
     },
     {
       href: '/profile/referral-code',
       icon: <IconReferralCode />,
-      label: 'Referral Code',
-      subtitle: 'Invite friends and earn rewards',
+      label: t('referralCode'),
+      subtitle: t('referralCodeSubtitle'),
     },
   ];
   const transactionItems: MenuItem[] = [
     {
       href: '/profile/bank-account',
       icon: <IconBankAccount />,
-      label: 'Bank Account',
-      subtitle: 'Payout information',
+      label: t('bankAccount'),
+      subtitle: t('bankAccountSubtitle'),
     },
     ...(canShowFavorites
       ? [
           {
             href: '/profile/favorites',
             icon: <IconFavorites />,
-            label: 'Favorites',
-            subtitle: 'Saved ventures and founders',
+            label: t('favorites'),
+            subtitle: t('favoritesSubtitle'),
           },
         ]
       : []),
@@ -333,49 +352,49 @@ export default function DesktopUserMenu({
     {
       href: '/profile/settings',
       icon: <IconSettings />,
-      label: 'Settings',
-      subtitle: 'App preferences',
+      label: t('settings'),
+      subtitle: t('settingsSubtitle'),
     },
     {
       href: '/profile/language',
       icon: <IconLanguage />,
-      label: 'Language',
-      subtitle: 'English (US)',
+      label: t('language'),
+      subtitle: activeLanguage.nativeName,
     },
     {
       href: '/profile/help-center',
       icon: <IconHelpCenter />,
-      label: 'Help Center',
-      subtitle: 'Support workspace',
+      label: t('helpCenter'),
+      subtitle: t('helpCenterSubtitle'),
     },
     {
       href: '/profile/faq',
       icon: <IconFaq />,
-      label: 'FAQ',
-      subtitle: 'Common questions',
+      label: t('faq'),
+      subtitle: t('faqSubtitle'),
     },
     {
       href: '/profile/privacy-policy',
       icon: <IconPrivacyPolicy />,
-      label: 'Privacy Policy',
-      subtitle: 'Data and wallet handling',
+      label: t('privacyPolicy'),
+      subtitle: t('privacyPolicySubtitle'),
     },
     {
       href: '/profile/terms-conditions',
       icon: <IconTerms />,
-      label: 'Terms & Conditions',
-      subtitle: 'Platform responsibilities',
+      label: t('terms'),
+      subtitle: t('termsSubtitle'),
     },
     {
       href: '/profile/about',
       icon: <IconAboutApp />,
-      label: 'About App',
-      subtitle: 'InvestApp mission',
+      label: t('aboutApp'),
+      subtitle: t('aboutAppSubtitle'),
     },
     {
       icon: <IconLogout />,
-      label: 'Log out',
-      subtitle: 'Sign out securely',
+      label: t('logout'),
+      subtitle: t('logoutSubtitle'),
       danger: true,
       onClick: () => {
         setOpen(false);
@@ -436,19 +455,29 @@ export default function DesktopUserMenu({
                 <p className="mt-0.5 text-xs font-semibold text-[#73809A]">{roleLabel}</p>
               </div>
               <Link
-                href="/profile"
+                href={localizePath('/profile', activeLocale)}
                 onClick={() => setOpen(false)}
                 className="rounded-xl border border-[#D9CCFF] bg-white px-3 py-2 text-xs font-bold text-[#6B39F4] shadow-[0_12px_24px_rgba(107,57,244,0.08)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#F8F5FF] focus:outline-none focus:ring-4 focus:ring-[#6B39F4]/10"
               >
-                Profile
+                {commonT('profile')}
               </Link>
             </div>
           </div>
 
           <div className="mt-3 space-y-2.5">
-            <MenuSection items={accountItems} onSelect={() => setOpen(false)} title="Account" />
-            <MenuSection items={transactionItems} onSelect={() => setOpen(false)} title="Transactions" />
-            <MenuSection items={preferenceItems} onSelect={() => setOpen(false)} title="Preferences" />
+            <MenuSection items={accountItems} locale={activeLocale} onSelect={() => setOpen(false)} title={t('account')} />
+            <MenuSection
+              items={transactionItems}
+              locale={activeLocale}
+              onSelect={() => setOpen(false)}
+              title={t('transactions')}
+            />
+            <MenuSection
+              items={preferenceItems}
+              locale={activeLocale}
+              onSelect={() => setOpen(false)}
+              title={t('preferences')}
+            />
           </div>
         </div>
       ) : null}

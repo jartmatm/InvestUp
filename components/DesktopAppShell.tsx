@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -71,13 +72,16 @@ export function DesktopAppShell({
   rightRail,
   contentClassName = '',
   maxWidthClassName = 'max-w-none',
-  searchPlaceholder = 'Search ventures, entrepreneurs or keywords...',
+  searchPlaceholder,
   hideHeader = false,
 }: DesktopAppShellProps) {
+  const topbarT = useTranslations('Topbar');
+  const roleT = useTranslations('Roles');
   const { rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName, loading } = useUserProfileSummary();
   const safeName = displayName || 'InvestApp user';
-  const roleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
+  const roleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
+  const resolvedSearchPlaceholder = searchPlaceholder || topbarT('searchPlaceholder');
 
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen bg-[#F8F9FB] text-[#101828] lg:block">
@@ -90,7 +94,7 @@ export function DesktopAppShell({
           displayName={safeName}
           loading={loading}
           roleLabel={roleLabel}
-          searchPlaceholder={searchPlaceholder}
+          searchPlaceholder={resolvedSearchPlaceholder}
         />
 
         <main className="px-5 py-5 xl:px-7 2xl:px-9">
