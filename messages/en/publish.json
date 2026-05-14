@@ -1,0 +1,33 @@
+{
+  "Publish": {
+    "progress": "Progress",
+    "media": "Media",
+    "draft": "Draft",
+    "saved": "Saved",
+    "new": "New",
+    "steps": "Steps",
+    "listingHealth": "Listing health",
+    "businessNamePlaceholder": "Aurora Coffee",
+    "locationPlaceholder": "Street, city, country",
+    "selectCategory": "Select a category",
+    "selectOption": "Select an option",
+    "selectStage": "Select current stage",
+    "productPlaceholder": "Describe the product or service clearly.",
+    "problemPlaceholder": "Describe the customer's real pain and how you solve it.",
+    "monthlyRevenuePlaceholder": "$12,000 USD",
+    "avgTicketPlaceholder": "$45 USD",
+    "monthlyCustomersPlaceholder": "320",
+    "growthRatePlaceholder": "Yes, 18% over the last 3 months",
+    "socialMediaPlaceholder": "@business, Instagram, TikTok, website or links",
+    "capitalNeededPlaceholder": "50000",
+    "fundsUsagePlaceholder": "Example: 45% inventory, 30% equipment, 25% marketing.",
+    "investmentOfferPlaceholder": "12",
+    "marketSizePlaceholder": "An estimate is okay.",
+    "founderInfoPlaceholder": "Brief experience.",
+    "teamInfoPlaceholder": "Roles and responsibilities.",
+    "photos": "Photos",
+    "photosDescription": "Minimum 5, ideal 8-12.",
+    "video": "Video",
+    "videoPlaceholder": "Paste a video URL if the file is not on this device"
+  }
+}

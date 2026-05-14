@@ -2,25 +2,26 @@
 
 import NextImage from 'next/image';
 import { useMemo, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { useInvestApp } from '@/lib/investapp-context';
 
-const mapStatus = (status: string) => {
+const getStatusKey = (status: string) => {
   const key = status.toLowerCase();
   if (key === 'completed' || key === 'confirmed' || key === 'success' || key === 'approved') {
-    return 'Completed';
+    return 'statusCompleted';
   }
-  if (key === 'failed' || key === 'rejected') return 'Failed';
-  if (key === 'pending') return 'Pending';
-  if (key === 'submitted') return 'Submitted';
-  return status;
+  if (key === 'failed' || key === 'rejected') return 'statusFailed';
+  if (key === 'pending') return 'statusPending';
+  if (key === 'submitted') return 'statusSubmitted';
+  return null;
 };
 
-const mapType = (type: string) => {
-  if (type === 'investment') return 'Investment';
-  if (type === 'repayment') return 'Repayment';
-  if (type === 'withdrawal') return 'Withdrawal';
-  if (type === 'transfer') return 'Transfer';
-  return type;
+const getTypeKey = (type: string) => {
+  if (type === 'investment') return 'typeInvestment';
+  if (type === 'repayment') return 'typeRepayment';
+  if (type === 'withdrawal') return 'typeWithdrawal';
+  if (type === 'transfer') return 'typeTransfer';
+  return null;
 };
 
 const splitValue = (value: string) => {
@@ -31,17 +32,42 @@ const splitValue = (value: string) => {
 
 export default function TransactionReceipt() {
   const { lastReceipt, clearReceipt } = useInvestApp();
+  const t = useTranslations('Transaction');
+  const commonT = useTranslations('Common');
+  const locale = useLocale();
   const [shareMessage, setShareMessage] = useState('');
 
   const formattedDate = useMemo(() => {
     if (!lastReceipt?.createdAt) return '';
     const date = new Date(lastReceipt.createdAt);
     if (Number.isNaN(date.getTime())) return lastReceipt.createdAt;
-    return date.toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-  }, [lastReceipt?.createdAt]);
+    return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  }, [lastReceipt?.createdAt, locale]);
 
   if (!lastReceipt) return null;
   const receiptCurrency = lastReceipt.currency === 'USDC' ? 'USD' : lastReceipt.currency;
+  const statusKey = getStatusKey(lastReceipt.status);
+  const typeKey = getTypeKey(lastReceipt.type);
+  const translatedStatus =
+    statusKey === 'statusCompleted'
+      ? t('statusCompleted')
+      : statusKey === 'statusFailed'
+        ? t('statusFailed')
+        : statusKey === 'statusPending'
+          ? t('statusPending')
+          : statusKey === 'statusSubmitted'
+            ? t('statusSubmitted')
+            : lastReceipt.status;
+  const translatedType =
+    typeKey === 'typeInvestment'
+      ? t('typeInvestment')
+      : typeKey === 'typeRepayment'
+        ? t('typeRepayment')
+        : typeKey === 'typeWithdrawal'
+          ? t('typeWithdrawal')
+          : typeKey === 'typeTransfer'
+            ? t('typeTransfer')
+            : lastReceipt.type;
 
   const loadReceiptLogo = async () =>
     await new Promise<HTMLImageElement | null>((resolve) => {
@@ -77,31 +103,31 @@ export default function TransactionReceipt() {
     let y = 210;
     ctx.fillStyle = '#111827';
     ctx.font = 'bold 42px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText('Payment Receipt', padding, y);
+    ctx.fillText(t('paymentReceipt'), padding, y);
     y += 44;
 
     ctx.fillStyle = '#6b7280';
     ctx.font = '24px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText(`Date: ${formattedDate}`, padding, y);
+    ctx.fillText(`${t('dateLabel')}: ${formattedDate}`, padding, y);
     y += 46;
 
     const sections = [
-      { label: 'UUID', values: [lastReceipt.uuid || 'Pending'] },
+      { label: t('uuid'), values: [lastReceipt.uuid || commonT('pending')] },
       {
-        label: 'Sender',
+        label: t('sender'),
         values: [lastReceipt.senderName, lastReceipt.senderContact],
       },
       {
-        label: 'Recipient',
+        label: t('recipient'),
         values: [lastReceipt.receiverName, lastReceipt.receiverContact],
       },
-      { label: 'Transaction type', values: [mapType(lastReceipt.type)] },
+      { label: t('transactionType'), values: [translatedType] },
       {
-        label: 'Amount',
+        label: t('amount'),
         values: [`${lastReceipt.amount} ${receiptCurrency}`],
       },
-      { label: 'Status', values: [mapStatus(lastReceipt.status)] },
-      { label: 'Transaction hash', values: [lastReceipt.txHash] },
+      { label: t('status'), values: [translatedStatus] },
+      { label: t('transactionHash'), values: [lastReceipt.txHash] },
     ];
 
     const drawSection = (label: string, values: string[]) => {
@@ -130,7 +156,7 @@ export default function TransactionReceipt() {
   const onDownload = async () => {
     const blob = await createReceiptBlob();
     if (!blob) {
-      setShareMessage('Could not generate the image');
+      setShareMessage(t('imageError'));
       setTimeout(() => setShareMessage(''), 2000);
       return;
     }
@@ -151,7 +177,7 @@ export default function TransactionReceipt() {
       });
 
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: 'InvestApp Receipt', files: [file] });
+        await navigator.share({ title: t('receiptTitle'), files: [file] });
         return;
       }
 
@@ -161,10 +187,10 @@ export default function TransactionReceipt() {
       anchor.download = `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`;
       anchor.click();
       URL.revokeObjectURL(url);
-      setShareMessage('Image downloaded');
+      setShareMessage(t('imageDownloaded'));
       setTimeout(() => setShareMessage(''), 2000);
     } catch {
-      setShareMessage('Could not share the receipt');
+      setShareMessage(t('shareError'));
       setTimeout(() => setShareMessage(''), 2000);
     }
   };
@@ -172,7 +198,7 @@ export default function TransactionReceipt() {
   const onPrint = async () => {
     const blob = await createReceiptBlob();
     if (!blob) {
-      setShareMessage('Could not prepare the print view');
+      setShareMessage(t('printError'));
       setTimeout(() => setShareMessage(''), 2000);
       return;
     }
@@ -181,7 +207,7 @@ export default function TransactionReceipt() {
     const printWindow = window.open('', '_blank', 'width=900,height=1200');
     if (!printWindow) {
       URL.revokeObjectURL(url);
-      setShareMessage('Enable pop-ups to print the receipt');
+      setShareMessage(t('printPopupError'));
       setTimeout(() => setShareMessage(''), 2000);
       return;
     }
@@ -189,14 +215,14 @@ export default function TransactionReceipt() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>InvestApp Receipt</title>
+          <title>${t('receiptTitle')}</title>
           <style>
             body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #ffffff; }
             img { max-width: 100%; height: auto; }
           </style>
         </head>
         <body>
-          <img src="${url}" alt="InvestApp Receipt" />
+          <img src="${url}" alt="${t('receiptTitle')}" />
           <script>
             window.onload = function () {
               window.print();
@@ -223,34 +249,34 @@ export default function TransactionReceipt() {
             height={80}
             className="h-20 w-20 rounded-2xl bg-white/95 p-2"
           />
-          <h2 className="mt-4 text-xl font-semibold">Payment Receipt</h2>
+          <h2 className="mt-4 text-xl font-semibold">{t('paymentReceipt')}</h2>
         </div>
 
         <div className="mt-5 space-y-4 text-sm">
           <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">UUID</p>
-            <p className="break-all">{lastReceipt.uuid || 'Pending'}</p>
+            <p className="text-xs uppercase text-white/60">{t('uuid')}</p>
+            <p className="break-all">{lastReceipt.uuid || commonT('pending')}</p>
           </div>
 
           <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">Sender</p>
+            <p className="text-xs uppercase text-white/60">{t('sender')}</p>
             <p>{lastReceipt.senderName}</p>
             <p className="text-xs text-white/60">{lastReceipt.senderContact}</p>
           </div>
 
           <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">Recipient</p>
+            <p className="text-xs uppercase text-white/60">{t('recipient')}</p>
             <p>{lastReceipt.receiverName}</p>
             <p className="text-xs text-white/60">{lastReceipt.receiverContact}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">Transaction type</p>
-              <p>{mapType(lastReceipt.type)}</p>
+              <p className="text-xs uppercase text-white/60">{t('transactionType')}</p>
+              <p>{translatedType}</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">Amount</p>
+              <p className="text-xs uppercase text-white/60">{t('amount')}</p>
               <p>
                 {lastReceipt.amount} {receiptCurrency}
               </p>
@@ -259,17 +285,17 @@ export default function TransactionReceipt() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">Status</p>
-              <p>{mapStatus(lastReceipt.status)}</p>
+              <p className="text-xs uppercase text-white/60">{t('status')}</p>
+              <p>{translatedStatus}</p>
             </div>
             <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">Date and time</p>
+              <p className="text-xs uppercase text-white/60">{t('dateTime')}</p>
               <p>{formattedDate}</p>
             </div>
           </div>
 
           <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">Transaction hash</p>
+            <p className="text-xs uppercase text-white/60">{t('transactionHash')}</p>
             <p className="break-all">{lastReceipt.txHash}</p>
           </div>
         </div>
@@ -279,25 +305,25 @@ export default function TransactionReceipt() {
             onClick={onDownload}
             className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
-            Download
+            {commonT('download')}
           </button>
           <button
             onClick={onPrint}
             className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
-            Print
+            {commonT('print')}
           </button>
           <button
             onClick={onShare}
             className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
-            Share
+            {commonT('share')}
           </button>
           <button
             onClick={clearReceipt}
             className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
           >
-            Close
+            {commonT('close')}
           </button>
         </div>
 

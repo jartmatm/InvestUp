@@ -1,0 +1,20 @@
+{
+  "Common": {
+    "back": "वापस",
+    "loading": "लोड हो रहा है",
+    "viewAll": "सभी देखें",
+    "profile": "प्रोफ़ाइल"
+  },
+  "Locale": {
+    "label": "भाषा",
+    "changeLanguage": "भाषा बदलें",
+    "currentLanguage": "वर्तमान भाषा"
+  },
+  "Roles": {
+    "investor": "निवेशक",
+    "entrepreneur": "उद्यमी"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp कार्यक्षेत्र"
+  }
+}

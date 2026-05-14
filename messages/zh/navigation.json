@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "首页",
+    "portfolio": "投资组合",
+    "send": "发送",
+    "feed": "动态",
+    "profile": "个人资料",
+    "topUp": "充值",
+    "withdraw": "提现",
+    "documents": "文件"
+  }
+}

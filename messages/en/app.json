@@ -1,0 +1,83 @@
+{
+  "AppLoading": {
+    "title": "Preparing InvestApp",
+    "description": "Loading your secure investment workspace..."
+  },
+  "Transaction": {
+    "processing": "Processing transaction...",
+    "sending": "Sending",
+    "receiptTitle": "InvestApp Receipt",
+    "paymentReceipt": "Payment Receipt",
+    "dateLabel": "Date",
+    "uuid": "UUID",
+    "sender": "Sender",
+    "recipient": "Recipient",
+    "transactionType": "Transaction type",
+    "amount": "Amount",
+    "status": "Status",
+    "dateTime": "Date and time",
+    "transactionHash": "Transaction hash",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "statusPending": "Pending",
+    "statusSubmitted": "Submitted",
+    "typeInvestment": "Investment",
+    "typeRepayment": "Repayment",
+    "typeWithdrawal": "Withdrawal",
+    "typeTransfer": "Transfer",
+    "imageError": "Could not generate the image",
+    "imageDownloaded": "Image downloaded",
+    "shareError": "Could not share the receipt",
+    "printError": "Could not prepare the print view",
+    "printPopupError": "Enable pop-ups to print the receipt"
+  },
+  "Components": {
+    "totalBalance": "Total balance",
+    "availableToSend": "Available to send",
+    "fundingProgress": "Funding progress",
+    "sector": "Sector",
+    "requested": "Requested",
+    "raised": "Raised",
+    "installments": "Installments",
+    "months": "months",
+    "interest": "Interest",
+    "targetUsd": "Target USD",
+    "interestEa": "Interest {value}% EA",
+    "publishedUntil": "Published until {date}",
+    "publicationDetailsEmpty": "Publication details will appear here.",
+    "noImage": "No image",
+    "previousPhoto": "Previous photo",
+    "nextPhoto": "Next photo",
+    "goToPhoto": "Go to photo {index}",
+    "secureProfileArea": "Secure profile area",
+    "premiumDashboardStyling": "Premium dashboard styling"
+  },
+  "Tables": {
+    "month": "Month",
+    "fixedPayment": "Fixed payment",
+    "interest": "Interest",
+    "principalPayment": "Principal payment",
+    "endingBalance": "Ending balance",
+    "monthNumber": "Month {number}",
+    "dueDate": "Due {date}",
+    "paid": "Paid",
+    "late": "Late",
+    "partial": "Partial",
+    "pending": "Pending",
+    "project": "Project",
+    "type": "Type",
+    "status": "Status",
+    "date": "Date",
+    "contact": "Contact",
+    "amount": "Amount",
+    "actions": "Actions"
+  },
+  "Format": {
+    "currency": "Currency",
+    "date": "Date",
+    "percent": "Percent"
+  },
+  "Auth": {
+    "openingSecureLogin": "Opening secure login..."
+  }
+}

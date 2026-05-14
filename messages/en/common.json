@@ -1,0 +1,25 @@
+{
+  "Common": {
+    "back": "Back",
+    "close": "Close",
+    "download": "Download",
+    "print": "Print",
+    "share": "Share",
+    "loading": "Loading",
+    "pending": "Pending",
+    "viewAll": "View all",
+    "profile": "Profile"
+  },
+  "Locale": {
+    "label": "Language",
+    "changeLanguage": "Change language",
+    "currentLanguage": "Current language"
+  },
+  "Roles": {
+    "investor": "Investor",
+    "entrepreneur": "Entrepreneur"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp workspace"
+  }
+}

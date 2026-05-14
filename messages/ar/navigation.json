@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "الرئيسية",
+    "portfolio": "المحفظة",
+    "send": "إرسال",
+    "feed": "الموجز",
+    "profile": "الملف الشخصي",
+    "topUp": "إضافة رصيد",
+    "withdraw": "سحب",
+    "documents": "المستندات"
+  }
+}

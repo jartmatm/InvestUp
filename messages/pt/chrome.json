@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Voltar",
-    "loading": "Carregando",
-    "viewAll": "Ver tudo",
-    "profile": "Perfil"
-  },
-  "Locale": {
-    "label": "Idioma",
-    "changeLanguage": "Alterar idioma",
-    "currentLanguage": "Idioma atual"
-  },
-  "Navigation": {
-    "home": "Início",
-    "portfolio": "Portfólio",
-    "send": "Enviar",
-    "feed": "Feed",
-    "profile": "Perfil",
-    "topUp": "Adicionar fundos",
-    "withdraw": "Sacar",
-    "documents": "Documentos"
-  },
-  "Roles": {
-    "investor": "Investidor",
-    "entrepreneur": "Empreendedor"
-  },
   "Topbar": {
     "searchPlaceholder": "Buscar negócios, empreendedores ou palavras-chave...",
     "notifications": "Notificações",
@@ -34,9 +9,6 @@
     "title": "Fazer upgrade para Premium",
     "description": "Desbloqueie oportunidades exclusivas e análises avançadas.",
     "cta": "Fazer upgrade"
-  },
-  "PageFrame": {
-    "eyebrow": "Área de trabalho InvestApp"
   },
   "UserMenu": {
     "account": "Conta",

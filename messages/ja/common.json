@@ -1,0 +1,20 @@
+{
+  "Common": {
+    "back": "戻る",
+    "loading": "読み込み中",
+    "viewAll": "すべて表示",
+    "profile": "プロフィール"
+  },
+  "Locale": {
+    "label": "言語",
+    "changeLanguage": "言語を変更",
+    "currentLanguage": "現在の言語"
+  },
+  "Roles": {
+    "investor": "投資家",
+    "entrepreneur": "起業家"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp ワークスペース"
+  }
+}

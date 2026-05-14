@@ -1,0 +1,20 @@
+{
+  "Common": {
+    "back": "返回",
+    "loading": "加载中",
+    "viewAll": "查看全部",
+    "profile": "个人资料"
+  },
+  "Locale": {
+    "label": "语言",
+    "changeLanguage": "切换语言",
+    "currentLanguage": "当前语言"
+  },
+  "Roles": {
+    "investor": "投资者",
+    "entrepreneur": "创业者"
+  },
+  "PageFrame": {
+    "eyebrow": "InvestApp 工作区"
+  }
+}

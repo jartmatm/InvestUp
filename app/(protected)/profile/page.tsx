@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
@@ -299,13 +300,14 @@ function ProfileCard({
   loading: boolean;
   profileRole: string;
 }) {
+  const t = useTranslations('ProfilePages');
   return (
     <section className="rounded-[24px] border border-[#E9ECF4] bg-[linear-gradient(135deg,#FFFFFF_0%,#F8F6FF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
       <div className="flex items-center justify-between gap-8">
         <div className="flex min-w-0 items-center gap-6">
           <button
             type="button"
-            aria-label="Edit profile photo"
+            aria-label={t('editProfilePhoto')}
             className="relative shrink-0 rounded-full transition hover:scale-[1.02]"
           >
             <span className="block h-[112px] w-[112px] overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]">
@@ -340,8 +342,8 @@ function ProfileCard({
               <IconCalendar />
             </span>
             <span>
-              <span className="block text-sm font-semibold text-[#718096]">Member since</span>
-              <span className="mt-1 block text-sm font-bold text-[#111827]">Jan 15, 2024</span>
+              <span className="block text-sm font-semibold text-[#718096]">{t('memberSince')}</span>
+              <span className="mt-1 block text-sm font-bold text-[#111827]">{t('memberSinceDate')}</span>
             </span>
           </div>
 
@@ -350,9 +352,9 @@ function ProfileCard({
               <IconVerifiedShield />
             </span>
             <span>
-              <span className="block text-sm font-semibold text-[#718096]">Account status</span>
+              <span className="block text-sm font-semibold text-[#718096]">{t('accountStatus')}</span>
               <span className="mt-1 inline-flex rounded-full bg-[#DDFBEA] px-3 py-1 text-xs font-bold text-[#14985F]">
-                Verified
+                {t('verified')}
               </span>
             </span>
           </div>
@@ -412,45 +414,47 @@ function DesktopSectionCard({ children, title }: { children: ReactNode; title: s
 }
 
 function AccountSection() {
+  const t = useTranslations('ProfilePages');
   return (
-    <DesktopSectionCard title="Account">
+    <DesktopSectionCard title={t('account')}>
       <DesktopOptionItem
         href="/profile/personal-data"
         icon={<IconPersonalData />}
-        label="Personal Data"
-        subtitle="Manage your personal information"
+        label={t('personalData')}
+        subtitle={t('personalDataSubtitle')}
       />
       <DesktopOptionItem
         href="/profile/social-media"
         icon={<IconSocialMedia />}
-        label="Social Media"
-        subtitle="Connect and manage your social accounts"
+        label={t('socialMedia')}
+        subtitle={t('socialMediaSubtitle')}
       />
       <DesktopOptionItem
         href="/profile/referral-code"
         icon={<IconReferralCode />}
-        label="Referral Code"
-        subtitle="Invite friends and earn rewards"
+        label={t('referralCode')}
+        subtitle={t('referralCodeSubtitle')}
       />
     </DesktopSectionCard>
   );
 }
 
 function TransactionsSection({ showFavorites }: { showFavorites: boolean }) {
+  const t = useTranslations('ProfilePages');
   return (
-    <DesktopSectionCard title="Transactions">
+    <DesktopSectionCard title={t('transactions')}>
       <DesktopOptionItem
         href="/profile/bank-account"
         icon={<IconBankAccount />}
-        label="Bank Account"
-        subtitle="Manage your bank and payout information"
+        label={t('bankAccount')}
+        subtitle={t('bankAccountSubtitle')}
       />
       {showFavorites ? (
         <DesktopOptionItem
           href="/profile/favorites"
           icon={<IconFavorites />}
-          label="Favorites"
-          subtitle="Your favorite projects and entrepreneurs"
+          label={t('favorites')}
+          subtitle={t('favoritesSubtitle')}
         />
       ) : null}
     </DesktopSectionCard>
@@ -458,55 +462,56 @@ function TransactionsSection({ showFavorites }: { showFavorites: boolean }) {
 }
 
 function PreferencesSection({ languageLabel, onLogout }: { languageLabel: string; onLogout: () => void }) {
+  const t = useTranslations('ProfilePages');
   const leftItems: DesktopProfileOption[] = [
     {
       href: '/profile/settings',
       icon: <IconSettings />,
-      label: 'Settings',
-      subtitle: 'Manage app settings and preferences',
+      label: t('settings'),
+      subtitle: t('settingsSubtitle'),
     },
     {
       href: '/profile/language',
       icon: <IconLanguage />,
-      label: 'Language',
+      label: t('language'),
       subtitle: languageLabel,
     },
     {
       href: '/profile/help-center',
       icon: <IconHelpCenter />,
-      label: 'Help Center',
-      subtitle: 'Get help and support',
+      label: t('helpCenter'),
+      subtitle: t('helpCenterSubtitle'),
     },
     {
       href: '/profile/faq',
       icon: <IconFaq />,
-      label: 'FAQ',
-      subtitle: 'Frequently asked questions',
+      label: t('faq'),
+      subtitle: t('faqSubtitle'),
     },
   ];
   const rightItems: DesktopProfileOption[] = [
     {
       href: '/profile/privacy-policy',
       icon: <IconPrivacyPolicy />,
-      label: 'Privacy Policy',
-      subtitle: 'Read our privacy policy',
+      label: t('privacyPolicy'),
+      subtitle: t('privacyPolicySubtitle'),
     },
     {
       href: '/profile/terms-conditions',
       icon: <IconTerms />,
-      label: 'Terms & Conditions',
-      subtitle: 'View terms and conditions',
+      label: t('termsConditions'),
+      subtitle: t('termsConditionsSubtitle'),
     },
     {
       href: '/profile/about',
       icon: <IconAboutApp />,
-      label: 'About App',
-      subtitle: 'Learn more about InvestApp',
+      label: t('aboutApp'),
+      subtitle: t('aboutAppSubtitle'),
     },
     {
       icon: <IconLogout />,
-      label: 'Log out',
-      subtitle: 'Sign out from your account',
+      label: t('logout'),
+      subtitle: t('logoutSubtitle'),
       danger: true,
       onClick: onLogout,
     },
@@ -514,7 +519,7 @@ function PreferencesSection({ languageLabel, onLogout }: { languageLabel: string
 
   return (
     <section className="rounded-[24px] border border-[#E9ECF4] bg-white p-5 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
-      <h2 className="px-1 text-lg font-bold tracking-[-0.04em] text-[#111827]">Preferences</h2>
+      <h2 className="px-1 text-lg font-bold tracking-[-0.04em] text-[#111827]">{t('preferences')}</h2>
       <div className="mt-4 grid grid-cols-2 gap-8">
         <div className="divide-y divide-[#EEF1F7]">
           {leftItems.map((item) => (
@@ -575,6 +580,8 @@ function DesktopProfileDashboard({
 }
 
 export default function ProfilePage() {
+  const t = useTranslations('ProfilePages');
+  const roleT = useTranslations('Roles');
   const router = useRouter();
   const { faseApp, logoutApp, rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName, email, loading } = useUserProfileSummary();
@@ -582,7 +589,7 @@ export default function ProfilePage() {
   const mobileSafeName = displayName || 'User';
   const desktopDisplayName = displayName || 'Maria Gonzalez';
   const desktopEmail = email || 'maria.gonzalez@email.com';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -610,7 +617,7 @@ export default function ProfilePage() {
 
           <button
             type="button"
-            aria-label="Edit profile photo"
+            aria-label={t('editProfilePhoto')}
             onClick={() => router.push('/profile/personal-data')}
             className="relative mx-auto block rounded-full transition hover:scale-[1.02]"
           >
@@ -634,86 +641,86 @@ export default function ProfilePage() {
           </button>
 
           <p className="mt-5 text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#8A93A6]">
-            INVESTAPP
+            {t('investApp')}
           </p>
           <h1 className="mt-1 text-[2.05rem] font-semibold tracking-[-0.06em] text-[#1D2538]">
-            Profile
+            {t('profile')}
           </h1>
           <p className="mt-1 text-[1rem] font-medium tracking-[-0.025em] text-[#7A8497]">
-            Account settings
+            {t('accountSettings')}
           </p>
         </section>
 
         <div className="space-y-6">
-          <Section title="Account">
+          <Section title={t('account')}>
             <SettingItem
               icon={<IconPersonalData />}
-              label="Personal Data"
+              label={t('personalData')}
               onClick={() => router.push('/profile/personal-data')}
             />
             <SettingItem
               icon={<IconSocialMedia />}
-              label="Social Media"
+              label={t('socialMedia')}
               onClick={() => router.push('/profile/social-media')}
             />
             <SettingItem
               icon={<IconReferralCode />}
-              label="Referral Code"
+              label={t('referralCode')}
               onClick={() => router.push('/profile/referral-code')}
             />
           </Section>
 
-          <Section title="Transactions">
+          <Section title={t('transactions')}>
             <SettingItem
               icon={<IconBankAccount />}
-              label="Bank Account"
+              label={t('bankAccount')}
               onClick={() => router.push('/profile/bank-account')}
             />
             {rolSeleccionado === 'inversor' ? (
               <SettingItem
                 icon={<IconFavorites />}
-                label="Favorites"
+                label={t('favorites')}
                 onClick={() => router.push('/profile/favorites')}
               />
             ) : null}
           </Section>
 
-          <Section title="Preferences">
+          <Section title={t('preferences')}>
             <SettingItem
               icon={<IconSettings />}
-              label="Settings"
+              label={t('settings')}
               onClick={() => router.push('/profile/settings')}
             />
             <SettingItem
               icon={<IconLanguage />}
-              label="Language"
+              label={t('language')}
               value={languageLabel}
               onClick={() => router.push('/profile/language')}
             />
             <SettingItem
               icon={<IconHelpCenter />}
-              label="Help Center"
+              label={t('helpCenter')}
               onClick={() => router.push('/profile/help-center')}
             />
-            <SettingItem icon={<IconFaq />} label="FAQ" onClick={() => router.push('/profile/faq')} />
+            <SettingItem icon={<IconFaq />} label={t('faq')} onClick={() => router.push('/profile/faq')} />
             <SettingItem
               icon={<IconPrivacyPolicy />}
-              label="Privacy Policy"
+              label={t('privacyPolicy')}
               onClick={() => router.push('/profile/privacy-policy')}
             />
             <SettingItem
               icon={<IconTerms />}
-              label="Terms & Conditions"
+              label={t('termsConditions')}
               onClick={() => router.push('/profile/terms-conditions')}
             />
             <SettingItem
               icon={<IconAboutApp />}
-              label="About App"
+              label={t('aboutApp')}
               onClick={() => router.push('/profile/about')}
             />
             <SettingItem
               icon={<IconLogout />}
-              label="Log out"
+              label={t('logout')}
               danger
               onClick={logoutApp}
             />

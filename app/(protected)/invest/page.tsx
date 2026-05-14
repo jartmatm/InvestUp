@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
@@ -553,12 +554,13 @@ function Topbar({
   displayName: string;
   profileRole: string;
 }) {
+  const t = useTranslations('Send');
   return (
     <DesktopTopbar
       avatarUrl={avatarUrl}
       displayName={displayName}
       roleLabel={profileRole}
-      searchPlaceholder="Search contacts, wallets or transfers..."
+      searchPlaceholder={t('searchPlaceholder')}
     />
   );
 }
@@ -572,6 +574,7 @@ function SendWalletCard({
   href: string;
   totalCount: number;
 }) {
+  const t = useTranslations('Send');
   return (
     <Link
       href={href}
@@ -582,13 +585,11 @@ function SendWalletCard({
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-8">
           <div className="max-w-[360px]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/78">Transfer</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/78">{t('transfer')}</p>
             <h2 className="mt-5 text-[2.15rem] font-bold leading-tight tracking-[-0.06em] text-white">
-              Send to a Wallet
+              {t('sendToWallet')}
             </h2>
-            <p className="mt-4 text-base leading-7 text-white/88">
-              Enter a wallet address manually or pick one of your recent contacts.
-            </p>
+            <p className="mt-4 text-base leading-7 text-white/88">{t('sendToWalletDescription')}</p>
           </div>
           <span className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-white text-[#20B5A9] shadow-[0_20px_34px_rgba(255,255,255,0.22)] transition group-hover:translate-x-1">
             <ArrowLaunchIcon />
@@ -617,6 +618,7 @@ function InvestCard({
   href: string;
   title: string;
 }) {
+  const t = useTranslations('Send');
   return (
     <Link
       href={href}
@@ -626,7 +628,7 @@ function InvestCard({
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-8">
           <div className="max-w-[390px]">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/78">Transfer</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/78">{t('transfer')}</p>
             <h2 className="mt-5 text-[2.15rem] font-bold leading-tight tracking-[-0.06em] text-white">
               {title}
             </h2>
@@ -660,12 +662,14 @@ function RecentContacts({
   loading: boolean;
   walletHref: string;
 }) {
+  const t = useTranslations('Send');
+  const commonT = useTranslations('Common');
   return (
     <section>
       <div className="mb-4 flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Recent contacts</h2>
+        <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">{t('recentContacts')}</h2>
         <Link href={walletHref} className="inline-flex items-center gap-1 text-sm font-bold text-[#6B39F4]">
-          View all
+          {commonT('viewAll')}
           <ChevronRightIcon />
         </Link>
       </div>
@@ -678,7 +682,7 @@ function RecentContacts({
           <span className="grid h-16 w-16 place-items-center rounded-full bg-[#F1EBFF] text-[#7C5CFF]">
             <AddContactIcon />
           </span>
-          <span className="mt-3 text-sm font-semibold text-[#2A3245]">New contact</span>
+          <span className="mt-3 text-sm font-semibold text-[#2A3245]">{t('newContact')}</span>
         </Link>
 
         {loading
@@ -713,6 +717,7 @@ function RecentContacts({
 }
 
 function SecurityCard() {
+  const t = useTranslations('Send');
   return (
     <section className="rounded-[24px] border border-[#EEE9FF] bg-[linear-gradient(135deg,#F7F3FF_0%,#F2F0FF_100%)] p-6 shadow-[0_18px_38px_rgba(107,57,244,0.08)]">
       <div className="flex items-center gap-5">
@@ -720,15 +725,13 @@ function SecurityCard() {
           <ShieldIcon />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-[#111827]">Your security matters</h2>
-          <p className="mt-1 text-sm font-medium text-[#66728A]">
-            All transfers are encrypted and protected with industry-leading security.
-          </p>
+          <h2 className="text-base font-bold text-[#111827]">{t('securityTitle')}</h2>
+          <p className="mt-1 text-sm font-medium text-[#66728A]">{t('securityDescription')}</p>
         </div>
         <Link
           href="/profile/privacy-policy"
           className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)] transition hover:-translate-y-0.5"
-          aria-label="Review security details"
+          aria-label={t('reviewSecurity')}
         >
           <ChevronRightIcon />
         </Link>
@@ -738,6 +741,8 @@ function SecurityCard() {
 }
 
 function TransactionsTable() {
+  const t = useTranslations('Send');
+  const tableT = useTranslations('Tables');
   const statusClassNames: Record<DesktopTransactionStatus, string> = {
     Success: 'bg-[#E9FFF4] text-[#12895B]',
     Pending: 'bg-[#FFF7DA] text-[#A46A00]',
@@ -748,11 +753,11 @@ function TransactionsTable() {
     <section className="rounded-[24px] border border-[#E9ECF4] bg-white p-6 shadow-[0_18px_38px_rgba(21,28,44,0.06)]">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">Activity</h2>
-          <p className="mt-1 text-sm font-medium text-[#66728A]">Latest wallet and investment movements</p>
+          <h2 className="text-xl font-bold tracking-[-0.04em] text-[#111827]">{t('activity')}</h2>
+          <p className="mt-1 text-sm font-medium text-[#66728A]">{t('activitySubtitle')}</p>
         </div>
         <Link href="/history" className="text-sm font-bold text-[#6B39F4]">
-          View ledger
+          {t('viewLedger')}
         </Link>
       </div>
 
@@ -760,11 +765,11 @@ function TransactionsTable() {
         <table className="w-full border-collapse text-left">
           <thead className="bg-[#F8F9FB] text-xs font-bold uppercase tracking-[0.12em] text-[#8D97AA]">
             <tr>
-              <th className="px-5 py-4">Contact</th>
-              <th className="px-5 py-4">Type</th>
-              <th className="px-5 py-4">Amount</th>
-              <th className="px-5 py-4">Status</th>
-              <th className="px-5 py-4">Date</th>
+              <th className="px-5 py-4">{tableT('contact')}</th>
+              <th className="px-5 py-4">{tableT('type')}</th>
+              <th className="px-5 py-4">{tableT('amount')}</th>
+              <th className="px-5 py-4">{tableT('status')}</th>
+              <th className="px-5 py-4">{tableT('date')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF1F7]">
@@ -845,6 +850,9 @@ function SendDashboard({
 }
 
 export default function InvestPage() {
+  const t = useTranslations('Send');
+  const roleT = useTranslations('Roles');
+  const commonT = useTranslations('Common');
   const router = useRouter();
   const { user } = usePrivy();
   const { faseApp, rolSeleccionado, walletTargets, loadingWallets, cargarWalletsObjetivo } =
@@ -903,19 +911,19 @@ export default function InvestPage() {
 
   const walletHref = '/invest/wallet?mode=transfer';
   const opportunityHref = rolSeleccionado === 'inversor' ? '/feed' : '/invest/repayments';
-  const secondaryTitle = rolSeleccionado === 'inversor' ? 'Invest' : 'Send repayment';
+  const secondaryTitle = rolSeleccionado === 'inversor' ? t('invest') : t('sendRepayment');
   const secondaryDescription =
     rolSeleccionado === 'inversor'
-      ? 'Open ventures and pick a business to invest with a prefilled transfer flow.'
-      : 'Review your investors and launch protected repayment flows with prefilled details.';
+      ? t('investDescription')
+      : t('repaymentDescription');
   const secondaryCta =
     rolSeleccionado === 'inversor'
-      ? 'Explore high-growth opportunities'
-      : 'Review investor repayment flows';
+      ? t('exploreOpportunities')
+      : t('repaymentCta');
   const desktopContacts = recentContacts.length > 0 ? recentContacts : MOCK_DESKTOP_CONTACTS;
   const desktopContactCount = recentContacts.length > 0 ? recentContacts.length : 12;
   const profileDisplayName = displayName || email || 'InvestApp user';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
 
   if (hasPendingInvestment) {
     return (
@@ -929,10 +937,10 @@ export default function InvestPage() {
                 <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
               </div>
               <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-                Send Money
+                {t('sendMoney')}
               </h1>
               <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
-                Preparing your investment transfer
+                {t('preparingTransfer')}
               </p>
             </div>
 
@@ -963,10 +971,10 @@ export default function InvestPage() {
                 <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
               </div>
               <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-                Send Money
+                {t('sendMoney')}
               </h1>
               <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
-                Choose how you want to move funds
+                {t('subtitle')}
               </p>
             </div>
 
@@ -989,13 +997,13 @@ export default function InvestPage() {
             <section className="pt-2">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-[1.02rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                  Recent contacts
+                  {t('recentContacts')}
                 </h2>
                 <Link
                   href={walletHref}
                   className="inline-flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] transition hover:text-[#5B48FF]"
                 >
-                  View all
+                  {commonT('viewAll')}
                   <ChevronRightIcon />
                 </Link>
               </div>
@@ -1010,7 +1018,7 @@ export default function InvestPage() {
                       <AddContactIcon />
                     </div>
                     <span className="text-xs font-medium tracking-[-0.02em] text-slate-500">
-                      New contact
+                      {t('newContact')}
                     </span>
                   </Link>
 
@@ -1038,7 +1046,7 @@ export default function InvestPage() {
                     ))
                   ) : (
                     <div className="flex min-h-[84px] items-center rounded-[24px] border border-dashed border-white/80 bg-white/70 px-4 text-sm text-slate-500 shadow-[0_14px_30px_rgba(15,23,42,0.04)]">
-                      Your recent contacts will appear here after your first transfer.
+                      {t('noRecentContactsMessage')}
                     </div>
                   )}
                 </div>
@@ -1052,10 +1060,10 @@ export default function InvestPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold tracking-[-0.02em] text-[#1C2340]">
-                    Your security matters
+                    {t('securityTitle')}
                   </p>
                   <p className="mt-1 text-sm leading-5 text-slate-500">
-                    All transfers are encrypted and protected with industry-leading security.
+                    {t('securityDescription')}
                   </p>
                 </div>
                 <span className="text-[#7C5CFF]">

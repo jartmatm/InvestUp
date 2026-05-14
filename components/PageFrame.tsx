@@ -4,6 +4,7 @@ import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell } from '@/components/DesktopAppShell';
 import Navbar from '@/components/Navbar';
 import PageBackButton from '@/components/PageBackButton';
+import { useTranslations } from 'next-intl';
 
 type PageFrameProps = {
   title: string;
@@ -26,10 +27,12 @@ export default function PageFrame({
   headerAlign = 'left',
   showBackButton = false,
   backHref = '/profile',
-  backLabel = 'Back',
+  backLabel,
   hideDesktopHeader = false,
   children,
 }: PageFrameProps) {
+  const t = useTranslations('PageFrame');
+
   return (
     <>
       <main className="min-h-screen bg-transparent pb-32 pt-6 text-gray-900 lg:hidden">
@@ -49,7 +52,7 @@ export default function PageFrame({
       <DesktopAppShell
         title={title}
         subtitle={subtitle}
-        eyebrow="InvestApp workspace"
+        eyebrow={t('eyebrow')}
         maxWidthClassName="max-w-none"
         hideHeader={hideDesktopHeader}
       >

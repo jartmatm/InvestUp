@@ -1,0 +1,30 @@
+{
+  "Home": {
+    "available": "Available",
+    "activeInvestments": "Active investments",
+    "viewAll": "View all",
+    "investor": "Investor",
+    "date": "Date",
+    "invested": "Invested",
+    "return": "Return",
+    "myBusiness": "My Business",
+    "noActiveProject": "No active project yet",
+    "recentTransactions": "Recent transactions",
+    "contact": "Contact",
+    "type": "Type",
+    "amount": "Amount",
+    "status": "Status",
+    "open": "Open",
+    "searchAria": "Search",
+    "notificationsAria": "Notifications",
+    "searchPlaceholder": "Search by venture, user, email, DID or tx hash",
+    "searching": "Searching InvestApp...",
+    "searchError": "We could not load search results right now.",
+    "profileMatch": "Profile match",
+    "closeProfilePrompt": "Close profile completion prompt",
+    "topUp": "Top up",
+    "sendMoney": "Send Money",
+    "withdraw": "Withdraw",
+    "history": "History"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "ホーム",
+    "portfolio": "ポートフォリオ",
+    "send": "送金",
+    "feed": "フィード",
+    "profile": "プロフィール",
+    "topUp": "入金",
+    "withdraw": "出金",
+    "documents": "書類"
+  }
+}

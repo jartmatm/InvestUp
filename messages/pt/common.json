@@ -1,0 +1,20 @@
+{
+  "Common": {
+    "back": "Voltar",
+    "loading": "Carregando",
+    "viewAll": "Ver tudo",
+    "profile": "Perfil"
+  },
+  "Locale": {
+    "label": "Idioma",
+    "changeLanguage": "Alterar idioma",
+    "currentLanguage": "Idioma atual"
+  },
+  "Roles": {
+    "investor": "Investidor",
+    "entrepreneur": "Empreendedor"
+  },
+  "PageFrame": {
+    "eyebrow": "Área de trabalho InvestApp"
+  }
+}

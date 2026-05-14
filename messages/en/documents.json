@@ -1,0 +1,28 @@
+{
+  "Contracts": {
+    "title": "Contract ledger",
+    "subtitle": "Backend contract and internal audit trail",
+    "overview": "Contract overview",
+    "internalBalances": "Internal balances",
+    "principal": "Principal",
+    "fixedInstallment": "Fixed installment",
+    "interest": "Interest",
+    "installments": "Installments",
+    "investor": "Investor",
+    "entrepreneur": "Entrepreneur",
+    "manifest": "Backend contract manifest",
+    "amortizationTable": "Amortization table",
+    "auditTrail": "Audit trail"
+  },
+  "Repayments": {
+    "title": "Repayments",
+    "subtitle": "Review each investor and launch the payment flow",
+    "tapDetails": "Tap to view repayment details",
+    "invested": "Invested",
+    "interest": "Interest",
+    "repaymentDate": "Repayment date",
+    "country": "Country",
+    "pending": "Pending",
+    "toRepay": "To repay"
+  }
+}

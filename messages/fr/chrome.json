@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Retour",
-    "loading": "Chargement",
-    "viewAll": "Tout voir",
-    "profile": "Profil"
-  },
-  "Locale": {
-    "label": "Langue",
-    "changeLanguage": "Changer de langue",
-    "currentLanguage": "Langue actuelle"
-  },
-  "Navigation": {
-    "home": "Accueil",
-    "portfolio": "Portefeuille",
-    "send": "Envoyer",
-    "feed": "Flux",
-    "profile": "Profil",
-    "topUp": "Recharger",
-    "withdraw": "Retirer",
-    "documents": "Documents"
-  },
-  "Roles": {
-    "investor": "Investisseur",
-    "entrepreneur": "Entrepreneur"
-  },
   "Topbar": {
     "searchPlaceholder": "Rechercher des projets, entrepreneurs ou mots-clés...",
     "notifications": "Notifications",
@@ -34,9 +9,6 @@
     "title": "Passer à Premium",
     "description": "Débloquez des opportunités exclusives et des analyses avancées.",
     "cta": "Mettre à niveau"
-  },
-  "PageFrame": {
-    "eyebrow": "Espace de travail InvestApp"
   },
   "UserMenu": {
     "account": "Compte",

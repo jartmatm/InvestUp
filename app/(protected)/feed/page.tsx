@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
@@ -161,11 +162,11 @@ function InvestAppWordmark() {
   );
 }
 
-function formatAmount(amount: number | null, currency: string | null) {
-  if (amount === null || amount === undefined) return 'No amount';
+function formatAmount(amount: number | null, currency: string | null, locale: string, fallback: string) {
+  if (amount === null || amount === undefined) return fallback;
   const code = currency ?? 'USD';
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: code,
       minimumFractionDigits: 0,
@@ -207,22 +208,22 @@ const getOwnerDisplayName = (
   return [owner?.name, owner?.surname].filter(Boolean).join(' ') || owner?.email || 'InvestApp';
 };
 
-const getFeaturedSubtitle = (project: FeedProject) => {
+const getFeaturedSubtitle = (project: FeedProject, fallback: string) => {
   const sector = toEnglishSector(project.sector);
   if (project.city && sector) return `${sector} in ${project.city}`;
   if (project.city) return project.city;
   if (sector) return sector;
-  return 'Published venture';
+  return fallback;
 };
 
 const SURFACE_CLASSNAME =
   'rounded-[30px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(248,248,255,0.94)_100%)] shadow-[0_24px_70px_rgba(20,28,55,0.08)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl';
 
-const SORT_OPTIONS: Array<{ id: SortKey; label: string }> = [
-  { id: 'latest', label: 'Latest first' },
-  { id: 'rate', label: 'Highest rate' },
-  { id: 'progress', label: 'Funding progress' },
-  { id: 'goal', label: 'Funding goal' },
+const SORT_OPTIONS: Array<{ id: SortKey }> = [
+  { id: 'latest' },
+  { id: 'rate' },
+  { id: 'progress' },
+  { id: 'goal' },
 ];
 
 const CATEGORY_PREFERRED_ORDER = ['Tech', 'Commerce', 'Food', 'Health'];
@@ -238,6 +239,8 @@ function FeaturedReelsCarousel({
   projects: FeedProject[];
   onOpenProject: (projectId: string) => void;
 }) {
+  const t = useTranslations('Feed');
+
   if (loading) {
     return (
       <div className="-mx-1 mb-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain scroll-smooth px-1 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -270,7 +273,7 @@ function FeaturedReelsCarousel({
             onClick={() => onOpenProject(project.id)}
             className="group relative h-[170px] w-[100px] shrink-0 snap-start overflow-hidden rounded-[22px] border border-white/75 bg-cover bg-center text-left shadow-[0_16px_32px_rgba(20,28,55,0.14)] ring-1 ring-[#E9ECF7]/90 transition-transform duration-200 ease-out hover:scale-[1.03] active:scale-[1.03] focus-visible:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8A63FF]/55"
             style={{ backgroundImage: cardBackground }}
-            aria-label={`Open featured venture ${project.title}`}
+            aria-label={t('openFeaturedVenture', { title: project.title })}
           >
             <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.24),transparent_42%)] opacity-90" />
 
@@ -289,11 +292,11 @@ function FeaturedReelsCarousel({
                 {project.title}
               </span>
               <span className="mt-1 line-clamp-1 block text-[0.62rem] font-medium text-white/86 drop-shadow-[0_2px_8px_rgba(0,0,0,0.30)]">
-                {getFeaturedSubtitle(project)}
+                {getFeaturedSubtitle(project, t('publishedVenture'))}
               </span>
               <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#8A63FF_0%,#6B39F4_100%)] px-2.5 py-1 text-[0.58rem] font-bold text-white shadow-[0_10px_18px_rgba(107,57,244,0.26)] ring-1 ring-white/20">
                 <IconCrown />
-                Destacado
+                {t('featuredBadge')}
               </span>
             </span>
           </button>
@@ -315,11 +318,11 @@ const DESKTOP_CATEGORY_OPTIONS = [
   'Entertainment',
 ];
 
-const getLocationLabel = (project: FeedProject) =>
-  [project.city, project.country].filter(Boolean).join(', ') || 'Location pending';
+const getLocationLabel = (project: FeedProject, fallback: string) =>
+  [project.city, project.country].filter(Boolean).join(', ') || fallback;
 
-const getRateLabel = (project: FeedProject) =>
-  project.interest_rate ? `${project.interest_rate}% EA` : 'Rate pending';
+const getRateLabel = (project: FeedProject, fallback: string) =>
+  project.interest_rate ? `${project.interest_rate}% EA` : fallback;
 
 const getInitials = (value: string) => {
   const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -417,6 +420,8 @@ function DesktopReelsSection({
   projects: FeedProject[];
   onOpenProject: (projectId: string) => void;
 }) {
+  const t = useTranslations('Feed');
+
   if (projects.length === 0) return null;
 
   return (
@@ -424,16 +429,16 @@ function DesktopReelsSection({
       <div className="flex items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Featured projects</h2>
+            <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">{t('featuredProjects')}</h2>
             <span className="inline-flex items-center gap-1 rounded-full bg-[#EEE7FF] px-2.5 py-1 text-[0.7rem] font-bold text-[#6B39F4]">
               <IconCrown />
-              Premium
+              {t('premium')}
             </span>
           </div>
-          <p className="mt-0.5 text-sm font-medium text-[#65718A]">Highlighted founder stories</p>
+          <p className="mt-0.5 text-sm font-medium text-[#65718A]">{t('highlightedFounderStories')}</p>
         </div>
         <button type="button" className="text-sm font-bold text-[#6B39F4] transition hover:text-[#5427DA]">
-          View all
+          {t('viewAll')}
         </button>
       </div>
 
@@ -466,7 +471,7 @@ function DesktopReelsSection({
                 </span>
                 <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-[#7C5CFF] px-2.5 py-1 text-[0.68rem] font-bold text-white shadow-[0_10px_20px_rgba(107,57,244,0.28)]">
                   <IconCrown />
-                  Premium
+                  {t('premium')}
                 </span>
               </span>
             </button>
@@ -486,6 +491,7 @@ function DesktopCategories({
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
 }) {
+  const t = useTranslations('Feed');
   const options = Array.from(new Set([...DESKTOP_CATEGORY_OPTIONS, ...categories]));
 
   return (
@@ -504,7 +510,7 @@ function DesktopCategories({
             }`}
           >
             <DesktopCategoryIcon active={active} category={category} />
-            {category}
+            {category === 'All' ? t('all') : category}
           </button>
         );
       })}
@@ -512,7 +518,7 @@ function DesktopCategories({
         type="button"
         className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-4 text-[0.78rem] font-bold text-[#3E485E] shadow-[0_12px_28px_rgba(21,28,44,0.04)]"
       >
-        More categories
+        {t('moreCategories')}
         <IconChevronDown />
       </button>
     </div>
@@ -530,9 +536,10 @@ function DesktopProjectCard({
   onToggleWishlist: (projectId: string) => void;
   project: FeedProject;
 }) {
+  const t = useTranslations('Feed');
   const coverImage = getProjectCoverImage(project);
-  const sector = toEnglishSector(project.sector) || 'Uncategorized';
-  const location = getLocationLabel(project);
+  const sector = toEnglishSector(project.sector) || t('uncategorized');
+  const location = getLocationLabel(project, t('locationPending'));
   const cardBackground = coverImage
     ? toCssImageUrl(coverImage)
     : 'linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)';
@@ -560,7 +567,7 @@ function DesktopProjectCard({
           className={`absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/40 bg-black/28 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition ${
             isWishlisted ? 'text-[#FFD1DB]' : ''
           }`}
-          aria-label={isWishlisted ? 'Remove from favorites' : 'Add to favorites'}
+          aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
         >
           <IconHeart filled={isWishlisted} />
         </button>
@@ -574,9 +581,9 @@ function DesktopProjectCard({
         </p>
         <div className="mt-5 flex items-center justify-between gap-3">
           <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-3 py-1.5 text-xs font-bold text-[#12895B]">
-            {getRateLabel(project)}
+            {getRateLabel(project, t('ratePending'))}
           </span>
-          <span className="text-xs font-semibold text-[#8F98AA]">Interest rate</span>
+          <span className="text-xs font-semibold text-[#8F98AA]">{t('interestRate')}</span>
         </div>
       </div>
     </article>
@@ -634,6 +641,7 @@ function DesktopMarketplaceLayout({
   onToggleSort: () => void;
   onToggleWishlist: (projectId: string) => void;
 }) {
+  const t = useTranslations('Feed');
   const featuredProjects = projects.slice(0, 8);
 
   return (
@@ -671,8 +679,8 @@ function DesktopMarketplaceLayout({
                   <IconSpark />
                 </span>
                 <div>
-                  <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">Suggested for you</h2>
-                  <p className="mt-0.5 text-sm font-medium text-[#65718A]">Opportunities selected for you</p>
+                  <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">{t('suggestedForYou')}</h2>
+                  <p className="mt-0.5 text-sm font-medium text-[#65718A]">{t('opportunitiesSelected')}</p>
                 </div>
               </div>
 
@@ -683,7 +691,7 @@ function DesktopMarketplaceLayout({
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconSort />
-                  Sort by
+                  {t('sortBy')}
                 </button>
                 <button
                   type="button"
@@ -691,7 +699,7 @@ function DesktopMarketplaceLayout({
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E2E6F0] bg-white px-3.5 text-xs font-bold text-[#273247] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#FBFBFE]"
                 >
                   <IconFilter />
-                  Filter
+                  {t('filter')}
                   {favoritesOnly ? <span className="h-2 w-2 rounded-full bg-[#6B39F4]" /> : null}
                 </button>
 
@@ -708,7 +716,7 @@ function DesktopMarketplaceLayout({
                             : 'text-[#49536A] hover:bg-[#F7F8FB]'
                         }`}
                       >
-                        {option.label}
+                        {t(`sortOptions.${option.id}`)}
                         {option.id === sortBy ? <IconSpark /> : null}
                       </button>
                     ))}
@@ -730,7 +738,7 @@ function DesktopMarketplaceLayout({
 
             {!loading && status ? (
               <div className="mt-5 rounded-[24px] border border-[#E7EAF3] bg-white p-10 text-center shadow-[0_18px_38px_rgba(21,28,44,0.05)]">
-                <p className="text-lg font-bold text-[#111827]">We could not load the marketplace.</p>
+                <p className="text-lg font-bold text-[#111827]">{t('loadErrorTitle')}</p>
                 <p className="mt-2 text-sm text-[#65718A]">{status}</p>
               </div>
             ) : null}
@@ -751,8 +759,8 @@ function DesktopMarketplaceLayout({
 
             {!loading && !status && filteredProjects.length === 0 ? (
               <div className="mt-5 rounded-[24px] border border-[#E7EAF3] bg-white p-10 text-center shadow-[0_18px_38px_rgba(21,28,44,0.05)]">
-                <p className="text-lg font-bold text-[#111827]">No ventures match your search</p>
-                <p className="mt-2 text-sm text-[#65718A]">Try another keyword or clear your filters.</p>
+                <p className="text-lg font-bold text-[#111827]">{t('noMatchesTitle')}</p>
+                <p className="mt-2 text-sm text-[#65718A]">{t('noMatchesDescription')}</p>
               </div>
             ) : null}
           </section>
@@ -763,6 +771,9 @@ function DesktopMarketplaceLayout({
 }
 
 export default function FeedPage() {
+  const t = useTranslations('Feed');
+  const roleT = useTranslations('Roles');
+  const locale = useLocale();
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
@@ -799,7 +810,7 @@ export default function FeedPage() {
       const { data, error } = await fetchProjects({ limit: 48 });
 
       if (error) {
-        setStatus(`Could not load the feed: ${error}`);
+        setStatus(error);
         setLoading(false);
         return;
       }
@@ -980,7 +991,7 @@ export default function FeedPage() {
   };
   const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
   const profileDisplayName = displayName || email || 'InvestApp user';
-  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? 'Entrepreneur' : 'Investor';
+  const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
   const openProjectDetail = (projectId: string) => router.push(`/feed/${projectId}`);
   const openPublish = () => {
     if (!publishDisabled) router.push('/publish');
@@ -995,7 +1006,7 @@ export default function FeedPage() {
       {showSortSelector ? (
         <button
           type="button"
-          aria-label="Close sort selector"
+          aria-label={t('closeSort')}
           className="fixed inset-0 z-30 cursor-default"
           onClick={() => setShowSortSelector(false)}
         />
@@ -1023,7 +1034,7 @@ export default function FeedPage() {
                   ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] text-[#A9AEC0] opacity-75'
                   : 'border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] hover:scale-[1.03]'
               }`}
-              aria-label="Publish new project"
+              aria-label={t('publishAria')}
             >
               <IconPlus />
             </button>
@@ -1036,9 +1047,9 @@ export default function FeedPage() {
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search ventures, entrepreneurs or keywords..."
+              placeholder={t('searchPlaceholder')}
               className="h-4 w-full border-none bg-transparent text-[0.72rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
-              aria-label="Search ventures"
+              aria-label={t('searchAria')}
             />
           </div>
 
@@ -1057,7 +1068,7 @@ export default function FeedPage() {
                       : 'border border-[#EEF1F8] bg-white text-[#596277] shadow-[0_8px_18px_rgba(27,36,53,0.04)]'
                   }`}
                 >
-                  {category}
+                  {category === 'All' ? t('all') : category}
                 </button>
               );
             })}
@@ -1070,9 +1081,9 @@ export default function FeedPage() {
               </span>
               <div>
                 <p className="text-[0.94rem] font-semibold tracking-[-0.03em] text-[#101828]">
-                  Suggested for you
+                  {t('suggestedForYou')}
                 </p>
-                <p className="mt-0.5 text-[0.72rem] text-[#8A92A8]">Handpicked opportunities</p>
+                <p className="mt-0.5 text-[0.72rem] text-[#8A92A8]">{t('handpicked')}</p>
               </div>
             </div>
 
@@ -1083,7 +1094,7 @@ export default function FeedPage() {
                 className="flex h-9 items-center gap-1.5 rounded-full border border-[#E9E4FF] bg-white px-3 text-[0.68rem] font-semibold text-[#6736F3] shadow-[0_10px_20px_rgba(107,57,244,0.08)] transition hover:scale-[1.01]"
               >
                 <IconFilter />
-                Filter
+                {t('filter')}
               </button>
 
               <button
@@ -1095,7 +1106,7 @@ export default function FeedPage() {
                 className="flex h-9 items-center gap-1.5 rounded-full border border-[#E8ECF8] bg-white px-3 text-[0.68rem] font-semibold text-[#445067] shadow-[0_10px_20px_rgba(22,32,51,0.06)] transition hover:scale-[1.01]"
               >
                 <IconSort />
-                Sort
+                {t('sort')}
               </button>
 
               {showSortSelector ? (
@@ -1117,7 +1128,7 @@ export default function FeedPage() {
                             : 'text-[#3E475B] hover:bg-[#F7F7FE]'
                         }`}
                       >
-                        <span>{option.label}</span>
+                        <span>{t(`sortOptions.${option.id}`)}</span>
                         {active ? <IconSpark /> : <IconChevronDown />}
                       </button>
                     );
@@ -1153,7 +1164,7 @@ export default function FeedPage() {
 
             {!loading && status ? (
               <div className="rounded-[22px] border border-[#EEF1F7] bg-white p-4 shadow-[0_18px_36px_rgba(18,27,48,0.05)]">
-                <p className="text-sm font-semibold text-[#152033]">We couldn&apos;t load the marketplace.</p>
+                <p className="text-sm font-semibold text-[#152033]">{t('loadErrorShort')}</p>
                 <p className="mt-1 text-sm leading-6 text-[#70798D]">{status}</p>
               </div>
             ) : null}
@@ -1164,11 +1175,9 @@ export default function FeedPage() {
                   <IconSearch />
                 </div>
                 <p className="mt-4 text-[1rem] font-semibold tracking-[-0.03em] text-[#152033]">
-                  No ventures match your search
+                  {t('noMatchesTitle')}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[#70798D]">
-                  Try another keyword, clear the filters, or switch category to explore more opportunities.
-                </p>
+                <p className="mt-2 text-sm leading-6 text-[#70798D]">{t('noMatchesDescriptionLong')}</p>
               </div>
             ) : null}
 
@@ -1177,17 +1186,19 @@ export default function FeedPage() {
                 {filteredProjects.map((project) => {
                   const isFlipped = flippedId === project.id;
                   const isWishlisted = wishlist.includes(project.id);
-                  const amountLabel = formatAmount(project.amount_requested, project.currency);
-                  const raisedLabel = formatAmount(project.amount_received, project.currency);
+                  const amountLabel = formatAmount(project.amount_requested, project.currency, locale, t('noAmount'));
+                  const raisedLabel = formatAmount(project.amount_received, project.currency, locale, t('noAmount'));
                   const minimumInvestmentLabel = formatAmount(
                     project.minimum_investment,
-                    project.currency
+                    project.currency,
+                    locale,
+                    t('noAmount')
                   );
-                  const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : 'Rate pending';
+                  const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending');
                   const isOwnProject = Boolean(
                     user?.id && project.owner_user_id && project.owner_user_id === user.id
                   );
-                  const backActionLabel = isOwnProject ? 'Edit' : 'Invest';
+                  const backActionLabel = isOwnProject ? t('edit') : t('invest');
 
                   const handleBackAction = (event: MouseEvent<HTMLButtonElement>) => {
                     event.stopPropagation();
@@ -1238,7 +1249,7 @@ export default function FeedPage() {
                                   ? 'text-[#FFD1DB] shadow-[0_12px_24px_rgba(17,24,39,0.18)]'
                                   : 'text-white shadow-[0_12px_24px_rgba(17,24,39,0.14)]'
                               }`}
-                              aria-label={isWishlisted ? 'Remove from favorites' : 'Add to favorites'}
+                              aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
                               aria-pressed={isWishlisted}
                             >
                               <IconHeart filled={isWishlisted} />
@@ -1257,7 +1268,7 @@ export default function FeedPage() {
                                 {rateLabel}
                               </div>
                               <span className="text-[0.62rem] font-medium text-[#B0B7C7]">
-                                Interest rate
+                                {t('interestRate')}
                               </span>
                             </div>
                           </div>
@@ -1268,7 +1279,7 @@ export default function FeedPage() {
                           <div className="relative flex h-full flex-col items-center justify-center gap-2.5 text-center">
                             <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
                               <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
-                                Goal
+                                {t('goal')}
                               </p>
                               <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
                                 {amountLabel}
@@ -1277,7 +1288,7 @@ export default function FeedPage() {
 
                             <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
                               <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
-                                Raised
+                                {t('raised')}
                               </p>
                               <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
                                 {raisedLabel}
@@ -1286,7 +1297,7 @@ export default function FeedPage() {
 
                             <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
                               <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
-                                Minimum investment
+                                {t('minimumInvestment')}
                               </p>
                               <p className="mt-1.5 text-[0.88rem] font-semibold tracking-[-0.03em] text-white">
                                 {minimumInvestmentLabel}
@@ -1316,7 +1327,7 @@ export default function FeedPage() {
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-[#0F172A]/28 px-4 pb-[106px] pt-10 backdrop-blur-sm">
           <button
             type="button"
-            aria-label="Close filters"
+            aria-label={t('closeFilters')}
             className="absolute inset-0"
             onClick={() => setShowFilterSheet(false)}
           />
@@ -1326,22 +1337,22 @@ export default function FeedPage() {
 
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[#111827]">Refine results</p>
-                <p className="mt-1 text-[0.82rem] text-[#7A8296]">Apply quick filters for your next venture</p>
+                <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[#111827]">{t('refineResults')}</p>
+                <p className="mt-1 text-[0.82rem] text-[#7A8296]">{t('filterDescription')}</p>
               </div>
               <button
                 type="button"
                 onClick={clearFilters}
                 className="text-[0.76rem] font-semibold text-[#6B39F4]"
               >
-                Clear all
+                {t('clearAll')}
               </button>
             </div>
 
             <div className="mt-5 space-y-5">
               <section>
                 <p className="text-[0.76rem] font-semibold uppercase tracking-[0.18em] text-[#8A92A8]">
-                  Visibility
+                  {t('visibility')}
                 </p>
                 <button
                   type="button"
@@ -1353,8 +1364,8 @@ export default function FeedPage() {
                   }`}
                 >
                   <div>
-                    <p className="text-[0.9rem] font-semibold tracking-[-0.025em]">Favorites only</p>
-                    <p className="mt-1 text-[0.78rem] text-[#7A8296]">Show the ventures you already saved</p>
+                    <p className="text-[0.9rem] font-semibold tracking-[-0.025em]">{t('favoritesOnly')}</p>
+                    <p className="mt-1 text-[0.78rem] text-[#7A8296]">{t('favoritesOnlyDescription')}</p>
                   </div>
                   <span
                     className={`flex h-7 w-12 items-center rounded-full p-1 transition ${
@@ -1372,7 +1383,7 @@ export default function FeedPage() {
 
               <section>
                 <p className="text-[0.76rem] font-semibold uppercase tracking-[0.18em] text-[#8A92A8]">
-                  Category
+                  {t('category')}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {categories.map((category) => {
@@ -1389,7 +1400,7 @@ export default function FeedPage() {
                             : 'border border-[#E8ECF8] bg-white text-[#4E576E]'
                         }`}
                       >
-                        {category}
+                        {category === 'All' ? t('all') : category}
                       </button>
                     );
                   })}
@@ -1403,14 +1414,14 @@ export default function FeedPage() {
                 onClick={() => setShowFilterSheet(false)}
                 className="flex-1 rounded-full border border-[#E5E9F6] bg-white px-4 py-3 text-[0.82rem] font-semibold text-[#4B5565]"
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="button"
                 onClick={applyFilters}
                 className="flex-1 rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 py-3 text-[0.82rem] font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.28)]"
               >
-                Apply filters
+                {t('applyFilters')}
               </button>
             </div>
           </div>

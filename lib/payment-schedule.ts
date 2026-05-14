@@ -173,9 +173,9 @@ export const expandPaymentScheduleRows = (
   });
 };
 
-export const formatPaymentScheduleMoney = (value: number, currency = 'USD') => {
+export const formatPaymentScheduleMoney = (value: number, currency = 'USD', locale = 'en-US') => {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
@@ -185,11 +185,11 @@ export const formatPaymentScheduleMoney = (value: number, currency = 'USD') => {
   }
 };
 
-export const formatPaymentScheduleDate = (value: string | null) => {
-  if (!value) return 'Pending';
+export const formatPaymentScheduleDate = (value: string | null, locale = 'en-GB', fallback = 'Pending') => {
+  if (!value) return fallback;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-GB', {
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',
@@ -201,21 +201,25 @@ export const getPaymentScheduleStatusMeta = (status: string | null) => {
     case 'paid':
       return {
         label: 'Paid',
+        labelKey: 'paid',
         className: 'border-[#40C4AA]/30 bg-[#EFFFF8] text-[#1A8E78]',
       };
     case 'late':
       return {
         label: 'Late',
+        labelKey: 'late',
         className: 'border-[#DF1C41]/20 bg-[#FFF1F3] text-[#B01835]',
       };
     case 'partial':
       return {
         label: 'Partial',
+        labelKey: 'partial',
         className: 'border-[#FFBE4C]/30 bg-[#FFF8E9] text-[#B97800]',
       };
     default:
       return {
         label: 'Pending',
+        labelKey: 'pending',
         className: 'border-slate-200 bg-slate-50 text-slate-600',
       };
   }

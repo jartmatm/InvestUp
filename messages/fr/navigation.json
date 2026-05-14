@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "Accueil",
+    "portfolio": "Portefeuille",
+    "send": "Envoyer",
+    "feed": "Flux",
+    "profile": "Profil",
+    "topUp": "Recharger",
+    "withdraw": "Retirer",
+    "documents": "Documents"
+  }
+}

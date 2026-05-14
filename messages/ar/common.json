@@ -1,0 +1,20 @@
+{
+  "Common": {
+    "back": "رجوع",
+    "loading": "جار التحميل",
+    "viewAll": "عرض الكل",
+    "profile": "الملف الشخصي"
+  },
+  "Locale": {
+    "label": "اللغة",
+    "changeLanguage": "تغيير اللغة",
+    "currentLanguage": "اللغة الحالية"
+  },
+  "Roles": {
+    "investor": "مستثمر",
+    "entrepreneur": "رائد أعمال"
+  },
+  "PageFrame": {
+    "eyebrow": "مساحة عمل InvestApp"
+  }
+}

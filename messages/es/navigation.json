@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "Inicio",
+    "portfolio": "Portafolio",
+    "send": "Enviar",
+    "feed": "Feed",
+    "profile": "Perfil",
+    "topUp": "Recargar",
+    "withdraw": "Retirar",
+    "documents": "Documentos"
+  }
+}

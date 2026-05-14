@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "वापस",
-    "loading": "लोड हो रहा है",
-    "viewAll": "सभी देखें",
-    "profile": "प्रोफ़ाइल"
-  },
-  "Locale": {
-    "label": "भाषा",
-    "changeLanguage": "भाषा बदलें",
-    "currentLanguage": "वर्तमान भाषा"
-  },
-  "Navigation": {
-    "home": "होम",
-    "portfolio": "पोर्टफोलियो",
-    "send": "भेजें",
-    "feed": "फ़ीड",
-    "profile": "प्रोफ़ाइल",
-    "topUp": "टॉप अप",
-    "withdraw": "निकासी",
-    "documents": "दस्तावेज़"
-  },
-  "Roles": {
-    "investor": "निवेशक",
-    "entrepreneur": "उद्यमी"
-  },
   "Topbar": {
     "searchPlaceholder": "वेंचर्स, उद्यमियों या कीवर्ड खोजें...",
     "notifications": "सूचनाएँ",
@@ -34,9 +9,6 @@
     "title": "प्रीमियम में अपग्रेड करें",
     "description": "विशेष अवसर और उन्नत एनालिटिक्स अनलॉक करें।",
     "cta": "अभी अपग्रेड करें"
-  },
-  "PageFrame": {
-    "eyebrow": "InvestApp कार्यक्षेत्र"
   },
   "UserMenu": {
     "account": "खाता",

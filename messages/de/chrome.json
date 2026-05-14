@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Zurück",
-    "loading": "Wird geladen",
-    "viewAll": "Alle anzeigen",
-    "profile": "Profil"
-  },
-  "Locale": {
-    "label": "Sprache",
-    "changeLanguage": "Sprache ändern",
-    "currentLanguage": "Aktuelle Sprache"
-  },
-  "Navigation": {
-    "home": "Home",
-    "portfolio": "Portfolio",
-    "send": "Senden",
-    "feed": "Feed",
-    "profile": "Profil",
-    "topUp": "Aufladen",
-    "withdraw": "Auszahlen",
-    "documents": "Dokumente"
-  },
-  "Roles": {
-    "investor": "Investor",
-    "entrepreneur": "Unternehmer"
-  },
   "Topbar": {
     "searchPlaceholder": "Ventures, Unternehmer oder Schlüsselwörter suchen...",
     "notifications": "Benachrichtigungen",
@@ -34,9 +9,6 @@
     "title": "Auf Premium upgraden",
     "description": "Schalten Sie exklusive Chancen und erweiterte Analysen frei.",
     "cta": "Jetzt upgraden"
-  },
-  "PageFrame": {
-    "eyebrow": "InvestApp Arbeitsbereich"
   },
   "UserMenu": {
     "account": "Konto",

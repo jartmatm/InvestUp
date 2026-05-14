@@ -3,9 +3,11 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useModalStatus, usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import PrivyLoginBackground from '@/components/PrivyLoginBackground';
 
 export default function LoginClient() {
+  const t = useTranslations('Auth');
   const router = useRouter();
   const { login, ready, authenticated } = usePrivy();
   const { isOpen } = useModalStatus();
@@ -59,7 +61,7 @@ export default function LoginClient() {
       <div className="relative mx-auto w-full max-w-sm rounded-[28px] border border-white/12 bg-white/[0.06] p-8 shadow-[0_18px_44px_rgba(2,6,23,0.36)] backdrop-blur-xl">
         <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/18 border-t-[#6C4DFF]" />
-          <p className="mt-6 text-sm font-medium text-slate-100/88">Opening secure login...</p>
+          <p className="mt-6 text-sm font-medium text-slate-100/88">{t('openingSecureLogin')}</p>
         </div>
       </div>
     </div>

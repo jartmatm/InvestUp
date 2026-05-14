@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "返回",
-    "loading": "加载中",
-    "viewAll": "查看全部",
-    "profile": "个人资料"
-  },
-  "Locale": {
-    "label": "语言",
-    "changeLanguage": "切换语言",
-    "currentLanguage": "当前语言"
-  },
-  "Navigation": {
-    "home": "首页",
-    "portfolio": "投资组合",
-    "send": "发送",
-    "feed": "动态",
-    "profile": "个人资料",
-    "topUp": "充值",
-    "withdraw": "提现",
-    "documents": "文件"
-  },
-  "Roles": {
-    "investor": "投资者",
-    "entrepreneur": "创业者"
-  },
   "Topbar": {
     "searchPlaceholder": "搜索项目、创业者或关键词...",
     "notifications": "通知",
@@ -34,9 +9,6 @@
     "title": "升级到 Premium",
     "description": "解锁专属机会和高级分析。",
     "cta": "立即升级"
-  },
-  "PageFrame": {
-    "eyebrow": "InvestApp 工作区"
   },
   "UserMenu": {
     "account": "账户",

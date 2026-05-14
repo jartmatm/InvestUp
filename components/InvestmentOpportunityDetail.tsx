@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 
 export type OpportunityMetric = {
@@ -144,6 +145,7 @@ export default function InvestmentOpportunityDetail({
   secondaryDisabled,
   bottomOffsetClassName = 'bottom-0',
 }: InvestmentOpportunityDetailProps) {
+  const t = useTranslations('Components');
   const normalizedImages = (images ?? []).filter(Boolean);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const activeSectionIndexSafe =
@@ -271,7 +273,7 @@ export default function InvestmentOpportunityDetail({
               </div>
             </article>
           ) : (
-            <p className="text-sm leading-6 text-[#59657F]">Publication details will appear here.</p>
+            <p className="text-sm leading-6 text-[#59657F]">{t('publicationDetailsEmpty')}</p>
           )}
         </section>
       </div>

@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Atrás",
-    "loading": "Cargando",
-    "viewAll": "Ver todo",
-    "profile": "Perfil"
-  },
-  "Locale": {
-    "label": "Idioma",
-    "changeLanguage": "Cambiar idioma",
-    "currentLanguage": "Idioma actual"
-  },
-  "Navigation": {
-    "home": "Inicio",
-    "portfolio": "Portafolio",
-    "send": "Enviar",
-    "feed": "Feed",
-    "profile": "Perfil",
-    "topUp": "Recargar",
-    "withdraw": "Retirar",
-    "documents": "Documentos"
-  },
-  "Roles": {
-    "investor": "Inversionista",
-    "entrepreneur": "Emprendedor"
-  },
   "Topbar": {
     "searchPlaceholder": "Buscar proyectos, emprendedores o palabras clave...",
     "notifications": "Notificaciones",
@@ -34,9 +9,6 @@
     "title": "Hazte Premium",
     "description": "Desbloquea oportunidades exclusivas y analítica avanzada.",
     "cta": "Mejorar ahora"
-  },
-  "PageFrame": {
-    "eyebrow": "Espacio de trabajo InvestApp"
   },
   "UserMenu": {
     "account": "Cuenta",

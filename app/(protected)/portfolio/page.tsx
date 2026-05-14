@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
@@ -329,6 +330,7 @@ function DesktopEntrepreneurDashboardShell({
 }
 
 export default function PortfolioPage() {
+  const t = useTranslations('Portfolio');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
@@ -661,12 +663,12 @@ export default function PortfolioPage() {
       : await createCurrentUserProject(getAccessToken, payload);
 
     if (error) {
-      setStatus(`Could not publish the project: ${error}`);
+      setStatus(t('statusPublishError', { error }));
       setSavingProject(false);
       return;
     }
 
-    setStatus(editingProjectId ? 'Listing updated.' : 'Project published and now visible in the feed.');
+    setStatus(editingProjectId ? t('statusUpdated') : t('statusPublished'));
     setSavingProject(false);
     setShowPublisher(false);
     setEditingProjectId(null);
@@ -680,9 +682,9 @@ export default function PortfolioPage() {
     return (
       <>
         <DesktopAppShell
-          title="Portfolio"
-          subtitle="Preparing the right portfolio workspace for your profile."
-          eyebrow="Loading"
+          title={t('loadingTitle')}
+          subtitle={t('loadingSubtitle')}
+          eyebrow={t('loadingEyebrow')}
           maxWidthClassName="max-w-none"
           hideHeader
         >
@@ -728,11 +730,9 @@ export default function PortfolioPage() {
           <header className="flex flex-col gap-2">
             <div>
               <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-                Entrepreneur portfolio
+                {t('entrepreneurPortfolio')}
               </h1>
-              <p className="mt-1 text-sm leading-6 text-[#7B879C]">
-                Publish your venture or credit request
-              </p>
+              <p className="mt-1 text-sm leading-6 text-[#7B879C]">{t('publishVentureOrCredit')}</p>
             </div>
           </header>
 
@@ -741,23 +741,23 @@ export default function PortfolioPage() {
               <div className="flex flex-col gap-3">
                 <div>
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    {editingProjectId ? 'Current publication' : 'New publication'}
+                    {editingProjectId ? t('currentPublication') : t('newPublication')}
                   </p>
                   <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                    {editingProjectId ? 'Edit your venture details' : 'Publish a new venture'}
+                    {editingProjectId ? t('editVentureDetails') : t('publishNewVenture')}
                   </h2>
                 </div>
 
                 <Input
                   value={form.title}
                   onChange={(value) => onChangeForm('title', value)}
-                  placeholder="Listing title"
+                  placeholder={t('listingTitle')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.businessName}
                   onChange={(value) => onChangeForm('businessName', value)}
-                  placeholder="Business name"
+                  placeholder={t('businessName')}
                   className={inputClassName}
                 />
                 <select
@@ -765,7 +765,7 @@ export default function PortfolioPage() {
                   onChange={(event) => onChangeForm('sector', event.target.value)}
                   className={fieldClassName}
                 >
-                  <option value="">Economic sector</option>
+                  <option value="">{t('economicSector')}</option>
                   {SECTOR_OPTIONS.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -775,32 +775,32 @@ export default function PortfolioPage() {
                 <Input
                   value={form.legalRepresentative}
                   onChange={(value) => onChangeForm('legalRepresentative', value)}
-                  placeholder="Legal representative"
+                  placeholder={t('legalRepresentative')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.nit}
                   onChange={(value) => onChangeForm('nit', value)}
-                  placeholder="Tax ID (optional)"
+                  placeholder={t('taxIdOptional')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.openingDate}
                   onChange={(value) => onChangeForm('openingDate', value)}
                   type="date"
-                  placeholder="Opening date"
+                  placeholder={t('openingDate')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.address}
                   onChange={(value) => onChangeForm('address', value)}
-                  placeholder="Address"
+                  placeholder={t('address')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.phone}
                   onChange={(value) => onChangeForm('phone', value)}
-                  placeholder="Phone"
+                  placeholder={t('phone')}
                   className={inputClassName}
                 />
 
@@ -812,7 +812,7 @@ export default function PortfolioPage() {
                   }}
                   className={fieldClassName}
                 >
-                  <option value="">Country</option>
+                  <option value="">{t('country')}</option>
                   {COUNTRY_OPTIONS.map((option) => (
                     <option key={option.code} value={option.code}>
                       {option.name}
@@ -825,7 +825,7 @@ export default function PortfolioPage() {
                   disabled={!form.country}
                   className={fieldClassName}
                 >
-                  <option value="">{form.country ? 'City' : 'Select a country first'}</option>
+                  <option value="">{form.country ? t('city') : t('selectCountryFirst')}</option>
                   {cityOptions.map((city) => (
                     <option key={city} value={city}>
                       {city}
@@ -835,9 +835,9 @@ export default function PortfolioPage() {
 
                 <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    Business photos
+                    {t('businessPhotos')}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">Upload up to 12 images</p>
+                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('uploadImages')}</p>
                   <input
                     type="file"
                     accept="image/*"
@@ -846,31 +846,31 @@ export default function PortfolioPage() {
                     className="mt-3 w-full text-xs text-[#7B879C]"
                   />
                   {projectPhotos.length ? (
-                    <p className="mt-2 text-xs text-[#7B879C]">{projectPhotos.length} photo(s) uploaded.</p>
+                    <p className="mt-2 text-xs text-[#7B879C]">{t('photosUploaded', { count: projectPhotos.length })}</p>
                   ) : null}
                 </div>
 
                 <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    Business video
+                    {t('businessVideo')}
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">Upload 1 video file</p>
+                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('uploadVideo')}</p>
                   <input
                     type="file"
                     accept="video/*"
                     onChange={(event) => onPickVideo(event.target.files)}
                     className="mt-3 w-full text-xs text-[#7B879C]"
                   />
-                  {projectVideo ? <p className="mt-2 text-xs text-[#7B879C]">Video uploaded.</p> : null}
+                  {projectVideo ? <p className="mt-2 text-xs text-[#7B879C]">{t('videoUploaded')}</p> : null}
                 </div>
 
                 <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                        Description
+                        {t('description')}
                       </p>
-                      <p className="mt-1 text-sm font-semibold text-[#1C2336]">Maximum 2500 characters</p>
+                      <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('maxCharacters')}</p>
                     </div>
                     <button
                       type="button"
@@ -878,7 +878,7 @@ export default function PortfolioPage() {
                       disabled={improvingAI}
                       className="rounded-full border border-[#D7C8FF] bg-[#F6F1FF] px-3 py-1.5 text-xs font-semibold text-[#6B39F4] transition hover:bg-[#F1E8FF] disabled:opacity-60"
                     >
-                      {improvingAI ? 'Improving...' : 'Improve with AI'}
+                      {improvingAI ? t('improving') : t('improveWithAi')}
                     </button>
                   </div>
                   <textarea
@@ -890,35 +890,35 @@ export default function PortfolioPage() {
                 </div>
 
                 <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 text-xs leading-6 text-[#7B879C] shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                  Publication starts automatically on the day you save it and remains active until the end date below.
+                  {t('publicationTiming')}
                 </div>
 
                 <Input
                   value={form.publicationEndDate}
                   onChange={(value) => onChangeForm('publicationEndDate', value)}
                   type="date"
-                  placeholder="Publication end date"
+                  placeholder={t('publicationEndDate')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.amountRequested}
                   onChange={(value) => onChangeForm('amountRequested', value)}
                   type="number"
-                  placeholder="Requested amount"
+                  placeholder={t('requestedAmount')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.minimumInvestment}
                   onChange={(value) => onChangeForm('minimumInvestment', value)}
                   type="number"
-                  placeholder="Minimum investment"
+                  placeholder={t('minimumInvestment')}
                   className={inputClassName}
                 />
                 <Input
                   value={form.installmentCount}
                   onChange={(value) => onChangeForm('installmentCount', value)}
                   type="number"
-                  placeholder="Installments / payment term"
+                  placeholder={t('installmentsTerm')}
                   className={inputClassName}
                 />
                 <select
@@ -936,7 +936,7 @@ export default function PortfolioPage() {
                   value={form.interestRateEa}
                   onChange={(value) => onChangeForm('interestRateEa', value)}
                   type="number"
-                  placeholder="Effective annual interest rate %"
+                  placeholder={t('interestRatePlaceholder')}
                   className={inputClassName}
                 />
 
@@ -948,11 +948,11 @@ export default function PortfolioPage() {
                 >
                   {savingProject
                     ? editingProjectId
-                      ? 'Saving...'
-                      : 'Publishing...'
+                      ? t('saving')
+                      : t('publishing')
                     : editingProjectId
-                      ? 'Save changes'
-                      : 'Publish'}
+                      ? t('saveChanges')
+                      : t('publish')}
                 </button>
               </div>
             </SectionSurface>

@@ -1,0 +1,12 @@
+{
+  "Navigation": {
+    "home": "होम",
+    "portfolio": "पोर्टफोलियो",
+    "send": "भेजें",
+    "feed": "फ़ीड",
+    "profile": "प्रोफ़ाइल",
+    "topUp": "टॉप अप",
+    "withdraw": "निकासी",
+    "documents": "दस्तावेज़"
+  }
+}

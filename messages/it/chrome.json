@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Indietro",
-    "loading": "Caricamento",
-    "viewAll": "Vedi tutto",
-    "profile": "Profilo"
-  },
-  "Locale": {
-    "label": "Lingua",
-    "changeLanguage": "Cambia lingua",
-    "currentLanguage": "Lingua attuale"
-  },
-  "Navigation": {
-    "home": "Home",
-    "portfolio": "Portafoglio",
-    "send": "Invia",
-    "feed": "Feed",
-    "profile": "Profilo",
-    "topUp": "Ricarica",
-    "withdraw": "Preleva",
-    "documents": "Documenti"
-  },
-  "Roles": {
-    "investor": "Investitore",
-    "entrepreneur": "Imprenditore"
-  },
   "Topbar": {
     "searchPlaceholder": "Cerca venture, imprenditori o parole chiave...",
     "notifications": "Notifiche",
@@ -34,9 +9,6 @@
     "title": "Passa a Premium",
     "description": "Sblocca opportunità esclusive e analisi avanzate.",
     "cta": "Aggiorna ora"
-  },
-  "PageFrame": {
-    "eyebrow": "Workspace InvestApp"
   },
   "UserMenu": {
     "account": "Account",

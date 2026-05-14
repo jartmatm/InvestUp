@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "Back",
-    "loading": "Loading",
-    "viewAll": "View all",
-    "profile": "Profile"
-  },
-  "Locale": {
-    "label": "Language",
-    "changeLanguage": "Change language",
-    "currentLanguage": "Current language"
-  },
-  "Navigation": {
-    "home": "Home",
-    "portfolio": "Portfolio",
-    "send": "Send",
-    "feed": "Feed",
-    "profile": "Profile",
-    "topUp": "Top up",
-    "withdraw": "Withdraw",
-    "documents": "Documents"
-  },
-  "Roles": {
-    "investor": "Investor",
-    "entrepreneur": "Entrepreneur"
-  },
   "Topbar": {
     "searchPlaceholder": "Search ventures, entrepreneurs or keywords...",
     "notifications": "Notifications",
@@ -34,9 +9,6 @@
     "title": "Upgrade to Premium",
     "description": "Unlock exclusive opportunities and advanced analytics.",
     "cta": "Upgrade now"
-  },
-  "PageFrame": {
-    "eyebrow": "InvestApp workspace"
   },
   "UserMenu": {
     "account": "Account",

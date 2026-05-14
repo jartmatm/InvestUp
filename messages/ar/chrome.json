@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "رجوع",
-    "loading": "جار التحميل",
-    "viewAll": "عرض الكل",
-    "profile": "الملف الشخصي"
-  },
-  "Locale": {
-    "label": "اللغة",
-    "changeLanguage": "تغيير اللغة",
-    "currentLanguage": "اللغة الحالية"
-  },
-  "Navigation": {
-    "home": "الرئيسية",
-    "portfolio": "المحفظة",
-    "send": "إرسال",
-    "feed": "الموجز",
-    "profile": "الملف الشخصي",
-    "topUp": "إضافة رصيد",
-    "withdraw": "سحب",
-    "documents": "المستندات"
-  },
-  "Roles": {
-    "investor": "مستثمر",
-    "entrepreneur": "رائد أعمال"
-  },
   "Topbar": {
     "searchPlaceholder": "ابحث عن مشاريع أو رواد أعمال أو كلمات مفتاحية...",
     "notifications": "الإشعارات",
@@ -34,9 +9,6 @@
     "title": "الترقية إلى Premium",
     "description": "افتح فرصا حصرية وتحليلات متقدمة.",
     "cta": "الترقية الآن"
-  },
-  "PageFrame": {
-    "eyebrow": "مساحة عمل InvestApp"
   },
   "UserMenu": {
     "account": "الحساب",

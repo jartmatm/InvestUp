@@ -1,29 +1,4 @@
 {
-  "Common": {
-    "back": "戻る",
-    "loading": "読み込み中",
-    "viewAll": "すべて表示",
-    "profile": "プロフィール"
-  },
-  "Locale": {
-    "label": "言語",
-    "changeLanguage": "言語を変更",
-    "currentLanguage": "現在の言語"
-  },
-  "Navigation": {
-    "home": "ホーム",
-    "portfolio": "ポートフォリオ",
-    "send": "送金",
-    "feed": "フィード",
-    "profile": "プロフィール",
-    "topUp": "入金",
-    "withdraw": "出金",
-    "documents": "書類"
-  },
-  "Roles": {
-    "investor": "投資家",
-    "entrepreneur": "起業家"
-  },
   "Topbar": {
     "searchPlaceholder": "ベンチャー、起業家、キーワードを検索...",
     "notifications": "通知",
@@ -34,9 +9,6 @@
     "title": "Premium にアップグレード",
     "description": "限定案件と高度な分析を利用できます。",
     "cta": "今すぐアップグレード"
-  },
-  "PageFrame": {
-    "eyebrow": "InvestApp ワークスペース"
   },
   "UserMenu": {
     "account": "アカウント",

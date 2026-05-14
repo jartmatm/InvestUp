@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 type ProjectPhotoCarouselProps = {
   images?: string[] | null;
@@ -19,6 +20,7 @@ export default function ProjectPhotoCarousel({
   emptyClassName,
   stopPropagation,
 }: ProjectPhotoCarouselProps) {
+  const t = useTranslations('Components');
   const slides = useMemo(
     () => (images ?? []).filter((image): image is string => Boolean(image && image.trim())),
     [images]
@@ -87,7 +89,7 @@ export default function ProjectPhotoCarousel({
             'flex h-full w-full items-center justify-center rounded-2xl bg-white/20 text-xs text-slate-500 backdrop-blur-md'
           }
         >
-          No image
+          {t('noImage')}
         </div>
       )}
 
@@ -96,7 +98,7 @@ export default function ProjectPhotoCarousel({
           <button
             type="button"
             onClick={showPrevious}
-            aria-label="Previous photo"
+            aria-label={t('previousPhoto')}
             className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
             <span className="text-lg leading-none">&lt;</span>
@@ -104,7 +106,7 @@ export default function ProjectPhotoCarousel({
           <button
             type="button"
             onClick={showNext}
-            aria-label="Next photo"
+            aria-label={t('nextPhoto')}
             className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
           >
             <span className="text-lg leading-none">&gt;</span>
@@ -118,7 +120,7 @@ export default function ProjectPhotoCarousel({
                   event.stopPropagation();
                   goToIndex(index);
                 }}
-                aria-label={`Go to photo ${index + 1}`}
+                aria-label={t('goToPhoto', { index: index + 1 })}
                 className={`h-2.5 rounded-full transition-all ${
                   index === currentIndex ? 'w-5 bg-white' : 'w-2.5 bg-white/45'
                 }`}
