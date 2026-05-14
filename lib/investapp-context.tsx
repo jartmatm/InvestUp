@@ -20,6 +20,7 @@ import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
 import { createClient } from '@supabase/supabase-js';
 import type { PublicClient } from 'viem';
 import { polygon } from 'viem/chains';
+import { clearAuthenticatedUserBrowserCache } from '@/lib/browser-user-cache';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import {
   buildTransactionNotificationKey,
@@ -1381,23 +1382,17 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   }, [pushNotification, smartWalletAddress]);
 
   const logoutApp = useCallback(async () => {
-    if (user?.id) {
-      localStorage.removeItem(getRolKey(user.id));
-      localStorage.removeItem(getLegacyRolKey(user.id));
-      localStorage.removeItem(getOnboardingDoneKey(user.id));
-      localStorage.removeItem(getLegacyOnboardingDoneKey(user.id));
-    }
-    clearPendingInvestment(user?.id);
+    clearAuthenticatedUserBrowserCache(user?.id);
     await logout();
     setFaseApp('login');
     setRolSeleccionado(null);
     setWalletTargets([]);
     setHistorial([]);
+    setNotifications([]);
+    setNotificationsEnabledState(true);
+    seenTransactionNotificationKeysRef.current = new Set();
+    bootstrappedTransactionNotificationsRef.current = false;
   }, [
-    getLegacyOnboardingDoneKey,
-    getLegacyRolKey,
-    getOnboardingDoneKey,
-    getRolKey,
     logout,
     user?.id,
   ]);

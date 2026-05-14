@@ -118,6 +118,19 @@ export const writeStoredNotifications = (userId: string, notifications: AppNotif
   window.localStorage.setItem(getLegacyNotificationsKey(userId), serialized);
 };
 
+export const clearStoredNotifications = (userId: string | null | undefined) => {
+  if (typeof window === 'undefined' || !userId) return;
+
+  [
+    getPrimaryNotificationsKey(userId),
+    getLegacyNotificationsKey(userId),
+    getPrimaryNotificationsEnabledKey(userId),
+    getLegacyNotificationsEnabledKey(userId),
+  ].forEach((key) => {
+    window.localStorage.removeItem(key);
+  });
+};
+
 export const readNotificationsEnabled = (userId: string) => {
   const raw = readStorage([
     getPrimaryNotificationsEnabledKey(userId),

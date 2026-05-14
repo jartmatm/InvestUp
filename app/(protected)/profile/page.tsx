@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
+import { getLanguageOption, isLocale } from '@/i18n/locales';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 
@@ -273,6 +274,18 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
+const formatMemberSince = (value: string, locale: string, fallback: string) => {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+
+  return new Intl.DateTimeFormat(locale, {
+    month: 'long',
+    timeZone: 'UTC',
+    year: 'numeric',
+  }).format(date);
+};
+
 function Topbar({
   avatarUrl,
   displayName,
@@ -292,12 +305,14 @@ function ProfileCard({
   displayName,
   email,
   loading,
+  memberSinceLabel,
   profileRole,
 }: {
   avatarUrl: string;
   displayName: string;
   email: string;
   loading: boolean;
+  memberSinceLabel: string;
   profileRole: string;
 }) {
   const t = useTranslations('ProfilePages');
@@ -343,7 +358,7 @@ function ProfileCard({
             </span>
             <span>
               <span className="block text-sm font-semibold text-[#718096]">{t('memberSince')}</span>
-              <span className="mt-1 block text-sm font-bold text-[#111827]">{t('memberSinceDate')}</span>
+              <span className="mt-1 block text-sm font-bold text-[#111827]">{memberSinceLabel}</span>
             </span>
           </div>
 
@@ -471,7 +486,7 @@ function PreferencesSection({ languageLabel, onLogout }: { languageLabel: string
       subtitle: t('settingsSubtitle'),
     },
     {
-      href: '/profile/language',
+      href: '/profile/preferences/language',
       icon: <IconLanguage />,
       label: t('language'),
       subtitle: languageLabel,
@@ -543,6 +558,7 @@ function DesktopProfileDashboard({
   languageLabel,
   loading,
   logoutApp,
+  memberSinceLabel,
   profileRole,
   showFavorites,
 }: {
@@ -552,6 +568,7 @@ function DesktopProfileDashboard({
   languageLabel: string;
   loading: boolean;
   logoutApp: () => void;
+  memberSinceLabel: string;
   profileRole: string;
   showFavorites: boolean;
 }) {
@@ -566,6 +583,7 @@ function DesktopProfileDashboard({
             displayName={displayName}
             email={email}
             loading={loading}
+            memberSinceLabel={memberSinceLabel}
             profileRole={profileRole}
           />
           <div className="grid grid-cols-2 gap-6">
@@ -582,13 +600,19 @@ function DesktopProfileDashboard({
 export default function ProfilePage() {
   const t = useTranslations('ProfilePages');
   const roleT = useTranslations('Roles');
+  const locale = useLocale();
   const router = useRouter();
   const { faseApp, logoutApp, rolSeleccionado } = useInvestApp();
-  const { avatarUrl, displayName, email, loading } = useUserProfileSummary();
-  const languageLabel = 'English (US)';
-  const mobileSafeName = displayName || 'User';
-  const desktopDisplayName = displayName || 'Maria Gonzalez';
-  const desktopEmail = email || 'maria.gonzalez@email.com';
+  const { avatarUrl, createdAt, displayName, email, loading } = useUserProfileSummary();
+  const activeLocale = isLocale(locale) ? locale : 'en';
+  const languageLabel = getLanguageOption(activeLocale).nativeName;
+  const memberSinceLabel = useMemo(
+    () => formatMemberSince(createdAt, activeLocale, t('notAvailable')),
+    [activeLocale, createdAt, t]
+  );
+  const mobileSafeName = displayName || email || t('userFallback');
+  const desktopDisplayName = displayName || email || t('userFallback');
+  const desktopEmail = email || t('noEmailAvailable');
   const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
 
   useEffect(() => {
@@ -695,7 +719,7 @@ export default function ProfilePage() {
               icon={<IconLanguage />}
               label={t('language')}
               value={languageLabel}
-              onClick={() => router.push('/profile/language')}
+              onClick={() => router.push('/profile/preferences/language')}
             />
             <SettingItem
               icon={<IconHelpCenter />}
@@ -737,6 +761,7 @@ export default function ProfilePage() {
       languageLabel={languageLabel}
       loading={loading}
       logoutApp={logoutApp}
+      memberSinceLabel={memberSinceLabel}
       profileRole={profileRoleLabel}
       showFavorites={rolSeleccionado === 'inversor'}
     />

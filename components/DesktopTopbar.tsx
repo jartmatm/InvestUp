@@ -6,7 +6,6 @@ import type { ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
-import LanguageSelector from '@/components/LanguageSelector';
 import { isLocale, type AppLocale } from '@/i18n/locales';
 import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -191,8 +190,6 @@ export default function DesktopTopbar({
             {notificationContent}
           </Link>
         )}
-
-        <LanguageSelector variant="desktop" />
 
         {primaryCtaOnClick ? (
           <button type="button" disabled={effectivePublishDisabled} onClick={primaryCtaOnClick} className={publishClassName}>

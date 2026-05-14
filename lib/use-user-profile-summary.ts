@@ -12,6 +12,7 @@ import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 
 type ProfileSummary = {
   avatarUrl: string;
+  createdAt: string;
   displayName: string;
   email: string;
   loading: boolean;
@@ -47,9 +48,37 @@ const pickFirstFilledString = (...values: unknown[]) => {
   return '';
 };
 
+const normalizeDateValue = (value: unknown) => {
+  if (!value) return '';
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString();
+  }
+
+  if (typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  if (typeof value === 'string' && value.trim()) {
+    const date = new Date(value.trim());
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  return '';
+};
+
+const getAuthenticatedUserCreatedAt = (user: unknown) => {
+  if (!user || typeof user !== 'object') return '';
+  const candidate = user as { createdAt?: unknown; created_at?: unknown };
+  return normalizeDateValue(candidate.createdAt) || normalizeDateValue(candidate.created_at);
+};
+
 export function useUserProfileSummary(): ProfileSummary {
   const { user, getAccessToken } = usePrivy();
+  const authenticatedCreatedAt = getAuthenticatedUserCreatedAt(user);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [createdAt, setCreatedAt] = useState(authenticatedCreatedAt);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(user?.email?.address ?? '');
   const [loading, setLoading] = useState(true);
@@ -61,6 +90,7 @@ export function useUserProfileSummary(): ProfileSummary {
 
     if (!user?.id) {
       setAvatarUrl('');
+      setCreatedAt(authenticatedCreatedAt);
       setDisplayName('');
       setEmail(user?.email?.address ?? '');
       return;
@@ -68,9 +98,10 @@ export function useUserProfileSummary(): ProfileSummary {
 
     const cachedProfile = readProfileSummaryCache(user.id);
     setAvatarUrl(cachedProfile.avatarUrl);
+    setCreatedAt(authenticatedCreatedAt || cachedProfile.createdAt);
     setDisplayName(cachedProfile.displayName);
     setEmail(cachedProfile.email || user.email?.address || '');
-  }, [user?.email?.address, user?.id]);
+  }, [authenticatedCreatedAt, user?.email?.address, user?.id]);
 
   const loadProfile = useCallback(async () => {
     if (!user?.id) {
@@ -83,11 +114,16 @@ export function useUserProfileSummary(): ProfileSummary {
     try {
       const { data } = await fetchCurrentUserProfile<Record<string, unknown> | null>(getAccessToken);
       const profileData = parseProfileBlob(data?.profile_data ?? data?.metadata ?? null);
-      const emailValue = pickFirstFilledString(data?.email, user.email?.address);
+      const emailValue = pickFirstFilledString(user.email?.address, data?.email);
       const nameValue = pickFirstFilledString(data?.name, profileData?.name);
       const surnameValue = pickFirstFilledString(data?.surname, profileData?.surname);
-      const resolvedName = `${nameValue} ${surnameValue}`.trim() || (emailValue ? emailValue.split('@')[0] : 'User');
+      const resolvedName = `${nameValue} ${surnameValue}`.trim() || (emailValue ? emailValue.split('@')[0] : '');
       const cachedProfile = readProfileSummaryCache(user.id);
+      const resolvedCreatedAt =
+        authenticatedCreatedAt ||
+        normalizeDateValue(data?.created_at) ||
+        normalizeDateValue(data?.createdAt) ||
+        cachedProfile.createdAt;
       const resolvedAvatar = pickFirstFilledString(
         data?.avatar_url,
         profileData?.avatar_url,
@@ -96,9 +132,11 @@ export function useUserProfileSummary(): ProfileSummary {
 
       setEmail(emailValue);
       setDisplayName(resolvedName);
+      setCreatedAt(resolvedCreatedAt);
       setAvatarUrl(resolvedAvatar);
       writeProfileSummaryCache(user.id, {
         avatarUrl: resolvedAvatar,
+        createdAt: resolvedCreatedAt,
         displayName: resolvedName,
         email: emailValue,
       });
@@ -107,7 +145,7 @@ export function useUserProfileSummary(): ProfileSummary {
     } finally {
       setLoading(false);
     }
-  }, [getAccessToken, user?.email?.address, user?.id]);
+  }, [authenticatedCreatedAt, getAccessToken, user?.email?.address, user?.id]);
 
   useEffect(() => {
     let retryShort: number | undefined;
@@ -138,6 +176,7 @@ export function useUserProfileSummary(): ProfileSummary {
       if (user?.id) {
         const cachedProfile = readProfileSummaryCache(user.id);
         setAvatarUrl(cachedProfile.avatarUrl);
+        setCreatedAt(authenticatedCreatedAt || cachedProfile.createdAt);
         setDisplayName(cachedProfile.displayName);
         setEmail(cachedProfile.email || user.email?.address || '');
       }
@@ -159,7 +198,7 @@ export function useUserProfileSummary(): ProfileSummary {
       });
       window.removeEventListener('storage', handleProfileUpdate);
     };
-  }, [loadProfile, user?.id]);
+  }, [authenticatedCreatedAt, loadProfile, user?.email?.address, user?.id]);
 
-  return { avatarUrl, displayName, email, loading };
+  return { avatarUrl, createdAt, displayName, email, loading };
 }

@@ -80,54 +80,7 @@ type DesktopActivityRow = {
   coverImage: string | null;
 };
 
-const FALLBACK_SPARKLINE = [18, 24, 22, 20, 28, 36, 34, 40, 37, 48, 56, 64];
-const DESKTOP_FALLBACK_SPARKLINE = [22, 36, 31, 34, 27, 39, 40, 52, 58, 68, 60, 54, 62, 65, 72, 82];
-const DEFAULT_PORTFOLIO_VALUE = 100;
-const DEFAULT_AVERAGE_RATE = 25;
-const DEFAULT_ACCUMULATED_EARNINGS = 95.31;
-const DEFAULT_MONTHLY_GROWTH = 5.2;
-
-const MOCK_ACTIVITY_ROWS: DesktopActivityRow[] = [
-  {
-    id: 'mock-empanadas-play',
-    href: '/feed',
-    businessName: 'Empanadas Play',
-    category: 'Food & Beverage',
-    type: 'Investment',
-    statusLabel: 'Up to date',
-    statusBadgeClassName: 'bg-[#E9FBF5] text-[#0B9B72]',
-    dotClassName: 'bg-[#27D6A4]',
-    dateLabel: 'Today, 9:30 AM',
-    coverImage:
-      'https://images.unsplash.com/photo-1604909052743-94e838986d24?auto=format&fit=crop&w=240&q=80',
-  },
-  {
-    id: 'mock-tienda-urbana',
-    href: '/feed',
-    businessName: 'Tienda Urbana',
-    category: 'Retail',
-    type: 'Investment',
-    statusLabel: 'Up to date',
-    statusBadgeClassName: 'bg-[#E9FBF5] text-[#0B9B72]',
-    dotClassName: 'bg-[#27D6A4]',
-    dateLabel: 'Yesterday, 6:15 PM',
-    coverImage:
-      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=240&q=80',
-  },
-  {
-    id: 'mock-platforma-educativa',
-    href: '/feed',
-    businessName: 'Plataforma educativa',
-    category: 'Education',
-    type: 'Investment',
-    statusLabel: 'Up to date',
-    statusBadgeClassName: 'bg-[#E9FBF5] text-[#0B9B72]',
-    dotClassName: 'bg-[#27D6A4]',
-    dateLabel: 'May 5, 11:20 AM',
-    coverImage:
-      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=240&q=80',
-  },
-];
+const EMPTY_SPARKLINE = Array.from({ length: 12 }, () => 42);
 
 const money = (value: number) =>
   new Intl.NumberFormat('en-US', {
@@ -208,7 +161,7 @@ const formatActivityTimestamp = (
 };
 
 const buildSparklineSeries = (items: PortfolioItem[]) => {
-  if (items.length === 0) return FALLBACK_SPARKLINE;
+  if (items.length === 0) return EMPTY_SPARKLINE;
 
   const ascending = [...items].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -896,42 +849,51 @@ function ActivityList({ rows, status }: { rows: DesktopActivityRow[]; status: st
         </div>
 
         <div className="divide-y divide-[#EEF1F7]">
-          {rows.map((row) => (
-            <Link
-              key={row.id}
-              href={row.href}
-              className="grid grid-cols-[minmax(260px,1.6fr)_1fr_1fr_1fr_40px] items-center px-3 py-4 transition duration-200 hover:bg-[#F8F9FB]"
-            >
-              <span className="flex min-w-0 items-center gap-4">
-                <DesktopActivityThumb coverImage={row.coverImage} label={row.businessName} />
-                <span className="min-w-0">
-                  <span className="block truncate text-base font-bold tracking-[-0.035em] text-[#111827]">
-                    {row.businessName}
-                  </span>
-                  <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">
-                    {row.category}
+          {rows.length === 0 ? (
+            <div className="px-3 py-10 text-center">
+              <p className="text-sm font-bold text-[#111827]">{t('noInvestments')}</p>
+              <p className="mx-auto mt-1 max-w-md text-sm font-medium text-[#66728A]">
+                {t('noInvestmentsDescription')}
+              </p>
+            </div>
+          ) : (
+            rows.map((row) => (
+              <Link
+                key={row.id}
+                href={row.href}
+                className="grid grid-cols-[minmax(260px,1.6fr)_1fr_1fr_1fr_40px] items-center px-3 py-4 transition duration-200 hover:bg-[#F8F9FB]"
+              >
+                <span className="flex min-w-0 items-center gap-4">
+                  <DesktopActivityThumb coverImage={row.coverImage} label={row.businessName} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-base font-bold tracking-[-0.035em] text-[#111827]">
+                      {row.businessName}
+                    </span>
+                    <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">
+                      {row.category}
+                    </span>
                   </span>
                 </span>
-              </span>
 
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#66728A]">
-                <span className="h-2 w-2 rounded-full bg-[#6B39F4]" />
-                {row.type}
-              </span>
-
-              <span>
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${row.statusBadgeClassName}`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${row.dotClassName}`} />
-                  {row.statusLabel}
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#66728A]">
+                  <span className="h-2 w-2 rounded-full bg-[#6B39F4]" />
+                  {row.type}
                 </span>
-              </span>
 
-              <span className="text-sm font-medium text-[#66728A]">{row.dateLabel}</span>
-              <span className="text-right text-[#8D98AA]">•••</span>
-            </Link>
-          ))}
+                <span>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ${row.statusBadgeClassName}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${row.dotClassName}`} />
+                    {row.statusLabel}
+                  </span>
+                </span>
+
+                <span className="text-sm font-medium text-[#66728A]">{row.dateLabel}</span>
+                <span className="text-right text-[#8D98AA]">•••</span>
+              </Link>
+            ))
+          )}
         </div>
       </div>
     </section>
@@ -1180,18 +1142,15 @@ export default function InvestorPortfolioDashboard() {
       };
     });
 
-    return rows.length > 0 ? rows : MOCK_ACTIVITY_ROWS;
+    return rows;
   }, [sortedItems, t]);
 
-  const profileName = displayName || 'Maria Gonzalez';
-  const desktopTotalPortfolio = totalPortfolio > 0 ? totalPortfolio : DEFAULT_PORTFOLIO_VALUE;
-  const desktopAverageRate = averageRate > 0 ? averageRate : DEFAULT_AVERAGE_RATE;
-  const desktopAccumulatedEarnings =
-    accumulatedEarnings > 0 ? accumulatedEarnings : DEFAULT_ACCUMULATED_EARNINGS;
-  const desktopMonthlyGrowth =
-    monthlyGrowth !== 0 || items.length > 0 ? monthlyGrowth : DEFAULT_MONTHLY_GROWTH;
-  const desktopSparklinePoints =
-    sortedItems.length > 0 ? sparklinePoints : DESKTOP_FALLBACK_SPARKLINE;
+  const profileName = displayName || t('investor');
+  const desktopTotalPortfolio = totalPortfolio;
+  const desktopAverageRate = averageRate;
+  const desktopAccumulatedEarnings = accumulatedEarnings;
+  const desktopMonthlyGrowth = monthlyGrowth;
+  const desktopSparklinePoints = sparklinePoints;
 
   const growthChipClassName =
     monthlyGrowth >= 0

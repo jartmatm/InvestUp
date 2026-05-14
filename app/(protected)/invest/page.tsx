@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getPendingInvestment } from '@/lib/pending-investment';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
+import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
+import type { CurrentUserTransaction, TransactionStatus } from '@/utils/transactions/current-user';
 
 type ContactItem = {
   id: string;
@@ -209,10 +211,18 @@ function RecentPreview({
         ) : null}
       </div>
 
-      <span className="text-sm font-medium text-white/78">
-        {totalCount > 0 ? `${totalCount} recent contact${totalCount === 1 ? '' : 's'}` : 'No recent contacts yet'}
-      </span>
+      <RecentPreviewLabel totalCount={totalCount} />
     </div>
+  );
+}
+
+function RecentPreviewLabel({ totalCount }: { totalCount: number }) {
+  const t = useTranslations('Send');
+
+  return (
+    <span className="text-sm font-medium text-white/78">
+      {totalCount > 0 ? t('recentContactsCount', { count: totalCount }) : t('noRecentContacts')}
+    </span>
   );
 }
 
@@ -225,6 +235,7 @@ function WalletHeroCard({
   previewContacts: ContactItem[];
   totalCount: number;
 }) {
+  const t = useTranslations('Send');
   return (
     <Link
       href={href}
@@ -235,13 +246,13 @@ function WalletHeroCard({
       <div className="relative flex items-start justify-between gap-4">
         <div className="max-w-[220px]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/74">
-            Transfer
+            {t('transfer')}
           </p>
           <h2 className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-white">
-            Send funds
+            {t('sendFunds')}
           </h2>
           <p className="mt-3 text-sm leading-6 tracking-[-0.02em] text-white/86">
-            Enter an InvestApp email manually or pick one of your recent contacts.
+            {t('sendFundsDescription')}
           </p>
         </div>
 
@@ -269,6 +280,7 @@ function InvestHeroCard({
   description: string;
   ctaLabel: string;
 }) {
+  const t = useTranslations('Send');
   return (
     <Link
       href={href}
@@ -279,7 +291,7 @@ function InvestHeroCard({
       <div className="relative flex items-start justify-between gap-4">
         <div className="max-w-[220px]">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/74">
-            Transfer
+            {t('transfer')}
           </p>
           <h2 className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-white">
             {title}
@@ -315,101 +327,59 @@ function ContactsSkeleton() {
   );
 }
 
-type DesktopTransactionStatus = 'Success' | 'Pending' | 'Failed';
-
-type DesktopTransaction = {
-  id: string;
-  contact: string;
-  detail: string;
-  type: string;
-  amount: string;
-  status: DesktopTransactionStatus;
-  date: string;
+const truncateWallet = (value: string | null | undefined) => {
+  if (!value) return '';
+  return value.length > 12 ? `${value.slice(0, 6)}...${value.slice(-4)}` : value;
 };
 
-const MOCK_DESKTOP_CONTACTS: ContactItem[] = [
-  {
-    id: 'mock-satoshi',
-    displayName: 'Satoshi Nakamoto',
-    email: 'satoshi@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x1111111111111111111111111111111111111111',
-  },
-  {
-    id: 'mock-maria',
-    displayName: 'Maria Gonzalez',
-    email: 'maria@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x2222222222222222222222222222222222222222',
-  },
-  {
-    id: 'mock-james',
-    displayName: 'James Lee',
-    email: 'james@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x3333333333333333333333333333333333333333',
-  },
-  {
-    id: 'mock-alex',
-    displayName: 'Alex Kim',
-    email: 'alex@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x4444444444444444444444444444444444444444',
-  },
-  {
-    id: 'mock-elisa',
-    displayName: 'Elisa Martinez',
-    email: 'elisa@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x5555555555555555555555555555555555555555',
-  },
-  {
-    id: 'mock-david',
-    displayName: 'David Rivera',
-    email: 'david@investapp.test',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=160&q=80',
-    walletAddress: '0x6666666666666666666666666666666666666666',
-  },
-];
+const isSameWallet = (left: string | null | undefined, right: string | null | undefined) =>
+  Boolean(left && right && left.toLowerCase() === right.toLowerCase());
 
-const DESKTOP_TRANSACTIONS: DesktopTransaction[] = [
-  {
-    id: 'tx-1',
-    contact: 'Maria G.',
-    detail: 'Wallet transfer',
-    type: 'Send Money',
-    amount: '-$1,250.00',
-    status: 'Success',
-    date: 'Today, 9:42 AM',
-  },
-  {
-    id: 'tx-2',
-    contact: 'Satoshi N.',
-    detail: 'Venture allocation',
-    type: 'Invest',
-    amount: '-$4,800.00',
-    status: 'Pending',
-    date: 'Yesterday',
-  },
-  {
-    id: 'tx-3',
-    contact: 'Alex K.',
-    detail: 'Returned transfer',
-    type: 'Withdraw',
-    amount: '$920.00',
-    status: 'Failed',
-    date: 'May 4',
-  },
-  {
-    id: 'tx-4',
-    contact: 'Elisa M.',
-    detail: 'Incoming wallet funds',
-    type: 'Receive',
-    amount: '$2,100.00',
-    status: 'Success',
-    date: 'May 2',
-  },
-];
+const getCounterpartyWallet = (transaction: CurrentUserTransaction, currentWallet?: string) => {
+  if (isSameWallet(transaction.from_wallet, currentWallet)) return transaction.to_wallet;
+  if (isSameWallet(transaction.to_wallet, currentWallet)) return transaction.from_wallet;
+  return transaction.to_wallet ?? transaction.from_wallet;
+};
+
+const getTransactionDirection = (
+  transaction: CurrentUserTransaction,
+  currentWallet?: string
+) => {
+  if (isSameWallet(transaction.from_wallet, currentWallet)) return 'outgoing';
+  if (isSameWallet(transaction.to_wallet, currentWallet)) return 'incoming';
+  if (transaction.movement_type === 'withdrawal' || transaction.movement_type === 'investment') {
+    return 'outgoing';
+  }
+  return 'incoming';
+};
+
+const formatTransactionAmount = (
+  transaction: CurrentUserTransaction,
+  locale: string,
+  currentWallet?: string
+) => {
+  const value = Number(transaction.amount ?? 0);
+  const formatted = new Intl.NumberFormat(locale, {
+    currency: 'USD',
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: 'currency',
+  }).format(Math.abs(Number.isFinite(value) ? value : 0));
+
+  return `${getTransactionDirection(transaction, currentWallet) === 'outgoing' ? '-' : '+'}${formatted}`;
+};
+
+const formatTransactionDate = (value: string, locale: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+    year: 'numeric',
+  }).format(date);
+};
 
 function DesktopIcon({ type }: { type: string }) {
   const common = {
@@ -740,13 +710,49 @@ function SecurityCard() {
   );
 }
 
-function TransactionsTable() {
+function TransactionsTable({
+  currentWallet,
+  error,
+  loading,
+  transactions,
+  walletTargets,
+}: {
+  currentWallet?: string;
+  error: string;
+  loading: boolean;
+  transactions: CurrentUserTransaction[];
+  walletTargets: ContactItem[];
+}) {
   const t = useTranslations('Send');
   const tableT = useTranslations('Tables');
-  const statusClassNames: Record<DesktopTransactionStatus, string> = {
-    Success: 'bg-[#E9FFF4] text-[#12895B]',
-    Pending: 'bg-[#FFF7DA] text-[#A46A00]',
-    Failed: 'bg-[#FFF0F0] text-[#C24141]',
+  const locale = useLocale();
+  const statusClassNames: Record<TransactionStatus, string> = {
+    confirmed: 'bg-[#E9FFF4] text-[#12895B]',
+    submitted: 'bg-[#FFF7DA] text-[#A46A00]',
+    failed: 'bg-[#FFF0F0] text-[#C24141]',
+  };
+  const statusLabels: Record<TransactionStatus, string> = {
+    confirmed: t('success'),
+    submitted: t('pending'),
+    failed: t('failed'),
+  };
+  const movementLabels: Record<CurrentUserTransaction['movement_type'], string> = {
+    buy: t('topUp'),
+    investment: t('invest'),
+    repayment: t('repayment'),
+    transfer: t('walletTransfer'),
+    withdrawal: t('withdrawal'),
+  };
+  const walletTargetByAddress = new Map(
+    walletTargets
+      .filter((target) => target.walletAddress)
+      .map((target) => [target.walletAddress.toLowerCase(), target])
+  );
+
+  const getCounterpartyLabel = (transaction: CurrentUserTransaction) => {
+    const wallet = getCounterpartyWallet(transaction, currentWallet);
+    const contact = wallet ? walletTargetByAddress.get(wallet.toLowerCase()) : null;
+    return contact?.displayName || contact?.email || truncateWallet(wallet) || t('unknownContact');
   };
 
   return (
@@ -773,29 +779,88 @@ function TransactionsTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF1F7]">
-            {DESKTOP_TRANSACTIONS.map((transaction) => (
-              <tr key={transaction.id} className="transition hover:bg-[#FBFCFF]">
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[#F2EDFF] text-sm font-bold text-[#6B39F4]">
-                      {initialsFrom(transaction.contact)}
-                    </span>
-                    <span>
-                      <span className="block text-sm font-bold text-[#111827]">{transaction.contact}</span>
-                      <span className="block text-xs font-medium text-[#7A8498]">{transaction.detail}</span>
-                    </span>
-                  </div>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, index) => (
+                <tr key={`activity-loading-${index}`} className="animate-pulse">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <span className="h-10 w-10 rounded-full bg-[#EEF1F7]" />
+                      <span className="space-y-2">
+                        <span className="block h-3 w-28 rounded-full bg-[#EEF1F7]" />
+                        <span className="block h-2.5 w-20 rounded-full bg-[#F2F4F8]" />
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="block h-3 w-20 rounded-full bg-[#EEF1F7]" />
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="block h-3 w-20 rounded-full bg-[#EEF1F7]" />
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="block h-6 w-20 rounded-full bg-[#EEF1F7]" />
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="block h-3 w-24 rounded-full bg-[#EEF1F7]" />
+                  </td>
+                </tr>
+              ))
+            ) : error ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center">
+                  <p className="text-sm font-bold text-[#111827]">{t('activityLoadError')}</p>
+                  <p className="mt-1 text-sm font-medium text-[#7A8498]">{error}</p>
                 </td>
-                <td className="px-5 py-4 text-sm font-semibold text-[#3A465C]">{transaction.type}</td>
-                <td className="px-5 py-4 text-sm font-bold text-[#111827]">{transaction.amount}</td>
-                <td className="px-5 py-4">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClassNames[transaction.status]}`}>
-                    {transaction.status}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-sm font-medium text-[#7A8498]">{transaction.date}</td>
               </tr>
-            ))}
+            ) : transactions.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-12 text-center">
+                  <p className="text-sm font-bold text-[#111827]">{t('noActivityTitle')}</p>
+                  <p className="mt-1 text-sm font-medium text-[#7A8498]">
+                    {t('noActivityDescription')}
+                  </p>
+                </td>
+              </tr>
+            ) : (
+              transactions.map((transaction) => {
+                const contact = getCounterpartyLabel(transaction);
+                return (
+                  <tr key={transaction.id} className="transition hover:bg-[#FBFCFF]">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 place-items-center rounded-full bg-[#F2EDFF] text-sm font-bold text-[#6B39F4]">
+                          {initialsFrom(contact)}
+                        </span>
+                        <span>
+                          <span className="block text-sm font-bold text-[#111827]">{contact}</span>
+                          <span className="block text-xs font-medium text-[#7A8498]">
+                            {truncateWallet(getCounterpartyWallet(transaction, currentWallet))}
+                          </span>
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-[#3A465C]">
+                      {movementLabels[transaction.movement_type]}
+                    </td>
+                    <td className="px-5 py-4 text-sm font-bold text-[#111827]">
+                      {formatTransactionAmount(transaction, locale, currentWallet)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${
+                          statusClassNames[transaction.status]
+                        }`}
+                      >
+                        {statusLabels[transaction.status]}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-medium text-[#7A8498]">
+                      {formatTransactionDate(transaction.created_at, locale)}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -804,27 +869,35 @@ function TransactionsTable() {
 }
 
 function SendDashboard({
+  activityError,
+  activityTransactions,
   avatarUrl,
   contacts,
   displayName,
+  loadingActivity,
   loadingContacts,
   opportunityHref,
   profileRole,
   secondaryCta,
   secondaryDescription,
   secondaryTitle,
+  smartWalletAddress,
   totalContactCount,
   walletHref,
 }: {
+  activityError: string;
+  activityTransactions: CurrentUserTransaction[];
   avatarUrl: string;
   contacts: ContactItem[];
   displayName: string;
+  loadingActivity: boolean;
   loadingContacts: boolean;
   opportunityHref: string;
   profileRole: string;
   secondaryCta: string;
   secondaryDescription: string;
   secondaryTitle: string;
+  smartWalletAddress?: string;
   totalContactCount: number;
   walletHref: string;
 }) {
@@ -843,7 +916,13 @@ function SendDashboard({
 
         <RecentContacts contacts={contacts} loading={loadingContacts} walletHref={walletHref} />
         <SecurityCard />
-        <TransactionsTable />
+        <TransactionsTable
+          currentWallet={smartWalletAddress}
+          error={activityError}
+          loading={loadingActivity}
+          transactions={activityTransactions}
+          walletTargets={contacts}
+        />
       </div>
     </DashboardLayout>
   );
@@ -854,10 +933,20 @@ export default function InvestPage() {
   const roleT = useTranslations('Roles');
   const commonT = useTranslations('Common');
   const router = useRouter();
-  const { user } = usePrivy();
-  const { faseApp, rolSeleccionado, walletTargets, loadingWallets, cargarWalletsObjetivo } =
-    useInvestApp();
+  const { user, getAccessToken } = usePrivy();
+  const {
+    faseApp,
+    rolSeleccionado,
+    smartWalletAddress,
+    walletTargets,
+    loadingWallets,
+    cargarWalletsObjetivo,
+  } = useInvestApp();
   const { avatarUrl, displayName, email } = useUserProfileSummary();
+  const [activityTransactions, setActivityTransactions] = useState<CurrentUserTransaction[]>([]);
+  const [activityUserId, setActivityUserId] = useState('');
+  const [loadingActivity, setLoadingActivity] = useState(false);
+  const [activityError, setActivityError] = useState('');
   const [hasPendingInvestment, setHasPendingInvestment] = useState(() => {
     if (typeof window === 'undefined') return false;
     return Boolean(getPendingInvestment(user?.id));
@@ -894,19 +983,58 @@ export default function InvestPage() {
     router.replace('/invest/wallet');
   }, [hasPendingInvestment, router]);
 
-  const recentContacts = useMemo<ContactItem[]>(
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    let active = true;
+    const requestedUserId = user.id;
+
+    const loadActivity = async () => {
+      setActivityUserId(requestedUserId);
+      setLoadingActivity(true);
+      setActivityError('');
+
+      const { data, error } = await fetchCurrentUserTransactions(getAccessToken, { limit: 8 });
+      if (!active) return;
+
+      if (error) {
+        setActivityTransactions([]);
+        setActivityError(error);
+        setLoadingActivity(false);
+        return;
+      }
+
+      setActivityTransactions(
+        [...(data ?? [])].sort(
+          (left, right) =>
+            new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
+        )
+      );
+      setLoadingActivity(false);
+    };
+
+    void loadActivity();
+
+    return () => {
+      active = false;
+    };
+  }, [getAccessToken, user?.id]);
+
+  const directoryContacts = useMemo<ContactItem[]>(
     () =>
       walletTargets
         .filter((target) => target.wallet_address)
         .map((target) => ({
           id: target.id,
-          displayName: `${target.name ?? ''} ${target.surname ?? ''}`.trim() || target.email?.trim() || 'InvestApp user',
+          displayName:
+            `${target.name ?? ''} ${target.surname ?? ''}`.trim() ||
+            target.email?.trim() ||
+            t('investAppUser'),
           email: target.email,
           avatarUrl: target.avatar_url,
           walletAddress: target.wallet_address ?? '',
-        }))
-        .slice(0, 12),
-    [walletTargets]
+        })),
+    [t, walletTargets]
   );
 
   const walletHref = '/invest/wallet?mode=transfer';
@@ -920,10 +1048,45 @@ export default function InvestPage() {
     rolSeleccionado === 'inversor'
       ? t('exploreOpportunities')
       : t('repaymentCta');
-  const desktopContacts = recentContacts.length > 0 ? recentContacts : MOCK_DESKTOP_CONTACTS;
-  const desktopContactCount = recentContacts.length > 0 ? recentContacts.length : 12;
-  const profileDisplayName = displayName || email || 'InvestApp user';
+  const currentUserId = user?.id ?? '';
+  const profileDisplayName = displayName || email || t('investAppUser');
   const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
+  const visibleActivityTransactions = useMemo(
+    () => (activityUserId === currentUserId ? activityTransactions : []),
+    [activityTransactions, activityUserId, currentUserId]
+  );
+  const visibleActivityError = activityUserId === currentUserId ? activityError : '';
+  const visibleActivityLoading =
+    Boolean(currentUserId) && (loadingActivity || activityUserId !== currentUserId);
+  const recentContacts = useMemo<ContactItem[]>(() => {
+    const contactsByWallet = new Map(
+      directoryContacts.map((contact) => [contact.walletAddress.toLowerCase(), contact])
+    );
+    const seenWallets = new Set<string>();
+
+    return visibleActivityTransactions
+      .map((transaction) => getCounterpartyWallet(transaction, smartWalletAddress))
+      .filter((wallet): wallet is string => Boolean(wallet && wallet.trim()))
+      .filter((wallet) => !isSameWallet(wallet, smartWalletAddress))
+      .reduce<ContactItem[]>((contacts, wallet) => {
+        const normalizedWallet = wallet.toLowerCase();
+        if (seenWallets.has(normalizedWallet)) return contacts;
+        seenWallets.add(normalizedWallet);
+
+        const directoryContact = contactsByWallet.get(normalizedWallet);
+        contacts.push(
+          directoryContact ?? {
+            id: `wallet-${normalizedWallet}`,
+            displayName: truncateWallet(wallet) || t('unknownContact'),
+            email: null,
+            avatarUrl: null,
+            walletAddress: wallet,
+          }
+        );
+        return contacts;
+      }, [])
+      .slice(0, 12);
+  }, [directoryContacts, smartWalletAddress, t, visibleActivityTransactions]);
 
   if (hasPendingInvestment) {
     return (
@@ -1022,7 +1185,7 @@ export default function InvestPage() {
                     </span>
                   </Link>
 
-                  {loadingWallets ? (
+                  {visibleActivityLoading || loadingWallets ? (
                     <ContactsSkeleton />
                   ) : recentContacts.length > 0 ? (
                     recentContacts.map((contact) => (
@@ -1078,16 +1241,20 @@ export default function InvestPage() {
       </main>
 
       <SendDashboard
+        activityError={visibleActivityError}
+        activityTransactions={visibleActivityTransactions}
         avatarUrl={avatarUrl}
-        contacts={desktopContacts}
+        contacts={recentContacts}
         displayName={profileDisplayName}
-        loadingContacts={loadingWallets && recentContacts.length === 0}
+        loadingActivity={visibleActivityLoading}
+        loadingContacts={(visibleActivityLoading || loadingWallets) && recentContacts.length === 0}
         opportunityHref={opportunityHref}
         profileRole={profileRoleLabel}
         secondaryCta={secondaryCta}
         secondaryDescription={secondaryDescription}
         secondaryTitle={secondaryTitle}
-        totalContactCount={desktopContactCount}
+        smartWalletAddress={smartWalletAddress}
+        totalContactCount={recentContacts.length}
         walletHref={walletHref}
       />
     </>

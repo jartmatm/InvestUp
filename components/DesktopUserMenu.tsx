@@ -356,7 +356,7 @@ export default function DesktopUserMenu({
       subtitle: t('settingsSubtitle'),
     },
     {
-      href: '/profile/language',
+      href: '/profile/preferences/language',
       icon: <IconLanguage />,
       label: t('language'),
       subtitle: activeLanguage.nativeName,

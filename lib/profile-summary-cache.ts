@@ -4,6 +4,7 @@ const PROFILE_UPDATED_EVENTS = ['investapp-profile-updated', 'investup-profile-u
 const GLOBAL_AVATAR_KEYS = ['investapp_avatar_url', 'investup_avatar_url'] as const;
 const GLOBAL_DISPLAY_NAME_KEYS = ['investapp_display_name', 'investup_display_name'] as const;
 const GLOBAL_EMAIL_KEYS = ['investapp_email', 'investup_email'] as const;
+const GLOBAL_CREATED_AT_KEYS = ['investapp_created_at', 'investup_created_at'] as const;
 
 const getAvatarKeys = (userId: string) =>
   [`investapp_avatar_url_${userId}`, `investup_avatar_url_${userId}`] as const;
@@ -13,6 +14,9 @@ const getDisplayNameKeys = (userId: string) =>
 
 const getEmailKeys = (userId: string) =>
   [`investapp_email_${userId}`, `investup_email_${userId}`] as const;
+
+const getCreatedAtKeys = (userId: string) =>
+  [`investapp_created_at_${userId}`, `investup_created_at_${userId}`] as const;
 
 const readFirstStoredValue = (keys: readonly string[]) => {
   if (typeof window === 'undefined') return '';
@@ -29,16 +33,19 @@ export const readProfileSummaryCache = (userId: string) => ({
   avatarUrl: readFirstStoredValue(getAvatarKeys(userId)),
   displayName: readFirstStoredValue(getDisplayNameKeys(userId)),
   email: readFirstStoredValue(getEmailKeys(userId)),
+  createdAt: readFirstStoredValue(getCreatedAtKeys(userId)),
 });
 
 export const writeProfileSummaryCache = (
   userId: string,
   {
     avatarUrl,
+    createdAt,
     displayName,
     email,
   }: {
     avatarUrl: string;
+    createdAt?: string;
     displayName: string;
     email: string;
   }
@@ -50,6 +57,13 @@ export const writeProfileSummaryCache = (
   });
   getEmailKeys(userId).forEach((key) => {
     window.localStorage.setItem(key, email);
+  });
+  getCreatedAtKeys(userId).forEach((key) => {
+    if (createdAt) {
+      window.localStorage.setItem(key, createdAt);
+    } else {
+      window.localStorage.removeItem(key);
+    }
   });
 
   if (avatarUrl) {
@@ -81,7 +95,29 @@ export const writeProfileAvatarCache = (userId: string, avatarUrl: string) => {
 export const clearLegacyGlobalProfileSummaryCache = () => {
   if (typeof window === 'undefined') return;
 
-  [...GLOBAL_AVATAR_KEYS, ...GLOBAL_DISPLAY_NAME_KEYS, ...GLOBAL_EMAIL_KEYS].forEach((key) => {
+  [
+    ...GLOBAL_AVATAR_KEYS,
+    ...GLOBAL_DISPLAY_NAME_KEYS,
+    ...GLOBAL_EMAIL_KEYS,
+    ...GLOBAL_CREATED_AT_KEYS,
+  ].forEach((key) => {
+    window.localStorage.removeItem(key);
+  });
+};
+
+export const clearProfileSummaryCache = (userId: string | null | undefined) => {
+  if (typeof window === 'undefined') return;
+
+  clearLegacyGlobalProfileSummaryCache();
+
+  if (!userId) return;
+
+  [
+    ...getAvatarKeys(userId),
+    ...getDisplayNameKeys(userId),
+    ...getEmailKeys(userId),
+    ...getCreatedAtKeys(userId),
+  ].forEach((key) => {
     window.localStorage.removeItem(key);
   });
 };
