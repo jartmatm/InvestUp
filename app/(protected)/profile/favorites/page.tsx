@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -27,9 +28,9 @@ const normalizePhotos = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-const formatAmount = (amount: number | null) => {
-  if (amount == null) return 'Open amount';
-  return new Intl.NumberFormat('en-US', {
+const formatAmount = (amount: number | null, locale: string, openAmountLabel: string) => {
+  if (amount == null) return openAmountLabel;
+  return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0,
@@ -37,6 +38,9 @@ const formatAmount = (amount: number | null) => {
 };
 
 export default function FavoritesPage() {
+  const t = useTranslations('ProfilePages');
+  const feedT = useTranslations('Feed');
+  const locale = useLocale();
   const router = useRouter();
   const { user } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
@@ -85,7 +89,7 @@ export default function FavoritesPage() {
       });
 
       if (error) {
-        setStatus('Could not load your favorite ventures.');
+        setStatus(t('favoritesLoadError'));
         setProjects([]);
         setLoading(false);
         return;
@@ -112,29 +116,29 @@ export default function FavoritesPage() {
   }, [rolSeleccionado, user?.id]);
 
   return (
-    <PageFrame title="Favorites" subtitle="Your saved ventures in one place">
+    <PageFrame title={t('favorites')} subtitle={t('favoritesPageSubtitle')}>
       {rolSeleccionado !== 'inversor' ? (
         <div className="rounded-[22px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          Favorites are available only for investor accounts.
+          {t('favoritesInvestorOnly')}
         </div>
       ) : (
         <div className="space-y-4">
-          {loading ? <p className="text-sm text-gray-500">Loading favorites...</p> : null}
+          {loading ? <p className="text-sm text-gray-500">{t('loadingFavorites')}</p> : null}
           {status ? <p className="text-sm text-gray-500">{status}</p> : null}
 
           {!loading && !status && projects.length === 0 ? (
             <div className="rounded-[22px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              You have not saved any ventures yet. Tap the heart in the ventures feed to build your favorites list.
+              {t('favoritesEmpty')}
             </div>
           ) : null}
 
           <div className="grid grid-cols-1 gap-4 pb-8">
             {projects.map((project) => {
-              const categoryLabel = toEnglishSector(project.sector) || 'Uncategorized';
+              const categoryLabel = toEnglishSector(project.sector) || feedT('uncategorized');
               const locationLabel =
                 project.city || project.country
                   ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                  : 'Location pending';
+                  : feedT('locationPending');
 
               return (
                 <button
@@ -145,7 +149,7 @@ export default function FavoritesPage() {
                 >
                   <ProjectPhotoCarousel
                     images={project.photo_urls}
-                    alt={project.title ?? 'Favorite venture'}
+                    alt={project.title ?? t('favoriteVenture')}
                     className="h-44 w-full"
                     imageClassName="h-44 w-full object-cover"
                     emptyClassName="flex h-44 w-full items-center justify-center bg-white/20 text-xs text-slate-500 backdrop-blur-md"
@@ -155,7 +159,7 @@ export default function FavoritesPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold text-gray-900">
-                          {project.title || 'Business'}
+                          {project.title || feedT('Detail.business')}
                         </p>
                         <p className="mt-1 text-xs text-gray-500">{locationLabel}</p>
                       </div>
@@ -165,18 +169,18 @@ export default function FavoritesPage() {
                     </div>
 
                     <p className="line-clamp-3 text-sm leading-6 text-gray-600">
-                      {project.description || 'Open this venture to see more details.'}
+                      {project.description || t('openVentureDetails')}
                     </p>
 
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Goal</p>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">{feedT('goal')}</p>
                         <p className="text-sm font-semibold text-gray-900">
-                          {formatAmount(project.amount_requested)}
+                          {formatAmount(project.amount_requested, locale, t('openAmount'))}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">Interest rate</p>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-400">{feedT('interestRate')}</p>
                         <p className="text-sm font-semibold text-gray-900">
                           {project.interest_rate ? `${project.interest_rate}% EA` : '--'}
                         </p>

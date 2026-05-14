@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import {
   ProfileFieldShell,
   ProfileInfoTile,
@@ -172,20 +173,22 @@ function IconGlobe() {
 
 const FIELD_CONFIG: Array<{
   key: keyof SocialForm;
-  label: string;
-  placeholder: string;
+  labelKey: string;
+  placeholderKey: string;
   icon: ReactNode;
 }> = [
-  { key: 'facebook', label: 'Facebook', placeholder: 'Facebook URL', icon: <IconUsers /> },
-  { key: 'instagram', label: 'Instagram', placeholder: 'Instagram handle', icon: <IconCamera /> },
-  { key: 'x', label: 'X (Twitter)', placeholder: 'X handle', icon: <IconMessage /> },
-  { key: 'tiktok', label: 'TikTok', placeholder: 'TikTok handle', icon: <IconPlay /> },
-  { key: 'linkedin', label: 'LinkedIn', placeholder: 'LinkedIn URL', icon: <IconBriefcase /> },
-  { key: 'youtube', label: 'YouTube', placeholder: 'YouTube channel', icon: <IconPlay /> },
-  { key: 'website', label: 'Website', placeholder: 'https://', icon: <IconGlobe /> },
+  { key: 'facebook', labelKey: 'fields.facebook', placeholderKey: 'placeholders.facebook', icon: <IconUsers /> },
+  { key: 'instagram', labelKey: 'fields.instagram', placeholderKey: 'placeholders.instagram', icon: <IconCamera /> },
+  { key: 'x', labelKey: 'fields.x', placeholderKey: 'placeholders.x', icon: <IconMessage /> },
+  { key: 'tiktok', labelKey: 'fields.tiktok', placeholderKey: 'placeholders.tiktok', icon: <IconPlay /> },
+  { key: 'linkedin', labelKey: 'fields.linkedin', placeholderKey: 'placeholders.linkedin', icon: <IconBriefcase /> },
+  { key: 'youtube', labelKey: 'fields.youtube', placeholderKey: 'placeholders.youtube', icon: <IconPlay /> },
+  { key: 'website', labelKey: 'fields.website', placeholderKey: 'placeholders.website', icon: <IconGlobe /> },
 ];
 
 export default function SocialMediaPage() {
+  const t = useTranslations('ProfilePages.socialMediaPage');
+  const tx = (key: string) => t(key as never);
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
@@ -213,7 +216,7 @@ export default function SocialMediaPage() {
       );
 
       if (error) {
-        setStatus('Could not load your profile from Supabase.');
+        setStatus(t('couldNotLoad'));
       }
 
       const cols = new Set<string>(Object.keys(data ?? {}));
@@ -291,18 +294,18 @@ export default function SocialMediaPage() {
 
       const { error } = await patchCurrentUserProfile(getAccessToken, payload);
       if (error) {
-        setStatus(`Could not save to Supabase: ${error}`);
+        setStatus(t('couldNotSave', { error }));
         return;
       }
 
-      setStatus('Social media updated successfully.');
+      setStatus(t('updated'));
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
           ? caughtError.message
-          : 'Unknown error while saving social media.';
+          : t('unknownSaveError');
       console.error('Unexpected error saving social media:', caughtError);
-      setStatus(`Social media updated, but the screen could not finish refreshing: ${message}`);
+      setStatus(t('updatedButRefreshFailed', { message }));
     } finally {
       setSaving(false);
     }
@@ -310,14 +313,14 @@ export default function SocialMediaPage() {
 
   return (
     <ProfilePageShell
-      title="Social Media"
-      subtitle="Show the public channels that validate your profile."
+      title={t('title')}
+      subtitle={t('subtitle')}
       footer={
         <>
           {status ? <ProfileNotice tone={getStatusTone(status)}>{status}</ProfileNotice> : null}
           <ProfileSurface className="p-3">
             <ProfilePrimaryButton onClick={saveSocialMedia} disabled={saving || loadingProfile}>
-              {saving ? 'Saving...' : 'Save social media'}
+              {saving ? t('saving') : t('saveSocialMedia')}
             </ProfilePrimaryButton>
           </ProfileSurface>
         </>
@@ -327,29 +330,29 @@ export default function SocialMediaPage() {
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Social profiles
+              {t('heroEyebrow')}
             </p>
             <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              Keep your public presence up to date
+              {t('heroTitle')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-              Add the channels that help investors, founders and partners verify your identity and credibility across the web.
+              {t('heroDescription')}
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <ProfileInfoTile
               icon={<IconUsers />}
-              eyebrow="Connected"
-              title={`${connectedProfiles} profile${connectedProfiles === 1 ? '' : 's'} linked`}
-              description="Active public channels connected to your account."
+              eyebrow={t('connected')}
+              title={t('profilesLinked', { count: connectedProfiles })}
+              description={t('connectedDescription')}
               tone="purple"
             />
             <ProfileInfoTile
               icon={<IconShield />}
-              eyebrow="Visibility"
-              title="Public trust signals ready"
-              description="Prioritize LinkedIn, website and one active social network."
+              eyebrow={t('visibility')}
+              title={t('visibilityTitle')}
+              description={t('visibilityDescription')}
               tone="green"
             />
           </div>
@@ -357,27 +360,27 @@ export default function SocialMediaPage() {
       </ProfileSurface>
 
       {loadingProfile ? (
-        <ProfileNotice>Loading your social media settings...</ProfileNotice>
+        <ProfileNotice>{t('loadingSettings')}</ProfileNotice>
       ) : null}
 
       <ProfileSurface>
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Public channels
+              {t('publicChannels')}
             </p>
             <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              Channels visible from your profile
+              {t('publicChannelsTitle')}
             </h3>
           </div>
 
           <div className="flex flex-col gap-3">
             {FIELD_CONFIG.map((field) => (
-              <ProfileFieldShell key={field.key} label={field.label} icon={field.icon}>
+              <ProfileFieldShell key={field.key} label={tx(field.labelKey)} icon={field.icon}>
                 <input
                   value={form[field.key]}
                   onChange={(event) => updateForm(field.key, event.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={tx(field.placeholderKey)}
                   className={profileControlClassName}
                 />
               </ProfileFieldShell>

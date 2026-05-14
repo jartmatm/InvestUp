@@ -159,7 +159,7 @@ export default function InvestmentOpportunityDetail({
           <button
             type="button"
             onClick={onBack}
-            aria-label="Back"
+            aria-label={t('back')}
             className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-white/86 text-[#10172F] shadow-[0_18px_45px_rgba(27,35,58,0.08)] backdrop-blur-xl transition active:scale-95"
           >
             <DetailIcon name="back" className="h-6 w-6" />

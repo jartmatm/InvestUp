@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
@@ -46,9 +47,9 @@ const normalizePhotos = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-const formatCurrency = (value: number, currency: string) => {
+const formatCurrency = (value: number, currency: string, locale: string) => {
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       maximumFractionDigits: 2,
@@ -59,6 +60,8 @@ const formatCurrency = (value: number, currency: string) => {
 };
 
 export default function ProjectInvestPage() {
+  const t = useTranslations('Feed');
+  const locale = useLocale();
   const router = useRouter();
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
@@ -78,7 +81,7 @@ export default function ProjectInvestPage() {
   useEffect(() => {
     const loadProject = async () => {
       if (!projectId) {
-        setStatus('We could not find this venture.');
+        setStatus(t('InvestFlow.notFound'));
         setLoading(false);
         return;
       }
@@ -89,7 +92,7 @@ export default function ProjectInvestPage() {
       const { data, error } = await fetchProjectById(projectId, getAccessToken);
 
       if (error) {
-        setStatus(`Could not load the project: ${error}`);
+        setStatus(t('InvestFlow.loadError', { error }));
         setLoading(false);
         return;
       }
@@ -103,7 +106,7 @@ export default function ProjectInvestPage() {
 
       if (normalizedProject && !isProjectPubliclyVisible(normalizedProject)) {
         setProject(null);
-        setStatus('This listing is no longer active for new investments.');
+        setStatus(t('Detail.inactiveListing'));
         setLoading(false);
         return;
       }
@@ -128,7 +131,7 @@ export default function ProjectInvestPage() {
     };
 
     loadProject();
-  }, [getAccessToken, projectId]);
+  }, [getAccessToken, projectId, t]);
 
   const handleAmountChange = (value: string) => {
     const sanitized = value.replace(/[^0-9.]/g, '');
@@ -164,7 +167,7 @@ export default function ProjectInvestPage() {
     if (ownerName) return ownerName;
     if (owner?.email?.trim()) return owner.email.trim();
     if (project?.business_name) return project.business_name;
-    return 'Entrepreneur';
+    return t('InvestFlow.entrepreneur');
   })();
 
   const entrepreneurEmail = owner?.email?.trim() ?? '';
@@ -176,19 +179,19 @@ export default function ProjectInvestPage() {
 
   const handleContinue = () => {
     if (!project) {
-      setStatus('The project needs to load first.');
+      setStatus(t('InvestFlow.projectLoadFirst'));
       return;
     }
     if (!entrepreneurWallet) {
-      setStatus('This venture does not have a wallet ready to receive the investment yet.');
+      setStatus(t('InvestFlow.walletNotReady'));
       return;
     }
     if (!amountNumber || amountNumber <= 0) {
-      setStatus('Enter a valid investment amount.');
+      setStatus(t('InvestFlow.invalidAmount'));
       return;
     }
     if (minimumInvestment > 0 && amountNumber < minimumInvestment) {
-      setStatus(`The minimum investment for this venture is ${minimumInvestment.toFixed(2)} USD.`);
+      setStatus(t('InvestFlow.minimumInvestmentError', { amount: minimumInvestment.toFixed(2) }));
       return;
     }
 
@@ -213,7 +216,7 @@ export default function ProjectInvestPage() {
   };
 
   return (
-    <PageFrame title="Invest" subtitle="Simulate your return before transferring">
+    <PageFrame title={t('invest')} subtitle={t('InvestFlow.subtitle')}>
       {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="mb-4 text-sm text-rose-600">{status}</p> : null}
 
@@ -225,7 +228,7 @@ export default function ProjectInvestPage() {
               onClick={() => router.back()}
               className="rounded-full border border-white/25 bg-white/20 px-4 py-2 text-sm font-semibold text-gray-700 backdrop-blur-md"
             >
-              Back
+              {t('InvestFlow.back')}
             </button>
             {project.sector ? (
               <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -244,19 +247,19 @@ export default function ProjectInvestPage() {
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Project</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">{t('InvestFlow.project')}</p>
                 <h2 className="mt-1 text-xl font-semibold text-gray-900">{project.title}</h2>
                 <p className="mt-2 text-sm text-gray-600">{entrepreneurName}</p>
                 <p className="mt-1 text-xs text-gray-500">
                   {project.city || project.country
                     ? `${project.city ?? ''} ${project.country ?? ''}`.trim()
-                    : 'Location pending'}
+                    : t('locationPending')}
                 </p>
               </div>
               <div className="rounded-2xl border border-emerald-200/50 bg-emerald-50/40 px-4 py-3 text-right backdrop-blur-md">
-                <p className="text-xs text-emerald-700">Published target</p>
+                <p className="text-xs text-emerald-700">{t('InvestFlow.publishedTarget')}</p>
                 <p className="mt-1 text-sm font-semibold text-emerald-900">
-                  {formatCurrency(Number(project.amount_requested ?? 0), currencyCode)}
+                  {formatCurrency(Number(project.amount_requested ?? 0), currencyCode, locale)}
                 </p>
               </div>
             </div>
@@ -264,23 +267,23 @@ export default function ProjectInvestPage() {
             <p className="mt-4 text-sm text-gray-700">{project.description}</p>
 
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
-              <p className="text-xs text-gray-500">InvestApp user email</p>
+              <p className="text-xs text-gray-500">{t('InvestFlow.userEmail')}</p>
               <p className="mt-1 break-all text-sm font-medium text-gray-800">
-                {entrepreneurEmail || 'Email pending'}
+                {entrepreneurEmail || t('InvestFlow.emailPending')}
               </p>
             </div>
             <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/10 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-primary/70">Minimum investment</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-primary/70">{t('minimumInvestment')}</p>
               <p className="mt-2 text-lg font-semibold text-gray-900">
-                {formatCurrency(minimumInvestment || 0, currencyCode)}
+                {formatCurrency(minimumInvestment || 0, currencyCode, locale)}
               </p>
             </div>
           </div>
 
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-            <p className="text-sm font-semibold text-gray-900">Amount to invest</p>
+            <p className="text-sm font-semibold text-gray-900">{t('InvestFlow.amountToInvest')}</p>
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Selected amount</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('InvestFlow.selectedAmount')}</p>
               <p className="mt-2 text-3xl font-semibold text-gray-900">
                 {(formatAmountInput(amount) || '0.00')} USD
               </p>
@@ -304,7 +307,7 @@ export default function ProjectInvestPage() {
             </div>
 
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">Custom amount</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('InvestFlow.customAmount')}</p>
               <div className="mt-3 flex items-center gap-3 rounded-2xl border border-white/25 bg-white/20 px-4 py-4">
                 <span className="rounded-full border border-primary/15 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   USD
@@ -315,7 +318,7 @@ export default function ProjectInvestPage() {
                   value={amount}
                   onChange={(event) => handleAmountChange(event.target.value)}
                   onBlur={() => setAmount(formatAmountInput(amount))}
-                  placeholder="Enter the amount you want to invest"
+                  placeholder={t('InvestFlow.amountPlaceholder')}
                   className="w-full bg-transparent text-lg font-semibold text-gray-900 outline-none"
                 />
               </div>
@@ -324,34 +327,34 @@ export default function ProjectInvestPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">EA rate</p>
+              <p className="text-xs text-gray-500">{t('InvestFlow.eaRate')}</p>
               <p className="mt-2 text-lg font-semibold text-gray-900">{safeInterestRate}%</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Installments</p>
+              <p className="text-xs text-gray-500">{t('InvestFlow.installments')}</p>
               <p className="mt-2 text-lg font-semibold text-gray-900">
-                {safeInstallmentCount || 0} months
+                {t('InvestFlow.monthsCount', { count: safeInstallmentCount || 0 })}
               </p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Effective yield</p>
+              <p className="text-xs text-gray-500">{t('InvestFlow.effectiveYield')}</p>
               <p className="mt-2 text-lg font-semibold text-emerald-700">{projection.effectiveRate}%</p>
             </div>
             <div className="rounded-3xl border border-white/25 bg-white/20 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              <p className="text-xs text-gray-500">Estimated return</p>
+              <p className="text-xs text-gray-500">{t('InvestFlow.estimatedReturn')}</p>
               <p className="mt-2 text-lg font-semibold text-emerald-700">
-                {formatCurrency(projection.projectedReturnUsdc, 'USD')}
+                {formatCurrency(projection.projectedReturnUsdc, 'USD', locale)}
               </p>
             </div>
           </div>
 
           <div className="rounded-3xl border border-primary/15 bg-primary/10 p-5 backdrop-blur-md">
-            <p className="text-xs uppercase tracking-[0.2em] text-primary/70">Projected result</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary/70">{t('InvestFlow.projectedResult')}</p>
             <p className="mt-3 text-3xl font-semibold text-primary">
-              {formatCurrency(projection.projectedTotalUsdc, 'USD')}
+              {formatCurrency(projection.projectedTotalUsdc, 'USD', locale)}
             </p>
             <p className="mt-2 text-sm text-primary/80">
-              This estimate uses the listing&apos;s effective annual rate and converts it to the project term.
+              {t('InvestFlow.estimateDescription')}
             </p>
           </div>
 
@@ -363,7 +366,7 @@ export default function ProjectInvestPage() {
               canContinue ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
-            Confirm investment
+            {t('InvestFlow.confirmInvestment')}
           </button>
         </div>
       ) : null}

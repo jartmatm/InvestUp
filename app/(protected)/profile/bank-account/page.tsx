@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import {
   ProfileFieldShell,
   ProfileInfoTile,
@@ -219,6 +220,7 @@ function IconChevronDown() {
 }
 
 export default function BankAccountPage() {
+  const t = useTranslations('ProfilePages.bankAccountPage');
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
@@ -247,7 +249,7 @@ export default function BankAccountPage() {
       );
 
       if (error) {
-        setStatus(`Could not load your bank details: ${error}`);
+        setStatus(t('couldNotLoad', { error }));
         setLoadingDetails(false);
         return;
       }
@@ -308,8 +310,8 @@ export default function BankAccountPage() {
     if (!canSave) {
       setStatus(
         isBankMethod
-          ? 'Complete all bank account fields before saving.'
-          : 'Enter the Breve key before saving.'
+          ? t('completeBankFields')
+          : t('enterBreveKey')
       );
       return;
     }
@@ -336,20 +338,18 @@ export default function BankAccountPage() {
       });
 
       if (error) {
-        setStatus(
-          `Could not save Bank_details in Supabase. Make sure the column exists: ${error}`
-        );
+        setStatus(t('couldNotSave', { error }));
         return;
       }
 
-      setStatus('Bank details saved successfully.');
+      setStatus(t('saved'));
     } catch (caughtError) {
       const message =
         caughtError instanceof Error
           ? caughtError.message
-          : 'Unknown error while saving bank details.';
+          : t('unknownSaveError');
       console.error('Unexpected error saving bank details:', caughtError);
-      setStatus(`Bank details saved, but the screen could not finish refreshing: ${message}`);
+      setStatus(t('savedButRefreshFailed', { message }));
     } finally {
       setSaving(false);
     }
@@ -357,14 +357,14 @@ export default function BankAccountPage() {
 
   return (
     <ProfilePageShell
-      title="Bank Account"
-      subtitle="Store your payout destination for compliant withdrawal flows."
+      title={t('title')}
+      subtitle={t('subtitle')}
       footer={
         <>
           {status ? <ProfileNotice tone={getStatusTone(status)}>{status}</ProfileNotice> : null}
           <ProfileSurface className="p-3">
             <ProfilePrimaryButton onClick={saveBankDetails} disabled={!canSave || saving || loadingDetails}>
-              {saving ? 'Saving...' : 'Save bank details'}
+              {saving ? t('saving') : t('saveBankDetails')}
             </ProfilePrimaryButton>
           </ProfileSurface>
         </>
@@ -374,46 +374,46 @@ export default function BankAccountPage() {
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Payout setup
+              {t('heroEyebrow')}
             </p>
             <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              Configure where withdrawals should land
+              {t('heroTitle')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-              Save your preferred payout destination once and reuse it in future withdrawal flows without typing everything again.
+              {t('heroDescription')}
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <ProfileInfoTile
               icon={<IconBank />}
-              eyebrow="Selected method"
-              title={form.method === 'bank' ? 'Bank account' : 'Breve key'}
-              description="Choose the destination that matches your payout flow."
+              eyebrow={t('selectedMethod')}
+              title={form.method === 'bank' ? t('bankAccount') : t('breveKey')}
+              description={t('selectedMethodDescription')}
               tone="purple"
             />
             <ProfileInfoTile
               icon={<IconShield />}
-              eyebrow="Security"
-              title="Used only for payout processing"
-              description="These details remain stored in your profile for future withdrawals."
+              eyebrow={t('security')}
+              title={t('securityTitle')}
+              description={t('securityDescription')}
               tone="green"
             />
           </div>
         </div>
       </ProfileSurface>
 
-      {loadingDetails ? <ProfileNotice>Loading your payout destination...</ProfileNotice> : null}
+      {loadingDetails ? <ProfileNotice>{t('loadingDestination')}</ProfileNotice> : null}
 
       <ProfileSurface>
         <div className="flex flex-col gap-3">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-            Payout method
+            {t('payoutMethod')}
           </p>
 
           {([
-            { value: 'bank', title: 'Bank', description: 'Bank account details', icon: <IconBank /> },
-            { value: 'breve', title: 'Breve', description: 'Use a single key', icon: <IconKey /> },
+            { value: 'bank', title: t('bank'), description: t('bankDescription'), icon: <IconBank /> },
+            { value: 'breve', title: t('breve'), description: t('breveDescription'), icon: <IconKey /> },
           ] as const).map((option) => {
             const active = form.method === option.value;
 
@@ -453,23 +453,23 @@ export default function BankAccountPage() {
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              {isBankMethod ? 'Bank details' : 'Breve details'}
+              {isBankMethod ? t('bankDetails') : t('breveDetails')}
             </p>
             <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              {isBankMethod ? 'Complete the payout account' : 'Add your Breve key'}
+              {isBankMethod ? t('completePayoutAccount') : t('addBreveKey')}
             </h3>
           </div>
 
           {isBankMethod ? (
             <div className="flex flex-col gap-3">
-              <ProfileFieldShell label="Select bank" icon={<IconBank />}>
+              <ProfileFieldShell label={t('selectBank')} icon={<IconBank />}>
                 <div className="relative">
                   <select
                     value={form.bankName}
                     onChange={(event) => updateForm('bankName', event.target.value)}
                     className={`${profileControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Select a bank or wallet</option>
+                    <option value="">{t('selectBankPlaceholder')}</option>
                     {BANK_OPTIONS.map((bank) => (
                       <option key={bank} value={bank}>
                         {bank}
@@ -482,27 +482,27 @@ export default function BankAccountPage() {
                 </div>
               </ProfileFieldShell>
 
-              <ProfileFieldShell label="Account number" icon={<IconHash />}>
+              <ProfileFieldShell label={t('accountNumber')} icon={<IconHash />}>
                 <input
                   value={form.accountNumber}
                   onChange={(event) =>
                     updateForm('accountNumber', event.target.value.replace(/[^\d]/g, ''))
                   }
-                  placeholder="Account number"
+                  placeholder={t('accountNumber')}
                   className={profileControlClassName}
                 />
               </ProfileFieldShell>
 
-              <ProfileFieldShell label="Account type" icon={<IconBank />}>
+              <ProfileFieldShell label={t('accountType')} icon={<IconBank />}>
                 <div className="relative">
                   <select
                     value={form.accountType}
                     onChange={(event) => updateForm('accountType', event.target.value as AccountType)}
                     className={`${profileControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Account type</option>
-                    <option value="ahorros">Ahorros</option>
-                    <option value="corriente">Corriente</option>
+                    <option value="">{t('accountType')}</option>
+                    <option value="ahorros">{t('savings')}</option>
+                    <option value="corriente">{t('checking')}</option>
                   </select>
                   <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
                     <IconChevronDown />
@@ -510,7 +510,7 @@ export default function BankAccountPage() {
                 </div>
               </ProfileFieldShell>
 
-              <ProfileFieldShell label="Identification type" icon={<IconUserCard />}>
+              <ProfileFieldShell label={t('identificationType')} icon={<IconUserCard />}>
                 <div className="relative">
                   <select
                     value={form.identificationType}
@@ -519,11 +519,11 @@ export default function BankAccountPage() {
                     }
                     className={`${profileControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Identification type</option>
+                    <option value="">{t('identificationType')}</option>
                     <option value="cc">CC</option>
                     <option value="ti">TI</option>
                     <option value="te">TE</option>
-                    <option value="pasaporte">Pasaporte</option>
+                    <option value="pasaporte">{t('passport')}</option>
                   </select>
                   <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
                     <IconChevronDown />
@@ -531,7 +531,7 @@ export default function BankAccountPage() {
                 </div>
               </ProfileFieldShell>
 
-              <ProfileFieldShell label="Identification number" icon={<IconHash />}>
+              <ProfileFieldShell label={t('identificationNumber')} icon={<IconHash />}>
                 <input
                   value={form.identificationNumber}
                   onChange={(event) =>
@@ -540,32 +540,32 @@ export default function BankAccountPage() {
                       event.target.value.replace(/[^\dA-Za-z]/g, '')
                     )
                   }
-                  placeholder="Identification number"
+                  placeholder={t('identificationNumber')}
                   className={profileControlClassName}
                 />
               </ProfileFieldShell>
 
-              <ProfileFieldShell label="Phone number" icon={<IconPhone />}>
+              <ProfileFieldShell label={t('phoneNumber')} icon={<IconPhone />}>
                 <input
                   value={form.phoneNumber}
                   onChange={(event) =>
                     updateForm('phoneNumber', event.target.value.replace(/[^\d+\s-]/g, ''))
                   }
-                  placeholder="Phone number"
+                  placeholder={t('phoneNumber')}
                   className={profileControlClassName}
                 />
               </ProfileFieldShell>
             </div>
           ) : (
             <ProfileFieldShell
-              label="Breve key"
+              label={t('breveKey')}
               icon={<IconKey />}
-              helper="Use a single identifier when your payout flow is handled through Breve."
+              helper={t('breveHelper')}
             >
               <input
                 value={form.breveKey}
                 onChange={(event) => updateForm('breveKey', event.target.value)}
-                placeholder="Llave"
+                placeholder={t('brevePlaceholder')}
                 className={profileControlClassName}
               />
             </ProfileFieldShell>

@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
@@ -106,8 +107,8 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'I';
 
-const formatDate = (value: Date | null) => {
-  if (!value || Number.isNaN(value.getTime())) return 'Pending';
+const formatDate = (value: Date | null, pendingLabel: string) => {
+  if (!value || Number.isNaN(value.getTime())) return pendingLabel;
   return value.toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
@@ -115,17 +116,27 @@ const formatDate = (value: Date | null) => {
   });
 };
 
-const getDaysRemaining = (value: string | null | undefined) => {
-  if (!value) return 'No date';
+const getDaysRemaining = (
+  value: string | null | undefined,
+  labels: {
+    noDate: string;
+    pending: string;
+    expired: string;
+    dueToday: string;
+    oneDay: string;
+    days: (count: number) => string;
+  }
+) => {
+  if (!value) return labels.noDate;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Pending';
+  if (Number.isNaN(date.getTime())) return labels.pending;
 
   const diffMs = date.getTime() - Date.now();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return 'Expired';
-  if (diffDays === 0) return 'Due today';
-  if (diffDays === 1) return '1 day';
-  return `${diffDays} days`;
+  if (diffDays < 0) return labels.expired;
+  if (diffDays === 0) return labels.dueToday;
+  if (diffDays === 1) return labels.oneDay;
+  return labels.days(diffDays);
 };
 
 const getNextInstallmentDate = (createdAt: string, termMonths: number | null | undefined) => {
@@ -232,7 +243,10 @@ function DashboardCard({ children, className = '' }: DashboardCardProps) {
   );
 }
 
-function SectionHeading({ title, subtitle, actionLabel = 'View all' }: SectionHeadingProps) {
+function SectionHeading({ title, subtitle, actionLabel }: SectionHeadingProps) {
+  const commonT = useTranslations('Common');
+  const resolvedActionLabel = actionLabel ?? commonT('viewAll');
+
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -241,7 +255,7 @@ function SectionHeading({ title, subtitle, actionLabel = 'View all' }: SectionHe
           <p className="mt-1 text-xs leading-5 text-[#7B879C]">{subtitle}</p>
         ) : null}
       </div>
-      <span className="shrink-0 text-xs font-semibold text-[#6B39F4]">{actionLabel}</span>
+      <span className="shrink-0 text-xs font-semibold text-[#6B39F4]">{resolvedActionLabel}</span>
     </div>
   );
 }
@@ -397,6 +411,7 @@ function FundingGauge({
   currency: string;
   daysRemainingLabel: string;
 }) {
+  const t = useTranslations('Portfolio');
   const gaugeId = useId().replace(/:/g, '');
   const progressRatio = target > 0 ? Math.max(0, Math.min(1, raised / target)) : 0;
   const [animatedRatio, setAnimatedRatio] = useState(0);
@@ -417,7 +432,7 @@ function FundingGauge({
   const glowBlur = 6 + animatedRatio * 4;
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? `${daysRemainingLabel} remaining`
+    ? t('remainingTemplate', { value: daysRemainingLabel })
     : daysRemainingLabel;
 
   return (
@@ -430,22 +445,24 @@ function FundingGauge({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
-              Funds raised
+              {t('fundsRaised')}
             </p>
             <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
               {money(raised, currency)}
             </p>
-            <p className="mt-1 text-xs text-[#8A93A8]">of {money(target, currency)} goal</p>
+            <p className="mt-1 text-xs text-[#8A93A8]">
+              {t('ofGoal', { amount: money(target, currency) })}
+            </p>
           </div>
 
           <div className="text-right">
             <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
-              Remaining
+              {t('remaining')}
             </p>
             <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
               {money(remaining, currency)}
             </p>
-            <p className="mt-1 text-xs text-[#8A93A8]">to go</p>
+            <p className="mt-1 text-xs text-[#8A93A8]">{t('toGo')}</p>
           </div>
         </div>
 
@@ -515,7 +532,7 @@ function FundingGauge({
               {percentageLabel}
             </p>
             <p className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-              Funding progress
+              {t('fundingProgress')}
             </p>
           </div>
         </div>
@@ -544,6 +561,7 @@ function DesktopFundingGauge({
   currency: string;
   daysRemainingLabel: string;
 }) {
+  const t = useTranslations('Portfolio');
   const gaugeId = useId().replace(/:/g, '');
   const progressRatio = target > 0 ? Math.max(0, Math.min(1, raised / target)) : 0;
   const [animatedRatio, setAnimatedRatio] = useState(0);
@@ -559,7 +577,7 @@ function DesktopFundingGauge({
     animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? `${daysRemainingLabel} remaining`
+    ? t('remainingTemplate', { value: daysRemainingLabel })
     : daysRemainingLabel;
   const markerAngle = ((180 - animatedRatio * 180) * Math.PI) / 180;
   const markerX = 180 + 132 * Math.cos(markerAngle);
@@ -577,14 +595,14 @@ function DesktopFundingGauge({
         <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-[43px]">
           <div className="pt-8 text-center">
             <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-              Capital raised
+              {t('capitalRaised')}
             </p>
             <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
               {money(raised, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full" style={{ backgroundColor: progressColor }} />
             <p className="mt-5 text-base font-medium text-[#6F7C96]">
-              of {money(target, currency)} target
+              {t('ofTarget', { amount: money(target, currency) })}
             </p>
           </div>
 
@@ -644,20 +662,20 @@ function DesktopFundingGauge({
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-16 text-center">
               <p className="text-[4.25rem] font-semibold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
               <p className="mt-3 text-[0.82rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-                Funding progress
+                {t('fundingProgress')}
               </p>
             </div>
           </div>
 
           <div className="pt-8 text-center">
             <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-              Restante
+              {t('remaining')}
             </p>
             <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
               {money(remaining, currency)}
             </p>
             <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-[#75DDBA]" />
-            <p className="mt-5 text-base font-medium text-[#6F7C96]">left to raise</p>
+            <p className="mt-5 text-base font-medium text-[#6F7C96]">{t('leftToRaise')}</p>
           </div>
         </div>
 
@@ -775,32 +793,34 @@ function DesktopSummarySection({
   router: ReturnType<typeof useRouter>;
   summaryItems: SummaryItem[];
 }) {
+  const t = useTranslations('Portfolio');
+
   return (
     <section className="rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">Summary</h2>
+          <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">{t('summary')}</h2>
           <p className="mt-1 text-sm font-medium text-[#66728A]">
-            {summaryItems.length} investor{summaryItems.length === 1 ? '' : 's'} supporting this venture
+            {t('investorsSupporting', { count: summaryItems.length })}
           </p>
         </div>
         <span className="rounded-full bg-[#F1ECFF] px-3 py-1.5 text-xs font-bold text-[#6B39F4]">
-          Live funding
+          {t('liveFunding')}
         </span>
       </div>
 
       <div className="mt-6 overflow-hidden">
         <div className="grid grid-cols-[minmax(260px,1.5fr)_1fr_1fr_1fr_220px] border-b border-[#E8EBF4] px-1 pb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#7C879D]">
-          <span>Investor</span>
-          <span>Due date</span>
-          <span>Installment</span>
-          <span>Status</span>
-          <span className="text-right">Actions</span>
+          <span>{t('investor')}</span>
+          <span>{t('dueDate')}</span>
+          <span>{t('installment')}</span>
+          <span>{t('status')}</span>
+          <span className="text-right">{t('actions')}</span>
         </div>
 
         {summaryItems.length === 0 ? (
           <div className="rounded-2xl bg-[#F8F9FB] px-4 py-8 text-center text-sm font-medium text-[#66728A]">
-            No investors yet. Once funding starts, each investor will appear here with the next payment due date.
+            {t('noInvestors')}
           </div>
         ) : (
           <div className="divide-y divide-[#EEF1F7]">
@@ -820,7 +840,7 @@ function DesktopSummarySection({
                       {item.displayName}
                     </span>
                     <span className="mt-1 block truncate text-sm font-medium text-[#66728A]">
-                      {item.country || 'Country pending'}
+                      {item.country || t('countryPending')}
                     </span>
                   </span>
                 </span>
@@ -841,7 +861,7 @@ function DesktopSummarySection({
                       onClick={() => router.push(`/contracts?credit=${encodeURIComponent(item.creditId ?? '')}`)}
                       className="inline-flex h-10 items-center rounded-xl border border-[#E4E8F1] bg-white px-3 text-xs font-bold text-[#273247] shadow-[0_10px_22px_rgba(21,28,44,0.04)] transition hover:bg-[#F8F9FB]"
                     >
-                      Contract
+                      {t('contract')}
                     </button>
                   ) : null}
 
@@ -865,7 +885,7 @@ function DesktopSummarySection({
                         : 'bg-[#E7E4F7] text-[#A39FB7]'
                     }`}
                   >
-                    Pay
+                    {t('pay')}
                   </button>
                 </span>
               </div>
@@ -885,6 +905,7 @@ export default function EntrepreneurFeedDashboard({
   desktop?: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations('Portfolio');
   const { user, getAccessToken } = usePrivy();
   const [project, setProject] = useState<EntrepreneurProjectRow | null>(null);
   const [summaryItems, setSummaryItems] = useState<SummaryItem[]>([]);
@@ -909,7 +930,7 @@ export default function EntrepreneurFeedDashboard({
       );
 
       if (projectError) {
-        setStatus('Could not load your venture dashboard right now.');
+        setStatus(t('loadVentureDashboardError'));
         setProject(null);
         setSummaryItems([]);
         setLoading(false);
@@ -939,7 +960,7 @@ export default function EntrepreneurFeedDashboard({
       );
 
       if (investmentError) {
-        setStatus('Could not load your investor summary right now.');
+        setStatus(t('loadInvestorSummaryError'));
         setSummaryItems([]);
         setLoading(false);
         return;
@@ -983,7 +1004,7 @@ export default function EntrepreneurFeedDashboard({
       );
 
       if (scheduleError) {
-        setStatus('Could not load your payment schedule right now.');
+        setStatus(t('loadPaymentScheduleError'));
       }
 
       if (!scheduleError && scheduleData) {
@@ -1053,7 +1074,7 @@ export default function EntrepreneurFeedDashboard({
               ? contractIdByInvestor.get(investment.investor_user_id) ?? scheduleSnapshot?.credit_id ?? null
               : null,
             nextDueDate,
-            nextDueLabel: formatDate(nextDueDate),
+            nextDueLabel: formatDate(nextDueDate, t('pending')),
             installmentAmount:
               scheduleSnapshot?.current_installment_amount ??
               getInstallmentAmount(
@@ -1074,52 +1095,59 @@ export default function EntrepreneurFeedDashboard({
     };
 
     void loadDashboard();
-  }, [getAccessToken, user?.id]);
+  }, [getAccessToken, t, user?.id]);
 
   const targetAmount = Number(project?.amount_requested ?? 0);
   const raisedAmount = Number(project?.amount_received ?? 0);
   const remainingAmount = Math.max(targetAmount - raisedAmount, 0);
   const currency = project?.currency ?? 'USD';
-  const daysRemainingLabel = getDaysRemaining(project?.publication_end_date);
+  const daysRemainingLabel = getDaysRemaining(project?.publication_end_date, {
+    noDate: t('noDate'),
+    pending: t('pending'),
+    expired: t('expired'),
+    dueToday: t('dueToday'),
+    oneDay: t('oneDay'),
+    days: (count) => t('days', { count }),
+  });
   const statusLabel = project
     ? getProjectStatusLabel(project) === 'Financing in progress'
-      ? 'Financing in progress'
+      ? t('financingInProgress')
       : getProjectStatusLabel(project)
     : '--';
 
   const infoRows = [
     {
-      label: 'Funding goal',
+      label: t('fundingGoal'),
       value: money(targetAmount, currency),
       icon: <IconTarget />,
       accent: 'purple' as const,
     },
     {
-      label: 'Funds raised',
+      label: t('fundsRaised'),
       value: money(raisedAmount, currency),
       icon: <IconWallet />,
       accent: 'green' as const,
     },
     {
-      label: 'Interest rate',
+      label: t('interestRate'),
       value: project?.interest_rate ? `${project.interest_rate}% EA` : '--',
       icon: <IconPercent />,
       accent: 'amber' as const,
     },
     {
-      label: 'Days remaining',
+      label: t('daysRemaining'),
       value: daysRemainingLabel,
       icon: <IconCalendar />,
       accent: 'blue' as const,
     },
     {
-      label: 'Amount remaining',
+      label: t('amountRemaining'),
       value: money(remainingAmount, currency),
       icon: <IconClock />,
       accent: 'purple' as const,
     },
     {
-      label: 'Status',
+      label: t('status'),
       value: statusLabel,
       icon: <IconChart />,
       accent: 'green' as const,
@@ -1151,10 +1179,10 @@ export default function EntrepreneurFeedDashboard({
         {!loading && !project ? (
           <section className="rounded-[24px] border border-dashed border-[#C9B8FF] bg-white p-10 text-center shadow-[0_22px_52px_rgba(21,28,44,0.05)]">
             <p className="text-xl font-bold tracking-[-0.045em] text-[#111827]">
-              Publish your venture first
+              {t('publishVentureFirst')}
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[#66728A]">
-              Once your venture is active, this dashboard will show capital raised, financing metrics and investor summary.
+              {t('publishVentureFirstDescription')}
             </p>
           </section>
         ) : null}
@@ -1228,10 +1256,10 @@ export default function EntrepreneurFeedDashboard({
                 </div>
               ) : null}
               <h1 className={`${embedded ? 'mt-0 text-[1.35rem]' : 'mt-4 text-[2rem]'} font-semibold tracking-[-0.065em] text-[#1C2336]`}>
-                Dashboard
+                {t('dashboard')}
               </h1>
               <p className="mt-1 text-sm leading-6 text-[#7B879C]">
-                Funding progress and investor summary
+                {t('dashboardSubtitle')}
               </p>
             </div>
 
@@ -1247,7 +1275,7 @@ export default function EntrepreneurFeedDashboard({
 
           {!loading && !project ? (
             <DashboardCard className="text-sm text-[#667085]">
-              Publish your venture first and this dashboard will show your fundraising progress here.
+              {t('publishFirstMobile')}
             </DashboardCard>
           ) : null}
 
@@ -1278,14 +1306,14 @@ export default function EntrepreneurFeedDashboard({
 
               <DashboardCard>
                 <SectionHeading
-                  title="Summary"
-                  subtitle={`${summaryItems.length} investor${summaryItems.length === 1 ? '' : 's'} supporting this venture`}
+                  title={t('summary')}
+                  subtitle={t('investorsSupporting', { count: summaryItems.length })}
                 />
 
                 <div className="mt-4 flex flex-col gap-3">
                   {summaryItems.length === 0 ? (
                     <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 text-sm leading-6 text-[#7B879C] shadow-[0_16px_32px_rgba(31,38,64,0.05)]">
-                      No investors yet. Once funding starts, each investor will appear here with the next payment due date.
+                      {t('noInvestors')}
                     </div>
                   ) : (
                     summaryItems.map((item) => (
@@ -1307,7 +1335,7 @@ export default function EntrepreneurFeedDashboard({
                                   {item.displayName}
                                 </p>
                                 <p className="mt-1 truncate text-xs text-[#7B879C]">
-                                  {item.country || 'Country pending'}
+                                  {item.country || t('countryPending')}
                                 </p>
                               </div>
                               <span
@@ -1321,7 +1349,7 @@ export default function EntrepreneurFeedDashboard({
                               <div className="flex gap-6">
                                 <div>
                                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                                    Due date
+                                    {t('dueDate')}
                                   </p>
                                   <p className="mt-1 text-xs font-semibold text-[#1C2336]">
                                     {item.nextDueLabel}
@@ -1329,7 +1357,7 @@ export default function EntrepreneurFeedDashboard({
                                 </div>
                                 <div>
                                   <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                                    Installment
+                                    {t('installment')}
                                   </p>
                                   <p className={`mt-1 text-xs font-semibold ${item.healthTone.textClass}`}>
                                     {money(item.installmentAmount, currency)}
@@ -1348,7 +1376,7 @@ export default function EntrepreneurFeedDashboard({
                                     }
                                     className="inline-flex min-h-[40px] shrink-0 items-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-4 text-xs font-semibold text-white shadow-[0_14px_24px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
                                   >
-                                    View contract
+                                    {t('viewContract')}
                                   </button>
                                 ) : null}
 
@@ -1376,7 +1404,7 @@ export default function EntrepreneurFeedDashboard({
                                       : 'bg-[#E7E4F7] text-[#A39FB7]'
                                   }`}
                                 >
-                                  Pay
+                                  {t('pay')}
                                 </button>
                               </div>
                             </div>

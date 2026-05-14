@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import {
   DesktopAppShell,
@@ -364,6 +365,7 @@ function IconCheckCircle() {
 }
 
 export default function WithdrawPage() {
+  const t = useTranslations('Withdraw');
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const {
@@ -414,14 +416,14 @@ export default function WithdrawPage() {
       const { data, error } = await fetchCurrentUserKycSummary(getAccessToken, requestedAmountUsd);
       if (error) {
         if (requestedAmountUsd != null) {
-          setStatus(`Could not verify your KYC status: ${error}`);
+          setStatus(t('kycError', { error }));
         }
         return null;
       }
 
       return data;
     },
-    [getAccessToken, user?.id]
+    [getAccessToken, t, user?.id]
   );
 
   useEffect(() => {
@@ -496,30 +498,31 @@ export default function WithdrawPage() {
 
   const handleSubmit = async () => {
     if (!user?.id) {
-      setStatus('You need to be signed in to request a withdrawal.');
+      setStatus(t('signInRequired'));
       return;
     }
 
     if (!smartWalletAddress) {
-      setStatus('Wait until your smart wallet is ready.');
+      setStatus(t('walletNotReady'));
       return;
     }
 
     if (!formattedAmount || amountNumber <= 0) {
-      setStatus('Enter a valid amount to withdraw.');
+      setStatus(t('invalidAmount'));
       return;
     }
 
     if (amountNumber < MIN_WITHDRAWAL_USDC) {
-      setStatus(`The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USD.`);
+      setStatus(t('minimumWithdrawal', { amount: MIN_WITHDRAWAL_USDC.toFixed(2) }));
       return;
     }
 
     if (amountNumber > withdrawableBalance) {
       setStatus(
-        `Enter ${withdrawableBalance.toFixed(2)} USD or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
-          2
-        )} USD available for network fees.`
+        t('safeBalanceLimit', {
+          amount: withdrawableBalance.toFixed(2),
+          reserve: MIN_GAS_RESERVE_USDC.toFixed(2),
+        })
       );
       return;
     }
@@ -534,11 +537,11 @@ export default function WithdrawPage() {
         !form.identificationNumber.trim() ||
         !form.phoneNumber.trim()
       ) {
-        setStatus('Complete all bank withdrawal fields before confirming.');
+        setStatus(t('completeBankFields'));
         return;
       }
     } else if (!form.breveKey.trim()) {
-      setStatus('Enter the Breve key before confirming.');
+      setStatus(t('enterBreveKey'));
       return;
     }
 
@@ -556,9 +559,9 @@ export default function WithdrawPage() {
     if (!nextKycSummary.canWithdrawRequestedAmount) {
       setStatus(
         nextKycSummary.blockingReason ??
-          `This withdrawal requires ${getKycLevelBadgeLabel(
-            nextKycSummary.requiredLevelForRequestedAmount
-          )}.`
+          t('kycLevelRequired', {
+            level: getKycLevelBadgeLabel(nextKycSummary.requiredLevelForRequestedAmount),
+          })
       );
       setSavingRequest(false);
       return;
@@ -586,7 +589,7 @@ export default function WithdrawPage() {
       | null;
 
     if (!createResponse.ok || !createJson?.id) {
-      const baseMessage = createJson?.error ?? 'We could not create the withdrawal request.';
+      const baseMessage = createJson?.error ?? t('createRequestError');
       setStatus(createJson?.details ? `${baseMessage}: ${createJson.details}` : baseMessage);
       setSavingRequest(false);
       return;
@@ -605,7 +608,7 @@ export default function WithdrawPage() {
         }),
       }).catch(() => null);
 
-      setStatus('The on-chain withdrawal transfer could not be completed. Please try again.');
+      setStatus(t('onchainError'));
       setSavingRequest(false);
       return;
     }
@@ -624,14 +627,14 @@ export default function WithdrawPage() {
 
     if (!updateResponse.ok) {
       const baseMessage =
-        updateJson?.error ?? 'USD was sent, but we could not finalize the withdrawal request.';
+        updateJson?.error ?? t('finalizeRequestError');
       setStatus(updateJson?.details ? `${baseMessage}: ${updateJson.details}` : baseMessage);
       setSavingRequest(false);
       return;
     }
 
     setSubmittedTxHash(result.txHash);
-    setSuccessMessage('Your withdrawal will be processed in 1 to 2 business days.');
+    setSuccessMessage(t('successProcessing'));
     setForm({ ...emptyForm, method: effectiveMethod });
     void refreshKycSummary();
     setSavingRequest(false);
@@ -640,25 +643,25 @@ export default function WithdrawPage() {
   return (
     <>
     <DesktopAppShell
-      title="Withdraw funds"
-      subtitle="Request a compliant fiat payout from your InvestApp USD balance."
-      eyebrow="Payouts"
-      searchPlaceholder="Search withdrawals, wallets or bank accounts..."
+      title={t('title')}
+      subtitle={t('subtitle')}
+      eyebrow={t('eyebrow')}
+      searchPlaceholder={t('searchPlaceholder')}
       hideHeader
       maxWidthClassName="max-w-none"
     >
       <section className="grid grid-cols-2 gap-5">
         <DesktopMetricCard
           icon={<IconWalletBalance />}
-          label="Available"
+          label={t('available')}
           value={`${displayBalance} USD`}
-          detail="Wallet balance"
+          detail={t('walletBalance')}
           tone="purple"
         />
         <DesktopMetricCard
           icon={isBankMethod ? <IconBank /> : <IconKey />}
-          label="Method"
-          value={isBankMethod ? 'Bank payout' : 'Breve key'}
+          label={t('method')}
+          value={isBankMethod ? t('bankPayout') : t('breveKey')}
           detail={withdrawCountryConfig.name}
           tone={isBankMethod ? 'blue' : 'amber'}
         />
@@ -666,8 +669,8 @@ export default function WithdrawPage() {
 
       <section>
         <DesktopSectionCard
-          title="Withdrawal request"
-          subtitle="Choose a payout method and confirm the destination details."
+          title={t('withdrawalRequest')}
+          subtitle={t('withdrawalRequestSubtitle')}
           className="min-h-[calc(100vh-270px)] p-8"
         >
           <div className="space-y-6">
@@ -675,14 +678,14 @@ export default function WithdrawPage() {
               {([
                 {
                   value: 'bank' as const,
-                  title: 'Bank',
-                  description: 'Manual bank payout',
+                  title: t('bank'),
+                  description: t('manualBankPayout'),
                   icon: <IconBank />,
                   disabled: false,
                 },
                 {
                   value: 'breve' as const,
-                  title: 'Breve',
+                  title: t('breve'),
                   description: withdrawCountryConfig.breveDescription,
                   icon: <IconKey />,
                   disabled: !withdrawCountryConfig.breveEnabled,
@@ -713,7 +716,7 @@ export default function WithdrawPage() {
 
             <label>
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
-                Amount
+                {t('amount')}
               </span>
               <input
                 type="text"
@@ -821,7 +824,7 @@ export default function WithdrawPage() {
                   : 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] hover:-translate-y-0.5'
               }`}
             >
-              {savingRequest || loadingTx ? 'Processing withdrawal...' : 'Confirm withdrawal'}
+              {savingRequest || loadingTx ? t('processingWithdrawal') : t('confirmWithdrawal')}
             </button>
           </div>
         </DesktopSectionCard>
@@ -844,10 +847,10 @@ export default function WithdrawPage() {
               INVESTAPP
             </p>
             <h1 className="mt-2 text-[2.65rem] font-semibold tracking-[-0.075em] text-[#121A31]">
-              Withdraw funds
+              {t('title')}
             </h1>
             <p className="mt-1 text-[1.12rem] font-medium tracking-[-0.03em] text-[#7A8497]">
-              Temporary manual payout from USD
+              {t('mobileSubtitle')}
             </p>
           </div>
 
@@ -860,8 +863,7 @@ export default function WithdrawPage() {
                 <IconInfo />
               </span>
               <p className="max-w-[29rem] text-[0.98rem] leading-8 tracking-[-0.02em] text-[#8A5B1C]">
-                Fiat withdrawals will be processed. After confirmation, the app will send your
-                USD to your bank account.
+                {t('fiatProcessingNotice')}
               </p>
             </div>
           </section>
@@ -874,10 +876,10 @@ export default function WithdrawPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-                    Available balance
+                    {t('availableBalance')}
                   </p>
                   <p className="mt-1 text-[0.9rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                    USD ready to withdraw from your wallet.
+                    {t('availableBalanceDescription')}
                   </p>
                 </div>
               </div>
@@ -890,26 +892,26 @@ export default function WithdrawPage() {
 
           <Surface>
             <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-              Withdrawal method
+              {t('withdrawalMethod')}
             </p>
             <p className="mt-1 text-[0.95rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-              Choose how you want us to send the fiat payout.
+              {t('withdrawalMethodDescription')}
             </p>
             <p className="mt-1 text-[0.88rem] font-medium tracking-[-0.02em] text-[#9AA3B6]">
-              Options for {withdrawCountryConfig.name}.
+              {t('optionsForCountry', { country: withdrawCountryConfig.name })}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               {([
                 {
                   value: 'bank',
-                  title: 'Bank',
-                  description: 'Manual bank payout',
+                  title: t('bank'),
+                  description: t('manualBankPayout'),
                   icon: <IconBank />,
                 },
                 {
                   value: 'breve',
-                  title: 'Breve',
+                  title: t('breve'),
                   description: withdrawCountryConfig.breveDescription,
                   icon: <IconKey />,
                 },
@@ -977,7 +979,7 @@ export default function WithdrawPage() {
           {isBankMethod ? (
             <Surface>
               <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-                Bank details
+                {t('bankDetails')}
               </p>
               <p className="mt-1 text-[0.9rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
                 Fields update automatically based on your country.
@@ -1097,7 +1099,7 @@ export default function WithdrawPage() {
           ) : (
             <Surface>
               <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-                Breve details
+                {t('breveDetails')}
               </p>
 
               <div className="mt-4">
@@ -1115,7 +1117,7 @@ export default function WithdrawPage() {
           )}
 
           <Surface>
-            <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">Amount</p>
+            <p className="text-[1.1rem] font-semibold tracking-[-0.04em] text-[#121A31]">{t('amount')}</p>
 
             <div className="mt-4">
               <FieldShell icon={<IconAmount />}>
@@ -1125,14 +1127,14 @@ export default function WithdrawPage() {
                   onChange={(event) =>
                     updateForm('amount', event.target.value.replace(/[^0-9.]/g, ''))
                   }
-                  placeholder="Amount in USD"
+                  placeholder={t('amountInUsd')}
                   className={formInputClassName}
                 />
               </FieldShell>
             </div>
 
             <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#7A8497]">
-              The hidden transfer is sent in USD on Polygon.
+              {t('hiddenTransfer')}
             </p>
             <p
               className={`mt-1 text-[0.88rem] font-medium tracking-[-0.02em] ${
@@ -1140,18 +1142,19 @@ export default function WithdrawPage() {
               }`}
             >
               {withdrawableBalance < MIN_WITHDRAWAL_USDC
-                ? `You must leave at least ${MIN_GAS_RESERVE_USDC.toFixed(2)} USD in your account.`
+                ? t('mustLeaveReserve', { reserve: MIN_GAS_RESERVE_USDC.toFixed(2) })
                 : amountBelowMinimum
-                  ? `The minimum withdrawal is ${MIN_WITHDRAWAL_USDC.toFixed(2)} USD.`
+                  ? t('minimumWithdrawal', { amount: MIN_WITHDRAWAL_USDC.toFixed(2) })
                 : amountExceedsSafeBalance
-                ? `Enter ${withdrawableBalance.toFixed(2)} USD or less to keep ${MIN_GAS_RESERVE_USDC.toFixed(
-                    2
-                  )} USD available for network fees.`
-                : `You can withdraw between ${MIN_WITHDRAWAL_USDC.toFixed(
-                    2
-                  )} and ${withdrawableBalance.toFixed(2)} USD and keep ${MIN_GAS_RESERVE_USDC.toFixed(
-                    2
-                  )} USD available for network fees.`}
+                ? t('safeBalanceLimit', {
+                    amount: withdrawableBalance.toFixed(2),
+                    reserve: MIN_GAS_RESERVE_USDC.toFixed(2),
+                  })
+                : t('withdrawalRange', {
+                    min: MIN_WITHDRAWAL_USDC.toFixed(2),
+                    max: withdrawableBalance.toFixed(2),
+                    reserve: MIN_GAS_RESERVE_USDC.toFixed(2),
+                  })}
             </p>
           </Surface>
 
@@ -1162,7 +1165,7 @@ export default function WithdrawPage() {
                   <p className="font-semibold">{successMessage}</p>
                   {submittedTxHash ? (
                     <p className="mt-2 break-all text-[0.78rem] text-[#14845A]/80">
-                      Tx hash: {submittedTxHash}
+                      {t('txHash', { hash: submittedTxHash })}
                     </p>
                   ) : null}
                 </div>
@@ -1185,11 +1188,11 @@ export default function WithdrawPage() {
                 }`}
               >
                 <IconPaperPlane />
-                {savingRequest || loadingTx ? 'Processing withdrawal...' : 'Confirm withdrawal'}
+                {savingRequest || loadingTx ? t('processingWithdrawal') : t('confirmWithdrawal')}
               </button>
 
               <p className="mt-4 text-center text-[0.84rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                Your withdrawal will be processed in 1 to 2 business days.
+                {t('successProcessing')}
               </p>
             </Surface>
           </div>

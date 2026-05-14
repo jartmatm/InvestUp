@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import {
   DesktopAppShell,
@@ -618,6 +619,7 @@ function LoadingOverlay({ label }: { label: string }) {
 }
 
 export default function PublishPage() {
+  const t = useTranslations('Publish');
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado, smartWalletAddress } = useInvestApp();
@@ -639,7 +641,20 @@ export default function PublishPage() {
   const [publishing, setPublishing] = useState(false);
   const [review, setReview] = useState<ReviewState | null>(null);
 
-  const currentStep = steps[stepIndex];
+  const stepLabels = useMemo(
+    () => [
+      t('stepBasicInformation'),
+      t('stepValueProposition'),
+      t('stepTraction'),
+      t('stepInvestment'),
+      t('stepMarket'),
+      t('stepTeam'),
+      t('stepMedia'),
+      t('stepExtra'),
+    ],
+    [t]
+  );
+  const currentStep = stepLabels[stepIndex] ?? steps[stepIndex];
   const progress = Math.round(((stepIndex + 1) / steps.length) * 100);
 
   useEffect(() => {
@@ -659,7 +674,7 @@ export default function PublishPage() {
       ]);
 
       if (projectsResponse.error) {
-        setStatus(`Could not verify your current project state: ${projectsResponse.error}`);
+        setStatus(t('verifyProjectStateError', { error: projectsResponse.error }));
       } else {
         setHasExistingProject(((projectsResponse.data ?? []) as ProjectRecord[]).length > 0);
       }
@@ -676,7 +691,7 @@ export default function PublishPage() {
     };
 
     void loadState();
-  }, [getAccessToken, rolSeleccionado, user?.id]);
+  }, [getAccessToken, rolSeleccionado, t, user?.id]);
 
   const updateForm = (key: keyof PublishWizardForm, value: string) => {
     setReview(null);
@@ -1026,12 +1041,12 @@ export default function PublishPage() {
 
     const { error } = await createCurrentUserProject(getAccessToken, payload);
     if (error) {
-      setStatus(`Could not publish the venture: ${error}`);
+      setStatus(t('publishError', { error }));
       setPublishing(false);
       return;
     }
 
-    setStatus('Venture published and visible in the marketplace.');
+    setStatus(t('publishSuccess'));
     setPublishing(false);
     router.push('/feed');
   };
@@ -1042,37 +1057,37 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextInput
-              label="Business name"
+              label={t('businessName')}
               value={form.business_name}
               onChange={(value) => updateForm('business_name', value)}
-              placeholder="Aurora Coffee"
+              placeholder={t('businessNamePlaceholder')}
             />
             <TextInput
-              label="Location"
+              label={t('location')}
               value={form.location}
               onChange={(value) => updateForm('location', value)}
-              placeholder="Street, city, country"
+              placeholder={t('locationPlaceholder')}
             />
             <SelectField
-              label="What industry are you in?"
+              label={t('industryQuestion')}
               value={form.industry}
               onChange={(value) => updateForm('industry', value)}
               options={SECTOR_OPTIONS_ENGLISH}
-              placeholder="Select a category"
+              placeholder={t('selectCategory')}
             />
             <SelectField
-              label="How long have you been operating?"
+              label={t('timeOperatingQuestion')}
               value={form.time_operating}
               onChange={(value) => updateForm('time_operating', value)}
               options={OPERATING_TIME_OPTIONS}
-              placeholder="Select an option"
+              placeholder={t('selectOption')}
             />
             <SelectField
-              label="Business stage"
+              label={t('businessStage')}
               value={form.business_stage}
               onChange={(value) => updateForm('business_stage', value)}
               options={REGISTRATION_OPTIONS}
-              placeholder="Select current stage"
+              placeholder={t('selectStage')}
             />
           </div>
         );
@@ -1080,22 +1095,22 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="What exactly do you sell?"
+              label={t('productQuestion')}
               value={form.product_description}
               onChange={(value) => updateForm('product_description', value)}
-              placeholder="Describe the product or service clearly."
+              placeholder={t('productPlaceholder')}
             />
             <TextArea
-              label="What problem do you solve?"
+              label={t('problemQuestion')}
               value={form.problem_solved}
               onChange={(value) => updateForm('problem_solved', value)}
-              placeholder="Describe the customer's real pain and how you solve it."
+              placeholder={t('problemPlaceholder')}
             />
             <TextArea
-              label="Why is your business different or better?"
+              label={t('differentiationQuestion')}
               value={form.differentiation}
               onChange={(value) => updateForm('differentiation', value)}
-              helper="Avoid generic answers like quality and good service."
+              helper={t('differentiationHelper')}
             />
           </div>
         );
@@ -1103,39 +1118,38 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              The more specific you are, the better. Avoid phrases like we sell a lot. A strong
-              example: $12,000 USD monthly revenue with 18% growth over 3 months.
+              {t('tractionHint')}
             </div>
             <TextInput
-              label="Current monthly revenue"
+              label={t('monthlyRevenue')}
               value={form.monthly_revenue}
               onChange={(value) => updateForm('monthly_revenue', value)}
-              placeholder="$12,000 USD"
+              placeholder={t('monthlyRevenuePlaceholder')}
             />
             <TextInput
-              label="Average ticket per customer"
+              label={t('avgTicket')}
               value={form.avg_ticket}
               onChange={(value) => updateForm('avg_ticket', value)}
-              placeholder="$45 USD"
+              placeholder={t('avgTicketPlaceholder')}
             />
             <TextInput
-              label="Number of customers per month"
+              label={t('monthlyCustomers')}
               value={form.monthly_customers}
               onChange={(value) => updateForm('monthly_customers', value)}
               type="number"
-              placeholder="320"
+              placeholder={t('monthlyCustomersPlaceholder')}
             />
             <TextInput
-              label="Are you growing? yes/no + approximate %"
+              label={t('growthRate')}
               value={form.growth_rate}
               onChange={(value) => updateForm('growth_rate', value)}
-              placeholder="Yes, 18% over the last 3 months"
+              placeholder={t('growthRatePlaceholder')}
             />
             <TextInput
-              label="Social media"
+              label={t('socialMedia')}
               value={form.social_media}
               onChange={(value) => updateForm('social_media', value)}
-              placeholder="@business, Instagram, TikTok, website or links"
+              placeholder={t('socialMediaPlaceholder')}
             />
           </div>
         );
@@ -1143,24 +1157,24 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextInput
-              label="How much capital do you need to raise?"
+              label={t('capitalNeeded')}
               value={form.capital_needed}
               onChange={(value) => updateForm('capital_needed', value)}
               type="number"
-              placeholder="50000"
+              placeholder={t('capitalNeededPlaceholder')}
             />
             <TextArea
-              label="How will you use the money?"
+              label={t('fundsUsage')}
               value={form.funds_usage}
               onChange={(value) => updateForm('funds_usage', value)}
-              placeholder="Example: 45% inventory, 30% equipment, 25% marketing."
+              placeholder={t('fundsUsagePlaceholder')}
             />
             <TextInput
-              label="What annual interest rate do you offer?"
+              label={t('investmentOffer')}
               value={form.investment_offer}
               onChange={(value) => updateForm('investment_offer', value)}
               type="number"
-              placeholder="12"
+              placeholder={t('investmentOfferPlaceholder')}
             />
           </div>
         );
@@ -1168,18 +1182,18 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Who is your ideal customer?"
+              label={t('targetCustomer')}
               value={form.target_customer}
               onChange={(value) => updateForm('target_customer', value)}
             />
             <TextArea
-              label="How large is the market?"
+              label={t('marketSize')}
               value={form.market_size}
               onChange={(value) => updateForm('market_size', value)}
-              placeholder="An estimate is okay."
+              placeholder={t('marketSizePlaceholder')}
             />
             <TextArea
-              label="Is there competition? What do you do better?"
+              label={t('competition')}
               value={form.competition}
               onChange={(value) => updateForm('competition', value)}
             />
@@ -1189,16 +1203,16 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Who are you?"
+              label={t('founderInfo')}
               value={form.founder_info}
               onChange={(value) => updateForm('founder_info', value)}
-              placeholder="Brief experience."
+              placeholder={t('founderInfoPlaceholder')}
             />
             <TextArea
-              label="Do you have partners or a team?"
+              label={t('teamInfo')}
               value={form.team_info}
               onChange={(value) => updateForm('team_info', value)}
-              placeholder="Roles and responsibilities."
+              placeholder={t('teamInfoPlaceholder')}
             />
           </div>
         );
@@ -1206,12 +1220,11 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              To make the publication stand out, upload at least 5 photos. Ideally show product,
-              location, process, customers and branding.
+              {t('mediaHint')}
             </div>
             <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-              <p className="text-sm font-semibold text-[#1C2336]">Photos</p>
-              <p className="mt-1 text-xs leading-5 text-[#7B879C]">Minimum 5, ideal 8-12.</p>
+              <p className="text-sm font-semibold text-[#1C2336]">{t('photos')}</p>
+              <p className="mt-1 text-xs leading-5 text-[#7B879C]">{t('photosDescription')}</p>
               <input
                 ref={photoInputRef}
                 type="file"
@@ -1226,24 +1239,24 @@ export default function PublishPage() {
                 className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
               >
                 <UploadIcon />
-                Upload images
+                {t('uploadImages')}
               </button>
               {projectPhotos.length ? (
                 <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {projectPhotos.length} photo(s) uploaded
+                  {t('photosUploaded', { count: projectPhotos.length })}
                 </p>
               ) : null}
             </div>
             <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-              <p className="text-sm font-semibold text-[#1C2336]">Video</p>
+              <p className="text-sm font-semibold text-[#1C2336]">{t('video')}</p>
               <p className="mt-1 text-xs leading-5 text-[#7B879C]">
-                Recommended: 1-2 videos of 30-60 seconds.
+                {t('videoDescription')}
               </p>
               <TextInput
-                label="Video URL"
+                label={t('videoUrl')}
                 value={videoUrl}
                 onChange={updateVideoUrl}
-                placeholder="Paste a video URL if the file is not on this device"
+                placeholder={t('videoPlaceholder')}
               />
               <input
                 ref={videoInputRef}
@@ -1259,15 +1272,15 @@ export default function PublishPage() {
                 className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
               >
                 <UploadIcon />
-                Upload videos
+                {t('uploadVideos')}
               </button>
               {projectVideos.length ? (
                 <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {projectVideos.length} video file(s) uploaded
+                  {t('videosUploaded', { count: projectVideos.length })}
                 </p>
               ) : null}
               {videoUrl.trim() ? (
-                <p className="mt-2 text-xs font-semibold text-[#6B39F4]">Video URL added</p>
+                <p className="mt-2 text-xs font-semibold text-[#6B39F4]">{t('videoUrlAdded')}</p>
               ) : null}
             </div>
           </div>
@@ -1276,22 +1289,22 @@ export default function PublishPage() {
         return (
           <div className="flex flex-col gap-4">
             <TextArea
-              label="Customer testimonials"
+              label={t('testimonials')}
               value={form.testimonials}
               onChange={(value) => updateForm('testimonials', value)}
-              placeholder="Optional."
+              placeholder={t('optionalPlaceholder')}
             />
             <TextArea
-              label="Achievements"
+              label={t('achievements')}
               value={form.achievements}
               onChange={(value) => updateForm('achievements', value)}
-              placeholder="Sales, awards, press, partnerships or milestones."
+              placeholder={t('achievementsPlaceholder')}
             />
             <TextArea
-              label="Why is now the right time?"
+              label={t('timingReason')}
               value={form.timing_reason}
               onChange={(value) => updateForm('timing_reason', value)}
-              placeholder="Optional: explain why raising capital now increases the opportunity."
+              placeholder={t('timingReasonPlaceholder')}
             />
           </div>
         );
@@ -1302,27 +1315,27 @@ export default function PublishPage() {
     return (
       <>
         <DesktopAppShell
-          title="Publish project"
-          subtitle="This workspace is available for entrepreneur profiles."
-          eyebrow="Access"
+          title={t('publishProject')}
+          subtitle={t('entrepreneurWorkspaceSubtitle')}
+          eyebrow={t('access')}
           maxWidthClassName="max-w-none"
         >
-          <DesktopSectionCard title="Entrepreneur-only area" subtitle="Switch to an entrepreneur profile to create or manage a venture publication.">
+          <DesktopSectionCard title={t('entrepreneurOnlyArea')} subtitle={t('entrepreneurOnlyAreaSubtitle')}>
             <button
               type="button"
               onClick={() => router.push('/feed')}
               className="h-11 rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-4 text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
             >
-              Back to Feed
+              {t('backToFeed')}
             </button>
           </DesktopSectionCard>
         </DesktopAppShell>
 
         <main className="min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828] lg:hidden">
           <div className="mx-auto w-full max-w-md">
-            <PageBackButton fallbackHref="/feed" label="Back" />
+            <PageBackButton fallbackHref="/feed" label={t('back')} />
             <SectionSurface className="mt-4 text-sm leading-6 text-[#667085]">
-              This page is available for entrepreneur profiles.
+              {t('entrepreneurOnlyMobile')}
             </SectionSurface>
           </div>
         </main>
@@ -1335,7 +1348,7 @@ export default function PublishPage() {
 
   return (
     <>
-      {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? 'Sending...' : 'Publishing...'} /> : null}
+      {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? t('sending') : t('publishing')} /> : null}
 
       {!hasExistingProject && review ? (
         <>
@@ -1344,17 +1357,17 @@ export default function PublishPage() {
               title={
                 review.optimizedPublication.title ||
                 review.optimizedPublication.tittle ||
-                `${form.business_name} investment opportunity`
+                t('investmentOpportunityTitle', { business: form.business_name })
               }
-              subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
-              location={form.location || profile?.country || 'Location pending'}
-              category={form.industry || 'Business'}
+              subtitle={review.optimizedPublication.summary || t('investInBusinessToday', { business: form.business_name || t('thisBusiness') })}
+              location={form.location || profile?.country || t('locationPending')}
+              category={form.industry || t('business')}
               rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
               images={projectPhotos}
               metrics={buildPreviewMetrics(form)}
               sections={buildPublicationSections(form, review.optimizedPublication)}
-              primaryActionLabel={publishing ? 'Publishing...' : 'Publish'}
-              secondaryActionLabel="Edit details"
+              primaryActionLabel={publishing ? t('publishing') : t('publish')}
+              secondaryActionLabel={t('editDetails')}
               onPrimaryAction={publishProject}
               onSecondaryAction={() => setReview(null)}
               onBack={() => setReview(null)}
@@ -1364,13 +1377,13 @@ export default function PublishPage() {
           </div>
 
           <DesktopAppShell
-            title={review.optimizedPublication.title || review.optimizedPublication.tittle || `${form.business_name} investment opportunity`}
-            subtitle={review.optimizedPublication.summary || `Invest in ${form.business_name || 'this business'} today.`}
-            eyebrow="Publication review"
+            title={review.optimizedPublication.title || review.optimizedPublication.tittle || t('investmentOpportunityTitle', { business: form.business_name })}
+            subtitle={review.optimizedPublication.summary || t('investInBusinessToday', { business: form.business_name || t('thisBusiness') })}
+            eyebrow={t('publicationReview')}
             maxWidthClassName="max-w-none"
           >
             <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
-              <DesktopSectionCard title="Optimized investor story" subtitle="Review the publication generated from your prompt before it goes live.">
+              <DesktopSectionCard title={t('optimizedInvestorStory')} subtitle={t('optimizedInvestorStorySubtitle')}>
                 <div className="space-y-5">
                   <div
                     className="h-[320px] overflow-hidden rounded-[24px] bg-[#F1ECFF] bg-cover bg-center shadow-[0_24px_58px_rgba(21,28,44,0.10)]"
@@ -1394,7 +1407,7 @@ export default function PublishPage() {
                   </div>
                 </div>
               </DesktopSectionCard>
-              <DesktopSectionCard title="Publish controls" subtitle="Keep editing or send it live to the marketplace.">
+              <DesktopSectionCard title={t('publishControls')} subtitle={t('publishControlsSubtitle')}>
                 <div className="space-y-3">
                   <button
                     type="button"
@@ -1402,7 +1415,7 @@ export default function PublishPage() {
                     disabled={publishing}
                     className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
                   >
-                    {publishing ? 'Publishing...' : 'Publish project'}
+                    {publishing ? t('publishing') : t('publishProject')}
                   </button>
                   <button
                     type="button"
@@ -1410,7 +1423,7 @@ export default function PublishPage() {
                     disabled={publishing}
                     className="h-12 w-full rounded-2xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF] disabled:opacity-60"
                   >
-                    Edit details
+                    {t('editDetails')}
                   </button>
                 </div>
               </DesktopSectionCard>
@@ -1420,19 +1433,19 @@ export default function PublishPage() {
       ) : (
       <>
       <DesktopAppShell
-        title="Publish project"
-        subtitle="Complete each section and review the optimized version before publishing."
-        eyebrow="Guided publish"
+        title={t('publishProject')}
+        subtitle={t('publishSubtitle')}
+        eyebrow={t('guidedPublish')}
         maxWidthClassName="max-w-none"
       >
         <section className="grid grid-cols-3 gap-4">
-          <DesktopMetricCard label="Progress" value={`${progress}%`} detail={`Step ${stepIndex + 1} of ${steps.length}`} tone="purple" />
-          <DesktopMetricCard label="Media" value={projectPhotos.length + projectVideos.length} detail="Assets attached" tone="blue" />
-          <DesktopMetricCard label="Draft" value={draftId || savedDraft ? 'Saved' : 'New'} detail="Publication workspace" tone={draftId || savedDraft ? 'green' : 'amber'} />
+          <DesktopMetricCard label={t('progress')} value={`${progress}%`} detail={t('stepProgress', { current: stepIndex + 1, total: steps.length })} tone="purple" />
+          <DesktopMetricCard label={t('media')} value={projectPhotos.length + projectVideos.length} detail={t('assetsAttached')} tone="blue" />
+          <DesktopMetricCard label={t('draft')} value={draftId || savedDraft ? t('saved') : t('new')} detail={t('publicationWorkspace')} tone={draftId || savedDraft ? 'green' : 'amber'} />
         </section>
 
         <section className="grid grid-cols-[280px_minmax(0,1fr)_340px] gap-6">
-          <DesktopSectionCard title="Steps" subtitle="Structured for a high-quality marketplace listing.">
+          <DesktopSectionCard title={t('steps')} subtitle={t('stepsSubtitle')}>
             <div className="space-y-2">
               {steps.map((step, index) => (
                 <button
@@ -1446,7 +1459,7 @@ export default function PublishPage() {
                   <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold shadow-[0_8px_18px_rgba(21,28,44,0.05)]">
                     {index + 1}
                   </span>
-                  <span className="text-sm font-bold">{step}</span>
+                  <span className="text-sm font-bold">{stepLabels[index] ?? step}</span>
                 </button>
               ))}
             </div>
@@ -1454,22 +1467,22 @@ export default function PublishPage() {
 
           <DesktopSectionCard
             title={currentStep}
-            subtitle="Use specific numbers, business context and clear investor language."
+            subtitle={t('currentStepSubtitle')}
           >
             {checkingProject ? (
               <div className="rounded-2xl bg-[#F8F9FB] px-4 py-5 text-sm font-semibold text-[#66728A]">
-                Checking your current business...
+                {t('checkingCurrentBusiness')}
               </div>
             ) : null}
             {!checkingProject && hasExistingProject ? (
               <div className="rounded-2xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 py-5 text-sm font-semibold leading-6 text-[#5B2FF4]">
-                You already have a published venture. Edit it from portfolio; the rule is one project per entrepreneur.
+                {t('existingProjectNotice')}
                 <button
                   type="button"
                   onClick={() => router.push('/portfolio')}
                   className="mt-4 h-11 rounded-xl bg-[#6B39F4] px-4 text-sm font-bold text-white"
                 >
-                  Go to portfolio
+                  {t('goToPortfolio')}
                 </button>
               </div>
             ) : null}
@@ -1484,18 +1497,18 @@ export default function PublishPage() {
                 {renderStep()}
                 <div className="grid grid-cols-4 gap-3">
                   <button type="button" onClick={goBack} disabled={stepIndex === 0 || finalizing || savingDraft} className={secondaryButtonClassName}>
-                    Previous
+                    {t('previous')}
                   </button>
                   <button type="button" onClick={() => void saveDraft()} disabled={savingDraft || finalizing || checkingProject} className={secondaryButtonClassName}>
-                    {savingDraft ? 'Saving...' : 'Save draft'}
+                    {savingDraft ? t('saving') : t('saveDraft')}
                   </button>
                   {stepIndex === steps.length - 1 ? (
                     <button type="button" onClick={finalizePrompt} disabled={finalizing || checkingProject} className={`${primaryButtonClassName} col-span-2`}>
-                      Finish
+                      {t('finish')}
                     </button>
                   ) : (
                     <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
-                      Next
+                      {t('next')}
                     </button>
                   )}
                 </div>
@@ -1503,19 +1516,19 @@ export default function PublishPage() {
             ) : null}
           </DesktopSectionCard>
 
-          <DesktopSectionCard title="Listing health" subtitle="What improves conversion in the marketplace.">
+          <DesktopSectionCard title={t('listingHealth')} subtitle={t('listingHealthSubtitle')}>
             <div className="space-y-3">
               <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Business</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{form.business_name || 'Pending name'}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('business')}</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{form.business_name || t('pendingName')}</p>
               </div>
               <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Capital</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{form.capital_needed || 'Pending amount'}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('capital')}</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{form.capital_needed || t('pendingAmount')}</p>
               </div>
               <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Photos</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{projectPhotos.length} uploaded</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('photos')}</p>
+                <p className="mt-1 text-sm font-bold text-[#111827]">{t('uploadedCount', { count: projectPhotos.length })}</p>
               </div>
               {savedDraft && !draftId && !review ? (
                 <button
@@ -1523,7 +1536,7 @@ export default function PublishPage() {
                   onClick={() => resumeDraft(savedDraft)}
                   className="h-11 w-full rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
                 >
-                  Resume saved draft
+                  {t('resumeSavedDraft')}
                 </button>
               ) : null}
               {status ? (
@@ -1541,34 +1554,33 @@ export default function PublishPage() {
         <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          <PageBackButton fallbackHref="/feed" label="Back" />
+          <PageBackButton fallbackHref="/feed" label={t('back')} />
 
           <header className="flex flex-col gap-2">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-              Guided publish
+              {t('guidedPublish')}
             </p>
             <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-              Publish project
+              {t('publishProject')}
             </h1>
             <p className="text-sm leading-6 text-[#7B879C]">
-              Complete each section and review the optimized version before publishing.
+              {t('publishSubtitle')}
             </p>
           </header>
 
           {checkingProject ? (
-            <SectionSurface className="text-sm text-[#667085]">Checking your current business...</SectionSurface>
+            <SectionSurface className="text-sm text-[#667085]">{t('checkingCurrentBusiness')}</SectionSurface>
           ) : null}
 
           {!checkingProject && hasExistingProject ? (
             <SectionSurface className="text-sm leading-6 text-[#667085]">
-              You already have a published venture. You can edit it from portfolio; the rule is one
-              project per entrepreneur.
+              {t('existingProjectNotice')}
               <button
                 type="button"
                 onClick={() => router.push('/portfolio')}
                 className={`${primaryButtonClassName} mt-4 w-full`}
               >
-                Go to portfolio
+                {t('goToPortfolio')}
               </button>
             </SectionSurface>
           ) : null}
@@ -1576,20 +1588,20 @@ export default function PublishPage() {
           {!hasExistingProject && savedDraft && !draftId && !review ? (
             <SectionSurface className="text-sm leading-6 text-[#667085]">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                Saved draft
+                {t('savedDraft')}
               </p>
               <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                Resume your publication
+                {t('resumePublication')}
               </h2>
               <p className="mt-2">
-                You have a saved publication draft. Resume it to keep editing from where you left off.
+                {t('resumePublicationDescription')}
               </p>
               <button
                 type="button"
                 onClick={() => resumeDraft(savedDraft)}
                 className={`${primaryButtonClassName} mt-4 w-full`}
               >
-                Resume
+                {t('resume')}
               </button>
             </SectionSurface>
           ) : null}
@@ -1600,7 +1612,7 @@ export default function PublishPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                      Step {stepIndex + 1} of {steps.length}
+                      {t('stepProgress', { current: stepIndex + 1, total: steps.length })}
                     </p>
                     <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
                       {currentStep}
@@ -1627,7 +1639,7 @@ export default function PublishPage() {
                   disabled={stepIndex === 0 || finalizing || savingDraft}
                   className={secondaryButtonClassName}
                 >
-                  Previous
+                  {t('previous')}
                 </button>
                 <button
                   type="button"
@@ -1635,7 +1647,7 @@ export default function PublishPage() {
                   disabled={savingDraft || finalizing || checkingProject}
                   className={secondaryButtonClassName}
                 >
-                  {savingDraft ? 'Saving...' : 'Save draft'}
+                  {savingDraft ? t('saving') : t('saveDraft')}
                 </button>
                 {stepIndex === steps.length - 1 ? (
                   <button
@@ -1644,11 +1656,11 @@ export default function PublishPage() {
                     disabled={finalizing || checkingProject}
                     className={`${primaryButtonClassName} col-span-2`}
                   >
-                    Finish
+                    {t('finish')}
                   </button>
                 ) : (
                   <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
-                    Next
+                    {t('next')}
                   </button>
                 )}
               </div>

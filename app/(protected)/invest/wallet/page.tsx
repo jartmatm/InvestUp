@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import {
   DesktopAppShell,
@@ -47,13 +48,13 @@ type TxRow = Pick<CurrentUserTransaction, 'from_wallet' | 'to_wallet'>;
 
 const suggestedValues = [5, 10, 50, 100, 500, 1000];
 
-const nameFrom = (target: Partial<WalletTarget> | null | undefined) => {
+const nameFrom = (target: Partial<WalletTarget> | null | undefined, fallback: string) => {
   const full = `${target?.name ?? ''} ${target?.surname ?? ''}`.trim();
   if (full) return full;
   if (target?.email?.trim()) {
     return target.email.split('@')[0]?.replace(/[._-]+/g, ' ').trim() || target.email.trim();
   }
-  return 'InvestApp user';
+  return fallback;
 };
 
 const normalizeRecipientIdentifier = (value: string | null | undefined) =>
@@ -268,6 +269,7 @@ function ContactAvatar({
 }
 
 export default function WalletTransferPage() {
+  const t = useTranslations('Send');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken, createWallet } = usePrivy();
@@ -308,12 +310,12 @@ export default function WalletTransferPage() {
         .filter((target) => target.wallet_address)
         .map((target) => ({
           id: target.id,
-          displayName: nameFrom(target),
+          displayName: nameFrom(target, t('investAppUser')),
           email: target.email,
           avatarUrl: target.avatar_url,
           walletAddress: target.wallet_address ?? '',
         })),
-    [walletTargets]
+    [t, walletTargets]
   );
 
   useEffect(() => {
@@ -436,7 +438,7 @@ export default function WalletTransferPage() {
           if (profile) {
             return {
               id: profile.id,
-              displayName: nameFrom(profile),
+              displayName: nameFrom(profile, t('investAppUser')),
               email: profile.email,
               avatarUrl: profile.avatar_url,
               walletAddress: profile.wallet_address ?? address,
@@ -457,7 +459,7 @@ export default function WalletTransferPage() {
     } finally {
       setLoadingRecentWallets(false);
     }
-  }, [getAccessToken, mappedTargets, smartWalletAddress, user?.id]);
+  }, [getAccessToken, mappedTargets, smartWalletAddress, t, user?.id]);
 
   useEffect(() => {
     void loadRecentWallets();
@@ -486,7 +488,7 @@ export default function WalletTransferPage() {
   const canRefresh = !loadingWallets && !loadingRecentWallets;
   const numericBalance = Number(balanceUSDC ?? 0);
   const safeBalanceValue = Number.isFinite(numericBalance) ? Math.max(numericBalance, 0) : 0;
-  const displaySourceContact = email || user?.email?.address || 'No email available yet';
+  const displaySourceContact = email || user?.email?.address || t('noEmailAvailable');
 
   const handleRefresh = async () => {
     await Promise.all([cargarWalletsObjetivo(), loadRecentWallets()]);
@@ -506,7 +508,7 @@ export default function WalletTransferPage() {
       await createWallet();
     } catch (error) {
       console.error('Error creating embedded wallet from transfer page:', error);
-      alert('We could not finish setting up your wallet yet. Please try again in a moment.');
+      alert(t('walletSetupError'));
     } finally {
       setSettingUpWallet(false);
     }
@@ -544,10 +546,10 @@ export default function WalletTransferPage() {
   return (
     <>
     <DesktopAppShell
-      title={transferMode === 'repayment' ? 'Send repayment' : 'Send money'}
-      subtitle="Move funds to an InvestApp user, wallet address or saved contact."
-      eyebrow="Wallet transfer"
-      searchPlaceholder="Search contacts, wallets or transfers..."
+      title={transferMode === 'repayment' ? t('sendRepayment') : t('sendMoney')}
+      subtitle={t('walletTransferSubtitle')}
+      eyebrow={t('walletTransfer')}
+      searchPlaceholder={t('searchPlaceholder')}
       actions={
         <button
           type="button"
@@ -555,32 +557,32 @@ export default function WalletTransferPage() {
           disabled={!canRefresh}
           className="h-11 rounded-2xl border border-[#D9CCFF] bg-white px-4 text-sm font-bold text-[#6B39F4] shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition hover:bg-[#F8F5FF] disabled:opacity-60"
         >
-          Refresh
+          {t('refresh')}
         </button>
       }
       rightRail={
-        <DesktopSectionCard title="Transfer readiness" subtitle="A quick operational check before sending.">
+        <DesktopSectionCard title={t('transferReadiness')} subtitle={t('transferReadinessSubtitle')}>
           <div className="space-y-3">
             <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Source</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('source')}</p>
               <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {smartWalletAddress ? `${smartWalletAddress.slice(0, 8)}...${smartWalletAddress.slice(-6)}` : 'Wallet syncing'}
+                {smartWalletAddress ? `${smartWalletAddress.slice(0, 8)}...${smartWalletAddress.slice(-6)}` : t('walletSyncing')}
               </p>
             </div>
             <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Recipient</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('recipient')}</p>
               <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {resolvedRecipient?.displayName || walletDestino || 'Pending recipient'}
+                {resolvedRecipient?.displayName || walletDestino || t('pendingRecipient')}
               </p>
             </div>
             <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Destination</p>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('destination')}</p>
               <p className="mt-1 break-all text-sm font-bold text-[#111827]">
                 {resolvedDestinationWallet
                   ? `${resolvedDestinationWallet.slice(0, 8)}...${resolvedDestinationWallet.slice(-6)}`
                   : looksLikeEmail(walletDestino)
-                    ? 'Email lookup on send'
-                    : 'Not resolved'}
+                    ? t('emailLookupOnSend')
+                    : t('notResolved')}
               </p>
             </div>
           </div>
@@ -590,36 +592,36 @@ export default function WalletTransferPage() {
       <section className="grid grid-cols-3 gap-4">
         <DesktopMetricCard
           icon={<CurrencyIcon />}
-          label="Available"
+          label={t('available')}
           value={`${safeBalanceValue.toFixed(2)} USD`}
-          detail="Current wallet balance"
+          detail={t('currentWalletBalance')}
           tone="purple"
         />
         <DesktopMetricCard
           icon={<WalletIcon />}
-          label="Amount"
+          label={t('amount')}
           value={`${formatAmount(monto) || '0.00'} USD`}
-          detail={transferMode === 'repayment' ? 'Repayment transfer' : 'Manual transfer'}
+          detail={transferMode === 'repayment' ? t('repaymentTransfer') : t('manualTransfer')}
           tone="green"
         />
         <DesktopMetricCard
           icon={<PaperPlaneIcon />}
-          label="Status"
-          value={canSubmit ? 'Ready' : 'Incomplete'}
-          detail={canSubmit ? 'Recipient and amount are valid' : 'Complete recipient and amount'}
+          label={t('status')}
+          value={canSubmit ? t('ready') : t('incomplete')}
+          detail={canSubmit ? t('recipientAndAmountValid') : t('completeRecipientAndAmount')}
           tone={canSubmit ? 'green' : 'amber'}
         />
       </section>
 
       <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
         <DesktopSectionCard
-          title="Transfer details"
-          subtitle="Enter a recipient email or wallet address and confirm the transfer amount."
+          title={t('transferDetails')}
+          subtitle={t('transferDetailsSubtitle')}
         >
           <div className="grid gap-5">
             <label>
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
-                Send to
+                {t('sendTo')}
               </span>
               <div className="flex h-14 items-center gap-3 rounded-2xl border border-[#E2E6F0] bg-[#FAFBFF] px-4 transition focus-within:border-[#BBA7FF] focus-within:ring-4 focus-within:ring-[#6B39F4]/10">
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#F1ECFF] text-[#6B39F4]">
@@ -629,7 +631,7 @@ export default function WalletTransferPage() {
                   type="text"
                   value={walletDestino}
                   onChange={(event) => setWalletDestino(event.target.value)}
-                  placeholder="Enter an InvestApp email or wallet"
+                  placeholder={t('recipientPlaceholder')}
                   className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111827] outline-none placeholder:text-[#9BA5B8]"
                 />
               </div>
@@ -637,7 +639,7 @@ export default function WalletTransferPage() {
 
             <label>
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
-                Amount
+                {t('amount')}
               </span>
               <div className="flex h-20 items-center gap-4 rounded-2xl border border-[#E2E6F0] bg-white px-5 shadow-[0_12px_28px_rgba(21,28,44,0.04)] transition focus-within:border-[#BBA7FF] focus-within:ring-4 focus-within:ring-[#6B39F4]/10">
                 <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#F1ECFF] text-[#6B39F4]">
@@ -664,7 +666,7 @@ export default function WalletTransferPage() {
 
             <div>
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
-                Suggested values
+                {t('suggestedValues')}
               </p>
               <div className="grid grid-cols-6 gap-2">
                 {suggestedValues.map((value) => {
@@ -698,12 +700,12 @@ export default function WalletTransferPage() {
               }`}
             >
               <PaperPlaneIcon />
-              {loadingTx ? 'Processing...' : transferMode === 'repayment' ? 'Send repayment' : 'Send money'}
+              {loadingTx ? t('processing') : transferMode === 'repayment' ? t('sendRepayment') : t('sendMoney')}
             </button>
           </div>
         </DesktopSectionCard>
 
-        <DesktopSectionCard title="Recent users" subtitle="Choose a verified InvestApp contact.">
+        <DesktopSectionCard title={t('recentUsers')} subtitle={t('recentUsersSubtitle')}>
           <div className="space-y-3">
             {loadingWallets || loadingRecentWallets ? (
               <div className="h-24 animate-pulse rounded-2xl bg-[#F8F9FB]" />
@@ -731,15 +733,15 @@ export default function WalletTransferPage() {
                       </span>
                     </span>
                     <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-[#6B39F4] text-white' : 'bg-[#F1ECFF] text-[#6B39F4]'}`}>
-                      {isSelected ? 'Selected' : 'Select'}
+                      {isSelected ? t('selected') : t('select')}
                     </span>
                   </button>
                 );
               })
             ) : (
               <DesktopEmptyState
-                title="No recent contacts yet"
-                description="Type an InvestApp email manually to start a new transfer."
+                title={t('noRecentContacts')}
+                description={t('typeEmailManually')}
               />
             )}
           </div>
@@ -757,10 +759,10 @@ export default function WalletTransferPage() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.62rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              Send Money
+              {t('sendMoney')}
             </h1>
             <p className="mt-1 max-w-[320px] text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
-              Enter an email or pick one of your recent InvestApp users
+              {t('mobileSubtitle')}
             </p>
           </div>
 
@@ -770,7 +772,7 @@ export default function WalletTransferPage() {
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                Send to
+                {t('sendTo')}
               </h2>
               <button
                 type="button"
@@ -779,7 +781,7 @@ export default function WalletTransferPage() {
                 className="inline-flex items-center gap-2 rounded-full border border-[#E9E3FF] bg-white/78 px-4 py-2 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-white disabled:opacity-60"
               >
                 <RefreshIcon />
-                Refresh
+                {t('refresh')}
               </button>
             </div>
 
@@ -792,12 +794,12 @@ export default function WalletTransferPage() {
                   type="text"
                   value={walletDestino}
                   onChange={(event) => setWalletDestino(event.target.value)}
-                  placeholder="Enter an InvestApp email"
+                  placeholder={t('enterEmail')}
                   className="w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#18213C] outline-none placeholder:text-slate-400"
                 />
                 <button
                   type="button"
-                  aria-label="Scan recipient QR"
+                  aria-label={t('scanQr')}
                   onClick={() => void 0}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#7C5CFF] transition hover:bg-[#F7F4FF]"
                 >
@@ -810,14 +812,14 @@ export default function WalletTransferPage() {
           <section className="rounded-[26px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
             <div className="mb-3 flex items-center justify-between gap-3 px-1">
               <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                Recent users
+                {t('recentUsers')}
               </h2>
               <button
                 type="button"
                 onClick={() => setShowAllWallets((current) => !current)}
                 className="inline-flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] transition hover:text-[#5B48FF]"
               >
-                {recentWallets.length > 1 && showAllWallets ? 'Show less' : 'View all'}
+                {recentWallets.length > 1 && showAllWallets ? t('showLess') : t('viewAll')}
                 <ChevronRightIcon />
               </button>
             </div>
@@ -854,7 +856,7 @@ export default function WalletTransferPage() {
                           {wallet.displayName}
                         </p>
                         <p className="truncate text-[12px] leading-5 text-slate-400">
-                          {firstNameFromEmail(wallet.email) || 'Contact'}
+                          {firstNameFromEmail(wallet.email) || t('contact')}
                         </p>
                       </div>
                       <button
@@ -866,14 +868,14 @@ export default function WalletTransferPage() {
                             : 'border-[#E4D9FF] bg-white text-[#7C5CFF] hover:bg-[#F8F4FF]'
                         }`}
                       >
-                        {isSelected ? 'Selected' : 'Select'}
+                        {isSelected ? t('selected') : t('select')}
                       </button>
                     </div>
                   );
                 })
               ) : (
                 <div className="rounded-[22px] border border-dashed border-[#E8E8F2] bg-[#FAFAFE] px-4 py-5 text-sm leading-6 text-slate-500">
-                  No recent users yet. You can still type an InvestApp email manually.
+                  {t('noRecentUsersManual')}
                 </div>
               )}
             </div>
@@ -882,7 +884,7 @@ export default function WalletTransferPage() {
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                From
+                {t('from')}
               </h2>
               {!smartWalletAddress && !alreadyHasEmbeddedWallet ? (
                 <button
@@ -891,7 +893,7 @@ export default function WalletTransferPage() {
                   disabled={settingUpWallet}
                   className="rounded-full border border-[#E9E3FF] bg-white/78 px-4 py-2 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] shadow-[0_10px_24px_rgba(15,23,42,0.04)] disabled:opacity-60"
                 >
-                  {settingUpWallet ? 'Setting up...' : 'Set up'}
+                  {settingUpWallet ? t('settingUp') : t('setUp')}
                 </button>
               ) : null}
             </div>
@@ -907,8 +909,8 @@ export default function WalletTransferPage() {
                   {!smartWalletAddress ? (
                     <p className="mt-1 text-[11px] leading-4 text-slate-400">
                       {alreadyHasEmbeddedWallet
-                        ? 'Waiting for your smart wallet session to finish syncing.'
-                        : 'Finish setting up your wallet to send funds.'}
+                        ? t('smartWalletSyncing')
+                        : t('finishWalletSetup')}
                     </p>
                   ) : null}
                 </div>
@@ -922,7 +924,7 @@ export default function WalletTransferPage() {
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                Amount
+                {t('amount')}
               </h2>
             </div>
 
@@ -951,7 +953,7 @@ export default function WalletTransferPage() {
                       type="button"
                       onClick={() => stepAmount(1)}
                       className="flex flex-1 items-center justify-center text-[#7C5CFF] transition hover:bg-[#F8F4FF]"
-                      aria-label="Increase amount by 1 dollar"
+                      aria-label={t('increaseAmount')}
                     >
                       <ChevronUpIcon />
                     </button>
@@ -959,7 +961,7 @@ export default function WalletTransferPage() {
                       type="button"
                       onClick={() => stepAmount(-1)}
                       className="flex flex-1 items-center justify-center border-t border-[#E4D9FF] text-[#7C5CFF] transition hover:bg-[#F8F4FF]"
-                      aria-label="Decrease amount by 1 dollar"
+                      aria-label={t('decreaseAmount')}
                     >
                       <ChevronDownIcon />
                     </button>
@@ -978,7 +980,7 @@ export default function WalletTransferPage() {
 
           <section>
             <h2 className="mb-3 text-[0.96rem] font-semibold tracking-[-0.03em] text-slate-500">
-              Suggested value
+              {t('suggestedValue')}
             </h2>
             <div className="grid grid-cols-3 gap-3">
               {suggestedValues.map((value) => {
@@ -1014,7 +1016,7 @@ export default function WalletTransferPage() {
               }`}
             >
               <PaperPlaneIcon />
-              {loadingTx ? 'Processing...' : 'Send Money'}
+              {loadingTx ? t('processing') : t('sendMoney')}
             </button>
           </section>
         </div>

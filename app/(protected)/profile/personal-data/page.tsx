@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
 import {
@@ -59,14 +60,16 @@ type FieldShellProps = {
   helper?: ReactNode;
 };
 
-const REGION_NAMES = new Intl.DisplayNames(['es', 'en'], { type: 'region' });
-const COUNTRY_OPTIONS: CountryOption[] = getCountries()
-  .map((code) => ({
-    code,
-    name: REGION_NAMES.of(code) ?? code,
-    dialCode: `+${getCountryCallingCode(code)}`,
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+const getCountryOptions = (locale: string): CountryOption[] => {
+  const regionNames = new Intl.DisplayNames([locale, 'en'], { type: 'region' });
+  return getCountries()
+    .map((code) => ({
+      code,
+      name: regionNames.of(code) ?? code,
+      dialCode: `+${getCountryCallingCode(code)}`,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, locale));
+};
 
 const emptyForm: ProfileForm = {
   id: '',
@@ -103,11 +106,11 @@ const getDocumentTone = (status?: string) => {
   return 'border-[#E3D9FF] bg-[#F6F1FF] text-[#6B39F4]';
 };
 
-const getDocumentLabel = (status?: string) => {
-  if (status === 'approved') return 'Approved';
-  if (status === 'rejected') return 'Rejected';
-  if (status === 'submitted') return 'Submitted';
-  return 'Missing';
+const getDocumentLabelKey = (status?: string) => {
+  if (status === 'approved') return 'documentStatus.approved';
+  if (status === 'rejected') return 'documentStatus.rejected';
+  if (status === 'submitted') return 'documentStatus.submitted';
+  return 'documentStatus.missing';
 };
 
 const getStatusTone = (message: string) => {
@@ -414,6 +417,9 @@ function IconChevronDown() {
 }
 
 export default function PersonalDataPage() {
+  const locale = useLocale();
+  const t = useTranslations('ProfilePages.personalDataPage');
+  const tx = (key: string) => t(key as never);
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, smartWalletAddress, guardarRol, pushNotification, rolSeleccionado } =
@@ -430,6 +436,7 @@ export default function PersonalDataPage() {
   const [kycStatus, setKycStatus] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const countryOptions = useMemo(() => getCountryOptions(locale), [locale]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -447,7 +454,7 @@ export default function PersonalDataPage() {
       );
 
       if (error) {
-        setStatus('Could not load your profile from Supabase.');
+        setStatus(t('couldNotLoadProfile'));
       }
 
       const cols = new Set<string>(Object.keys(data ?? {}));
@@ -468,8 +475,8 @@ export default function PersonalDataPage() {
       }
 
       const countryRaw = ((data?.country as string | null) ?? profileData?.country ?? '').trim();
-      const countryByCode = COUNTRY_OPTIONS.find((option) => option.code === countryRaw.toUpperCase());
-      const countryByName = COUNTRY_OPTIONS.find(
+      const countryByCode = countryOptions.find((option) => option.code === countryRaw.toUpperCase());
+      const countryByName = countryOptions.find(
         (option) => option.name.toLowerCase() === countryRaw.toLowerCase()
       );
       const normalizedCountryCode = countryByCode?.code ?? countryByName?.code ?? '';
@@ -490,7 +497,7 @@ export default function PersonalDataPage() {
     };
 
     void loadProfile();
-  }, [getAccessToken, user?.email?.address, user?.id]);
+  }, [countryOptions, getAccessToken, t, user?.email?.address, user?.id]);
 
   useEffect(() => {
     const loadRoleEligibility = async () => {
@@ -526,7 +533,7 @@ export default function PersonalDataPage() {
       setLoadingKyc(true);
       const { data, error } = await fetchCurrentUserKycSummary(getAccessToken, requestedAmountUsd);
       if (error) {
-        setKycStatus(`Could not load KYC compliance status: ${error}`);
+        setKycStatus(t('couldNotLoadKyc', { error }));
         setLoadingKyc(false);
         return null;
       }
@@ -536,7 +543,7 @@ export default function PersonalDataPage() {
       setLoadingKyc(false);
       return data;
     },
-    [getAccessToken, user?.id]
+    [getAccessToken, t, user?.id]
   );
 
   useEffect(() => {
@@ -564,18 +571,18 @@ export default function PersonalDataPage() {
     const fullName = `${form.name} ${form.surname}`.trim();
     if (fullName) return fullName;
     const fromEmail = (form.email || user?.email?.address || '').split('@')[0];
-    return fromEmail || 'User';
-  }, [form.email, form.name, form.surname, user?.email?.address]);
+    return fromEmail || t('userFallback');
+  }, [form.email, form.name, form.surname, t, user?.email?.address]);
 
   const displayEmail = useMemo(() => {
-    return form.email || user?.email?.address || 'No email';
-  }, [form.email, user?.email?.address]);
+    return form.email || user?.email?.address || t('noEmail');
+  }, [form.email, t, user?.email?.address]);
 
   const roleBadge = useMemo(() => {
-    if (form.role === 'investor') return 'Investor';
-    if (form.role === 'entrepreneur') return 'Entrepreneur';
-    return 'Profile';
-  }, [form.role]);
+    if (form.role === 'investor') return t('investor');
+    if (form.role === 'entrepreneur') return t('entrepreneur');
+    return t('profile');
+  }, [form.role, t]);
 
   const kycBadgeLabel = useMemo(
     () => getKycLevelBadgeLabel(kycSummary?.approvedLevel ?? 0),
@@ -631,7 +638,7 @@ export default function PersonalDataPage() {
 
   const onCountryChange = (countryCode: string) => {
     updateForm('country', countryCode);
-    const option = COUNTRY_OPTIONS.find((item) => item.code === countryCode);
+    const option = countryOptions.find((item) => item.code === countryCode);
     if (!option) return;
     setForm((prev) => {
       const value = prev.phone_number.trim();
@@ -654,7 +661,7 @@ export default function PersonalDataPage() {
         return;
       }
 
-      setKycStatus('KYC document uploaded successfully.');
+      setKycStatus(t('kycDocumentUploaded'));
       await refreshKycSummary();
     } finally {
       setUploadingDocument(null);
@@ -672,7 +679,7 @@ export default function PersonalDataPage() {
         email: canEditEmail ? form.email || null : user.email?.address ?? null,
         wallet_address: smartWalletAddress ?? null,
       };
-      const selectedCountry = COUNTRY_OPTIONS.find((item) => item.code === form.country);
+      const selectedCountry = countryOptions.find((item) => item.code === form.country);
 
       if (form.role && !isRoleChangeRequested) payload.role = form.role;
       if (availableColumns.has('name')) payload.name = form.name || null;
@@ -700,7 +707,7 @@ export default function PersonalDataPage() {
 
       const { error } = await patchCurrentUserProfile(getAccessToken, payload);
       if (error) {
-        setStatus(`Could not save to Supabase: ${error}`);
+        setStatus(t('couldNotSave', { error }));
         return;
       }
 
@@ -708,7 +715,9 @@ export default function PersonalDataPage() {
         if (roleEligibility && !roleEligibility.canChangeRole) {
           setForm((prev) => ({ ...prev, role: currentDbRole }));
           setStatus(
-            `Profile updated, but ${roleEligibility.message ?? 'the role cannot be changed right now.'}`
+            t('profileUpdatedBut', {
+              message: roleEligibility.message ?? t('roleCannotChangeNow'),
+            })
           );
           return;
         }
@@ -719,9 +728,9 @@ export default function PersonalDataPage() {
           const message =
             caughtError instanceof Error
               ? caughtError.message
-              : 'the role could not be changed right now.';
+              : t('roleCouldNotChangeNow');
           setForm((prev) => ({ ...prev, role: currentDbRole }));
-          setStatus(`Profile updated, but ${message}`);
+          setStatus(t('profileUpdatedBut', { message }));
           return;
         }
       }
@@ -729,7 +738,7 @@ export default function PersonalDataPage() {
       if (typeof window !== 'undefined') {
         const nextEmail = form.email || user.email?.address || '';
         const nextDisplayName =
-          `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : 'User');
+          `${form.name} ${form.surname}`.trim() || (nextEmail ? nextEmail.split('@')[0] : t('userFallback'));
 
         try {
           if (user.id) {
@@ -749,8 +758,8 @@ export default function PersonalDataPage() {
       try {
         pushNotification({
           kind: 'profile_update',
-          title: 'Profile updated',
-          body: 'Your personal information and account preferences were updated successfully.',
+          title: t('profileUpdatedNotificationTitle'),
+          body: t('profileUpdatedNotificationBody'),
           actionHref: '/profile/personal-data',
         });
       } catch (caughtError) {
@@ -759,10 +768,10 @@ export default function PersonalDataPage() {
 
       if (!hasAnyExtendedField) {
         setStatus(
-          'Basic save completed. To store extended fields (name, surname, phone, country, gender, address, avatar), add the matching columns in users or profile_data/metadata.'
+          t('basicSaveCompleted')
         );
       } else {
-        setStatus('Profile updated successfully.');
+        setStatus(t('profileUpdatedSuccessfully'));
       }
 
       void fetchCurrentUserRoleChangeEligibility(getAccessToken)
@@ -778,9 +787,9 @@ export default function PersonalDataPage() {
       void refreshKycSummary();
     } catch (caughtError) {
       const message =
-        caughtError instanceof Error ? caughtError.message : 'Unknown error while saving profile.';
+        caughtError instanceof Error ? caughtError.message : t('unknownSaveError');
       console.error('Unexpected error saving profile:', caughtError);
-      setStatus(`Profile updated, but the screen could not finish refreshing: ${message}`);
+      setStatus(t('profileUpdatedRefreshFailed', { message }));
     } finally {
       setSaving(false);
     }
@@ -789,37 +798,37 @@ export default function PersonalDataPage() {
   return (
     <>
       <DesktopAppShell
-        title="Personal Data"
-        subtitle="Update identity, contact details and compliance documents in one secure workspace."
-        eyebrow="Profile workspace"
+        title={t('title')}
+        subtitle={t('subtitle')}
+        eyebrow={t('eyebrow')}
         maxWidthClassName="max-w-none"
       >
         <section className="grid grid-cols-3 gap-4">
           <DesktopMetricCard
             icon={<IconLimit />}
-            label="Current limit"
-            value={loadingKyc ? 'Checking' : kycLimitLabel}
-            detail="Based on your approved KYC tier"
+            label={t('currentLimit')}
+            value={loadingKyc ? t('checking') : kycLimitLabel}
+            detail={t('currentLimitDetail')}
             tone="purple"
           />
           <DesktopMetricCard
             icon={<IconBriefcase />}
-            label="Role"
+            label={t('role')}
             value={roleBadge}
-            detail={isRoleSelectionLocked ? 'Role change locked' : 'Role can be reviewed'}
+            detail={isRoleSelectionLocked ? t('roleChangeLocked') : t('roleCanBeReviewed')}
             tone="blue"
           />
           <DesktopMetricCard
             icon={<IconDocument />}
-            label="KYC"
-            value={loadingKyc ? 'Updating' : kycBadgeLabel}
-            detail="Compliance status"
+            label={t('kyc')}
+            value={loadingKyc ? t('updating') : kycBadgeLabel}
+            detail={t('complianceStatus')}
             tone={(kycSummary?.approvedLevel ?? 0) > 0 ? 'green' : 'amber'}
           />
         </section>
 
         <section className="grid grid-cols-[360px_minmax(0,1fr)] gap-6">
-          <DesktopSectionCard title="Identity profile" subtitle="Avatar, role and wallet identity.">
+          <DesktopSectionCard title={t('identityProfile')} subtitle={t('identityProfileSubtitle')}>
             <div className="flex flex-col items-center text-center">
               <div className="relative h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
                 {form.avatar_url ? (
@@ -840,7 +849,7 @@ export default function PersonalDataPage() {
                 htmlFor="desktop-personal-data-avatar"
                 className="mt-5 inline-flex h-11 cursor-pointer items-center justify-center rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] px-5 text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
               >
-                Change avatar
+                {t('changeAvatar')}
               </label>
               <input
                 id="desktop-personal-data-avatar"
@@ -852,38 +861,40 @@ export default function PersonalDataPage() {
               <h2 className="mt-5 text-xl font-bold tracking-[-0.045em] text-[#111827]">{displayName}</h2>
               <p className="mt-1 text-sm font-medium text-[#73809A]">{displayEmail}</p>
               <div className="mt-5 w-full rounded-2xl bg-[#F8F9FB] px-4 py-3 text-left">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">Wallet</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">
+                  {t('wallet')}
+                </p>
                 <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                  {smartWalletAddress || 'Wallet not synced yet'}
+                  {smartWalletAddress || t('walletNotSynced')}
                 </p>
               </div>
             </div>
           </DesktopSectionCard>
 
-          <DesktopSectionCard title="Account information" subtitle="Keep your investor or entrepreneur profile verified and current.">
+          <DesktopSectionCard title={t('accountInformation')} subtitle={t('accountInformationSubtitle')}>
             <div className="grid grid-cols-2 gap-4">
-              <input value={form.name} onChange={(event) => updateForm('name', event.target.value)} placeholder="Name" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
-              <input value={form.surname} onChange={(event) => updateForm('surname', event.target.value)} placeholder="Surname" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
-              <input value={form.email} onChange={(event) => updateForm('email', event.target.value)} disabled={!canEditEmail} placeholder="Email" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]" />
-              <input value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} placeholder="Phone number" className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.name} onChange={(event) => updateForm('name', event.target.value)} placeholder={t('name')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.surname} onChange={(event) => updateForm('surname', event.target.value)} placeholder={t('surname')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.email} onChange={(event) => updateForm('email', event.target.value)} disabled={!canEditEmail} placeholder={t('email')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]" />
+              <input value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} placeholder={t('phoneNumber')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
               <select value={form.country} onChange={(event) => onCountryChange(event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
-                <option value="">Country</option>
-                {COUNTRY_OPTIONS.map((option) => (
+                <option value="">{t('country')}</option>
+                {countryOptions.map((option) => (
                   <option key={option.code} value={option.code}>{option.name}</option>
                 ))}
               </select>
               <select value={form.gender} onChange={(event) => updateForm('gender', event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
-                <option value="">Gender</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="non_binary">Non-binary</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
+                <option value="">{t('gender')}</option>
+                <option value="female">{t('female')}</option>
+                <option value="male">{t('male')}</option>
+                <option value="non_binary">{t('nonBinary')}</option>
+                <option value="prefer_not_to_say">{t('preferNotToSay')}</option>
               </select>
-              <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} placeholder="Address" className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
+              <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} placeholder={t('address')} className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
               <select value={form.role} onChange={(event) => updateForm('role', event.target.value)} disabled={loadingRoleEligibility || isRoleSelectionLocked} className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]">
-                <option value="">Role</option>
-                <option value="investor">Investor</option>
-                <option value="entrepreneur">Entrepreneur</option>
+                <option value="">{t('role')}</option>
+                <option value="investor">{t('investor')}</option>
+                <option value="entrepreneur">{t('entrepreneur')}</option>
               </select>
             </div>
             {status ? (
@@ -897,7 +908,7 @@ export default function PersonalDataPage() {
               disabled={saving || loadingProfile}
               className="mt-5 h-12 rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
             >
-              {saving ? 'Saving...' : 'Save profile'}
+              {saving ? t('saving') : t('saveProfile')}
             </button>
           </DesktopSectionCard>
         </section>
@@ -913,7 +924,7 @@ export default function PersonalDataPage() {
               type="button"
               onClick={() => router.push('/profile')}
               className="flex min-h-[44px] w-11 items-center justify-center rounded-full border border-white/90 bg-white/88 text-[#1C2336] shadow-[0_16px_34px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
-              aria-label="Back to profile"
+              aria-label={t('backToProfile')}
             >
               <IconBack />
             </button>
@@ -923,10 +934,10 @@ export default function PersonalDataPage() {
                 InvestApp
               </span>
               <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-                Personal Data
+                {t('title')}
               </h1>
               <p className="max-w-[28rem] text-sm leading-6 text-[#7B879C]">
-                Update your identity, contact details and compliance documents in one secure place.
+                {t('mobileSubtitle')}
               </p>
             </div>
           </header>
@@ -952,7 +963,7 @@ export default function PersonalDataPage() {
               <span
                 className={`mt-4 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${kycBadgeClassName}`}
               >
-                {loadingKyc ? 'Updating level...' : kycBadgeLabel}
+                {loadingKyc ? t('updatingLevel') : kycBadgeLabel}
               </span>
               <h2 className="mt-4 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
                 {displayName}
@@ -963,7 +974,7 @@ export default function PersonalDataPage() {
                 htmlFor="personal-data-avatar"
                 className="mt-4 inline-flex min-h-[44px] cursor-pointer items-center justify-center rounded-full border border-[#D9CCFF] bg-white/85 px-5 text-sm font-semibold text-[#6B39F4] shadow-[0_12px_28px_rgba(107,57,244,0.10)] transition hover:-translate-y-0.5 hover:bg-white"
               >
-                Change
+                {t('change')}
               </label>
               <input
                 id="personal-data-avatar"
@@ -981,13 +992,13 @@ export default function PersonalDataPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-                    Current limit
+                    {t('currentLimit')}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#1C2336]">
-                    {loadingKyc ? 'Checking limits...' : kycLimitLabel}
+                    {loadingKyc ? t('checkingLimits') : kycLimitLabel}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-[#7B879C]">
-                    Based on your approved compliance tier.
+                    {t('currentLimitDetail')}
                   </p>
                 </div>
               </div>
@@ -998,11 +1009,11 @@ export default function PersonalDataPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-                    Role
+                    {t('role')}
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#1C2336]">{roleBadge}</p>
                   <p className="mt-1 text-xs leading-5 text-[#7B879C]">
-                    Active account profile for your current activity.
+                    {t('activeAccountProfile')}
                   </p>
                 </div>
               </div>
@@ -1013,29 +1024,34 @@ export default function PersonalDataPage() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-                  Compliance KYC
+                  {t('complianceKyc')}
                 </p>
                 <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                  Keep your compliance documents ready
+                  {t('complianceTitle')}
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-[#7B879C]">
                   {loadingKyc
-                    ? 'Refreshing your verification level and movement limits.'
+                    ? t('refreshingVerification')
                     : kycSummary?.exempt
-                      ? 'This account is exempt from movement limits.'
-                      : `Current movement: ${kycSummary?.movementUsd?.toFixed(2) ?? '0.00'} USD. ${kycLimitLabel}.`}
+                      ? t('accountExempt')
+                      : t('currentMovement', {
+                          amount: kycSummary?.movementUsd?.toFixed(2) ?? '0.00',
+                          limit: kycLimitLabel,
+                        })}
                 </p>
               </div>
               <span
                 className={`inline-flex shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${kycBadgeClassName}`}
               >
-                {loadingKyc ? 'Lvl --' : kycBadgeLabel}
+                {loadingKyc ? t('levelPending') : kycBadgeLabel}
               </span>
             </div>
 
             {!kycSummary?.exempt && kycSummary?.missingForCurrentLevel?.length ? (
               <div className="mt-4 rounded-[22px] border border-[#FFDB93] bg-[#FFF8EA] px-4 py-3 text-sm leading-6 text-[#9C6900]">
-                Missing for your current level: {kycSummary.missingForCurrentLevel.join(', ')}.
+                {t('missingForCurrentLevel', {
+                  items: kycSummary.missingForCurrentLevel.join(', '),
+                })}
               </div>
             ) : null}
 
@@ -1043,14 +1059,14 @@ export default function PersonalDataPage() {
               {([
                 {
                   type: 'identity_document',
-                  title: 'Identity document',
-                  description: 'Passport, ID card or equivalent government document.',
+                  title: t('identityDocument'),
+                  description: t('identityDocumentDescription'),
                   icon: <IconDocument />,
                 },
                 {
                   type: 'proof_of_residence',
-                  title: 'Proof of residence',
-                  description: 'Recent utility bill or valid residence certificate.',
+                  title: t('proofOfResidence'),
+                  description: t('proofOfResidenceDescription'),
                   icon: <IconHomeDoc />,
                 },
               ] as const).map((item) => {
@@ -1077,7 +1093,7 @@ export default function PersonalDataPage() {
                           <span
                             className={`inline-flex shrink-0 rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] ${getDocumentTone(documentSummary?.status)}`}
                           >
-                            {getDocumentLabel(documentSummary?.status)}
+                            {tx(getDocumentLabelKey(documentSummary?.status))}
                           </span>
                         </div>
                       </div>
@@ -1086,15 +1102,15 @@ export default function PersonalDataPage() {
                     <div className="flex items-center justify-between gap-3">
                       <p className="min-w-0 flex-1 text-xs leading-5 text-[#7B879C]">
                         {documentSummary?.fileName
-                          ? `Latest file: ${documentSummary.fileName}`
-                          : 'No file uploaded yet.'}
+                          ? t('latestFile', { file: documentSummary.fileName })
+                          : t('noFileUploaded')}
                       </p>
                       <label
                         htmlFor={`kyc-upload-${item.type}`}
                         className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#D9CCFF] bg-[#F6F1FF] px-4 text-sm font-semibold text-[#6B39F4] transition hover:-translate-y-0.5 hover:bg-[#F1E8FF]"
                       >
                         <IconUpload />
-                        {isUploading ? 'Uploading...' : 'Upload'}
+                        {isUploading ? t('uploading') : t('upload')}
                       </label>
                       <input
                         id={`kyc-upload-${item.type}`}
@@ -1124,64 +1140,64 @@ export default function PersonalDataPage() {
           <Surface className="bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,250,255,0.98)_100%)]">
             <div className="flex flex-col gap-1">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-                Personal form
+                {t('personalForm')}
               </p>
               <h3 className="text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                Review your profile details
+                {t('reviewProfileDetails')}
               </h3>
               <p className="text-sm leading-6 text-[#7B879C]">
-                Keep this information accurate to avoid delays in verification, transfers and role updates.
+                {t('reviewProfileDescription')}
               </p>
             </div>
 
             <div className="mt-4 flex flex-col gap-3">
-              <FieldShell label="ID" icon={<IconId />}>
-                <input value={form.id} readOnly placeholder="ID" className={fieldControlClassName} />
+              <FieldShell label={t('id')} icon={<IconId />}>
+                <input value={form.id} readOnly placeholder={t('id')} className={fieldControlClassName} />
               </FieldShell>
 
-              <FieldShell label="First name" icon={<IconUser />}>
+              <FieldShell label={t('firstName')} icon={<IconUser />}>
                 <input
                   value={form.name}
                   onChange={(event) => updateForm('name', event.target.value)}
-                  placeholder="First name"
+                  placeholder={t('firstName')}
                   className={fieldControlClassName}
                 />
               </FieldShell>
 
-              <FieldShell label="Last name" icon={<IconUser />}>
+              <FieldShell label={t('lastName')} icon={<IconUser />}>
                 <input
                   value={form.surname}
                   onChange={(event) => updateForm('surname', event.target.value)}
-                  placeholder="Last name"
+                  placeholder={t('lastName')}
                   className={fieldControlClassName}
                 />
               </FieldShell>
 
               <FieldShell
-                label="Email"
+                label={t('email')}
                 icon={<IconMail />}
-                helper={!canEditEmail ? 'This email is locked by your current profile configuration.' : undefined}
+                helper={!canEditEmail ? t('emailLocked') : undefined}
               >
                 <input
                   value={form.email}
                   onChange={(event) => updateForm('email', event.target.value)}
                   readOnly={!canEditEmail}
-                  placeholder="Email"
+                  placeholder={t('email')}
                   className={fieldControlClassName}
                 />
               </FieldShell>
 
-              <FieldShell label="Gender" icon={<IconGender />}>
+              <FieldShell label={t('gender')} icon={<IconGender />}>
                 <div className="relative">
                   <select
                     value={form.gender}
                     onChange={(event) => updateForm('gender', event.target.value)}
                     className={`${fieldControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="prefer no say">Prefer not to say</option>
+                    <option value="">{t('gender')}</option>
+                    <option value="male">{t('male')}</option>
+                    <option value="female">{t('female')}</option>
+                    <option value="prefer no say">{t('preferNotToSay')}</option>
                   </select>
                   <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
                     <IconChevronDown />
@@ -1189,15 +1205,15 @@ export default function PersonalDataPage() {
                 </div>
               </FieldShell>
 
-              <FieldShell label="Country" icon={<IconGlobe />}>
+              <FieldShell label={t('country')} icon={<IconGlobe />}>
                 <div className="relative">
                   <select
                     value={form.country}
                     onChange={(event) => onCountryChange(event.target.value)}
                     className={`${fieldControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Country</option>
-                    {COUNTRY_OPTIONS.map((option) => (
+                    <option value="">{t('country')}</option>
+                    {countryOptions.map((option) => (
                       <option key={option.code} value={option.code}>
                         {option.name} ({option.dialCode})
                       </option>
@@ -1209,32 +1225,32 @@ export default function PersonalDataPage() {
                 </div>
               </FieldShell>
 
-              <FieldShell label="Address" icon={<IconMapPin />}>
+              <FieldShell label={t('address')} icon={<IconMapPin />}>
                 <input
                   value={form.address}
                   onChange={(event) => updateForm('address', event.target.value)}
-                  placeholder="Address"
+                  placeholder={t('address')}
                   className={fieldControlClassName}
                 />
               </FieldShell>
 
-              <FieldShell label="Phone" icon={<IconPhone />}>
+              <FieldShell label={t('phone')} icon={<IconPhone />}>
                 <input
                   value={form.phone_number}
                   onChange={(event) => updateForm('phone_number', event.target.value)}
-                  placeholder="Phone number"
+                  placeholder={t('phoneNumber')}
                   className={fieldControlClassName}
                 />
               </FieldShell>
 
               <FieldShell
-                label="Role"
+                label={t('role')}
                 icon={<IconBriefcase />}
                 helper={
                   roleEligibility?.canChangeRole === false
                     ? roleEligibility.message ??
-                      'You can only change roles when your account has no investments and no published projects.'
-                    : 'You can switch roles only when your account has no investments and no active publication.'
+                      t('roleChangeEligibilityFallback')
+                    : t('roleHelper')
                 }
               >
                 <div className="relative">
@@ -1244,9 +1260,9 @@ export default function PersonalDataPage() {
                     disabled={loadingRoleEligibility || isRoleSelectionLocked}
                     className={`${fieldControlClassName} appearance-none pr-8`}
                   >
-                    <option value="">Role</option>
-                    <option value="investor">Investor profile</option>
-                    <option value="entrepreneur">Entrepreneur profile</option>
+                    <option value="">{t('role')}</option>
+                    <option value="investor">{t('investorProfile')}</option>
+                    <option value="entrepreneur">{t('entrepreneurProfile')}</option>
                   </select>
                   <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
                     <IconChevronDown />
@@ -1267,7 +1283,7 @@ export default function PersonalDataPage() {
                   disabled={saving || loadingProfile}
                   className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving ? 'Saving...' : 'Save changes'}
+                  {saving ? t('saving') : t('saveChanges')}
                 </button>
               </div>
             </div>
@@ -1275,7 +1291,7 @@ export default function PersonalDataPage() {
 
           {loadingProfile ? (
             <div className="rounded-[22px] border border-[#E8ECF6] bg-white/80 px-4 py-3 text-sm text-[#7B879C] shadow-[0_12px_28px_rgba(31,38,64,0.05)]">
-              Loading your profile details...
+              {t('loadingProfileDetails')}
             </div>
           ) : null}
         </div>

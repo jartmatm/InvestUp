@@ -1,10 +1,13 @@
 import type { MetadataRoute } from 'next';
+import { getTranslations } from 'next-intl/server';
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getTranslations('Metadata');
+
   return {
-    name: 'InvestApp',
+    name: t('title'),
     short_name: 'InvestApp',
-    description: 'Fintech platform for decentralized investments and repayments',
+    description: t('description'),
     start_url: '/splash',
     display: 'standalone',
     background_color: '#F4F1FF',

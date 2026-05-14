@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   ProfileInfoTile,
   ProfilePageShell,
@@ -116,6 +117,7 @@ function PreferenceSwitchCard({
 }
 
 export default function SettingsPage() {
+  const t = useTranslations('ProfilePages.settingsPage');
   const router = useRouter();
   const {
     faseApp,
@@ -132,36 +134,36 @@ export default function SettingsPage() {
 
   return (
     <ProfilePageShell
-      title="Settings"
-      subtitle="Control appearance, notifications and the way InvestApp behaves for you."
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
       <ProfileSurface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Preferences
+              {t('heroEyebrow')}
             </p>
             <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              Personalize your fintech workspace
+              {t('heroTitle')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-              Keep the interface readable, quiet and aligned with how you monitor your activity.
+              {t('heroDescription')}
             </p>
           </div>
 
           <div className="flex flex-col gap-3">
             <ProfileInfoTile
               icon={<IconMoon />}
-              eyebrow="Theme"
-              title={mode === 'dark' ? 'Dark mode enabled' : 'Light mode enabled'}
-              description="Switch the full interface between light and dark appearance."
+              eyebrow={t('themeEyebrow')}
+              title={mode === 'dark' ? t('darkEnabled') : t('lightEnabled')}
+              description={t('themeDescription')}
               tone="purple"
             />
             <ProfileInfoTile
               icon={<IconBell />}
-              eyebrow="Notifications"
-              title={notificationsEnabled ? 'Alerts enabled' : 'Alerts muted'}
-              description={`Unread items: ${unreadNotificationsCount}`}
+              eyebrow={t('notificationsEyebrow')}
+              title={notificationsEnabled ? t('alertsEnabled') : t('alertsMuted')}
+              description={t('unreadItems', { count: unreadNotificationsCount })}
               tone="green"
             />
           </div>
@@ -171,23 +173,26 @@ export default function SettingsPage() {
       <ProfileSurface>
         <div className="flex flex-col gap-3">
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-            Controls
+            {t('controls')}
           </p>
           <PreferenceSwitchCard
-            title="Dark mode"
-            description="Apply a darker visual theme across the app."
+            title={t('darkMode')}
+            description={t('darkModeDescription')}
             checked={mode === 'dark'}
             onToggle={toggleMode}
-            statusLabel={`Current mode: ${mode === 'dark' ? 'Dark' : 'Light'}`}
+            statusLabel={t('currentMode', { mode: mode === 'dark' ? t('dark') : t('light') })}
             icon={<IconMoon />}
             activeTone="purple"
           />
           <PreferenceSwitchCard
-            title="Notifications"
-            description="Enable alerts for incoming money, transfers, investments and profile updates."
+            title={t('notifications')}
+            description={t('notificationsDescription')}
             checked={notificationsEnabled}
             onToggle={() => setNotificationsEnabled(!notificationsEnabled)}
-            statusLabel={`Notifications are ${notificationsEnabled ? 'enabled' : 'disabled'}. Unread items: ${unreadNotificationsCount}.`}
+            statusLabel={t('notificationsStatus', {
+              status: notificationsEnabled ? t('enabled') : t('disabled'),
+              count: unreadNotificationsCount,
+            })}
             icon={<IconBell />}
             activeTone="green"
           />

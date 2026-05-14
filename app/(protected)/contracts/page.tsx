@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import { createClient } from '@supabase/supabase-js';
 import PageFrame from '@/components/PageFrame';
 import PaymentScheduleTable from '@/components/PaymentScheduleTable';
@@ -98,12 +99,12 @@ const balanceCards: Array<{
     InternalAccountBalance,
     'available_balance' | 'withdrawable_balance' | 'invested_balance' | 'pending_balance'
   >;
-  label: string;
+  labelKey: 'availableBalance' | 'withdrawableBalance' | 'investedBalance' | 'pendingBalance';
 }> = [
-  { key: 'available_balance', label: 'Available balance' },
-  { key: 'withdrawable_balance', label: 'Withdrawable balance' },
-  { key: 'invested_balance', label: 'Invested balance' },
-  { key: 'pending_balance', label: 'Pending balance' },
+  { key: 'available_balance', labelKey: 'availableBalance' },
+  { key: 'withdrawable_balance', labelKey: 'withdrawableBalance' },
+  { key: 'invested_balance', labelKey: 'investedBalance' },
+  { key: 'pending_balance', labelKey: 'pendingBalance' },
 ];
 
 const formatDeltaSummary = (entry: InternalLedgerEntry, currentUserId: string | null) => {
@@ -124,6 +125,8 @@ const formatDeltaSummary = (entry: InternalLedgerEntry, currentUserId: string | 
 
 export default function ContractPage() {
   const router = useRouter();
+  const t = useTranslations('Contracts');
+  const commonT = useTranslations('Common');
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
@@ -173,7 +176,7 @@ export default function ContractPage() {
   useEffect(() => {
     const loadContract = async () => {
       if (!creditId) {
-        setStatus('Select a contract first.');
+        setStatus(t('selectContractFirst'));
         setLoading(false);
         return;
       }
@@ -187,7 +190,7 @@ export default function ContractPage() {
       );
 
       if (scheduleError || !scheduleData?.length) {
-        setStatus('Could not load this contract right now.');
+        setStatus(t('loadError'));
         setSnapshot(null);
         setContractSource('');
         setLoading(false);
@@ -231,7 +234,7 @@ export default function ContractPage() {
       const ventureName =
         project?.business_name ||
         project?.title ||
-        getMetadataText(scheduleRecord.metadata?.project_title, 'Investment contract');
+        getMetadataText(scheduleRecord.metadata?.project_title, t('investmentContract'));
 
       const contractSnapshot = buildInvestmentContractSnapshot({
         record: scheduleRecord,
@@ -239,13 +242,13 @@ export default function ContractPage() {
         ventureDescription: project?.description,
         currency: project?.currency || getMetadataText(scheduleRecord.metadata?.currency, 'USD'),
         lender: {
-          displayName: nameFromProfile(lenderProfile, 'Investor'),
+          displayName: nameFromProfile(lenderProfile, t('investor')),
           walletAddress: lenderProfile?.wallet_address ?? null,
           country: lenderProfile?.country ?? null,
           avatarUrl: lenderProfile?.avatar_url ?? null,
         },
         borrower: {
-          displayName: nameFromProfile(borrowerProfile, 'Entrepreneur'),
+          displayName: nameFromProfile(borrowerProfile, t('entrepreneur')),
           walletAddress: project?.owner_wallet ?? borrowerProfile?.wallet_address ?? null,
           country: borrowerProfile?.country ?? null,
           avatarUrl: borrowerProfile?.avatar_url ?? null,
@@ -260,10 +263,10 @@ export default function ContractPage() {
     };
 
     void loadContract();
-  }, [creditId, getAccessToken, supabase, user?.id]);
+  }, [creditId, getAccessToken, supabase, t, user?.id]);
 
   return (
-    <PageFrame title="Contract ledger" subtitle="Backend contract and internal audit trail" hideDesktopHeader>
+    <PageFrame title={t('title')} subtitle={t('subtitle')} hideDesktopHeader>
       {loading ? <SectionLoadingSkeleton rows={4} /> : null}
       {status ? <p className="text-sm text-slate-500">{status}</p> : null}
 
@@ -272,11 +275,10 @@ export default function ContractPage() {
           <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Contract overview</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{t('overview')}</p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-900">{snapshot.contractTitle}</h2>
                 <p className="mt-2 text-sm text-slate-500">
-                  This agreement now lives as a backend contract backed by the internal ledger, so
-                  we can audit balances and participant movements directly in-app.
+                  {t('overviewDescription')}
                 </p>
               </div>
 
@@ -285,7 +287,7 @@ export default function ContractPage() {
                 onClick={() => router.back()}
                 className="rounded-full border border-white/25 bg-white/40 px-4 py-2 text-sm font-semibold text-slate-700"
               >
-                Back
+                {commonT('back')}
               </button>
             </div>
 
@@ -296,7 +298,7 @@ export default function ContractPage() {
                 {snapshot.status}
               </span>
               <span className="rounded-full border border-white/20 bg-white/35 px-3 py-1 text-xs font-semibold text-slate-600">
-                Credit {snapshot.creditId}
+                {t('credit', { id: snapshot.creditId })}
               </span>
             </div>
           </section>
@@ -304,9 +306,9 @@ export default function ContractPage() {
           {ledgerBalance ? (
             <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Internal balances</h3>
+                <h3 className="text-lg font-semibold text-slate-900">{t('internalBalances')}</h3>
                 <p className="text-sm text-slate-500">
-                  Snapshot of your current backend ledger buckets for this contract flow.
+                  {t('internalBalancesDescription')}
                 </p>
               </div>
 
@@ -316,7 +318,7 @@ export default function ContractPage() {
                     key={card.key}
                     className="rounded-[24px] border border-white/25 bg-white/35 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)]"
                   >
-                    <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{card.label}</p>
+                    <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t(card.labelKey)}</p>
                     <p className="mt-2 text-lg font-semibold text-slate-900">
                       {formatMoney(Number(ledgerBalance[card.key] ?? 0), ledgerBalance.currency)}
                     </p>
@@ -328,45 +330,45 @@ export default function ContractPage() {
 
           <section className="grid gap-3 md:grid-cols-2">
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Principal</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('principal')}</p>
               <p className="mt-2 text-xl font-semibold text-slate-900">
                 {formatMoney(snapshot.principal, snapshot.currency)}
               </p>
             </div>
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Fixed installment</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('fixedInstallment')}</p>
               <p className="mt-2 text-xl font-semibold text-slate-900">
                 {formatMoney(snapshot.monthlyPayment, snapshot.currency)}
               </p>
             </div>
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Interest</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('interest')}</p>
               <p className="mt-2 text-base font-semibold text-slate-900">
                 {snapshot.annualInterestRate.toFixed(2)}% EA
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                {Number(snapshot.monthlyInterestRate * 100).toFixed(4)}% monthly
+                {t('monthlyRate', { rate: Number(snapshot.monthlyInterestRate * 100).toFixed(4) })}
               </p>
             </div>
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Installments</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('installments')}</p>
               <p className="mt-2 text-base font-semibold text-slate-900">
-                {snapshot.installmentsPaid} / {snapshot.totalInstallments} paid
+                {t('installmentsPaid', { paid: snapshot.installmentsPaid, total: snapshot.totalInstallments })}
               </p>
-              <p className="mt-1 text-sm text-slate-500">Next due {formatDate(snapshot.nextDueDate)}</p>
+              <p className="mt-1 text-sm text-slate-500">{t('nextDue', { date: formatDate(snapshot.nextDueDate) })}</p>
             </div>
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Investor</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('investor')}</p>
               <p className="mt-2 text-base font-semibold text-slate-900">{snapshot.lender.displayName}</p>
               <p className="mt-1 break-all text-sm text-slate-500">
-                {snapshot.lender.walletAddress || 'Wallet pending'}
+                {snapshot.lender.walletAddress || t('walletPending')}
               </p>
             </div>
             <div className="rounded-[24px] border border-white/25 bg-white/20 p-4 shadow-[0_10px_24px_rgba(15,23,42,0.06)] backdrop-blur-md">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">Entrepreneur</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-slate-400">{t('entrepreneur')}</p>
               <p className="mt-2 text-base font-semibold text-slate-900">{snapshot.borrower.displayName}</p>
               <p className="mt-1 break-all text-sm text-slate-500">
-                {snapshot.borrower.walletAddress || 'Wallet pending'}
+                {snapshot.borrower.walletAddress || t('walletPending')}
               </p>
             </div>
           </section>
@@ -374,10 +376,9 @@ export default function ContractPage() {
           <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Backend contract manifest</h3>
+                <h3 className="text-lg font-semibold text-slate-900">{t('manifest')}</h3>
                 <p className="text-sm text-slate-500">
-                  Live payload rendered from internal contract state, participant profiles, and the
-                  amortization schedule stored by the backend.
+                  {t('manifestDescription')}
                 </p>
               </div>
               <span className="rounded-full border border-white/20 bg-white/35 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -394,9 +395,9 @@ export default function ContractPage() {
 
           <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900">Amortization table</h3>
+              <h3 className="text-lg font-semibold text-slate-900">{t('amortizationTable')}</h3>
               <p className="text-sm text-slate-500">
-                Month-by-month schedule generated from the backend contract state.
+                {t('amortizationDescription')}
               </p>
             </div>
 
@@ -408,9 +409,9 @@ export default function ContractPage() {
           {ledgerEntries.length > 0 ? (
             <section className="rounded-[28px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900">Audit trail</h3>
+                <h3 className="text-lg font-semibold text-slate-900">{t('auditTrail')}</h3>
                 <p className="text-sm text-slate-500">
-                  Every row below is an internal ledger posting related to this contract.
+                  {t('auditTrailDescription')}
                 </p>
               </div>
 

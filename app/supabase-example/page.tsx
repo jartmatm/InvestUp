@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server';
+import { getTranslations } from 'next-intl/server';
 
 type Todo = {
   id: string | number;
@@ -6,6 +7,7 @@ type Todo = {
 };
 
 export default async function SupabaseExamplePage() {
+  const t = await getTranslations('SupabaseExample');
   const supabase = await createClient();
   const { data, error } = await supabase.from('todos').select('id,name').limit(20);
   const todos = (data ?? []) as Todo[];
@@ -13,14 +15,14 @@ export default async function SupabaseExamplePage() {
   return (
     <main className="min-h-screen px-6 py-10 text-gray-900">
       <div className="mx-auto max-w-xl rounded-[28px] border border-white/25 bg-white/20 p-6 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur-md">
-        <h1 className="text-2xl font-semibold">Supabase Example</h1>
+        <h1 className="text-2xl font-semibold">{t('title')}</h1>
         <p className="mt-2 text-sm text-gray-600">
-          This page reads the <code>todos</code> table from Supabase using the new server helper.
+          {t('descriptionPrefix')} <code>todos</code> {t('descriptionSuffix')}
         </p>
 
         {error ? (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-900">
-            Could not load <code>todos</code>: {error.message}
+            {t('loadErrorPrefix')} <code>todos</code>: {error.message}
           </div>
         ) : (
           <ul className="mt-6 space-y-3">
@@ -36,7 +38,7 @@ export default async function SupabaseExamplePage() {
         )}
 
         {!error && todos.length === 0 ? (
-          <p className="mt-6 text-sm text-gray-500">No rows found in the todos table yet.</p>
+          <p className="mt-6 text-sm text-gray-500">{t('empty')}</p>
         ) : null}
       </div>
     </main>

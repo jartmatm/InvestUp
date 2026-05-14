@@ -1,3 +1,7 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
+
 type ActionButtonsProps = {
   role: 'inversor' | 'emprendedor' | null;
   onInvest: () => void;
@@ -6,7 +10,8 @@ type ActionButtonsProps = {
 };
 
 export default function ActionButtons({ role, onInvest, onBuy, onWithdraw }: ActionButtonsProps) {
-  const primaryLabel = role === 'emprendedor' ? 'Repayments' : 'Investments';
+  const t = useTranslations('Components.actionButtons');
+  const primaryLabel = role === 'emprendedor' ? t('repayments') : t('investments');
 
   return (
     <div className="grid grid-cols-3 gap-3">
@@ -20,13 +25,13 @@ export default function ActionButtons({ role, onInvest, onBuy, onWithdraw }: Act
         onClick={onWithdraw}
         className="rounded-lg border border-white/25 bg-white/20 p-4 text-xs font-semibold text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white/30"
       >
-        Withdraw
+        {t('withdraw')}
       </button>
       <button
         onClick={onBuy}
         className="rounded-lg border border-white/25 bg-white/20 p-4 text-xs font-semibold text-gray-700 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md transition hover:bg-white/30"
       >
-        Buy
+        {t('buy')}
       </button>
     </div>
   );

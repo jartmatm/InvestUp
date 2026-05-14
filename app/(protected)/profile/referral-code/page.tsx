@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import {
   ProfileInfoTile,
   ProfileNotice,
@@ -93,6 +94,7 @@ function CardIcon() {
 }
 
 export default function ReferralCodePage() {
+  const t = useTranslations('ProfilePages.referralCodePage');
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
@@ -118,7 +120,7 @@ export default function ReferralCodePage() {
       );
 
       if (error) {
-        setStatus('Could not load your referral code.');
+        setStatus(t('couldNotLoad'));
       }
 
       const cols = new Set<string>(Object.keys(data ?? {}));
@@ -151,32 +153,32 @@ export default function ReferralCodePage() {
     try {
       await navigator.clipboard.writeText(referralCode);
       setCopied(true);
-      setStatus('Referral code copied to clipboard.');
+      setStatus(t('copiedStatus'));
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setStatus('We could not copy the referral code right now.');
+      setStatus(t('couldNotCopy'));
     }
   };
 
   return (
     <>
       <ProfilePageShell
-        title="Referral Code"
-        subtitle="Share your invite code with a cleaner, more premium referral card."
+        title={t('title')}
+        subtitle={t('subtitle')}
         footer={
           <>
             {status ? <ProfileNotice tone={getStatusTone(status)}>{status}</ProfileNotice> : null}
             <ProfileSurface className="p-3">
               <div className="flex flex-col gap-3">
                 <ProfilePrimaryButton onClick={copyCode} disabled={!referralCode || loadingProfile}>
-                  {copied ? 'Copied' : 'Copy code'}
+                  {copied ? t('copied') : t('copyCode')}
                 </ProfilePrimaryButton>
                 <button
                   type="button"
                   onClick={() => setShowPopup(true)}
                   className="flex min-h-[52px] w-full items-center justify-center rounded-full border border-[#D9CCFF] bg-[#F6F1FF] px-5 text-sm font-semibold text-[#6B39F4] transition hover:-translate-y-0.5 hover:bg-[#F1E8FF]"
                 >
-                  Preview card
+                  {t('previewCard')}
                 </button>
               </div>
             </ProfileSurface>
@@ -187,29 +189,29 @@ export default function ReferralCodePage() {
           <div className="flex flex-col gap-3">
             <div>
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-                Referral program
+                {t('heroEyebrow')}
               </p>
               <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                Invite new users with a premium share code
+                {t('heroTitle')}
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-                Your code stays linked to your account and can be copied or previewed in a clean share card before sending it to someone else.
+                {t('heroDescription')}
               </p>
             </div>
 
             <div className="flex flex-col gap-3">
               <ProfileInfoTile
                 icon={<GiftIcon />}
-                eyebrow="Status"
-                title={loadingProfile ? 'Generating code...' : 'Active referral code'}
-                description="Your invite code stays linked to your account."
+                eyebrow={t('status')}
+                title={loadingProfile ? t('generatingCode') : t('activeReferralCode')}
+                description={t('statusDescription')}
                 tone="purple"
               />
               <ProfileInfoTile
                 icon={<CardIcon />}
-                eyebrow="Preview"
-                title="Share-ready referral card"
-                description="Open the card preview before sending your invite."
+                eyebrow={t('preview')}
+                title={t('shareReadyCard')}
+                description={t('previewDescription')}
                 tone="blue"
               />
             </div>
@@ -219,23 +221,23 @@ export default function ReferralCodePage() {
         <ProfileSurface>
           <div className="flex flex-col gap-3">
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Your personal code
+              {t('yourPersonalCode')}
             </p>
             <div className="rounded-[26px] border border-[#DDD3FF] bg-[linear-gradient(135deg,rgba(107,57,244,0.10),rgba(255,255,255,0.96))] px-4 py-5 shadow-[0_16px_32px_rgba(31,38,64,0.06)]">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-                    Referral code
+                    {t('referralCodeLabel')}
                   </p>
                   <p className="mt-3 break-all text-[1.7rem] font-semibold tracking-[0.18em] text-[#1C2336]">
-                    {referralCode || 'Generating...'}
+                    {referralCode || t('generating')}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={copyCode}
                   className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl bg-white text-[#6B39F4] shadow-[0_12px_24px_rgba(107,57,244,0.12)] transition hover:-translate-y-0.5"
-                  aria-label="Copy referral code"
+                  aria-label={t('copyReferralCode')}
                 >
                   <CopyIcon />
                 </button>
@@ -255,16 +257,18 @@ export default function ReferralCodePage() {
             onClick={(event) => event.stopPropagation()}
           >
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-              InvestApp referral
+              {t('popupEyebrow')}
             </p>
             <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-[#1C2336]">
-              Invite with your code
+              {t('popupTitle')}
             </h3>
             <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-              Share this code with a new user so they can join through your invitation.
+              {t('popupDescription')}
             </p>
             <div className="mt-5 rounded-[24px] border border-[#DDD3FF] bg-white/90 px-4 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-              <p className="text-[0.68rem] uppercase tracking-[0.22em] text-[#8A93A8]">Referral code</p>
+              <p className="text-[0.68rem] uppercase tracking-[0.22em] text-[#8A93A8]">
+                {t('referralCodeLabel')}
+              </p>
               <p className="mt-3 break-all text-2xl font-semibold tracking-[0.2em] text-[#1C2336]">
                 {referralCode}
               </p>
@@ -274,7 +278,7 @@ export default function ReferralCodePage() {
               onClick={() => setShowPopup(false)}
               className="mt-5 flex min-h-[48px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-sm font-semibold text-white shadow-[0_18px_30px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
             >
-              Close
+              {t('close')}
             </button>
           </div>
         </div>

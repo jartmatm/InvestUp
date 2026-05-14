@@ -2,6 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell } from '@/components/DesktopAppShell';
 
@@ -89,12 +90,15 @@ export function ProfilePageShell({
   title,
   subtitle,
   backHref = '/profile',
-  backLabel = 'Back',
+  backLabel,
   children,
   footer,
   contentClassName = '',
 }: ProfilePageShellProps) {
   const router = useRouter();
+  const t = useTranslations('ProfilePages');
+  const componentsT = useTranslations('Components');
+  const resolvedBackLabel = backLabel ?? componentsT('back');
 
   const handleBack = () => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -117,7 +121,7 @@ export function ProfilePageShell({
             <button
               type="button"
               onClick={handleBack}
-              aria-label={backLabel}
+              aria-label={resolvedBackLabel}
               className="flex min-h-[44px] w-11 items-center justify-center rounded-full border border-white/90 bg-white/88 text-[#1C2336] shadow-[0_16px_34px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
             >
               <IconBack />
@@ -149,7 +153,7 @@ export function ProfilePageShell({
       <DesktopAppShell
         title={title}
         subtitle={subtitle}
-        eyebrow="Profile workspace"
+        eyebrow={t('profileWorkspace')}
         maxWidthClassName="max-w-none"
       >
         <div className={`grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] ${contentClassName}`}>
@@ -161,24 +165,24 @@ export function ProfilePageShell({
             <ProfileSurface className="lg:bg-[linear-gradient(160deg,#FFFFFF_0%,#F8F6FF_100%)]">
               <div className="flex flex-col gap-3">
                 <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
-                  Account confidence
+                  {t('accountConfidence')}
                 </p>
                 <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">
-                  Keep your investor profile complete
+                  {t('keepProfileComplete')}
                 </h2>
                 <p className="text-sm leading-6 text-[#66728A]">
-                  Updated account data improves wallet security, identity checks and project discovery.
+                  {t('accountConfidenceDescription')}
                 </p>
               </div>
             </ProfileSurface>
             <ProfileInfoTile
-              title="Secure profile area"
-              description="Changes are scoped to your authenticated InvestApp account."
+              title={componentsT('secureProfileArea')}
+              description={t('secureProfileAreaDescription')}
               tone="purple"
             />
             <ProfileInfoTile
-              title="Premium dashboard styling"
-              description="Desktop settings now use the same web shell as Feed, Send and Portfolio."
+              title={componentsT('premiumDashboardStyling')}
+              description={t('premiumDashboardStylingDescription')}
               tone="blue"
             />
           </aside>

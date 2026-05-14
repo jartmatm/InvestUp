@@ -2,15 +2,16 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import { useInvestApp } from '@/lib/investapp-context';
 import type { AppNotification } from '@/lib/app-notifications';
 
-const formatNotificationDate = (value: string) => {
+const formatNotificationDate = (value: string, locale: string, justNowLabel: string) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Just now';
+  if (Number.isNaN(date.getTime())) return justNowLabel;
 
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString(locale, {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -25,17 +26,19 @@ const getKindTone = (kind: AppNotification['kind']) => {
   return 'border-[#E2E8F0] bg-white/70 text-[#475569]';
 };
 
-const getKindLabel = (kind: AppNotification['kind']) => {
-  if (kind === 'wallet_incoming') return 'Incoming';
-  if (kind === 'transfer') return 'Transfer';
-  if (kind === 'investment') return 'Investment';
-  if (kind === 'repayment') return 'Repayment';
-  if (kind === 'profile_update') return 'Profile';
-  if (kind === 'top_up') return 'Top up';
-  return 'Withdrawal';
+const getKindLabelKey = (kind: AppNotification['kind']) => {
+  if (kind === 'wallet_incoming') return 'incoming';
+  if (kind === 'transfer') return 'transfer';
+  if (kind === 'investment') return 'investment';
+  if (kind === 'repayment') return 'repayment';
+  if (kind === 'profile_update') return 'profile';
+  if (kind === 'top_up') return 'topUp';
+  return 'withdrawal';
 };
 
 export default function NotificationsPage() {
+  const t = useTranslations('Notifications');
+  const locale = useLocale();
   const router = useRouter();
   const {
     faseApp,
@@ -54,20 +57,20 @@ export default function NotificationsPage() {
 
   return (
     <PageFrame
-      title="Notifications"
+      title={t('title')}
       subtitle={
         notificationsEnabled
-          ? 'Track wallet and profile activity in one place'
-          : 'Notifications are disabled right now'
+          ? t('enabledSubtitle')
+          : t('disabledSubtitle')
       }
     >
       <div className="space-y-4">
         <div className="rounded-[24px] border border-white/25 bg-white/20 p-5 shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-base font-semibold text-gray-900">Notification center</p>
+              <p className="text-base font-semibold text-gray-900">{t('notificationCenter')}</p>
               <p className="mt-1 text-sm text-gray-500">
-                Enable or mute alerts for movements in your wallet and account.
+                {t('notificationCenterDescription')}
               </p>
             </div>
 
@@ -90,33 +93,33 @@ export default function NotificationsPage() {
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/20 px-4 py-3 text-sm text-gray-500">
             <p>
-              Status:{' '}
+              {t('status')}:{' '}
               <span className={`font-semibold ${notificationsEnabled ? 'text-gray-900' : 'text-[#DF1C41]'}`}>
-                {notificationsEnabled ? 'Enabled' : 'Disabled'}
+                {notificationsEnabled ? t('enabled') : t('disabled')}
               </span>
             </p>
             <p>
-              Unread: <span className="font-semibold text-gray-900">{unreadNotificationsCount}</span>
+              {t('unread')}: <span className="font-semibold text-gray-900">{unreadNotificationsCount}</span>
             </p>
             <button
               type="button"
               onClick={markAllNotificationsAsRead}
               className="rounded-full border border-[#D3C4FC] px-4 py-2 text-xs font-semibold text-[#6B39F4]"
             >
-              Mark all as read
+              {t('markAllAsRead')}
             </button>
           </div>
         </div>
 
         {!notificationsEnabled ? (
           <div className="rounded-[20px] border border-[#DF1C41]/15 bg-[#FFF1F3] px-4 py-4 text-sm text-[#C42847]">
-            New alerts will stop being generated until you enable notifications again.
+            {t('disabledNotice')}
           </div>
         ) : null}
 
         {notifications.length === 0 ? (
           <div className="rounded-[20px] border border-white/25 bg-white/20 px-4 py-5 text-sm text-[#818898] backdrop-blur-md">
-            No notifications yet. Your next wallet or profile event will show up here.
+            {t('empty')}
           </div>
         ) : (
           <div className="space-y-3">
@@ -145,7 +148,7 @@ export default function NotificationsPage() {
                           notification.kind
                         )}`}
                       >
-                        {getKindLabel(notification.kind)}
+                        {t(getKindLabelKey(notification.kind))}
                       </span>
                       {!notification.read ? (
                         <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
@@ -154,12 +157,12 @@ export default function NotificationsPage() {
 
                     <p className="mt-2 text-sm text-[#666D80]">{notification.body}</p>
                     <p className="mt-3 text-xs text-[#818898]">
-                      {formatNotificationDate(notification.createdAt)}
+                      {formatNotificationDate(notification.createdAt, locale, t('justNow'))}
                     </p>
                   </div>
 
                   <span className="text-xs font-semibold text-[#6B39F4]">
-                    {notification.actionHref ? 'Open' : 'Seen'}
+                    {notification.actionHref ? t('open') : t('seen')}
                   </span>
                 </div>
               </button>

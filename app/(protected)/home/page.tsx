@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { createClient } from '@supabase/supabase-js';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import SharedDesktopTopbar from '@/components/DesktopTopbar';
@@ -415,6 +416,7 @@ function DesktopAvatar({
   loading: boolean;
   sizeClassName?: string;
 }) {
+  const t = useTranslations('Home');
   return (
     <span
       className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)] ${sizeClassName}`}
@@ -458,41 +460,42 @@ function DesktopSearchResults({
   searchUsers: SearchUserResult[];
   totalSearchResults: number;
 }) {
+  const t = useTranslations('Home');
   const trimmed = normalizeSearchQuery(searchQuery);
 
   return (
     <div className="absolute left-0 top-[calc(100%+12px)] z-40 w-full overflow-hidden rounded-[24px] border border-[#E4E8F1] bg-white p-3 shadow-[0_28px_80px_rgba(17,24,39,0.16)]">
       <div className="mb-3 flex items-center justify-between gap-3 px-2">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
-          Search InvestApp
+          {t('searchInvestApp')}
         </p>
         <button type="button" onClick={onClose} className="text-xs font-bold text-[#6B39F4]">
-          Close
+          {t('close')}
         </button>
       </div>
 
       {trimmed.length < 2 ? (
         <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
-          Search ventures, people, emails, wallets, project IDs or transaction hashes.
+          {t('desktopSearchHint')}
         </div>
       ) : searching ? (
         <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
-          Searching for {trimmed}...
+          {t('searchingFor', { query: trimmed })}
         </div>
       ) : searchError ? (
         <div className="rounded-2xl bg-[#FFF1F3] px-4 py-4 text-sm font-semibold text-[#DF1C41]">
-          We could not load search results right now.
+          {t('searchError')}
         </div>
       ) : totalSearchResults === 0 ? (
         <div className="rounded-2xl bg-[#F8F9FB] px-4 py-4 text-sm font-medium text-[#66728A]">
-          No matches found for <span className="font-bold text-[#111827]">{trimmed}</span>.
+          {t('noMatches', { query: trimmed })}
         </div>
       ) : (
         <div className="max-h-[460px] space-y-5 overflow-y-auto pr-1">
           {searchProjects.length > 0 ? (
             <section className="space-y-2">
               <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
-                Ventures
+                {t('ventures')}
               </p>
               {searchProjects.map((project) => (
                 <button
@@ -513,7 +516,7 @@ function DesktopSearchResults({
                       {project.subtitle}
                     </span>
                   </span>
-                  <span className="text-xs font-bold text-[#6B39F4]">Open</span>
+                  <span className="text-xs font-bold text-[#6B39F4]">{t('open')}</span>
                 </button>
               ))}
             </section>
@@ -522,7 +525,7 @@ function DesktopSearchResults({
           {searchUsers.length > 0 ? (
             <section className="space-y-2">
               <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
-                People
+                {t('people')}
               </p>
               {searchUsers.map((entry) => (
                 <button
@@ -544,7 +547,7 @@ function DesktopSearchResults({
                     </span>
                   </span>
                   <span className="text-xs font-bold text-[#6B39F4]">
-                    {entry.linkedProjectId ? 'Venture' : 'Send'}
+                    {entry.linkedProjectId ? t('venture') : t('send')}
                   </span>
                 </button>
               ))}
@@ -554,7 +557,7 @@ function DesktopSearchResults({
           {searchTransactions.length > 0 ? (
             <section className="space-y-2">
               <p className="px-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#6B39F4]/75">
-                Hashes
+                {t('hashes')}
               </p>
               {searchTransactions.map((transaction) => (
                 <button
@@ -587,7 +590,7 @@ function DesktopSearchResults({
           onClick={onClear}
           className="mt-3 w-full rounded-2xl bg-[#F5F3FF] px-4 py-3 text-sm font-bold text-[#6B39F4] transition duration-200 hover:bg-[#EEE8FF]"
         >
-          Clear search
+          {t('clearSearch')}
         </button>
       ) : null}
     </div>
@@ -641,6 +644,7 @@ function DesktopTopbar({
   totalSearchResults: number;
   unreadNotificationsCount: number;
 }) {
+  const t = useTranslations('Home');
   return (
     <SharedDesktopTopbar
       avatarUrl={avatarUrl}
@@ -668,7 +672,7 @@ function DesktopTopbar({
           />
         ) : null
       }
-      searchPlaceholder="Search for ventures, entrepreneurs or keywords..."
+      searchPlaceholder={t('desktopSearchPlaceholder')}
       searchValue={searchQuery}
       unreadNotificationsCount={unreadNotificationsCount}
       onSearchChange={(value) => {
@@ -701,6 +705,7 @@ function DesktopBalanceCard({
   activeCount: number;
   onToggleBalance: () => void;
 }) {
+  const t = useTranslations('Home');
   return (
     <section className="relative min-h-[300px] overflow-hidden rounded-[24px] bg-[radial-gradient(circle_at_72%_20%,rgba(255,255,255,0.18),transparent_28%),linear-gradient(135deg,#5E2CFF_0%,#4B27F0_52%,#334EFF_100%)] p-8 text-white shadow-[0_26px_60px_rgba(91,72,255,0.28)] transition duration-300 hover:-translate-y-0.5">
       <div className="pointer-events-none absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/14 blur-3xl" />
@@ -721,7 +726,7 @@ function DesktopBalanceCard({
       <div className="relative flex h-full flex-col justify-between gap-8">
         <div className="flex items-start justify-between gap-5">
           <div>
-            <p className="text-base font-medium text-white/78">Available</p>
+            <p className="text-base font-medium text-white/78">{t('available')}</p>
             <h2 className="mt-6 text-[3.35rem] font-semibold leading-none tracking-[-0.07em]">
               {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
               <span className="align-baseline text-[1.35rem] font-semibold tracking-[-0.04em] text-white/78">
@@ -733,7 +738,7 @@ function DesktopBalanceCard({
             type="button"
             onClick={onToggleBalance}
             className="grid h-14 w-14 place-items-center rounded-2xl bg-white/16 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl transition duration-200 hover:bg-white/24"
-            aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+            aria-label={showBalance ? t('hideBalance') : t('showBalance')}
           >
             <IconEye hidden={!showBalance} />
           </button>
@@ -741,17 +746,17 @@ function DesktopBalanceCard({
 
         {role === 'emprendedor' ? (
           <div className="relative inline-flex w-fit max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-3 text-sm font-bold tracking-[-0.02em] text-[#198F79] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
-            <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
+            <span>{t('raisedMetric', { value: formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD') })}</span>
             <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
-            <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+            <span>{t('interestRateMetric', { value: lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--' })}</span>
           </div>
         ) : (
           <div className="relative inline-flex w-fit max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-3 text-sm font-bold tracking-[-0.02em] text-[#198F79] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
-            <span>{`Active: ${activeCount}`}</span>
+            <span>{t('activeMetric', { count: activeCount })}</span>
             <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
-            <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
+            <span>{t('avgRateMetric', { value: investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--' })}</span>
             <span className="h-1 w-1 rounded-full bg-[#35A994]/45" />
-            <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
+            <span>{t('earningMetric', { value: formatMoney(investorEarnings, 'USD') })}</span>
           </div>
         )}
       </div>
@@ -770,6 +775,7 @@ function DesktopActiveInvestmentCard({
   onOpenPortfolio: () => void;
   onOpenProject: (projectId: string) => void;
 }) {
+  const t = useTranslations('Home');
   if (loading) {
     return <section className="min-h-[300px] animate-pulse rounded-[24px] bg-[#111C2E]" />;
   }
@@ -779,13 +785,13 @@ function DesktopActiveInvestmentCard({
       <section className="flex min-h-[300px] flex-col justify-between rounded-[24px] bg-[#111C2E] p-7 text-white shadow-[0_26px_60px_rgba(15,23,42,0.18)]">
         <div>
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-[-0.045em]">Active investments</h2>
+            <h2 className="text-xl font-bold tracking-[-0.045em]">{t('activeInvestments')}</h2>
             <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#8A68FF]">
-              View all
+              {t('viewAll')}
             </button>
           </div>
           <p className="mt-9 max-w-sm text-sm leading-6 text-white/64">
-            Your active investment cards will appear here once you fund a venture.
+            {t('activeInvestmentsEmpty')}
           </p>
         </div>
         <button
@@ -793,14 +799,14 @@ function DesktopActiveInvestmentCard({
           onClick={onOpenPortfolio}
           className="w-fit rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white transition duration-200 hover:bg-white/16"
         >
-          Review portfolio
+          {t('reviewPortfolio')}
         </button>
       </section>
     );
   }
 
   const project = investment.project;
-  const projectTitle = project?.business_name || project?.title || investment.project_title || 'Business';
+  const projectTitle = project?.business_name || project?.title || investment.project_title || t('business');
   const tone = getInvestmentHealthMeta(
     getInvestmentHealth(getNextRepaymentDate(investment.created_at, investment.term_months))
   );
@@ -820,9 +826,9 @@ function DesktopActiveInvestmentCard({
           <div className="flex items-start justify-between gap-5">
             <div>
               <div className="mb-5 flex items-center justify-between gap-6">
-                <h2 className="text-xl font-bold tracking-[-0.045em]">Active investments</h2>
+                <h2 className="text-xl font-bold tracking-[-0.045em]">{t('activeInvestments')}</h2>
                 <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#8A68FF]">
-                  View all
+                  {t('viewAll')}
                 </button>
               </div>
               <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${statusClassName}`}>
@@ -836,7 +842,7 @@ function DesktopActiveInvestmentCard({
                 {projectTitle}
               </button>
               <p className="mt-1 text-sm font-medium text-white/64">
-                {investment.ownerName} / Investment
+                {investment.ownerName} / {t('investment')}
               </p>
             </div>
             <button
@@ -861,21 +867,21 @@ function DesktopActiveInvestmentCard({
 
         <div className="grid grid-cols-4 gap-5">
           <div>
-            <p className="text-sm text-white/62">Investor</p>
+            <p className="text-sm text-white/62">{t('investor')}</p>
             <p className="mt-2 truncate text-sm font-bold">{investment.ownerName}</p>
           </div>
           <div>
-            <p className="text-sm text-white/62">Date</p>
+            <p className="text-sm text-white/62">{t('date')}</p>
             <p className="mt-2 text-sm font-bold">
               {formatInvestmentCardDate(getNextRepaymentDate(investment.created_at, investment.term_months))}
             </p>
           </div>
           <div>
-            <p className="text-sm text-white/62">Invested</p>
+            <p className="text-sm text-white/62">{t('invested')}</p>
             <p className="mt-2 text-sm font-bold">{formatInvestmentCardAmount(investment.amount ?? 0)}</p>
           </div>
           <div>
-            <p className="text-sm text-white/62">Return</p>
+            <p className="text-sm text-white/62">{t('return')}</p>
             <p className="mt-2 text-sm font-bold text-[#27D6A4]">
               +{Number(investment.interest_rate_ea ?? 0).toFixed(1)}%
             </p>
@@ -899,6 +905,7 @@ function DesktopBusinessCard({
   onOpenProject: (projectId: string) => void;
   onOpenPortfolio: () => void;
 }) {
+  const t = useTranslations('Home');
   if (loading) {
     return <section className="min-h-[300px] animate-pulse rounded-[24px] bg-white" />;
   }
@@ -906,9 +913,9 @@ function DesktopBusinessCard({
   return (
     <section className="min-h-[300px] rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.07)]">
       <div className="flex items-center justify-between gap-5">
-        <h2 className="text-xl font-bold tracking-[-0.045em]">My Business</h2>
+        <h2 className="text-xl font-bold tracking-[-0.045em]">{t('myBusiness')}</h2>
         <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#6B39F4]">
-          Edit
+          {t('edit')}
         </button>
       </div>
 
@@ -925,7 +932,10 @@ function DesktopBusinessCard({
           <span className="block p-4">
             <span className="block text-base font-bold text-[#111827]">{lastProject.title}</span>
             <span className="mt-1 block text-sm font-medium text-[#66728A]">
-              {`Raised ${formatMoney(lastProject.amount_received ?? 0, lastProject.currency ?? 'USD')} of ${formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD')}`}
+              {t('raisedOf', {
+                raised: formatMoney(lastProject.amount_received ?? 0, lastProject.currency ?? 'USD'),
+                goal: formatMoney(lastProject.amount_requested ?? 0, lastProject.currency ?? 'USD'),
+              })}
             </span>
             <span className="mt-4 block h-2 rounded-full bg-[#EEF1F7]">
               <span className="block h-2 rounded-full bg-[#6B39F4]" style={{ width: `${fundingProgress}%` }} />
@@ -934,9 +944,9 @@ function DesktopBusinessCard({
         </button>
       ) : (
         <div className="mt-6 rounded-[20px] border border-dashed border-[#C9B8FF] bg-[#F8F5FF] p-7 text-center">
-          <p className="text-base font-bold text-[#111827]">No active project yet</p>
+          <p className="text-base font-bold text-[#111827]">{t('noActiveProject')}</p>
           <p className="mt-2 text-sm font-medium text-[#66728A]">
-            Your listings will appear here once they are active.
+            {t('listingsEmpty')}
           </p>
         </div>
       )}
@@ -981,22 +991,23 @@ function DesktopTransactionsTable({
   smartWalletAddress?: string | null;
   transactions: TransactionRow[];
 }) {
+  const t = useTranslations('Home');
   return (
     <section className="rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.06)]">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">Recent transactions</h2>
+        <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">{t('recentTransactions')}</h2>
         <button type="button" onClick={onOpenHistory} className="text-sm font-bold text-[#6B39F4]">
-          View all
+          {t('viewAll')}
         </button>
       </div>
 
       <div className="mt-6 overflow-hidden">
         <div className="grid grid-cols-[minmax(260px,1.3fr)_0.8fr_1fr_1fr_0.8fr_32px] border-b border-[#E8EBF4] px-1 pb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#7C879D]">
-          <span>Contact</span>
-          <span>Type</span>
-          <span>Amount</span>
-          <span>Date</span>
-          <span>Status</span>
+          <span>{t('contact')}</span>
+          <span>{t('type')}</span>
+          <span>{t('amount')}</span>
+          <span>{t('date')}</span>
+          <span>{t('status')}</span>
           <span />
         </div>
 
@@ -1010,7 +1021,7 @@ function DesktopTransactionsTable({
 
         {!loadingTransactions && transactions.length === 0 ? (
           <div className="rounded-2xl bg-[#F8F9FB] px-4 py-8 text-center text-sm font-medium text-[#66728A]">
-            Your activity will appear here.
+            {t('activityEmpty')}
           </div>
         ) : null}
 
@@ -1072,7 +1083,7 @@ function DesktopTransactionsTable({
             onClick={onOpenHistory}
             className="mx-auto mt-5 flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold text-[#6B39F4] transition duration-200 hover:bg-[#F5F3FF]"
           >
-            View all transactions
+            {t('viewAllTransactions')}
             <IconChevronRight />
           </button>
         ) : null}
@@ -1263,6 +1274,8 @@ function DesktopHomeDashboard({
 }
 
 export default function HomePage() {
+  const t = useTranslations('Home');
+  const roleT = useTranslations('Roles');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
@@ -1458,7 +1471,7 @@ export default function HomePage() {
             const owner = ownerId ? ownerMap.get(ownerId) : undefined;
             const fullName = `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim();
             if (fullName) return fullName;
-            return 'Business owner';
+            return t('businessOwner');
           })(),
           nextRepaymentLabel: formatNextRepaymentDate(
             getNextRepaymentDate(
@@ -1693,11 +1706,11 @@ export default function HomePage() {
         setSearchProjects(
           visibleProjects.map((project) => ({
             id: project.id,
-            title: project.business_name || project.title || `Venture #${project.id}`,
-            subtitle: `${formatMoney(project.amount_received ?? 0, project.currency ?? 'USD')} raised of ${formatMoney(
-              project.amount_requested ?? 0,
-              project.currency ?? 'USD'
-            )}`,
+            title: project.business_name || project.title || t('ventureNumber', { id: project.id }),
+            subtitle: t('raisedOf', {
+              raised: formatMoney(project.amount_received ?? 0, project.currency ?? 'USD'),
+              goal: formatMoney(project.amount_requested ?? 0, project.currency ?? 'USD'),
+            }),
             imageUrl: project.photo_urls?.[0] ?? null,
           }))
         );
@@ -1706,7 +1719,7 @@ export default function HomePage() {
           rawUsers.map((entry) => ({
             id: entry.id,
             displayName: getUserDisplayName(entry),
-            subtitle: entry.email?.trim() || 'Email pending',
+            subtitle: entry.email?.trim() || t('emailPending'),
             avatarUrl: entry.avatar_url ?? null,
             walletAddress: entry.wallet_address ?? null,
             linkedProjectId: userProjectMap.get(entry.id) ?? null,
@@ -1719,7 +1732,7 @@ export default function HomePage() {
         setSearchProjects([]);
         setSearchUsers([]);
         setSearchTransactions([]);
-        setSearchError(error instanceof Error ? error.message : 'We could not load search results.');
+        setSearchError(error instanceof Error ? error.message : t('searchError'));
       } finally {
         if (!isCancelled) {
           setSearching(false);
@@ -1731,7 +1744,7 @@ export default function HomePage() {
       isCancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [getAccessToken, searchQuery, showSearch, smartWalletAddress, supabase, user?.id]);
+  }, [getAccessToken, searchQuery, showSearch, smartWalletAddress, supabase, t, user?.id]);
 
   const handleTopUpClick = useCallback(async () => {
     if (openingTopUp) return;
@@ -1790,17 +1803,17 @@ export default function HomePage() {
     }
   };
 
-  const displayName = useMemo(() => profileName || userAlias || 'User', [profileName, userAlias]);
+  const displayName = useMemo(() => profileName || userAlias || t('user'), [profileName, t, userAlias]);
   const trimmedSearchQuery = normalizeSearchQuery(searchQuery);
   const totalSearchResults = searchProjects.length + searchUsers.length + searchTransactions.length;
   const roleLabel =
     rolSeleccionado === 'emprendedor'
-      ? 'Entrepreneur'
+      ? roleT('entrepreneur')
       : rolSeleccionado === 'inversor'
-        ? 'Investor'
-        : 'User';
-  const sectionTitle = rolSeleccionado === 'emprendedor' ? 'My Business' : 'Active investments';
-  const sectionActionLabel = rolSeleccionado === 'emprendedor' ? 'Edit' : 'View all';
+        ? roleT('investor')
+        : t('user');
+  const sectionTitle = rolSeleccionado === 'emprendedor' ? t('myBusiness') : t('activeInvestments');
+  const sectionActionLabel = rolSeleccionado === 'emprendedor' ? t('edit') : t('viewAll');
   const sectionActionHref =
     rolSeleccionado === 'emprendedor' && lastProject ? `/portfolio?edit=${lastProject.id}` : '/portfolio';
   const investorEarnings = activeInvestments.reduce(
@@ -1819,10 +1832,10 @@ export default function HomePage() {
   const balanceCurrencyLabel = internalBalance?.currency ?? 'USD';
 
   const actions: ActionItem[] = [
-    { label: 'Top up', icon: <IconPlus />, onClick: () => void handleTopUpClick() },
-    { label: 'Send Money', icon: <IconSend />, onClick: () => router.push('/invest') },
-    { label: 'Withdraw', icon: <IconDownload />, onClick: handleWithdrawClick },
-    { label: 'History', icon: <IconClock />, onClick: () => router.push('/history') },
+    { label: t('topUp'), icon: <IconPlus />, onClick: () => void handleTopUpClick() },
+    { label: t('sendMoney'), icon: <IconSend />, onClick: () => router.push('/invest') },
+    { label: t('withdraw'), icon: <IconDownload />, onClick: handleWithdrawClick },
+    { label: t('history'), icon: <IconClock />, onClick: () => router.push('/history') },
   ];
 
   const closeSearch = () => {
@@ -1855,7 +1868,7 @@ export default function HomePage() {
       ? `/feed/${entry.linkedProjectId}`
       : entry.walletAddress
         ? `/invest/wallet?mode=transfer${
-            entry.subtitle && entry.subtitle !== 'Email pending'
+            entry.subtitle && entry.subtitle !== t('emailPending')
               ? `&email=${encodeURIComponent(entry.subtitle)}`
               : ''
           }&wallet=${encodeURIComponent(entry.walletAddress)}`
@@ -1972,7 +1985,7 @@ export default function HomePage() {
             <div className="flex shrink-0 items-center gap-2.5">
               <button
                 type="button"
-                aria-label="Search"
+                aria-label={t('searchAria')}
                 onClick={() => {
                   if (showSearch) {
                     setShowSearch(false);
@@ -1992,7 +2005,7 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
-                aria-label="Notifications"
+                aria-label={t('notificationsAria')}
                 onClick={() => router.push('/notifications')}
                 className={`relative flex h-12 w-12 items-center justify-center rounded-full border backdrop-blur-xl shadow-[0_12px_26px_rgba(31,38,64,0.08)] transition hover:-translate-y-0.5 ${
                   notificationsEnabled
@@ -2021,7 +2034,7 @@ export default function HomePage() {
                 value={searchQuery}
                 autoFocus
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by venture, user, email, DID or tx hash"
+                placeholder={t('searchPlaceholder')}
                 className="flex-1 bg-transparent text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8]"
               />
               {searchQuery ? (
@@ -2030,7 +2043,7 @@ export default function HomePage() {
                   onClick={() => setSearchQuery('')}
                   className="rounded-full px-2 py-1 text-xs font-semibold text-[#6B39F4]"
                 >
-                  Clear
+                  {t('clear')}
                 </button>
               ) : null}
             </div>
@@ -2038,23 +2051,22 @@ export default function HomePage() {
             <div className="max-h-[360px] overflow-y-auto rounded-[24px] border border-[#EEF0F8] bg-white/90 p-4 shadow-[0_18px_38px_rgba(31,38,64,0.08)] backdrop-blur-xl">
               {trimmedSearchQuery.length < 2 ? (
                 <p className="text-sm text-[#818898]">
-                  Start typing to search ventures, people, email addresses, DIDs, project IDs, or
-                  your transaction hashes.
+                  {t('mobileSearchHint')}
                 </p>
               ) : searching ? (
-                <p className="text-sm text-[#818898]">Searching InvestApp...</p>
+                <p className="text-sm text-[#818898]">{t('searching')}</p>
               ) : searchError ? (
-                <p className="text-sm text-[#DF1C41]">We could not load search results right now.</p>
+                <p className="text-sm text-[#DF1C41]">{t('searchError')}</p>
               ) : totalSearchResults === 0 ? (
                 <p className="text-sm text-[#818898]">
-                  No matches found for <span className="font-semibold text-[#0F172A]">{trimmedSearchQuery}</span>.
+                  {t('noMatches', { query: trimmedSearchQuery })}
                 </p>
               ) : (
                 <div className="space-y-5">
                   {searchProjects.length > 0 ? (
                     <section className="space-y-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
-                        Ventures
+                        {t('ventures')}
                       </p>
                       <div className="space-y-2">
                         {searchProjects.map((project) => (
@@ -2082,7 +2094,7 @@ export default function HomePage() {
                               <p className="truncate text-sm font-semibold text-[#0F172A]">{project.title}</p>
                               <p className="truncate text-xs text-[#818898]">{project.subtitle}</p>
                             </div>
-                            <span className="text-xs font-semibold text-[#6B39F4]">Open</span>
+                            <span className="text-xs font-semibold text-[#6B39F4]">{t('open')}</span>
                           </button>
                         ))}
                       </div>
@@ -2092,7 +2104,7 @@ export default function HomePage() {
                   {searchUsers.length > 0 ? (
                     <section className="space-y-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
-                        People
+                        {t('people')}
                       </p>
                       <div className="space-y-2">
                         {searchUsers.map((entry) => {
@@ -2100,7 +2112,7 @@ export default function HomePage() {
                             ? `/feed/${entry.linkedProjectId}`
                             : entry.walletAddress
                               ? `/invest/wallet?mode=transfer${
-                                  entry.subtitle && entry.subtitle !== 'Email pending'
+                                  entry.subtitle && entry.subtitle !== t('emailPending')
                                     ? `&email=${encodeURIComponent(entry.subtitle)}`
                                     : ''
                                 }&wallet=${encodeURIComponent(entry.walletAddress)}`
@@ -2134,7 +2146,7 @@ export default function HomePage() {
                                 <p className="truncate text-xs text-[#818898]">{entry.subtitle}</p>
                               </div>
                               <span className="text-xs font-semibold text-[#6B39F4]">
-                                {entry.linkedProjectId ? 'Venture' : 'Send'}
+                                {entry.linkedProjectId ? t('venture') : t('send')}
                               </span>
                             </button>
                           ) : (
@@ -2158,7 +2170,7 @@ export default function HomePage() {
                                 </p>
                                 <p className="truncate text-xs text-[#818898]">{entry.subtitle}</p>
                               </div>
-                              <span className="text-[11px] font-medium text-[#94A3B8]">Profile match</span>
+                              <span className="text-[11px] font-medium text-[#94A3B8]">{t('profileMatch')}</span>
                             </div>
                           );
                         })}
@@ -2169,7 +2181,7 @@ export default function HomePage() {
                   {searchTransactions.length > 0 ? (
                     <section className="space-y-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B39F4]/70">
-                        Hashes
+                        {t('hashes')}
                       </p>
                       <div className="space-y-2">
                         {searchTransactions.map((transaction) => (
@@ -2215,7 +2227,7 @@ export default function HomePage() {
             <div className="relative flex items-start justify-between">
               <div>
                 <p className="text-[1rem] font-medium tracking-[-0.03em] text-white/76">
-                  Available
+                  {t('available')}
                 </p>
                 <h2 className="mt-2 text-[2.65rem] font-semibold leading-none tracking-[-0.07em]">
                   {showBalance ? `$${availableBalanceLabel}` : 'XXXX.XX'}{' '}
@@ -2228,7 +2240,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setShowBalance((prev) => !prev)}
                 className="flex h-14 w-14 items-center justify-center rounded-full bg-white/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.24)] backdrop-blur-xl transition hover:bg-white/24"
-                aria-label={showBalance ? 'Hide balance' : 'Show balance'}
+                aria-label={showBalance ? t('hideBalance') : t('showBalance')}
               >
                 <IconEye hidden={!showBalance} />
               </button>
@@ -2236,17 +2248,17 @@ export default function HomePage() {
 
             {rolSeleccionado === 'emprendedor' ? (
               <div className="relative mt-6 inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-2.5 text-[0.82rem] font-semibold tracking-[-0.02em] text-[#35A994] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
-                <span>{`Raised: ${formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD')}`}</span>
+                <span>{t('raisedMetric', { value: formatMoney(lastProject?.amount_received ?? 0, lastProject?.currency ?? 'USD') })}</span>
                 <span className="text-[#35A994]/45">&middot;</span>
-                <span>{`Interest rate: ${lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--'}`}</span>
+                <span>{t('interestRateMetric', { value: lastProject?.interest_rate ? `${lastProject.interest_rate}%` : '--' })}</span>
               </div>
             ) : (
               <div className="relative mt-6 inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full bg-[#EFFFF9]/95 px-5 py-2.5 text-[0.82rem] font-semibold tracking-[-0.02em] text-[#35A994] shadow-[0_16px_28px_rgba(14,165,143,0.12)]">
-                <span>{`Active: ${activeInvestments.length}`}</span>
+                <span>{t('activeMetric', { count: activeInvestments.length })}</span>
                 <span className="text-[#35A994]/45">&middot;</span>
-                <span>{`Avg rate: ${investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--'}`}</span>
+                <span>{t('avgRateMetric', { value: investorAverageRate ? `${investorAverageRate.toFixed(1)}%` : '--' })}</span>
                 <span className="text-[#35A994]/45">&middot;</span>
-                <span>{`Earning: ${formatMoney(investorEarnings, 'USD')}`}</span>
+                <span>{t('earningMetric', { value: formatMoney(investorEarnings, 'USD') })}</span>
               </div>
             )}
           </div>
@@ -2507,7 +2519,7 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setShowWithdrawProfilePrompt(false)}
                 className="rounded-full border border-white/40 bg-white/70 px-3 py-1 text-sm font-semibold text-[#0F172A]"
-                aria-label="Close profile completion prompt"
+                aria-label={t('closeProfilePrompt')}
               >
                 Close
               </button>

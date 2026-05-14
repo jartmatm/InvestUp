@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
@@ -156,7 +157,7 @@ const ownerNameFrom = (owner: OwnerRow | undefined) => {
 const getHealthMeta = (health: InvestmentHealth) => {
   if (health === 'up_to_date') {
     return {
-      label: 'Up to date',
+      labelKey: 'upToDate' as const,
       badgeClassName: 'bg-[#E9FBF5] text-[#0B9B72]',
       dotClassName: 'bg-[#27D6A4]',
     };
@@ -164,22 +165,25 @@ const getHealthMeta = (health: InvestmentHealth) => {
 
   if (health === 'due_soon') {
     return {
-      label: 'Due soon',
+      labelKey: 'dueSoon' as const,
       badgeClassName: 'bg-[#FFF5E8] text-[#D97706]',
       dotClassName: 'bg-[#FFB84D]',
     };
   }
 
   return {
-    label: 'Overdue',
+    labelKey: 'overdue' as const,
     badgeClassName: 'bg-[#FFF0F3] text-[#E11D48]',
     dotClassName: 'bg-[#FB7185]',
   };
 };
 
-const formatActivityTimestamp = (value: string) => {
+const formatActivityTimestamp = (
+  value: string,
+  labels: { recently: string; today: string; yesterday: string }
+) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Recently';
+  if (Number.isNaN(date.getTime())) return labels.recently;
 
   const now = new Date();
   const timeLabel = date.toLocaleTimeString('en-US', {
@@ -188,13 +192,13 @@ const formatActivityTimestamp = (value: string) => {
   });
 
   if (date.toDateString() === now.toDateString()) {
-    return `Today, ${timeLabel}`;
+    return `${labels.today}, ${timeLabel}`;
   }
 
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
-    return `Yesterday, ${timeLabel}`;
+    return `${labels.yesterday}, ${timeLabel}`;
   }
 
   return date.toLocaleDateString('en-US', {
@@ -370,6 +374,7 @@ function ActivityGlyphIcon() {
 }
 
 function PortfolioGauge({ value }: { value: number }) {
+  const t = useTranslations('Portfolio');
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const progress = clamp(value / 30, 0, 1);
@@ -406,7 +411,7 @@ function PortfolioGauge({ value }: { value: number }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <p className="text-[29px] font-semibold tracking-[-0.04em] text-white">{percent(value)}</p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/65">
-          Agv. Rate
+          {t('averageRateShort')}
         </p>
       </div>
     </div>
@@ -551,6 +556,7 @@ function DashboardLayout({
 }
 
 function DesktopPortfolioDonut({ value }: { value: number }) {
+  const t = useTranslations('Portfolio');
   const radius = 66;
   const circumference = 2 * Math.PI * radius;
   const progress = clamp(value / 30, 0, 1);
@@ -596,7 +602,7 @@ function DesktopPortfolioDonut({ value }: { value: number }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <p className="text-[2.2rem] font-bold tracking-[-0.055em] text-white">{percent(value)}</p>
         <p className="mt-1 text-[0.78rem] font-bold uppercase tracking-[0.16em] text-white/70">
-          Average rate
+          {t('averageRate')}
         </p>
       </div>
     </div>
@@ -604,6 +610,7 @@ function DesktopPortfolioDonut({ value }: { value: number }) {
 }
 
 function DesktopPerformanceTrend({ points }: { points: number[] }) {
+  const t = useTranslations('Portfolio');
   const linePath = buildDesktopTrendPath(points);
   const lastPoint = points.at(-1) ?? 0;
   const lastX = points.length > 1 ? 960 : 0;
@@ -692,11 +699,11 @@ function DesktopPerformanceTrend({ points }: { points: number[] }) {
       />
       <circle cx={lastX} cy={lastY} r="3" fill="#FFFFFF" />
       {[
-        ['May 1', 18],
-        ['May 8', 240],
-        ['May 15', 480],
-        ['May 22', 720],
-        ['May 29', 922],
+        [t('chartMay1'), 18],
+        [t('chartMay8'), 240],
+        [t('chartMay15'), 480],
+        [t('chartMay22'), 720],
+        [t('chartMay29'), 922],
       ].map(([label, x]) => (
         <text key={label} x={Number(x)} y="184" fill="rgba(255,255,255,0.70)" fontSize="13">
           {label}
@@ -717,6 +724,7 @@ function PortfolioHero({
   points: number[];
   totalPortfolio: number;
 }) {
+  const t = useTranslations('Portfolio');
   const growthIsPositive = monthlyGrowth >= 0;
 
   return (
@@ -724,7 +732,7 @@ function PortfolioHero({
       <div className="grid min-h-[330px] grid-cols-[minmax(0,1fr)_270px] grid-rows-[auto_1fr] items-center gap-x-8 gap-y-5">
         <div className="min-w-0 self-start">
           <p className="text-[0.8rem] font-bold uppercase tracking-[0.18em] text-white/78">
-            Portfolio Value
+            {t('portfolioValue')}
           </p>
           <p className="mt-4 text-[3.75rem] font-bold leading-none tracking-[-0.065em] text-white">
             {money(totalPortfolio)}
@@ -737,7 +745,7 @@ function PortfolioHero({
             >
               {growthIsPositive ? '↑' : '↓'} {Math.abs(monthlyGrowth).toFixed(2)}%
             </span>
-            <span className="text-sm font-medium text-white/72">vs last month</span>
+            <span className="text-sm font-medium text-white/72">{t('vsLastMonth')}</span>
           </div>
         </div>
 
@@ -791,24 +799,25 @@ function StatsCards({
   averageRate: number;
   totalPortfolio: number;
 }) {
+  const t = useTranslations('Portfolio');
   return (
     <section className="grid grid-cols-3 gap-4">
       <DesktopStatCard
         icon={<PortfolioValueIcon />}
         iconClassName="bg-[#F1ECFF] text-[#6B39F4]"
-        label="Total Portfolio"
+        label={t('totalPortfolio')}
         value={money(totalPortfolio)}
       />
       <DesktopStatCard
         icon={<AverageRateIcon />}
         iconClassName="bg-[#E7FBF4] text-[#20B486]"
-        label="Average Rate"
+        label={t('averageRate')}
         value={percent(averageRate)}
       />
       <DesktopStatCard
         icon={<EarningsIcon />}
         iconClassName="bg-[#F1ECFF] text-[#6B39F4]"
-        label="Accumulated Earnings"
+        label={t('accumulatedEarnings')}
         value={money(accumulatedEarnings)}
       />
     </section>
@@ -816,6 +825,7 @@ function StatsCards({
 }
 
 function InsightCard() {
+  const t = useTranslations('Portfolio');
   return (
     <section className="rounded-[22px] border border-[#DDF5EE] bg-[linear-gradient(135deg,#F5FFFB_0%,#F1FFFB_45%,#EEF8FF_100%)] p-6 shadow-[0_18px_42px_rgba(21,28,44,0.045)]">
       <div className="flex items-center gap-6">
@@ -823,9 +833,9 @@ function InsightCard() {
           <TrendUpIcon />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-bold tracking-[-0.045em] text-[#0E8B65]">Great job!</p>
+          <p className="text-xl font-bold tracking-[-0.045em] text-[#0E8B65]">{t('greatJob')}</p>
           <p className="mt-1 text-base font-medium text-[#344054]">
-            You&apos;re performing better than 78% of InvestApp users.
+            {t('insightDescription')}
           </p>
         </div>
         <div className="hidden min-w-[280px] justify-end md:flex">
@@ -852,17 +862,20 @@ function DesktopActivityThumb({ coverImage, label }: { coverImage: string | null
 }
 
 function ActivityList({ rows, status }: { rows: DesktopActivityRow[]; status: string }) {
+  const t = useTranslations('Portfolio');
+  const commonT = useTranslations('Common');
+
   return (
     <section className="rounded-[24px] border border-[#E9ECF4] bg-white p-6 shadow-[0_18px_42px_rgba(21,28,44,0.055)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">Recent Activity</h2>
+          <h2 className="text-xl font-bold tracking-[-0.045em] text-[#111827]">{t('recentActivity')}</h2>
         </div>
         <Link
           href="/history"
           className="inline-flex items-center gap-2 text-sm font-bold text-[#6B39F4] transition duration-200 hover:text-[#4F2ED4]"
         >
-          View all
+          {commonT('viewAll')}
           <ChevronRightIcon />
         </Link>
       </div>
@@ -875,10 +888,10 @@ function ActivityList({ rows, status }: { rows: DesktopActivityRow[]; status: st
 
       <div className="mt-5 overflow-hidden">
         <div className="grid grid-cols-[minmax(260px,1.6fr)_1fr_1fr_1fr_40px] border-b border-[#E9ECF4] px-3 pb-3 text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#8A95A8]">
-          <span>Project</span>
-          <span>Type</span>
-          <span>Status</span>
-          <span>Date</span>
+          <span>{t('project')}</span>
+          <span>{t('type')}</span>
+          <span>{t('status')}</span>
+          <span>{t('date')}</span>
           <span />
         </div>
 
@@ -967,6 +980,9 @@ function DashboardSkeleton() {
 
 export default function InvestorPortfolioDashboard() {
   const router = useRouter();
+  const t = useTranslations('Portfolio');
+  const commonT = useTranslations('Common');
+  const roleT = useTranslations('Roles');
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
   const { avatarUrl, displayName } = useUserProfileSummary();
@@ -996,7 +1012,7 @@ export default function InvestorPortfolioDashboard() {
       });
 
       if (error) {
-        setStatus('Could not load your investments right now. Please try again in a moment.');
+        setStatus(t('loadInvestmentsError'));
         setItems([]);
         setLoading(false);
         return;
@@ -1060,7 +1076,7 @@ export default function InvestorPortfolioDashboard() {
             id: investment.id,
             createdAt: investment.created_at,
             projectId: investment.project_id,
-            businessName: project?.business_name || project?.title || 'Business',
+            businessName: project?.business_name || project?.title || t('business'),
             ownerName: ownerNameFrom(
               project?.owner_user_id ? ownerMap.get(project.owner_user_id) : undefined
             ),
@@ -1078,7 +1094,7 @@ export default function InvestorPortfolioDashboard() {
     };
 
     void loadDashboard();
-  }, [getAccessToken, user?.id]);
+  }, [getAccessToken, t, user?.id]);
 
   const sortedItems = useMemo(
     () =>
@@ -1139,23 +1155,33 @@ export default function InvestorPortfolioDashboard() {
   const desktopActivityRows = useMemo<DesktopActivityRow[]>(() => {
     const rows = sortedItems.slice(0, 5).map((item) => {
       const healthMeta = getHealthMeta(item.health);
+      const statusLabel =
+        healthMeta.labelKey === 'upToDate'
+          ? t('upToDate')
+          : healthMeta.labelKey === 'dueSoon'
+            ? t('dueSoon')
+            : t('overdue');
 
       return {
         id: item.id,
         href: `/feed/${item.projectId}`,
         businessName: item.businessName,
-        category: item.ownerName || 'Investment',
-        type: 'Investment',
-        statusLabel: healthMeta.label,
+        category: item.ownerName || t('investment'),
+        type: t('investment'),
+        statusLabel,
         statusBadgeClassName: healthMeta.badgeClassName,
         dotClassName: healthMeta.dotClassName,
-        dateLabel: formatActivityTimestamp(item.createdAt),
+        dateLabel: formatActivityTimestamp(item.createdAt, {
+          recently: t('recently'),
+          today: t('today'),
+          yesterday: t('yesterday'),
+        }),
         coverImage: item.coverImage,
       };
     });
 
     return rows.length > 0 ? rows : MOCK_ACTIVITY_ROWS;
-  }, [sortedItems]);
+  }, [sortedItems, t]);
 
   const profileName = displayName || 'Maria Gonzalez';
   const desktopTotalPortfolio = totalPortfolio > 0 ? totalPortfolio : DEFAULT_PORTFOLIO_VALUE;
@@ -1174,7 +1200,7 @@ export default function InvestorPortfolioDashboard() {
 
   return (
     <>
-      <DashboardLayout avatarUrl={avatarUrl} displayName={profileName} profileRole="Investor">
+      <DashboardLayout avatarUrl={avatarUrl} displayName={profileName} profileRole={roleT('investor')}>
         {loading ? (
           <DesktopPortfolioLoading />
         ) : (
@@ -1206,10 +1232,10 @@ export default function InvestorPortfolioDashboard() {
               <span className="mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
             </div>
             <h1 className="mt-5 text-[2.65rem] font-semibold tracking-[-0.07em] text-[#18213C]">
-              My Portfolio
+              {t('myPortfolio')}
             </h1>
             <p className="mt-1 text-[0.98rem] leading-6 tracking-[-0.02em] text-slate-500">
-              Track your portfolio performance and growth
+              {t('portfolioSubtitle')}
             </p>
           </div>
 
@@ -1223,7 +1249,7 @@ export default function InvestorPortfolioDashboard() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                    VALUE
+                    {t('value')}
                   </p>
                   <p className="mt-3 text-[2.35rem] font-semibold tracking-[-0.06em] text-white">
                     {money(totalPortfolio)}
@@ -1235,7 +1261,7 @@ export default function InvestorPortfolioDashboard() {
                     >
                       {monthlyGrowth >= 0 ? '↑' : '↓'} {Math.abs(monthlyGrowth).toFixed(2)}%
                     </span>
-                    <span className="text-[0.78rem] font-medium text-white/60">vs last month</span>
+                    <span className="text-[0.78rem] font-medium text-white/60">{t('vsLastMonth')}</span>
                   </div>
                 </div>
 
@@ -1251,21 +1277,21 @@ export default function InvestorPortfolioDashboard() {
               <StatRow
                 icon={<PortfolioValueIcon />}
                 iconClassName="bg-[#F1EBFF] text-[#7C5CFF]"
-                label="Total Portfolio"
+                label={t('totalPortfolio')}
                 value={money(totalPortfolio)}
               />
               <div className="mx-2 h-px bg-slate-100" />
               <StatRow
                 icon={<AverageRateIcon />}
                 iconClassName="bg-[#E7FBF4] text-[#20C997]"
-                label="Average Rate"
+                label={t('averageRate')}
                 value={percent(averageRate)}
               />
               <div className="mx-2 h-px bg-slate-100" />
               <StatRow
                 icon={<EarningsIcon />}
                 iconClassName="bg-[#F1EBFF] text-[#7C5CFF]"
-                label="Accumulated Earnings"
+                label={t('accumulatedEarnings')}
                 value={money(accumulatedEarnings)}
               />
             </section>
@@ -1277,12 +1303,10 @@ export default function InvestorPortfolioDashboard() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[1rem] font-semibold tracking-[-0.03em] text-[#0E8B65]">
-                    Great job!
+                    {t('greatJob')}
                   </p>
                   <p className="mt-1 text-sm leading-6 tracking-[-0.02em] text-slate-600">
-                    Your portfolio is up to date on{' '}
-                    <span className="font-semibold text-[#0E8B65]">{portfolioHealthShare}%</span>{' '}
-                    of tracked repayments.
+                    {t('upToDateInsight', { percent: portfolioHealthShare })}
                   </p>
                 </div>
                 <PerformanceMiniChart />
@@ -1293,17 +1317,17 @@ export default function InvestorPortfolioDashboard() {
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-[1.02rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                    Recent Activity
+                    {t('recentActivity')}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    {items.length} investment{items.length === 1 ? '' : 's'} tracked
+                    {t('investmentsTracked', { count: items.length })}
                   </p>
                 </div>
                 <Link
                   href="/history"
                   className="text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] transition hover:text-[#5B48FF]"
                 >
-                  View all
+                  {commonT('viewAll')}
                 </Link>
               </div>
 
@@ -1317,22 +1341,27 @@ export default function InvestorPortfolioDashboard() {
                 {recentItems.length === 0 ? (
                   <div className="rounded-[26px] border border-white/70 bg-white/92 p-5 shadow-[0_20px_50px_rgba(15,23,42,0.06)]">
                     <p className="text-base font-semibold tracking-[-0.03em] text-[#1C2340]">
-                      No investments yet
+                      {t('noInvestments')}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Once you fund a venture, your portfolio activity and performance will appear
-                      here.
+                      {t('noInvestmentsDescription')}
                     </p>
                     <Link
                       href="/feed"
                       className="mt-4 inline-flex items-center rounded-full bg-[#6B39F4] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.22)] transition hover:bg-[#5B31CF]"
                     >
-                      Explore ventures
+                      {t('exploreVentures')}
                     </Link>
                   </div>
                 ) : (
                   recentItems.map((item) => {
                     const healthMeta = getHealthMeta(item.health);
+                    const statusLabel =
+                      healthMeta.labelKey === 'upToDate'
+                        ? t('upToDate')
+                        : healthMeta.labelKey === 'dueSoon'
+                          ? t('dueSoon')
+                          : t('overdue');
 
                     return (
                       <Link
@@ -1359,7 +1388,7 @@ export default function InvestorPortfolioDashboard() {
                                 <p className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
                                   {item.businessName}
                                 </p>
-                                <p className="mt-0.5 text-sm text-slate-500">Investment</p>
+                                <p className="mt-0.5 text-sm text-slate-500">{t('investment')}</p>
                               </div>
                               <div className="text-right">
                                 <span
@@ -1368,23 +1397,27 @@ export default function InvestorPortfolioDashboard() {
                                   <span
                                     className={`h-1.5 w-1.5 rounded-full ${healthMeta.dotClassName}`}
                                   />
-                                  {healthMeta.label}
+                                  {statusLabel}
                                 </span>
                                 <p className="mt-2 text-xs font-medium text-slate-400">
-                                  {formatActivityTimestamp(item.createdAt)}
+                                  {formatActivityTimestamp(item.createdAt, {
+                                    recently: t('recently'),
+                                    today: t('today'),
+                                    yesterday: t('yesterday'),
+                                  })}
                                 </p>
                               </div>
                             </div>
 
                             <div className="mt-3 flex items-center justify-between gap-3">
-                              <p className="text-sm text-slate-500">Next repayment</p>
+                              <p className="text-sm text-slate-500">{t('nextRepayment')}</p>
                               <p className="text-sm font-semibold text-slate-800">
                                 {item.nextRepaymentLabel}
                               </p>
                             </div>
 
                             <div className="mt-2 flex items-center justify-between gap-3">
-                              <p className="text-sm text-slate-500">Invested amount</p>
+                              <p className="text-sm text-slate-500">{t('investedAmount')}</p>
                               <p className="text-base font-semibold tracking-[-0.03em] text-slate-900">
                                 {money(item.amountInvested)}
                               </p>

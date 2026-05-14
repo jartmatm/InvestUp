@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import {
@@ -38,27 +39,27 @@ type DirectoryProfile = {
   wallet_address: string | null;
 };
 
-const movementTypeOptions: Array<{ value: MovementFilter; label: string }> = [
-  { value: 'all', label: 'All types' },
-  { value: 'investment', label: 'Investments' },
-  { value: 'repayment', label: 'Repayments' },
-  { value: 'transfer', label: 'Transfers' },
-  { value: 'buy', label: 'Top ups' },
-  { value: 'withdrawal', label: 'Withdrawals' },
+const movementTypeOptions: Array<{ value: MovementFilter; labelKey: string }> = [
+  { value: 'all', labelKey: 'allTypes' },
+  { value: 'investment', labelKey: 'investments' },
+  { value: 'repayment', labelKey: 'repayments' },
+  { value: 'transfer', labelKey: 'transfers' },
+  { value: 'buy', labelKey: 'topUps' },
+  { value: 'withdrawal', labelKey: 'withdrawals' },
 ];
 
-const statusOptions: Array<{ value: StatusFilter; label: string }> = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'submitted', label: 'Pending' },
-  { value: 'failed', label: 'Failed' },
+const statusOptions: Array<{ value: StatusFilter; labelKey: string }> = [
+  { value: 'all', labelKey: 'allStatuses' },
+  { value: 'confirmed', labelKey: 'confirmed' },
+  { value: 'submitted', labelKey: 'pending' },
+  { value: 'failed', labelKey: 'failed' },
 ];
 
-const sortOptions: Array<{ value: SortFilter; label: string }> = [
-  { value: 'latest', label: 'Latest first' },
-  { value: 'oldest', label: 'Oldest first' },
-  { value: 'highest', label: 'Highest amount' },
-  { value: 'lowest', label: 'Lowest amount' },
+const sortOptions: Array<{ value: SortFilter; labelKey: string }> = [
+  { value: 'latest', labelKey: 'latestFirst' },
+  { value: 'oldest', labelKey: 'oldestFirst' },
+  { value: 'highest', labelKey: 'highestAmount' },
+  { value: 'lowest', labelKey: 'lowestAmount' },
 ];
 
 const normalizeSearchQuery = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase();
@@ -74,16 +75,16 @@ const shortenIdentifier = (value: string | null | undefined, size = 6) => {
   return `${value.slice(0, size)}...${value.slice(-size)}`;
 };
 
-const formatDateTime = (value: string) => {
+const formatDateTime = (value: string, locale: string, justNowLabel: string) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Just now';
+  if (Number.isNaN(date.getTime())) return justNowLabel;
 
-  const dateLabel = date.toLocaleDateString('en-US', {
+  const dateLabel = date.toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   });
-  const timeLabel = date.toLocaleTimeString('en-US', {
+  const timeLabel = date.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -108,41 +109,41 @@ const getTransactionDirection = (
   return 'neutral';
 };
 
-const getMovementTypeLabel = (movementType: TransactionMovementType) => {
+const getMovementTypeLabelKey = (movementType: TransactionMovementType) => {
   switch (movementType) {
     case 'investment':
-      return 'Investment';
+      return 'investment';
     case 'repayment':
-      return 'Repayment';
+      return 'repayment';
     case 'transfer':
-      return 'Transfer';
+      return 'transfer';
     case 'buy':
-      return 'Top up';
+      return 'topUp';
     case 'withdrawal':
-      return 'Withdrawal';
+      return 'withdrawal';
     default:
-      return 'Movement';
+      return 'movement';
   }
 };
 
-const getTransactionTitle = (transaction: TransactionRow, walletAddress?: string | null) => {
+const getTransactionTitleKey = (transaction: TransactionRow, walletAddress?: string | null) => {
   const direction = getTransactionDirection(transaction, walletAddress);
 
-  if (transaction.movement_type === 'buy') return 'Top up received';
-  if (transaction.movement_type === 'withdrawal') return 'Withdrawal sent';
+  if (transaction.movement_type === 'buy') return 'topUpReceived';
+  if (transaction.movement_type === 'withdrawal') return 'withdrawalSent';
   if (transaction.movement_type === 'investment') {
-    if (direction === 'incoming') return 'Investment received';
-    if (direction === 'outgoing') return 'Investment sent';
-    return 'Investment movement';
+    if (direction === 'incoming') return 'investmentReceived';
+    if (direction === 'outgoing') return 'investmentSent';
+    return 'investmentMovement';
   }
   if (transaction.movement_type === 'repayment') {
-    if (direction === 'incoming') return 'Repayment received';
-    if (direction === 'outgoing') return 'Repayment sent';
-    return 'Repayment movement';
+    if (direction === 'incoming') return 'repaymentReceived';
+    if (direction === 'outgoing') return 'repaymentSent';
+    return 'repaymentMovement';
   }
-  if (direction === 'incoming') return 'Transfer received';
-  if (direction === 'outgoing') return 'Transfer sent';
-  return 'Transfer movement';
+  if (direction === 'incoming') return 'transferReceived';
+  if (direction === 'outgoing') return 'transferSent';
+  return 'transferMovement';
 };
 
 const getStatusTone = (status: TransactionStatus) => {
@@ -151,10 +152,10 @@ const getStatusTone = (status: TransactionStatus) => {
   return 'border-[#FFBE4C]/35 bg-[#FFF7E6] text-[#C77C00]';
 };
 
-const getStatusLabel = (status: TransactionStatus) => {
-  if (status === 'confirmed') return 'Confirmed';
-  if (status === 'failed') return 'Failed';
-  return 'Pending';
+const getStatusLabelKey = (status: TransactionStatus) => {
+  if (status === 'confirmed') return 'confirmed';
+  if (status === 'failed') return 'failed';
+  return 'pending';
 };
 
 const getDirectionTone = (direction: TransactionDirection) => {
@@ -163,10 +164,10 @@ const getDirectionTone = (direction: TransactionDirection) => {
   return 'border-[#E4E7EF] bg-[#F8F9FC] text-[#818898]';
 };
 
-const getDirectionLabel = (direction: TransactionDirection) => {
-  if (direction === 'incoming') return 'Incoming';
-  if (direction === 'outgoing') return 'Outgoing';
-  return 'Internal';
+const getDirectionLabelKey = (direction: TransactionDirection) => {
+  if (direction === 'incoming') return 'incoming';
+  if (direction === 'outgoing') return 'outgoing';
+  return 'internal';
 };
 
 const sumTransactionAmounts = (transactions: TransactionRow[]) =>
@@ -180,11 +181,11 @@ const initialsFrom = (value: string) =>
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'U';
 
-const getDirectoryDisplayName = (profile: DirectoryProfile | null | undefined) => {
+const getDirectoryDisplayName = (profile: DirectoryProfile | null | undefined, fallback: string) => {
   const fullName = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (fullName) return fullName;
   if (profile?.email?.trim()) return profile.email.trim();
-  return 'InvestApp user';
+  return fallback;
 };
 
 function IconDocument() {
@@ -394,6 +395,9 @@ function IconCheck() {
 }
 
 export default function HistoryPage() {
+  const t = useTranslations('History');
+  const tx = (key: string, values?: Record<string, string | number>) => t(key as never, values as never);
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
@@ -434,7 +438,7 @@ export default function HistoryPage() {
 
       if (error) {
         setTransactions([]);
-        setStatusMessage(`Could not load your transaction history: ${error}`);
+        setStatusMessage(t('loadError', { error }));
         setLoading(false);
         return;
       }
@@ -581,8 +585,8 @@ export default function HistoryPage() {
 
   const subtitle =
     rolSeleccionado === 'emprendedor'
-      ? 'Review all incoming and outgoing venture movements'
-      : 'Review all wallet, investment and repayment movements';
+      ? t('entrepreneurSubtitle')
+      : t('investorSubtitle');
 
   const handleCopy = async (transaction: TransactionRow) => {
     const valueToCopy = transaction.tx_hash ?? String(transaction.id);
@@ -595,45 +599,45 @@ export default function HistoryPage() {
         setCopiedTransactionId((current) => (current === transaction.id ? null : current));
       }, 1400);
     } catch {
-      setStatusMessage('We could not copy the transaction hash right now.');
+      setStatusMessage(t('copyError'));
     }
   };
 
   return (
     <>
     <DesktopAppShell
-      title="Transaction history"
+      title={t('title')}
       subtitle={subtitle}
-      eyebrow="Ledger"
-      searchPlaceholder="Search transactions, wallets or hashes..."
+      eyebrow={t('eyebrow')}
+      searchPlaceholder={t('globalSearchPlaceholder')}
     >
       <section className="grid grid-cols-3 gap-4">
         <DesktopMetricCard
           icon={<IconDocument />}
-          label="Transactions"
+          label={t('transactions')}
           value={filteredTransactions.length}
-          detail="Loaded from your recent activity"
+          detail={t('loadedFromRecentActivity')}
           tone="purple"
         />
         <DesktopMetricCard
           icon={<IconArrowDown />}
-          label="Incoming"
+          label={t('incoming')}
           value={formatTransactionAmount(sumTransactionAmounts(incomingTransactions))}
-          detail={`${incomingTransactions.length} movements`}
+          detail={t('movementsCount', { count: incomingTransactions.length })}
           tone="green"
         />
         <DesktopMetricCard
           icon={<IconArrowUp />}
-          label="Outgoing"
+          label={t('outgoing')}
           value={formatTransactionAmount(sumTransactionAmounts(outgoingTransactions))}
-          detail={`${outgoingTransactions.length} movements`}
+          detail={t('movementsCount', { count: outgoingTransactions.length })}
           tone="rose"
         />
       </section>
 
       <DesktopSectionCard
-        title="Filters"
-        subtitle="Search by hash, wallet, email or movement type."
+        title={t('filters')}
+        subtitle={t('filtersSubtitle')}
         action={
           hasActiveFilters ? (
             <button
@@ -647,7 +651,7 @@ export default function HistoryPage() {
               }}
               className="h-10 rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
             >
-              Clear filters
+              {t('clearFilters')}
             </button>
           ) : null
         }
@@ -661,7 +665,7 @@ export default function HistoryPage() {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search hash, email or ID"
+              placeholder={t('searchHashEmailId')}
               className="h-11 w-full rounded-2xl border border-[#E2E6F0] bg-[#FAFBFF] pl-12 pr-4 text-sm font-semibold text-[#17203A] outline-none transition focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
             />
           </label>
@@ -673,7 +677,7 @@ export default function HistoryPage() {
           >
             {movementTypeOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {tx(option.labelKey)}
               </option>
             ))}
           </select>
@@ -685,7 +689,7 @@ export default function HistoryPage() {
           >
             {statusOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {tx(option.labelKey)}
               </option>
             ))}
           </select>
@@ -695,9 +699,9 @@ export default function HistoryPage() {
             onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)}
             className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
           >
-            <option value="all">All directions</option>
-            <option value="incoming">Incoming</option>
-            <option value="outgoing">Outgoing</option>
+            <option value="all">{t('allDirections')}</option>
+            <option value="incoming">{t('incoming')}</option>
+            <option value="outgoing">{t('outgoing')}</option>
           </select>
 
           <select
@@ -707,7 +711,7 @@ export default function HistoryPage() {
           >
             {sortOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {tx(option.labelKey)}
               </option>
             ))}
           </select>
@@ -715,8 +719,8 @@ export default function HistoryPage() {
       </DesktopSectionCard>
 
       <DesktopSectionCard
-        title="Recent movements"
-        subtitle="A production-style ledger table for wallet, investment and repayment activity."
+        title={t('recentMovements')}
+        subtitle={t('recentMovementsSubtitle')}
       >
         {loading ? <SectionLoadingSkeleton rows={4} /> : null}
         {statusMessage ? (
@@ -726,8 +730,8 @@ export default function HistoryPage() {
         ) : null}
         {!loading && !statusMessage && filteredTransactions.length === 0 ? (
           <DesktopEmptyState
-            title="No transactions match this view"
-            description="Your wallet and investment activity will appear here once funds start moving."
+            title={t('emptyFilteredTitle')}
+            description={t('emptyFilteredDescription')}
           />
         ) : null}
         {!loading && !statusMessage && filteredTransactions.length > 0 ? (
@@ -735,12 +739,12 @@ export default function HistoryPage() {
             <table className="w-full border-collapse text-left">
               <thead className="bg-[#F8F9FB] text-[0.72rem] font-bold uppercase tracking-[0.14em] text-[#8A95A8]">
                 <tr>
-                  <th className="px-5 py-4">Movement</th>
-                  <th className="px-5 py-4">Direction</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Amount</th>
-                  <th className="px-5 py-4">Date</th>
-                  <th className="px-5 py-4">Hash</th>
+                  <th className="px-5 py-4">{t('movement')}</th>
+                  <th className="px-5 py-4">{t('direction')}</th>
+                  <th className="px-5 py-4">{t('status')}</th>
+                  <th className="px-5 py-4">{t('amount')}</th>
+                  <th className="px-5 py-4">{t('date')}</th>
+                  <th className="px-5 py-4">{t('hash')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EEF1F7] bg-white">
@@ -771,22 +775,22 @@ export default function HistoryPage() {
                           </span>
                           <span>
                             <span className="block text-sm font-bold text-[#111827]">
-                              {getTransactionTitle(transaction, smartWalletAddress)}
+                              {tx(getTransactionTitleKey(transaction, smartWalletAddress))}
                             </span>
                             <span className="mt-1 block text-xs font-medium text-[#73809A]">
-                              {getMovementTypeLabel(transaction.movement_type)}
+                              {tx(getMovementTypeLabelKey(transaction.movement_type))}
                             </span>
                           </span>
                         </div>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full border px-3 py-1 text-xs font-bold ${getDirectionTone(direction)}`}>
-                          {getDirectionLabel(direction)}
+                          {tx(getDirectionLabelKey(direction))}
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`rounded-full border px-3 py-1 text-xs font-bold ${getStatusTone(transaction.status)}`}>
-                          {getStatusLabel(transaction.status)}
+                          {tx(getStatusLabelKey(transaction.status))}
                         </span>
                       </td>
                       <td className={`px-5 py-4 text-sm font-bold ${amountColor}`}>
@@ -794,7 +798,7 @@ export default function HistoryPage() {
                         {formatTransactionAmount(transaction.amount)}
                       </td>
                       <td className="px-5 py-4 text-sm font-semibold text-[#66728A]">
-                        {formatDateTime(transaction.created_at)}
+                        {formatDateTime(transaction.created_at, locale, t('justNow'))}
                       </td>
                       <td className="px-5 py-4">
                         <button
@@ -803,10 +807,10 @@ export default function HistoryPage() {
                           className="rounded-xl bg-[#F5F3FF] px-3 py-2 text-xs font-bold text-[#6B39F4] transition hover:bg-[#EEE8FF]"
                         >
                           {copiedTransactionId === transaction.id
-                            ? 'Copied'
+                            ? t('copied')
                             : transaction.tx_hash
                               ? shortenIdentifier(transaction.tx_hash, 7)
-                              : 'Copy'}
+                              : t('copy')}
                         </button>
                       </td>
                     </tr>
@@ -835,7 +839,7 @@ export default function HistoryPage() {
               INVESTAPP
             </p>
             <h1 className="mt-2 text-[2.6rem] font-semibold tracking-[-0.075em] text-[#121A31]">
-              Transaction history
+              {t('title')}
             </h1>
             <p className="mt-1 max-w-[34rem] text-[1.05rem] font-medium tracking-[-0.025em] text-[#7A8497]">
               {subtitle}
@@ -854,13 +858,13 @@ export default function HistoryPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[0.78rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A6]">
-                      Transactions
+                      {t('transactions')}
                     </p>
                     <p className="mt-3 text-[2.45rem] font-semibold leading-none tracking-[-0.07em] text-[#121A31]">
                       {filteredTransactions.length}
                     </p>
                     <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                      Loaded from your complete recent history.
+                      {t('loadedFromCompleteHistory')}
                     </p>
                   </div>
                 </div>
@@ -878,13 +882,13 @@ export default function HistoryPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[0.78rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A6]">
-                      Incoming
+                      {t('incoming')}
                     </p>
                     <p className="mt-3 text-[2rem] font-semibold leading-none tracking-[-0.07em] text-[#27906E]">
                       {formatTransactionAmount(sumTransactionAmounts(incomingTransactions))}
                     </p>
                     <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                      {incomingTransactions.length} movements
+                      {t('movementsCount', { count: incomingTransactions.length })}
                     </p>
                   </div>
                 </div>
@@ -902,13 +906,13 @@ export default function HistoryPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-[0.78rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A6]">
-                      Outgoing
+                      {t('outgoing')}
                     </p>
                     <p className="mt-3 text-[2rem] font-semibold leading-none tracking-[-0.07em] text-[#C42847]">
                       {formatTransactionAmount(sumTransactionAmounts(outgoingTransactions))}
                     </p>
                     <p className="mt-3 text-[0.88rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                      {outgoingTransactions.length} movements
+                      {t('movementsCount', { count: outgoingTransactions.length })}
                     </p>
                   </div>
                 </div>
@@ -923,10 +927,10 @@ export default function HistoryPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-[1.35rem] font-semibold tracking-[-0.055em] text-[#121A31]">
-                  Filters
+                  {t('filters')}
                 </h2>
                 <p className="mt-1 text-[0.92rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                  Search by hash, transaction ID or email.
+                  {t('mobileFiltersSubtitle')}
                 </p>
               </div>
               {hasActiveFilters ? (
@@ -941,7 +945,7 @@ export default function HistoryPage() {
                   }}
                   className="rounded-full border border-[#D7C8FF] bg-[#FBF9FF] px-4 py-2 text-[0.8rem] font-semibold tracking-[-0.02em] text-[#6B39F4] transition hover:bg-[#F6F1FF]"
                 >
-                  Clear filters
+                  {t('clearFilters')}
                 </button>
               ) : null}
             </div>
@@ -955,7 +959,7 @@ export default function HistoryPage() {
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search by tx hash, email or ID"
+                  placeholder={t('mobileSearchPlaceholder')}
                   className="w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#17203A] outline-none placeholder:text-[#99A3B6]"
                 />
               </div>
@@ -972,7 +976,7 @@ export default function HistoryPage() {
                   >
                     {movementTypeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
-                        {option.label}
+                        {tx(option.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -992,7 +996,7 @@ export default function HistoryPage() {
                   >
                     {statusOptions.map((option) => (
                       <option key={option.value} value={option.value}>
-                        {option.label}
+                        {tx(option.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -1012,7 +1016,7 @@ export default function HistoryPage() {
                   >
                     {sortOptions.map((option) => (
                       <option key={option.value} value={option.value}>
-                        {option.label}
+                        {tx(option.labelKey)}
                       </option>
                     ))}
                   </select>
@@ -1028,10 +1032,10 @@ export default function HistoryPage() {
                     const active = directionFilter === option;
                     const label =
                       option === 'all'
-                        ? 'All directions'
+                        ? t('allDirections')
                         : option === 'incoming'
-                          ? 'Incoming'
-                          : 'Outgoing';
+                          ? t('incoming')
+                          : t('outgoing');
 
                     return (
                       <button
@@ -1065,13 +1069,13 @@ export default function HistoryPage() {
 
           {!loading && !statusMessage && transactions.length === 0 ? (
             <div className="rounded-[26px] border border-white/85 bg-white/88 px-5 py-5 text-[0.95rem] font-medium text-[#8A93A6] shadow-[0_18px_46px_rgba(31,38,64,0.08)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
-              Your activity will appear here once you start moving funds through the app.
+              {t('emptyAllDescription')}
             </div>
           ) : null}
 
           {!loading && !statusMessage && transactions.length > 0 && filteredTransactions.length === 0 ? (
             <div className="rounded-[26px] border border-white/85 bg-white/88 px-5 py-5 text-[0.95rem] font-medium text-[#8A93A6] shadow-[0_18px_46px_rgba(31,38,64,0.08)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-xl">
-              No transactions match the current filters.
+              {t('emptyCurrentFilters')}
             </div>
           ) : null}
 
@@ -1092,14 +1096,14 @@ export default function HistoryPage() {
                 ? directoryProfiles[transaction.from_wallet.toLowerCase()]
                 : undefined;
               const senderDisplayName = isCurrentSender
-                ? profileName || profileEmail || 'Current user'
-                : getDirectoryDisplayName(senderProfile);
+                ? profileName || profileEmail || t('currentUser')
+                : getDirectoryDisplayName(senderProfile, t('investAppUser'));
               const senderAvatarUrl = isCurrentSender
                 ? avatarUrl
                 : senderProfile?.avatar_url ?? null;
               const senderContact = isCurrentSender
-                ? profileEmail || 'Email pending'
-                : senderProfile?.email?.trim() || 'Email pending';
+                ? profileEmail || t('emailPending')
+                : senderProfile?.email?.trim() || t('emailPending');
               const copyActive = copiedTransactionId === transaction.id;
 
               return (
@@ -1128,23 +1132,23 @@ export default function HistoryPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2.5">
                           <p className="text-[1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
-                            {getTransactionTitle(transaction, smartWalletAddress)}
+                            {tx(getTransactionTitleKey(transaction, smartWalletAddress))}
                           </p>
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold tracking-[-0.01em] ${getStatusTone(transaction.status)}`}
                           >
-                            {getStatusLabel(transaction.status)}
+                            {tx(getStatusLabelKey(transaction.status))}
                           </span>
                           <span
                             className={`rounded-full border px-2.5 py-1 text-[0.72rem] font-semibold tracking-[-0.01em] ${getDirectionTone(direction)}`}
                           >
-                            {getDirectionLabel(direction)}
+                            {tx(getDirectionLabelKey(direction))}
                           </span>
                         </div>
 
                         <p className="mt-2 text-[0.86rem] font-medium tracking-[-0.02em] text-[#8A93A6]">
-                          {getMovementTypeLabel(transaction.movement_type)} ·{' '}
-                          {formatDateTime(transaction.created_at)}
+                          {tx(getMovementTypeLabelKey(transaction.movement_type))} ·{' '}
+                          {formatDateTime(transaction.created_at, locale, t('justNow'))}
                         </p>
                       </div>
                     </div>
@@ -1162,12 +1166,12 @@ export default function HistoryPage() {
                   <div className="space-y-4">
                     <div>
                       <p className="text-[0.82rem] font-semibold tracking-[-0.02em] text-[#121A31]">
-                        Hash
+                        {t('hash')}
                       </p>
                       <p className="mt-1 text-[0.95rem] font-medium tracking-[-0.02em] text-[#77819A]">
                         {transaction.tx_hash
                           ? shortenIdentifier(transaction.tx_hash, 8)
-                          : 'Not available'}
+                          : t('notAvailable')}
                       </p>
                     </div>
 
@@ -1188,7 +1192,7 @@ export default function HistoryPage() {
 
                         <div className="min-w-0">
                           <p className="text-[0.82rem] font-semibold tracking-[-0.02em] text-[#121A31]">
-                            From
+                            {t('from')}
                           </p>
                           <p className="mt-2 truncate text-[1rem] font-semibold tracking-[-0.04em] text-[#121A31]">
                             {senderDisplayName}
@@ -1205,7 +1209,7 @@ export default function HistoryPage() {
                           event.stopPropagation();
                           void handleCopy(transaction);
                         }}
-                        aria-label={copyActive ? 'Copied transaction hash' : 'Copy transaction hash'}
+                        aria-label={copyActive ? t('copiedTransactionHash') : t('copyTransactionHash')}
                         className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] transition ${
                           copyActive
                             ? 'bg-[#F4F0FF] text-[#6B39F4]'

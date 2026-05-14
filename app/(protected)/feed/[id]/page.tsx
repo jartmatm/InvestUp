@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useTranslations } from 'next-intl';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { DesktopAppShell } from '@/components/DesktopAppShell';
 import InvestmentOpportunityDetail, {
@@ -38,8 +39,10 @@ type ProjectDetail = {
   metadata?: Record<string, unknown> | null;
 };
 
-const formatAmount = (amount: number | null, currency: string | null) => {
-  if (amount === null || amount === undefined) return 'No amount';
+type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+const formatAmount = (amount: number | null, currency: string | null, noAmountLabel: string) => {
+  if (amount === null || amount === undefined) return noAmountLabel;
   const code = currency ?? 'USD';
   try {
     return new Intl.NumberFormat('en-US', {
@@ -92,78 +95,79 @@ const getMetadataObject = (project: ProjectDetail | null, key: string) => {
 
 const buildDetailMetrics = (
   project: ProjectDetail,
-  formFields: Record<string, unknown>
+  formFields: Record<string, unknown>,
+  t: Translate
 ): OpportunityMetric[] => [
   {
-    label: 'Funding Goal',
-    value: formatAmount(project.amount_requested, project.currency),
+    label: t('Detail.fundingGoal'),
+    value: formatAmount(project.amount_requested, project.currency, t('noAmount')),
     icon: 'goal',
   },
   {
-    label: 'Annual Rate',
-    value: project.interest_rate ? `${project.interest_rate}% EA` : 'Pending',
+    label: t('Detail.annualRate'),
+    value: project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending'),
     icon: 'rate',
   },
   {
-    label: 'Monthly Sales',
-    value: formatAmount(coerceNumber(formFields.monthly_revenue), project.currency),
+    label: t('Detail.monthlySales'),
+    value: formatAmount(coerceNumber(formFields.monthly_revenue), project.currency, t('noAmount')),
     icon: 'sales',
   },
   {
-    label: 'Active Clients',
-    value: coerceText(formFields.monthly_customers) || 'Pending',
+    label: t('Detail.activeClients'),
+    value: coerceText(formFields.monthly_customers) || t('ratePending'),
     icon: 'clients',
   },
 ];
 
-const buildOptimizedDetailSections = (optimized: Record<string, unknown>): OpportunitySection[] => {
+const buildOptimizedDetailSections = (optimized: Record<string, unknown>, t: Translate): OpportunitySection[] => {
   const definitions: Array<{
     title: string;
     icon: OpportunitySection['icon'];
     keys: string[];
   }> = [
     {
-      title: 'Overview',
+      title: t('Detail.overview'),
       icon: 'overview',
       keys: ['overview'],
     },
     {
-      title: 'What we do',
+      title: t('Detail.whatWeDo'),
       icon: 'what',
       keys: ['whatWeDo', 'what_we_do'],
     },
     {
-      title: 'How we do it',
+      title: t('Detail.howWeDoIt'),
       icon: 'how',
       keys: ['howWeDoIt', 'how_we_do_it'],
     },
     {
-      title: 'Financial information',
+      title: t('Detail.financialInformation'),
       icon: 'financial',
       keys: ['financialInformation', 'financial_information'],
     },
     {
-      title: 'Investment',
+      title: t('Detail.investment'),
       icon: 'investment',
       keys: ['investment'],
     },
     {
-      title: 'Target',
+      title: t('Detail.target'),
       icon: 'target',
       keys: ['target'],
     },
     {
-      title: 'Team',
+      title: t('Detail.team'),
       icon: 'team',
       keys: ['team'],
     },
     {
-      title: 'Gallery',
+      title: t('Detail.gallery'),
       icon: 'gallery',
       keys: ['gallery'],
     },
     {
-      title: 'Extras',
+      title: t('Detail.extras'),
       icon: 'extras',
       keys: ['extras'],
     },
@@ -180,23 +184,24 @@ const buildOptimizedDetailSections = (optimized: Record<string, unknown>): Oppor
 
 const buildFallbackDetailSections = (
   project: ProjectDetail,
-  formFields: Record<string, unknown>
+  formFields: Record<string, unknown>,
+  t: Translate
 ): OpportunitySection[] => {
   const sections: OpportunitySection[] = [
     {
-      title: 'Overview',
+      title: t('Detail.overview'),
       body: project.description,
       icon: 'overview',
     },
     {
-      title: 'What we do',
+      title: t('Detail.whatWeDo'),
       body:
         [
           coerceText(formFields.product_description)
-            ? `Product or service: ${coerceText(formFields.product_description)}`
+            ? t('Detail.productOrService', { value: coerceText(formFields.product_description) })
             : '',
           coerceText(formFields.problem_solved)
-            ? `Problem solved: ${coerceText(formFields.problem_solved)}`
+            ? t('Detail.problemSolved', { value: coerceText(formFields.problem_solved) })
             : '',
         ]
           .filter(Boolean)
@@ -204,41 +209,43 @@ const buildFallbackDetailSections = (
       icon: 'what',
     },
     {
-      title: 'How we do it',
+      title: t('Detail.howWeDoIt'),
       body: coerceText(formFields.differentiation),
       icon: 'how',
     },
     {
-      title: 'Financial information',
+      title: t('Detail.financialInformation'),
       body: [
         coerceText(formFields.monthly_revenue)
-          ? `Monthly revenue: ${coerceText(formFields.monthly_revenue)}`
+          ? t('Detail.monthlyRevenue', { value: coerceText(formFields.monthly_revenue) })
           : '',
-        coerceText(formFields.avg_ticket) ? `Average ticket: ${coerceText(formFields.avg_ticket)}` : '',
+        coerceText(formFields.avg_ticket) ? t('Detail.averageTicket', { value: coerceText(formFields.avg_ticket) }) : '',
         coerceText(formFields.monthly_customers)
-          ? `Monthly customers: ${coerceText(formFields.monthly_customers)}`
+          ? t('Detail.monthlyCustomers', { value: coerceText(formFields.monthly_customers) })
           : '',
-        coerceText(formFields.growth_rate) ? `Growth: ${coerceText(formFields.growth_rate)}` : '',
+        coerceText(formFields.growth_rate) ? t('Detail.growth', { value: coerceText(formFields.growth_rate) }) : '',
       ]
         .filter(Boolean)
         .join('\n\n'),
       icon: 'financial',
     },
     {
-      title: 'Investment',
+      title: t('Detail.investment'),
       body: [
         project.amount_requested !== null && project.amount_requested !== undefined
-          ? `Capital needed: ${formatAmount(project.amount_requested, project.currency)}`
+          ? t('Detail.capitalNeeded', {
+              value: formatAmount(project.amount_requested, project.currency, t('noAmount')),
+            })
           : '',
-        coerceText(formFields.funds_usage) ? `Use of funds: ${coerceText(formFields.funds_usage)}` : '',
-        project.interest_rate ? `Annual interest rate: ${project.interest_rate}% EA` : '',
+        coerceText(formFields.funds_usage) ? t('Detail.useOfFunds', { value: coerceText(formFields.funds_usage) }) : '',
+        project.interest_rate ? t('Detail.annualInterestRate', { value: `${project.interest_rate}% EA` }) : '',
       ]
         .filter(Boolean)
         .join('\n\n'),
       icon: 'investment',
     },
     {
-      title: 'Target',
+      title: t('Detail.target'),
       body: [formFields.target_customer, formFields.market_size, formFields.competition]
         .map(coerceText)
         .filter(Boolean)
@@ -246,21 +253,21 @@ const buildFallbackDetailSections = (
       icon: 'target',
     },
     {
-      title: 'Team',
+      title: t('Detail.team'),
       body: [
-        coerceText(formFields.founder_info) ? `Founder: ${coerceText(formFields.founder_info)}` : '',
-        coerceText(formFields.team_info) ? `Team: ${coerceText(formFields.team_info)}` : '',
+        coerceText(formFields.founder_info) ? t('Detail.founder', { value: coerceText(formFields.founder_info) }) : '',
+        coerceText(formFields.team_info) ? t('Detail.teamLabel', { value: coerceText(formFields.team_info) }) : '',
       ]
         .filter(Boolean)
         .join('\n\n'),
       icon: 'team',
     },
     {
-      title: 'Extras',
+      title: t('Detail.extras'),
       body: [
-        coerceText(formFields.testimonials) ? `Testimonials: ${coerceText(formFields.testimonials)}` : '',
-        coerceText(formFields.achievements) ? `Achievements: ${coerceText(formFields.achievements)}` : '',
-        coerceText(formFields.timing_reason) ? `Timing: ${coerceText(formFields.timing_reason)}` : '',
+        coerceText(formFields.testimonials) ? t('Detail.testimonials', { value: coerceText(formFields.testimonials) }) : '',
+        coerceText(formFields.achievements) ? t('Detail.achievements', { value: coerceText(formFields.achievements) }) : '',
+        coerceText(formFields.timing_reason) ? t('Detail.timing', { value: coerceText(formFields.timing_reason) }) : '',
       ]
         .filter(Boolean)
         .join('\n\n'),
@@ -274,13 +281,15 @@ const buildFallbackDetailSections = (
 const buildDetailSections = (
   project: ProjectDetail,
   formFields: Record<string, unknown>,
-  optimized: Record<string, unknown>
+  optimized: Record<string, unknown>,
+  t: Translate
 ): OpportunitySection[] => {
-  const optimizedSections = buildOptimizedDetailSections(optimized);
-  return optimizedSections.length ? optimizedSections : buildFallbackDetailSections(project, formFields);
+  const optimizedSections = buildOptimizedDetailSections(optimized, t);
+  return optimizedSections.length ? optimizedSections : buildFallbackDetailSections(project, formFields, t);
 };
 
 export default function FeedDetailPage() {
+  const t = useTranslations('Feed');
   const router = useRouter();
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
@@ -300,7 +309,7 @@ export default function FeedDetailPage() {
   useEffect(() => {
     const loadProject = async () => {
       if (!projectId) {
-        setStatus('Listing not found.');
+        setStatus(t('Detail.listingNotFound'));
         setLoading(false);
         return;
       }
@@ -309,7 +318,7 @@ export default function FeedDetailPage() {
       const { data, error } = await fetchProjectById(projectId, getAccessToken);
 
       if (error) {
-        setStatus(`Could not load the listing: ${error}`);
+        setStatus(t('Detail.loadListingError', { error }));
         setLoading(false);
         return;
       }
@@ -327,7 +336,7 @@ export default function FeedDetailPage() {
         !isProjectPubliclyVisible(normalizedProject)
       ) {
         setProject(null);
-        setStatus('This listing is no longer active for new investments.');
+        setStatus(t('Detail.inactiveListing'));
         setLoading(false);
         return;
       }
@@ -337,7 +346,7 @@ export default function FeedDetailPage() {
     };
 
     loadProject();
-  }, [getAccessToken, projectId, rolSeleccionado]);
+  }, [getAccessToken, projectId, rolSeleccionado, t]);
 
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
   const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
@@ -352,15 +361,17 @@ export default function FeedDetailPage() {
     setShowShareOptions(true);
   };
 
-  const shareText = project?.title ? `Check out ${project.title} on InvestApp` : 'Check out this venture on InvestApp';
+  const shareText = project?.title
+    ? t('Detail.shareTextProject', { title: project.title })
+    : t('Detail.shareTextGeneric');
 
   const copyShareLink = async () => {
     try {
       const url = getShareUrl();
       await navigator.clipboard.writeText(url);
-      setShareStatus('Link copied.');
+      setShareStatus(t('Detail.linkCopied'));
     } catch {
-      setShareStatus('Could not copy the link.');
+      setShareStatus(t('Detail.copyLinkError'));
     }
   };
 
@@ -376,7 +387,7 @@ export default function FeedDetailPage() {
     : '';
   const detailSubtitle = project
     ? coerceText(optimizedPublication.summary) ||
-      (project.business_name ? `Invest in ${project.business_name} today.` : undefined)
+      (project.business_name ? t('Detail.investInBusinessToday', { business: project.business_name }) : undefined)
     : undefined;
   const locationLabel = project
     ? coerceText(formFields.location) ||
@@ -384,10 +395,11 @@ export default function FeedDetailPage() {
         .map((item) => coerceText(item))
         .filter((item) => item && item.toLowerCase() !== 'not specified')
         .join(', ') ||
-      'Location pending'
+      t('locationPending')
     : '';
-  const primaryActionLabel = canEditProject ? 'Edit' : isEntrepreneurView ? 'Share' : 'Invest';
-  const secondaryActionLabel = isEntrepreneurView ? 'Share' : 'Contact Founder';
+  const primaryActionLabel = canEditProject ? t('edit') : isEntrepreneurView ? t('Detail.share') : t('invest');
+  const secondaryActionLabel = isEntrepreneurView ? t('Detail.share') : t('Detail.contactFounder');
+  const detailT: Translate = (key, values) => t(key as never, values as never);
 
   const handlePrimaryAction = () => {
     if (!project) return;
@@ -428,11 +440,11 @@ export default function FeedDetailPage() {
         title={detailTitle}
         subtitle={detailSubtitle}
         location={locationLabel}
-        category={project.sector ? toEnglishSector(project.sector) : 'Business'}
+        category={project.sector ? toEnglishSector(project.sector) : t('Detail.business')}
         rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
         images={project.photo_urls ?? []}
-        metrics={buildDetailMetrics(project, formFields)}
-        sections={buildDetailSections(project, formFields, optimizedPublication)}
+        metrics={buildDetailMetrics(project, formFields, detailT)}
+        sections={buildDetailSections(project, formFields, optimizedPublication, detailT)}
         primaryActionLabel={primaryActionLabel}
         secondaryActionLabel={secondaryActionLabel}
         onPrimaryAction={handlePrimaryAction}
@@ -450,7 +462,7 @@ export default function FeedDetailPage() {
           <main className="min-h-screen bg-[#F8FAFE] px-4 py-8 lg:hidden">
             {renderLoadingState()}
           </main>
-          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+          <DesktopAppShell title={t('Detail.ventureDetail')} hideHeader maxWidthClassName="max-w-none">
             {renderLoadingState(true)}
           </DesktopAppShell>
         </>
@@ -461,7 +473,7 @@ export default function FeedDetailPage() {
           <main className="min-h-screen bg-[#F8FAFE] px-4 py-8 lg:hidden">
             {renderStatusState()}
           </main>
-          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+          <DesktopAppShell title={t('Detail.ventureDetail')} hideHeader maxWidthClassName="max-w-none">
             {renderStatusState(true)}
           </DesktopAppShell>
         </>
@@ -470,7 +482,7 @@ export default function FeedDetailPage() {
       {!loading && project ? (
         <>
           <div className="lg:hidden">{renderProjectDetail()}</div>
-          <DesktopAppShell title="Venture detail" hideHeader maxWidthClassName="max-w-none">
+          <DesktopAppShell title={t('Detail.ventureDetail')} hideHeader maxWidthClassName="max-w-none">
             {renderProjectDetail()}
           </DesktopAppShell>
         </>
@@ -481,16 +493,16 @@ export default function FeedDetailPage() {
           <div className="w-full max-w-sm rounded-[28px] border border-white/25 bg-[linear-gradient(160deg,rgba(255,255,255,0.94),rgba(238,244,255,0.86))] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.24)]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">Share</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B39F4]">{t('Detail.share')}</p>
                 <h3 className="mt-2 text-xl font-semibold text-[#0F172A]">{project.title}</h3>
-                <p className="mt-2 text-sm text-[#666D80]">Choose how you want to share this venture.</p>
+                <p className="mt-2 text-sm text-[#666D80]">{t('Detail.shareDescription')}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowShareOptions(false)}
                 className="rounded-full border border-white/40 bg-white/70 px-3 py-1 text-sm font-semibold text-[#0F172A]"
               >
-                Close
+                {t('Detail.close')}
               </button>
             </div>
 
@@ -503,12 +515,12 @@ export default function FeedDetailPage() {
                       await navigator.share({ title: project.title, text: shareText, url: getShareUrl() });
                       setShowShareOptions(false);
                     } catch {
-                      setShareStatus('Share was cancelled.');
+                      setShareStatus(t('Detail.shareCancelled'));
                     }
                   }}
                   className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
                 >
-                  Native share
+                  {t('Detail.nativeShare')}
                 </button>
               ) : null}
               <button
@@ -516,7 +528,7 @@ export default function FeedDetailPage() {
                 onClick={() => void copyShareLink()}
                 className="rounded-[18px] border border-white/25 bg-white/80 px-4 py-4 text-sm font-semibold text-[#0F172A] shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
               >
-                Copy link
+                {t('Detail.copyLink')}
               </button>
               <button
                 type="button"

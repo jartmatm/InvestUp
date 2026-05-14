@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
+import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
@@ -67,11 +68,11 @@ const themes = [
   'bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#334155]',
 ];
 
-const nameFrom = (profile: InvestorProfile | undefined) => {
+const nameFrom = (profile: InvestorProfile | undefined, fallback: string) => {
   const full = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
   if (full) return full;
   if (profile?.email?.trim()) return profile.email.trim();
-  return 'Investor';
+  return fallback;
 };
 
 const initialsFrom = (value: string) =>
@@ -84,14 +85,16 @@ const initialsFrom = (value: string) =>
 
 const money = (value: number) => `${value.toFixed(2)} USD`;
 
-const dueDateFrom = (createdAt: string, termMonths: number | null) => {
+const dueDateFrom = (createdAt: string, termMonths: number | null, locale: string, pendingLabel: string) => {
   const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return 'Date pending';
+  if (Number.isNaN(date.getTime())) return pendingLabel;
   date.setMonth(date.getMonth() + Number(termMonths ?? 0));
-  return date.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export default function RepaymentsPage() {
+  const t = useTranslations('Repayments');
+  const locale = useLocale();
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
@@ -180,14 +183,14 @@ export default function RepaymentsPage() {
               id: investment.id,
               projectId: investment.project_id,
               investorUserId: investment.investor_user_id,
-              displayName: nameFrom(profile),
+              displayName: nameFrom(profile, t('investor')),
               email: profile?.email ?? null,
               avatarUrl: profile?.avatar_url ?? null,
               country: profile?.country ?? null,
               walletAddress: profile?.wallet_address ?? investment.from_wallet ?? '',
               amountInvested: Number(investment.amount ?? 0),
               interestRateEa: investment.interest_rate_ea,
-              repaymentDate: dueDateFrom(investment.created_at, investment.term_months),
+              repaymentDate: dueDateFrom(investment.created_at, investment.term_months, locale, t('datePending')),
               projectTitle: investment.project_title,
               repaymentAmount: Number(investment.projected_total_usdc ?? investment.amount ?? 0),
             };
@@ -200,10 +203,10 @@ export default function RepaymentsPage() {
   }, [getAccessToken, rolSeleccionado, user?.id]);
 
   return (
-    <PageFrame title="Repayments" subtitle="Review each investor and launch the payment flow" hideDesktopHeader>
+    <PageFrame title={t('title')} subtitle={t('subtitle')} hideDesktopHeader>
       {rolSeleccionado !== 'emprendedor' ? (
         <div className="rounded-[20px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-          Repayments are available only for entrepreneur accounts.
+          {t('entrepreneurOnly')}
         </div>
       ) : (
         <>
@@ -211,7 +214,7 @@ export default function RepaymentsPage() {
 
           {!loading && cards.length === 0 ? (
             <div className="rounded-[20px] border border-white/25 bg-white/20 p-5 text-sm text-gray-600 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
-              No repayment candidates yet. Once an investor funds your business, they will appear here.
+              {t('empty')}
             </div>
           ) : null}
 
@@ -237,20 +240,20 @@ export default function RepaymentsPage() {
                         )}
                       </div>
                       <p className="mt-4 text-lg font-semibold">{card.displayName}</p>
-                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/70">Tap to view repayment details</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/70">{t('tapDetails')}</p>
                     </div>
 
                     <div className={`absolute inset-0 rounded-[24px] p-4 text-white shadow-[0_16px_36px_rgba(15,23,42,0.16)] [backface-visibility:hidden] [transform:rotateY(180deg)] ${themes[index % themes.length]}`}>
                       <div className="flex h-full flex-col justify-between">
                         <div>
                           <p className="text-sm font-semibold">{card.displayName}</p>
-                          <p className="mt-1 text-xs text-white/70">{card.projectTitle || 'Business investment'}</p>
+                          <p className="mt-1 text-xs text-white/70">{card.projectTitle || t('businessInvestment')}</p>
                           <div className="mt-4 space-y-2 text-xs">
-                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">Invested</span><span className="font-semibold">{money(card.amountInvested)}</span></div>
-                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">Interest</span><span className="font-semibold">{card.interestRateEa ? `${card.interestRateEa}% EA` : '--'}</span></div>
-                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">Repayment date</span><span className="font-semibold">{card.repaymentDate}</span></div>
-                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">Country</span><span className="font-semibold">{card.country || 'Pending'}</span></div>
-                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">To repay</span><span className="font-semibold">{money(card.repaymentAmount)}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">{t('invested')}</span><span className="font-semibold">{money(card.amountInvested)}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">{t('interest')}</span><span className="font-semibold">{card.interestRateEa ? `${card.interestRateEa}% EA` : '--'}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">{t('repaymentDate')}</span><span className="font-semibold">{card.repaymentDate}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">{t('country')}</span><span className="font-semibold">{card.country || t('pending')}</span></div>
+                            <div className="flex items-center justify-between gap-3"><span className="text-white/70">{t('toRepay')}</span><span className="font-semibold">{money(card.repaymentAmount)}</span></div>
                           </div>
                         </div>
 
@@ -275,7 +278,7 @@ export default function RepaymentsPage() {
                           disabled={!card.walletAddress}
                           className={`mt-4 rounded-full px-4 py-2 text-xs font-semibold ${card.walletAddress ? 'bg-white text-slate-900' : 'bg-white/20 text-white/60'}`}
                         >
-                          Pay now
+                          {t('payNow')}
                         </button>
                       </div>
                     </div>

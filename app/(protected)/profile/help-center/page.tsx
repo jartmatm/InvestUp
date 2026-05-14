@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import {
   ProfileInfoTile,
   ProfilePageShell,
@@ -59,30 +60,32 @@ function HelpIcon() {
 }
 
 export default function HelpCenterPage() {
+  const t = useTranslations('ProfilePages.helpCenterPage');
+
   return (
     <ProfilePageShell
-      title="Help Center"
-      subtitle="Get support quickly for account, wallet and platform questions."
+      title={t('title')}
+      subtitle={t('subtitle')}
     >
       <ProfileSurface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
-              Support
+              {t('heroEyebrow')}
             </p>
             <h2 className="mt-2 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-              We are here to help you move faster
+              {t('heroTitle')}
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#7B879C]">
-              Start with the FAQ for quick answers, then contact support with the details of your issue so the team can help with more context.
+              {t('heroDescription')}
             </p>
           </div>
 
           <ProfileInfoTile
             icon={<ClockIcon />}
-            eyebrow="Response window"
-            title="Within 24 to 48 hours"
-            description="Share your user email, wallet address and a short description so we can help faster."
+            eyebrow={t('responseWindowEyebrow')}
+            title={t('responseWindowTitle')}
+            description={t('responseWindowDescription')}
             tone="blue"
           />
         </div>
@@ -100,11 +103,11 @@ export default function HelpCenterPage() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-                  Email support
+                  {t('emailSupport')}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#1C2336]">support@investapp.app</p>
                 <p className="mt-2 text-xs leading-5 text-[#7B879C]">
-                  Best for account issues, wallet access questions or profile updates.
+                  {t('emailSupportDescription')}
                 </p>
               </div>
             </div>
@@ -112,9 +115,9 @@ export default function HelpCenterPage() {
 
           <ProfileInfoTile
             icon={<HelpIcon />}
-            eyebrow="Self-service"
-            title="Check common answers first"
-            description="Review common questions before opening a support request."
+            eyebrow={t('selfServiceEyebrow')}
+            title={t('selfServiceTitle')}
+            description={t('selfServiceDescription')}
             tone="purple"
           />
 
@@ -122,7 +125,7 @@ export default function HelpCenterPage() {
             href="/profile/faq"
             className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5"
           >
-            Open FAQ
+            {t('openFaq')}
           </a>
         </div>
       </ProfileSurface>

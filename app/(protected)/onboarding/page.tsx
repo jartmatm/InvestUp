@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useInvestApp } from '@/lib/investapp-context';
 
 type OnboardingStage = 'slides' | 'profile';
@@ -12,31 +13,28 @@ type FrontRole = 'inversor' | 'emprendedor';
 type SlideDefinition = {
   id: string;
   imageSrc: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
 };
 
 const ONBOARDING_SLIDES: SlideDefinition[] = [
   {
     id: 'opportunities',
     imageSrc: '/onboarding/onboarding-opportunities.png',
-    title: 'Find real opportunities',
-    description:
-      'Explore curated ventures, compare interest rates and discover businesses ready to grow.',
+    titleKey: 'slides.opportunities.title',
+    descriptionKey: 'slides.opportunities.description',
   },
   {
     id: 'portfolio',
     imageSrc: '/onboarding/onboarding-portfolio.png',
-    title: 'Track every investment',
-    description:
-      'Follow portfolio value, average rate and activity with clear performance insights.',
+    titleKey: 'slides.portfolio.title',
+    descriptionKey: 'slides.portfolio.description',
   },
   {
     id: 'send',
     imageSrc: '/onboarding/onboarding-send.png',
-    title: 'Move funds with confidence',
-    description:
-      'Send, invest and manage contacts from one secure flow built for everyday use.',
+    titleKey: 'slides.send.title',
+    descriptionKey: 'slides.send.description',
   },
 ];
 
@@ -118,9 +116,9 @@ function RoleButton({
   );
 }
 
-function SlideDots({ activeIndex }: { activeIndex: number }) {
+function SlideDots({ activeIndex, label }: { activeIndex: number; label: string }) {
   return (
-    <div className="flex items-center justify-center gap-3" aria-label="Onboarding progress">
+    <div className="flex items-center justify-center gap-3" aria-label={label}>
       {ONBOARDING_SLIDES.map((slide, index) => (
         <span
           key={slide.id}
@@ -135,6 +133,8 @@ function SlideDots({ activeIndex }: { activeIndex: number }) {
 }
 
 export default function OnboardingPage() {
+  const t = useTranslations('Onboarding');
+  const tx = (key: string) => t(key as never);
   const router = useRouter();
   const { faseApp, guardarRol, rolSeleccionado } = useInvestApp();
   const [rol, setRol] = useState<FrontRole | null>(rolSeleccionado);
@@ -182,7 +182,7 @@ export default function OnboardingPage() {
       setStatus(
         error instanceof Error
           ? error.message
-          : 'We could not finish updating your role.'
+          : t('roleUpdateError')
       );
     } finally {
       setSavingRole(false);
@@ -258,27 +258,26 @@ export default function OnboardingPage() {
 
           <div className="text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-[#6B39F4]/70">
-              Welcome
+              {t('welcome')}
             </p>
-            <h1 className="mt-3 text-3xl font-semibold text-slate-900">Choose your profile</h1>
+            <h1 className="mt-3 text-3xl font-semibold text-slate-900">{t('chooseProfile')}</h1>
             <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-600">
-              We will tailor your experience depending on whether you want to invest in ventures or
-              grow your own business.
+              {t('chooseProfileDescription')}
             </p>
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <RoleButton
               active={rol === 'inversor'}
-              title="Investor"
-              description="Explore businesses and invest with confidence."
+              title={t('investor')}
+              description={t('investorDescription')}
               tone="purple"
               onClick={() => setRol('inversor')}
             />
             <RoleButton
               active={rol === 'emprendedor'}
-              title="Entrepreneur"
-              description="Publish your business and connect with investors."
+              title={t('entrepreneur')}
+              description={t('entrepreneurDescription')}
               tone="green"
               onClick={() => setRol('emprendedor')}
             />
@@ -292,14 +291,14 @@ export default function OnboardingPage() {
               className="mt-0.5 h-4 w-4 accent-[#6B39F4]"
             />
             <span>
-              I accept the{' '}
+              {t('acceptPrefix')}{' '}
               <a
                 href="https://www.investappgroup.com"
                 target="_blank"
                 rel="noreferrer"
                 className="font-semibold text-[#6B39F4] underline decoration-[#6B39F4]/40 underline-offset-2"
               >
-                terms and conditions
+                {t('termsAndConditions')}
               </a>
               .
             </span>
@@ -322,14 +321,14 @@ export default function OnboardingPage() {
                 setStatus(
                   error instanceof Error
                     ? error.message
-                    : 'We could not finish updating your role.'
+                    : t('roleUpdateError')
                 );
               } finally {
                 setSavingRole(false);
               }
             }}
           >
-            {savingRole ? 'Saving...' : 'Continue'}
+            {savingRole ? t('saving') : t('continue')}
           </button>
 
           {status ? <p className="mt-4 text-center text-sm text-rose-600">{status}</p> : null}
@@ -358,7 +357,7 @@ export default function OnboardingPage() {
           >
             <Image
               src={activeSlide.imageSrc}
-              alt={activeSlide.title}
+              alt={tx(activeSlide.titleKey)}
               fill
               priority={currentSlide === 0}
               sizes="100vw"
@@ -369,9 +368,9 @@ export default function OnboardingPage() {
 
         <section className="absolute inset-x-0 bottom-0 z-20 flex h-[25dvh] min-h-[220px] flex-col items-center rounded-t-[34px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.72),rgba(247,241,255,0.62)_42%,rgba(232,245,255,0.58))] px-7 pb-[max(env(safe-area-inset-bottom),1rem)] pt-5 text-center shadow-[0_-24px_70px_rgba(77,63,137,0.14)] backdrop-blur-2xl">
           <div className="mx-auto flex max-w-[21rem] flex-1 flex-col items-center justify-center">
-            <h1 className="text-[1.45rem] font-semibold leading-tight text-black">{activeSlide.title}</h1>
+            <h1 className="text-[1.45rem] font-semibold leading-tight text-black">{tx(activeSlide.titleKey)}</h1>
             <p className="mt-3 text-[0.98rem] font-medium leading-6 text-black/78">
-              {activeSlide.description}
+              {tx(activeSlide.descriptionKey)}
             </p>
           </div>
 
@@ -380,7 +379,7 @@ export default function OnboardingPage() {
           <button
             type="button"
             aria-label={
-              currentSlide === ONBOARDING_SLIDES.length - 1 ? 'Finish onboarding' : 'Next slide'
+              currentSlide === ONBOARDING_SLIDES.length - 1 ? t('finishOnboarding') : t('nextSlide')
             }
             onClick={goToNext}
             disabled={savingRole}
@@ -394,7 +393,7 @@ export default function OnboardingPage() {
           </button>
 
           <div className="mt-5">
-            <SlideDots activeIndex={currentSlide} />
+            <SlideDots activeIndex={currentSlide} label={t('progress')} />
           </div>
         </section>
       </div>
