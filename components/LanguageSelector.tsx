@@ -48,10 +48,10 @@ export default function LanguageSelector({ variant = 'desktop' }: LanguageSelect
       ? 'h-11 rounded-2xl px-3.5 text-sm'
       : 'h-10 rounded-xl px-3 text-sm';
   const menuPositionClassName = inProfileLanguagePage
-    ? 'fixed inset-x-4 bottom-24 z-[90] max-h-[58vh] w-auto sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-3 sm:max-h-[70vh] sm:w-[280px]'
+    ? 'fixed inset-x-4 bottom-24 z-[9999] max-h-[58vh] w-auto sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-full sm:mt-3 sm:max-h-[70vh] sm:w-[280px]'
     : compact
-      ? 'absolute right-0 bottom-[calc(100%+10px)] z-50 max-h-[70vh] w-[260px]'
-      : 'absolute right-0 top-full z-50 mt-3 max-h-[70vh] w-[260px]';
+      ? 'absolute right-0 bottom-[calc(100%+10px)] z-[9999] max-h-[70vh] w-[260px]'
+      : 'absolute right-0 top-full z-[9999] mt-3 max-h-[70vh] w-[260px]';
 
   useEffect(() => {
     if (!open) return;
@@ -85,7 +85,7 @@ export default function LanguageSelector({ variant = 'desktop' }: LanguageSelect
   };
 
   return (
-    <div ref={menuRef} className="relative" dir="ltr">
+    <div ref={menuRef} className={`relative ${open ? 'z-[9999]' : 'z-10'}`} dir="ltr">
       <button
         type="button"
         aria-label={t('changeLanguage')}

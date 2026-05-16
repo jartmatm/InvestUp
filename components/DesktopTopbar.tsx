@@ -19,7 +19,6 @@ type DesktopTopbarProps = {
   notificationHref?: string;
   notificationOnClick?: () => void;
   notificationsEnabled?: boolean;
-  onPublish?: () => void;
   onSearchChange?: (value: string) => void;
   onSearchFocus?: () => void;
   publishDisabled?: boolean;
@@ -85,7 +84,6 @@ export default function DesktopTopbar({
   notificationHref = '/notifications',
   notificationOnClick,
   notificationsEnabled = true,
-  onPublish,
   onSearchChange,
   onSearchFocus,
   publishDisabled,
@@ -138,7 +136,6 @@ export default function DesktopTopbar({
     : false;
   const primaryCtaLabel = isEntrepreneur ? publishLabel || t('publishProject') : t('investInBusiness');
   const primaryCtaHref = localizePath(isEntrepreneur ? publishHref : '/feed', activeLocale);
-  const primaryCtaOnClick = isEntrepreneur ? onPublish : undefined;
   const notificationClassName = `relative grid h-10 w-10 place-items-center rounded-xl border shadow-[0_12px_28px_rgba(21,28,44,0.05)] transition duration-200 hover:-translate-y-0.5 ${
     notificationsEnabled
       ? 'border-[#E7EAF3] bg-white text-[#1F2A44] hover:text-[#6B39F4]'
@@ -191,24 +188,17 @@ export default function DesktopTopbar({
           </Link>
         )}
 
-        {primaryCtaOnClick ? (
-          <button type="button" disabled={effectivePublishDisabled} onClick={primaryCtaOnClick} className={publishClassName}>
-            {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
-            {primaryCtaLabel}
-          </button>
-        ) : (
-          <Link
-            href={effectivePublishDisabled ? '#' : primaryCtaHref}
-            aria-disabled={effectivePublishDisabled}
-            className={publishClassName}
-            onClick={(event) => {
-              if (effectivePublishDisabled) event.preventDefault();
-            }}
-          >
-            {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
-            {primaryCtaLabel}
-          </Link>
-        )}
+        <Link
+          href={effectivePublishDisabled ? '#' : primaryCtaHref}
+          aria-disabled={effectivePublishDisabled}
+          className={publishClassName}
+          onClick={(event) => {
+            if (effectivePublishDisabled) event.preventDefault();
+          }}
+        >
+          {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
+          {primaryCtaLabel}
+        </Link>
 
         <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} loading={loading} roleLabel={roleLabel} />
       </div>

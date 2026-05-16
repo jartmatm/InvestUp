@@ -609,7 +609,6 @@ function DesktopMarketplaceLayout({
   wishlist,
   onOpenFilter,
   onOpenProject,
-  onPublish,
   onSearchChange,
   onSelectCategory,
   onSelectSort,
@@ -634,7 +633,6 @@ function DesktopMarketplaceLayout({
   wishlist: string[];
   onOpenFilter: () => void;
   onOpenProject: (projectId: string) => void;
-  onPublish: () => void;
   onSearchChange: (value: string) => void;
   onSelectCategory: (category: string) => void;
   onSelectSort: (sort: SortKey) => void;
@@ -655,7 +653,6 @@ function DesktopMarketplaceLayout({
           roleLabel={profileRole}
           publishDisabled={publishDisabled}
           searchValue={searchQuery}
-          onPublish={onPublish}
           onSearchChange={onSearchChange}
         />
 
@@ -1449,7 +1446,6 @@ export default function FeedPage() {
       wishlist={wishlist}
       onOpenFilter={() => setFavoritesOnly((value) => !value)}
       onOpenProject={openProjectDetail}
-      onPublish={openPublish}
       onSearchChange={setSearchQuery}
       onSelectCategory={setSelectedCategory}
       onSelectSort={(nextSort) => {

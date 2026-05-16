@@ -268,14 +268,12 @@ function DesktopEntrepreneurTopbar({
   displayName,
   loadingProfileSummary,
   onNotifications,
-  onPublish,
   publishDisabled,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
-  onPublish: () => void;
   publishDisabled: boolean;
 }) {
   return (
@@ -287,7 +285,6 @@ function DesktopEntrepreneurTopbar({
       publishDisabled={publishDisabled}
       roleLabel="Entrepreneur"
       searchPlaceholder="Search funding, investors or project activity..."
-      onPublish={onPublish}
     />
   );
 }
@@ -297,14 +294,12 @@ function DesktopEntrepreneurDashboardShell({
   displayName,
   loadingProfileSummary,
   onNotifications,
-  onPublish,
   publishDisabled,
 }: {
   avatarUrl: string;
   displayName: string;
   loadingProfileSummary: boolean;
   onNotifications: () => void;
-  onPublish: () => void;
   publishDisabled: boolean;
 }) {
   return (
@@ -316,7 +311,6 @@ function DesktopEntrepreneurDashboardShell({
           displayName={displayName}
           loadingProfileSummary={loadingProfileSummary}
           onNotifications={onNotifications}
-          onPublish={onPublish}
           publishDisabled={publishDisabled}
         />
         <main className="px-5 py-5 xl:px-7 2xl:px-9">
@@ -714,10 +708,6 @@ export default function PortfolioPage() {
         displayName={desktopDisplayName}
         loadingProfileSummary={loadingProfileSummary}
         onNotifications={() => router.push('/notifications')}
-        onPublish={() => {
-          setEditingProjectId(null);
-          setShowPublisher(true);
-        }}
         publishDisabled={loadingProjects || myProjects.length >= 1}
       />
 

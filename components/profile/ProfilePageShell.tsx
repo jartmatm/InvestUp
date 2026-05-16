@@ -156,36 +156,9 @@ export function ProfilePageShell({
         eyebrow={t('profileWorkspace')}
         maxWidthClassName="max-w-none"
       >
-        <div className={`grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px] ${contentClassName}`}>
-          <div className="min-w-0 space-y-5">
-            {children}
-            {footer ? <div className="flex flex-col gap-3">{footer}</div> : null}
-          </div>
-          <aside className="space-y-5">
-            <ProfileSurface className="lg:bg-[linear-gradient(160deg,#FFFFFF_0%,#F8F6FF_100%)]">
-              <div className="flex flex-col gap-3">
-                <p className="text-[0.72rem] font-bold uppercase tracking-[0.18em] text-[#8A93A8]">
-                  {t('accountConfidence')}
-                </p>
-                <h2 className="text-lg font-bold tracking-[-0.04em] text-[#111827]">
-                  {t('keepProfileComplete')}
-                </h2>
-                <p className="text-sm leading-6 text-[#66728A]">
-                  {t('accountConfidenceDescription')}
-                </p>
-              </div>
-            </ProfileSurface>
-            <ProfileInfoTile
-              title={componentsT('secureProfileArea')}
-              description={t('secureProfileAreaDescription')}
-              tone="purple"
-            />
-            <ProfileInfoTile
-              title={componentsT('premiumDashboardStyling')}
-              description={t('premiumDashboardStylingDescription')}
-              tone="blue"
-            />
-          </aside>
+        <div className={`space-y-5 ${contentClassName}`}>
+          {children}
+          {footer ? <div className="flex flex-col gap-3">{footer}</div> : null}
         </div>
       </DesktopAppShell>
     </>

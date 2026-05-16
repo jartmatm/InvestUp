@@ -55,7 +55,7 @@ export default function LanguagePage() {
       title={t('title')}
       subtitle={t('subtitle')}
     >
-      <ProfileSurface className="bg-[linear-gradient(160deg,rgba(74,108,247,0.12)_0%,rgba(255,255,255,0.96)_46%,rgba(107,57,244,0.08)_100%)]">
+      <ProfileSurface className="relative z-30 overflow-visible bg-[linear-gradient(160deg,rgba(74,108,247,0.12)_0%,rgba(255,255,255,0.96)_46%,rgba(107,57,244,0.08)_100%)]">
         <div className="flex flex-col gap-3">
           <div>
             <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#7B879C]">
@@ -88,7 +88,7 @@ export default function LanguagePage() {
         </div>
       </ProfileSurface>
 
-      <ProfileSurface>
+      <ProfileSurface className="relative z-0">
         <div className="flex flex-col gap-3">
           <ProfileInfoTile
             icon={<SparkIcon />}

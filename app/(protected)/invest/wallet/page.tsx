@@ -560,34 +560,6 @@ export default function WalletTransferPage() {
           {t('refresh')}
         </button>
       }
-      rightRail={
-        <DesktopSectionCard title={t('transferReadiness')} subtitle={t('transferReadinessSubtitle')}>
-          <div className="space-y-3">
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('source')}</p>
-              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {smartWalletAddress ? `${smartWalletAddress.slice(0, 8)}...${smartWalletAddress.slice(-6)}` : t('walletSyncing')}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('recipient')}</p>
-              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {resolvedRecipient?.displayName || walletDestino || t('pendingRecipient')}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('destination')}</p>
-              <p className="mt-1 break-all text-sm font-bold text-[#111827]">
-                {resolvedDestinationWallet
-                  ? `${resolvedDestinationWallet.slice(0, 8)}...${resolvedDestinationWallet.slice(-6)}`
-                  : looksLikeEmail(walletDestino)
-                    ? t('emailLookupOnSend')
-                    : t('notResolved')}
-              </p>
-            </div>
-          </div>
-        </DesktopSectionCard>
-      }
     >
       <section className="grid grid-cols-3 gap-4">
         <DesktopMetricCard
