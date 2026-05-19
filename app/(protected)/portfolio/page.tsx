@@ -717,15 +717,6 @@ export default function PortfolioPage() {
         <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          <header className="flex flex-col gap-2">
-            <div>
-              <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-                {t('entrepreneurPortfolio')}
-              </h1>
-              <p className="mt-1 text-sm leading-6 text-[#7B879C]">{t('publishVentureOrCredit')}</p>
-            </div>
-          </header>
-
           {showPublisher ? (
             <SectionSurface>
               <div className="flex flex-col gap-3">
@@ -949,12 +940,6 @@ export default function PortfolioPage() {
           ) : null}
 
           <section className="flex flex-col gap-3">
-            <div className="px-1">
-              <h2 className="text-sm font-semibold tracking-[-0.02em] text-[#1C2336]">
-                My business
-              </h2>
-            </div>
-
             {loadingProjects ? (
               <SectionLoadingSkeleton rows={2} />
             ) : null}

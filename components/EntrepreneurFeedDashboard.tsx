@@ -1246,24 +1246,23 @@ export default function EntrepreneurFeedDashboard({
               : 'relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-10'
           }
         >
-          <header className="flex items-start gap-4">
-            <div className="min-w-0">
-              {!embedded ? (
+          {!embedded ? (
+            <header className="flex items-start gap-4">
+              <div className="min-w-0">
                 <div className="flex items-center gap-0.5 text-[1.9rem] font-semibold tracking-[-0.07em] text-[#1C2336]">
                   <span>Invest</span>
                   <span className="text-[#6B39F4]">App</span>
                   <span className="ml-0.5 mt-0.5 h-3 w-3 rounded-full bg-[#6B39F4]" />
                 </div>
-              ) : null}
-              <h1 className={`${embedded ? 'mt-0 text-[1.35rem]' : 'mt-4 text-[2rem]'} font-semibold tracking-[-0.065em] text-[#1C2336]`}>
-                {t('dashboard')}
-              </h1>
-              <p className="mt-1 text-sm leading-6 text-[#7B879C]">
-                {t('dashboardSubtitle')}
-              </p>
-            </div>
-
-          </header>
+                <h1 className="mt-4 text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
+                  {t('dashboard')}
+                </h1>
+                <p className="mt-1 text-sm leading-6 text-[#7B879C]">
+                  {t('dashboardSubtitle')}
+                </p>
+              </div>
+            </header>
+          ) : null}
 
           {loading ? (
             <SectionLoadingSkeleton rows={4} />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
@@ -132,6 +132,15 @@ function IconPlus() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
       <path d="M12 5v14" strokeLinecap="round" />
       <path d="M5 12h14" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconClose() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
+      <path d="M6 6l12 12" strokeLinecap="round" />
+      <path d="M18 6 6 18" strokeLinecap="round" />
     </svg>
   );
 }
@@ -794,11 +803,23 @@ export default function FeedPage() {
   const [draftFavoritesOnly, setDraftFavoritesOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('latest');
   const [showSortSelector, setShowSortSelector] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const mobileSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
+
+  useEffect(() => {
+    if (!mobileSearchOpen) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      mobileSearchInputRef.current?.focus();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [mobileSearchOpen]);
 
   useEffect(() => {
     const loadFeed = async () => {
@@ -993,6 +1014,19 @@ export default function FeedPage() {
   const openPublish = () => {
     if (!publishDisabled) router.push('/publish');
   };
+  const openMobileSearch = () => {
+    setShowFilterSheet(false);
+    setShowSortSelector(false);
+    setMobileSearchOpen(true);
+  };
+  const closeOrClearMobileSearch = () => {
+    if (searchQuery) {
+      setSearchQuery('');
+      return;
+    }
+
+    setMobileSearchOpen(false);
+  };
 
   return (
     <>
@@ -1010,85 +1044,92 @@ export default function FeedPage() {
       ) : null}
 
       <div className="relative mx-auto flex h-screen w-full max-w-md flex-col px-4 pb-[116px] pt-4">
-        <header className="mb-4 flex items-center justify-center">
-          <p className="text-[0.92rem] font-semibold tracking-[-0.03em] text-[#2A3245]">
-            investup.onrender.com
-          </p>
-        </header>
-
-        <section className={`${SURFACE_CLASSNAME} relative z-20 flex min-h-0 flex-1 flex-col overflow-visible p-3.5`}>
+        <section className={`${SURFACE_CLASSNAME} relative ${showSortSelector ? 'z-40' : 'z-20'} flex min-h-0 flex-1 flex-col overflow-visible p-3.5`}>
           <div className="flex items-center justify-between gap-4">
             <div className="py-1">
               <InvestAppWordmark />
             </div>
 
-            <button
-              type="button"
-              onClick={openPublish}
-              disabled={publishDisabled}
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition [&>svg]:h-5 [&>svg]:w-5 ${
-                publishDisabled
-                  ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] text-[#A9AEC0] opacity-75'
-                  : 'border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] hover:scale-[1.03]'
-              }`}
-              aria-label={t('publishAria')}
-            >
-              <IconPlus />
-            </button>
-          </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openMobileSearch}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition [&>svg]:h-5 [&>svg]:w-5 ${
+                  mobileSearchOpen || searchQuery
+                    ? 'border-[#D9CCFF] bg-[linear-gradient(135deg,#F9F6FF_0%,#EEF4FF_100%)] text-[#6736F3] ring-2 ring-[#6B39F4]/10'
+                    : 'border-[#EEF1F8] bg-white text-[#7B879C] hover:scale-[1.03] hover:text-[#6736F3]'
+                }`}
+                aria-label={t('searchAria')}
+                aria-expanded={mobileSearchOpen}
+              >
+                <IconSearch />
+              </button>
 
-          <div className="mt-2 flex items-center gap-2 rounded-[13px] border border-[#EEF0F8] bg-[#FAF9FF] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
-            <span className="text-[#9AA3B6] [&>svg]:h-4 [&>svg]:w-4">
-              <IconSearch />
-            </span>
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('searchPlaceholder')}
-              className="h-4 w-full border-none bg-transparent text-[0.72rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
-              aria-label={t('searchAria')}
-            />
-          </div>
-
-          <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
-            {categories.map((category) => {
-              const active = category === selectedCategory;
-
-              return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setSelectedCategory(category)}
-                  className={`shrink-0 rounded-full px-2.5 py-1.5 text-[0.6rem] font-semibold tracking-[-0.01em] transition ${
-                    active
-                      ? 'border border-[#CFC3FF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] text-[#6B39F4] shadow-[0_10px_22px_rgba(107,57,244,0.12)]'
-                      : 'border border-[#EEF1F8] bg-white text-[#596277] shadow-[0_8px_18px_rgba(27,36,53,0.04)]'
-                  }`}
-                >
-                  {category === 'All' ? t('all') : category}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#F4EFFF] text-[#6B39F4] shadow-[0_10px_24px_rgba(107,57,244,0.10)]">
-                <IconSpark />
-              </span>
-              <div>
-                <p className="text-[0.94rem] font-semibold tracking-[-0.03em] text-[#101828]">
-                  {t('suggestedForYou')}
-                </p>
-                <p className="mt-0.5 text-[0.72rem] text-[#8A92A8]">{t('handpicked')}</p>
-              </div>
+              <button
+                type="button"
+                onClick={openPublish}
+                disabled={publishDisabled}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] border shadow-[0_16px_30px_rgba(107,57,244,0.10)] transition [&>svg]:h-5 [&>svg]:w-5 ${
+                  publishDisabled
+                    ? 'cursor-not-allowed border-[#E6E8F2] bg-[#F4F5F8] text-[#A9AEC0] opacity-75'
+                    : 'border-[#EEE9FF] bg-[#F7F4FF] text-[#7C5CFF] hover:scale-[1.03]'
+                }`}
+                aria-label={t('publishAria')}
+              >
+                <IconPlus />
+              </button>
             </div>
+          </div>
 
-            <div className="relative flex items-center gap-2">
+          {mobileSearchOpen ? (
+            <div className="mt-2 flex items-center gap-2 rounded-[15px] border border-[#E6E8F4] bg-[#FAF9FF] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_12px_28px_rgba(27,36,53,0.05)]">
+              <span className="text-[#9AA3B6] [&>svg]:h-4 [&>svg]:w-4">
+                <IconSearch />
+              </span>
+              <input
+                ref={mobileSearchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={t('searchPlaceholder')}
+                className="h-5 w-full border-none bg-transparent text-[0.75rem] font-medium tracking-[-0.02em] text-[#162033] outline-none placeholder:text-[#A0A8BA]"
+                aria-label={t('searchAria')}
+              />
+              <button
+                type="button"
+                onClick={closeOrClearMobileSearch}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#7B879C] shadow-[0_8px_18px_rgba(27,36,53,0.06)] transition hover:text-[#6736F3]"
+                aria-label={searchQuery ? t('clearSearch') : t('closeSearch')}
+              >
+                <IconClose />
+              </button>
+            </div>
+          ) : null}
+
+          <div className="relative mt-2">
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1.5">
+              {categories.map((category) => {
+                const active = category === selectedCategory;
+
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    onClick={() => setSelectedCategory(category)}
+                    className={`shrink-0 rounded-full px-2.5 py-1.5 text-[0.6rem] font-semibold tracking-[-0.01em] transition ${
+                      active
+                        ? 'border border-[#CFC3FF] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4EEFF_100%)] text-[#6B39F4] shadow-[0_10px_22px_rgba(107,57,244,0.12)]'
+                        : 'border border-[#EEF1F8] bg-white text-[#596277] shadow-[0_8px_18px_rgba(27,36,53,0.04)]'
+                    }`}
+                  >
+                    {category === 'All' ? t('all') : category}
+                  </button>
+                );
+              })}
+
               <button
                 type="button"
                 onClick={openFilterSheet}
-                className="flex h-9 items-center gap-1.5 rounded-full border border-[#E9E4FF] bg-white px-3 text-[0.68rem] font-semibold text-[#6736F3] shadow-[0_10px_20px_rgba(107,57,244,0.08)] transition hover:scale-[1.01]"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9E4FF] bg-white px-2.5 py-1.5 text-[0.6rem] font-semibold text-[#6736F3] shadow-[0_8px_18px_rgba(107,57,244,0.08)] transition hover:scale-[1.01]"
               >
                 <IconFilter />
                 {t('filter')}
@@ -1100,42 +1141,46 @@ export default function FeedPage() {
                   setShowFilterSheet(false);
                   setShowSortSelector((previous) => !previous);
                 }}
-                className="flex h-9 items-center gap-1.5 rounded-full border border-[#E8ECF8] bg-white px-3 text-[0.68rem] font-semibold text-[#445067] shadow-[0_10px_20px_rgba(22,32,51,0.06)] transition hover:scale-[1.01]"
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[0.6rem] font-semibold shadow-[0_8px_18px_rgba(22,32,51,0.06)] transition hover:scale-[1.01] ${
+                  showSortSelector
+                    ? 'border-[#CFC3FF] bg-[#F7F3FF] text-[#6736F3]'
+                    : 'border-[#E8ECF8] bg-white text-[#445067]'
+                }`}
               >
                 <IconSort />
                 {t('sort')}
               </button>
-
-              {showSortSelector ? (
-                <div className="absolute right-0 top-[calc(100%+10px)] z-40 w-[204px] rounded-[24px] border border-white/85 bg-white/96 p-2 shadow-[0_26px_70px_rgba(17,24,39,0.18)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl">
-                  {SORT_OPTIONS.map((option) => {
-                    const active = option.id === sortBy;
-
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => {
-                          setSortBy(option.id);
-                          setShowSortSelector(false);
-                        }}
-                        className={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-[0.78rem] font-medium tracking-[-0.02em] transition ${
-                          active
-                            ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]'
-                            : 'text-[#3E475B] hover:bg-[#F7F7FE]'
-                        }`}
-                      >
-                        <span>{t(`sortOptions.${option.id}`)}</span>
-                        {active ? <IconSpark /> : <IconChevronDown />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
             </div>
+
+            {showSortSelector ? (
+              <div className="absolute right-1 top-[calc(100%+8px)] z-40 w-[204px] rounded-[24px] border border-white/85 bg-white/96 p-2 shadow-[0_26px_70px_rgba(17,24,39,0.18)] ring-1 ring-[#EEF0FF]/80 backdrop-blur-2xl">
+                {SORT_OPTIONS.map((option) => {
+                  const active = option.id === sortBy;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(option.id);
+                        setShowSortSelector(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded-[18px] px-3 py-3 text-left text-[0.78rem] font-medium tracking-[-0.02em] transition ${
+                        active
+                          ? 'bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_16px_28px_rgba(107,57,244,0.22)]'
+                          : 'text-[#3E475B] hover:bg-[#F7F7FE]'
+                      }`}
+                    >
+                      <span>{t(`sortOptions.${option.id}`)}</span>
+                      {active ? <IconSpark /> : <IconChevronDown />}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pb-2 pr-1">
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto pb-2 pr-1">
             <FeaturedReelsCarousel
               loading={loading}
               ownerProfiles={ownerProfiles}
@@ -1150,10 +1195,9 @@ export default function FeedPage() {
                     key={`feed-loading-${index}`}
                     className="h-[232px] animate-pulse rounded-[22px] border border-[#EEF1F7] bg-white p-2.5 shadow-[0_18px_36px_rgba(18,27,48,0.05)]"
                   >
-                    <div className="h-[112px] rounded-[16px] bg-[#EAEFFC]" />
-                    <div className="mt-3 h-4 rounded-full bg-[#EEF2FC]" />
-                    <div className="mt-2 h-4 w-4/5 rounded-full bg-[#EEF2FC]" />
-                    <div className="mt-4 h-7 w-20 rounded-full bg-[#E8F8EE]" />
+                    <div className="h-[172px] rounded-[16px] bg-[#EAEFFC]" />
+                    <div className="mt-2 h-3 rounded-full bg-[#EEF2FC]" />
+                    <div className="mt-1.5 h-3 w-4/5 rounded-full bg-[#EEF2FC]" />
                   </div>
                 ))}
               </div>
@@ -1227,9 +1271,10 @@ export default function FeedPage() {
                             <ProjectPhotoCarousel
                               images={project.photo_urls}
                               alt={project.title}
-                              className="h-[112px] w-full"
-                              imageClassName="h-[112px] w-full object-cover"
-                              emptyClassName="flex h-[112px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]"
+                              className="h-[174px] w-full"
+                              imageClassName="h-[174px] w-full object-cover"
+                              emptyClassName="flex h-[174px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]"
+                              showIndicators={false}
                               stopPropagation
                             />
 
@@ -1253,50 +1298,48 @@ export default function FeedPage() {
                             </button>
                           </div>
 
-                          <div className="flex h-[calc(100%-112px)] flex-col justify-between p-2.5">
-                            <div>
-                              <p className="line-clamp-3 text-[0.92rem] font-semibold leading-[1.22] tracking-[-0.03em] text-[#162033]">
-                                {project.title}
-                              </p>
-                            </div>
+                          <div className="flex h-[58px] flex-col justify-between p-2">
+                            <p className="line-clamp-2 text-[0.72rem] font-semibold leading-[1.12] tracking-[-0.025em] text-[#162033]">
+                              {project.title}
+                            </p>
 
-                            <div className="mt-3 flex items-center justify-between gap-2">
-                              <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2.5 py-1 text-[0.66rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">
+                            <div className="mt-1 flex items-center justify-between gap-1.5">
+                              <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2 py-0.5 text-[0.56rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">
                                 {rateLabel}
                               </div>
-                              <span className="text-[0.62rem] font-medium text-[#B0B7C7]">
+                              <span className="truncate text-[0.54rem] font-medium text-[#B0B7C7]">
                                 {t('interestRate')}
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-3 text-white shadow-[0_24px_56px_rgba(18,24,42,0.24)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-2 text-white shadow-[0_24px_56px_rgba(18,24,42,0.24)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
                           <div className="pointer-events-none absolute inset-x-6 top-4 h-20 rounded-full bg-[#7C5CFF]/25 blur-3xl" />
-                          <div className="relative flex h-full flex-col items-center justify-center gap-2.5 text-center">
-                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
-                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                          <div className="relative flex h-full flex-col items-center justify-center gap-1.5 text-center">
+                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
+                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
                                 {t('goal')}
                               </p>
-                              <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
+                              <p className="mt-0.5 text-[0.74rem] font-semibold tracking-[-0.025em] text-white">
                                 {amountLabel}
                               </p>
                             </div>
 
-                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
-                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
+                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
                                 {t('raised')}
                               </p>
-                              <p className="mt-1.5 text-[0.92rem] font-semibold tracking-[-0.03em] text-white">
+                              <p className="mt-0.5 text-[0.74rem] font-semibold tracking-[-0.025em] text-white">
                                 {raisedLabel}
                               </p>
                             </div>
 
-                            <div className="w-full rounded-[18px] border border-white/10 bg-white/8 px-3 py-2.5 backdrop-blur-md">
-                              <p className="text-[0.64rem] font-medium uppercase tracking-[0.18em] text-white/58">
+                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
+                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
                                 {t('minimumInvestment')}
                               </p>
-                              <p className="mt-1.5 text-[0.88rem] font-semibold tracking-[-0.03em] text-white">
+                              <p className="mt-0.5 text-[0.7rem] font-semibold tracking-[-0.025em] text-white">
                                 {minimumInvestmentLabel}
                               </p>
                             </div>
@@ -1304,7 +1347,7 @@ export default function FeedPage() {
                             <button
                               type="button"
                               onClick={handleBackAction}
-                              className="mt-1 w-full rounded-full bg-[linear-gradient(135deg,#2BCA7B_0%,#19A864_100%)] px-3 py-3 text-[0.74rem] font-semibold text-white shadow-[0_18px_30px_rgba(25,168,100,0.28)] transition hover:scale-[1.01]"
+                              className="mt-0.5 w-full rounded-full bg-[linear-gradient(135deg,#2BCA7B_0%,#19A864_100%)] px-3 py-2 text-[0.68rem] font-semibold text-white shadow-[0_18px_30px_rgba(25,168,100,0.28)] transition hover:scale-[1.01]"
                             >
                               {backActionLabel}
                             </button>
@@ -1319,7 +1362,6 @@ export default function FeedPage() {
           </div>
         </section>
       </div>
-
       {showFilterSheet ? (
         <div className="fixed inset-0 z-40 flex items-end justify-center bg-[#0F172A]/28 px-4 pb-[106px] pt-10 backdrop-blur-sm">
           <button

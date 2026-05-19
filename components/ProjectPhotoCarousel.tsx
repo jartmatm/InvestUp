@@ -9,6 +9,7 @@ type ProjectPhotoCarouselProps = {
   className?: string;
   imageClassName?: string;
   emptyClassName?: string;
+  showIndicators?: boolean;
   stopPropagation?: boolean;
 };
 
@@ -18,6 +19,7 @@ export default function ProjectPhotoCarousel({
   className,
   imageClassName,
   emptyClassName,
+  showIndicators = true,
   stopPropagation,
 }: ProjectPhotoCarouselProps) {
   const t = useTranslations('Components');
@@ -111,25 +113,29 @@ export default function ProjectPhotoCarousel({
           >
             <span className="text-lg leading-none">&gt;</span>
           </button>
-          <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 backdrop-blur-md">
-            {slides.map((_, index) => (
-              <button
-                key={`slide-dot-${index}`}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  goToIndex(index);
-                }}
-                aria-label={t('goToPhoto', { index: index + 1 })}
-                className={`h-2.5 rounded-full transition-all ${
-                  index === currentIndex ? 'w-5 bg-white' : 'w-2.5 bg-white/45'
-                }`}
-              />
-            ))}
-          </div>
-          <div className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/30 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
-            {currentIndex + 1}/{slides.length}
-          </div>
+          {showIndicators ? (
+            <>
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 backdrop-blur-md">
+                {slides.map((_, index) => (
+                  <button
+                    key={`slide-dot-${index}`}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      goToIndex(index);
+                    }}
+                    aria-label={t('goToPhoto', { index: index + 1 })}
+                    className={`h-2.5 rounded-full transition-all ${
+                      index === currentIndex ? 'w-5 bg-white' : 'w-2.5 bg-white/45'
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/30 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+                {currentIndex + 1}/{slides.length}
+              </div>
+            </>
+          ) : null}
         </>
       ) : null}
     </div>
