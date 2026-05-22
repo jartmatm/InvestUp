@@ -456,6 +456,55 @@ function DesktopCategories({
   );
 }
 
+function DesktopReelsSection({
+  ownerProfiles,
+  projects,
+  onOpenProject,
+}: {
+  ownerProfiles: Record<string, RecipientDirectoryEntry>;
+  projects: FeedProject[];
+  onOpenProject: (projectId: string) => void;
+}) {
+  if (projects.length === 0) return null;
+
+  return (
+    <section className="mt-5">
+      <div className="flex snap-x snap-mandatory gap-5 overflow-x-auto overscroll-x-contain scroll-smooth pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {projects.map((project) => {
+          const coverImage = getProjectCoverImage(project);
+          const avatarImage = getOwnerAvatarImage(project, ownerProfiles);
+          const ownerName = getOwnerDisplayName(project, ownerProfiles);
+          const cardBackground = coverImage
+            ? `linear-gradient(180deg,rgba(8,12,24,0.06)_0%,rgba(8,12,24,0.24)_46%,rgba(8,12,24,0.78)_100%),${toCssImageUrl(coverImage)}`
+            : 'linear-gradient(145deg,#F7F8FC_0%,#ECE7FF_44%,#7C5CFF_100%)';
+
+          return (
+            <button
+              key={`desktop-reel-${project.id}`}
+              type="button"
+              onClick={() => onOpenProject(project.id)}
+              className="group relative h-[clamp(230px,27vh,306px)] w-[clamp(168px,13.2vw,218px)] shrink-0 snap-start overflow-hidden rounded-[18px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
+              style={{ backgroundImage: cardBackground }}
+            >
+              <span
+                className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center text-[0.7rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+                style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
+              >
+                {avatarImage ? null : getInitials(ownerName)}
+              </span>
+              <span className="absolute inset-x-4 bottom-4">
+                <span className="line-clamp-3 text-[1rem] font-bold leading-tight tracking-[-0.04em] text-white">
+                  {project.title}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function DesktopProjectCard({
   isWishlisted,
   onOpenProject,
@@ -486,7 +535,7 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex h-[clamp(306px,34vh,356px)] flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex aspect-[2/3] flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
       <div className="relative min-h-0 flex-[3] bg-cover bg-center" style={{ backgroundImage: cardBackground }}>
         <button
@@ -528,7 +577,9 @@ function DesktopMarketplaceLayout({
   favoritesOnly,
   filteredProjects,
   loading,
+  ownerProfiles,
   profileRole,
+  projects,
   publishDisabled,
   searchQuery,
   selectedCategory,
@@ -550,7 +601,9 @@ function DesktopMarketplaceLayout({
   favoritesOnly: boolean;
   filteredProjects: FeedProject[];
   loading: boolean;
+  ownerProfiles: Record<string, RecipientDirectoryEntry>;
   profileRole: string;
+  projects: FeedProject[];
   publishDisabled: boolean;
   searchQuery: string;
   selectedCategory: string;
@@ -567,6 +620,7 @@ function DesktopMarketplaceLayout({
   onToggleWishlist: (projectId: string) => void;
 }) {
   const t = useTranslations('Feed');
+  const featuredProjects = projects.slice(0, 8);
 
   return (
     <div className="investapp-desktop-autofit hidden min-h-screen overflow-x-hidden bg-[#F8F9FB] text-[#111827] lg:flex">
@@ -631,12 +685,18 @@ function DesktopMarketplaceLayout({
               </div>
             </div>
 
+            <DesktopReelsSection
+              ownerProfiles={ownerProfiles}
+              projects={featuredProjects}
+              onOpenProject={onOpenProject}
+            />
+
             {loading ? (
-              <div className="mt-5 grid max-h-[calc(100vh-214px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
+              <div className="mt-1 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[clamp(306px,34vh,356px)] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="aspect-[2/3] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -650,7 +710,7 @@ function DesktopMarketplaceLayout({
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="mt-5 grid max-h-[calc(100vh-214px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
+              <div className="mt-1 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
                 {filteredProjects.map((project) => (
                   <DesktopProjectCard
                     key={`desktop-project-${project.id}`}
@@ -1376,7 +1436,9 @@ export default function FeedPage() {
       favoritesOnly={favoritesOnly}
       filteredProjects={filteredProjects}
       loading={loading}
+      ownerProfiles={ownerProfiles}
       profileRole={profileRoleLabel}
+      projects={projects}
       publishDisabled={publishDisabled}
       searchQuery={searchQuery}
       selectedCategory={selectedCategory}
