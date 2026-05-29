@@ -1,661 +1,206 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { useTranslations } from 'next-intl';
+import { AnimatePresence, motion } from 'framer-motion';
 import BottomNav from '@/components/BottomNav';
-import {
-  DesktopAppShell,
-  DesktopMetricCard,
-  DesktopSectionCard,
-} from '@/components/DesktopAppShell';
+import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import PageBackButton from '@/components/PageBackButton';
-import TransactionLoader from '@/components/TransactionLoader';
-import InvestmentOpportunityDetail, {
-  type OpportunityMetric,
-  type OpportunitySection,
-} from '@/components/InvestmentOpportunityDetail';
 import { useInvestApp } from '@/lib/investapp-context';
-import { SECTOR_OPTIONS_ENGLISH } from '@/lib/sector-labels';
 import {
-  createCurrentUserProject,
-  fetchCurrentUserProjects,
-} from '@/utils/client/current-user-projects';
-import {
-  createCurrentUserPublicationPrompt,
   fetchCurrentUserPublicationDraft,
   saveCurrentUserPublicationDraft,
-  type PublicationPromptDraft,
 } from '@/utils/client/current-user-publication-prompts';
-import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
-import type { ProjectMutationPayload, ProjectRecord } from '@/utils/projects/shared';
+import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
+import {
+  reverseBusinessAddress,
+  searchBusinessAddress,
+  type BusinessAddressRecord,
+} from '@/utils/client/publish-address-geocoding';
+import type { ProjectRecord } from '@/utils/projects/shared';
 
-type PublishWizardForm = {
-  business_name: string;
-  location: string;
-  industry: string;
-  time_operating: string;
-  business_stage: string;
-  product_description: string;
-  problem_solved: string;
-  differentiation: string;
-  monthly_revenue: string;
-  avg_ticket: string;
-  monthly_customers: string;
-  growth_rate: string;
-  social_media: string;
-  capital_needed: string;
-  funds_usage: string;
-  investment_offer: string;
-  target_customer: string;
-  market_size: string;
-  competition: string;
-  founder_info: string;
-  team_info: string;
-  testimonials: string;
-  achievements: string;
-  timing_reason: string;
+type AddressSource = 'manual_search' | 'use_my_location' | 'manual_edit' | '';
+
+type PublishAddressStepFields = {
+  country: string;
+  unit: string;
+  street_address: string;
+  locality: string;
+  state: string;
+  postcode: string;
+  formatted_address: string;
+  latitude: number | null;
+  longitude: number | null;
+  source: AddressSource;
 };
 
-type ProfileSnapshot = {
-  name?: string | null;
-  surname?: string | null;
-  phone_number?: string | null;
-  country?: string | null;
+const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
+
+const emptyAddress: PublishAddressStepFields = {
+  country: '',
+  unit: '',
+  street_address: '',
+  locality: '',
+  state: '',
+  postcode: '',
+  formatted_address: '',
+  latitude: null,
+  longitude: null,
+  source: '',
 };
 
-type PromptField = {
-  key: keyof PublishWizardForm | 'photo_count' | 'video_count';
-  label: string;
-  value: string;
-};
+const requiredAddressKeys: Array<keyof PublishAddressStepFields> = [
+  'country',
+  'street_address',
+  'locality',
+  'state',
+  'postcode',
+  'formatted_address',
+];
 
-type PromptSection = {
-  title: string;
-  fields: PromptField[];
-};
+const mobileSurfaceClassName =
+  'rounded-[26px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_52px_rgba(17,24,39,0.08)] backdrop-blur-sm';
 
-type PromptJson = {
-  version: number;
-  locale: string;
-  createdAt: string;
-  fields: PublishWizardForm;
-  sections: PromptSection[];
-  media: {
-    photoCount: number;
-    videoCount: number;
-    videoUrl: string | null;
+const inputClassName =
+  'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
+
+const isAddressValid = (address: PublishAddressStepFields) =>
+  requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
+
+const normalizeDraftAddress = (value: unknown): PublishAddressStepFields => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return emptyAddress;
+  const source = value as Record<string, unknown>;
+
+  return {
+    country: typeof source.country === 'string' ? source.country : '',
+    unit: typeof source.unit === 'string' ? source.unit : '',
+    street_address: typeof source.street_address === 'string' ? source.street_address : '',
+    locality: typeof source.locality === 'string' ? source.locality : '',
+    state: typeof source.state === 'string' ? source.state : '',
+    postcode: typeof source.postcode === 'string' ? source.postcode : '',
+    formatted_address:
+      typeof source.formatted_address === 'string' ? source.formatted_address : '',
+    latitude: typeof source.latitude === 'number' ? source.latitude : null,
+    longitude: typeof source.longitude === 'number' ? source.longitude : null,
+    source:
+      source.source === 'manual_search' ||
+      source.source === 'use_my_location' ||
+      source.source === 'manual_edit'
+        ? source.source
+        : '',
   };
 };
 
-type OptimizedSectionContent =
-  | string
-  | {
-      paragraph?: string | null;
-      body?: string | null;
-      content?: string | null;
-      text?: string | null;
-      description?: string | null;
-    };
+const toAddressFromGeocode = (
+  record: BusinessAddressRecord,
+  source: Exclude<AddressSource, ''>
+): PublishAddressStepFields => ({
+  country: record.country,
+  unit: record.unit,
+  street_address: record.street_address,
+  locality: record.locality,
+  state: record.state,
+  postcode: record.postcode,
+  formatted_address: record.formatted_address,
+  latitude: record.latitude,
+  longitude: record.longitude,
+  source,
+});
 
-type OptimizedPublication = {
-  title?: string;
-  tittle?: string;
-  summary?: string;
-  description?: string;
-  highlights?: string[];
-  traction?: string;
-  useOfFunds?: string;
-  marketOpportunity?: string;
-  investorNotes?: string;
-  overview?: OptimizedSectionContent;
-  whatWeDo?: OptimizedSectionContent;
-  howWeDoIt?: OptimizedSectionContent;
-  financialInformation?: OptimizedSectionContent;
-  investment?: OptimizedSectionContent;
-  target?: OptimizedSectionContent;
-  team?: OptimizedSectionContent;
-  gallery?: OptimizedSectionContent;
-  extras?: OptimizedSectionContent;
+const buildDraftPayload = (fields: PublishAddressStepFields) => {
+  const promptJson = {
+    version: 1,
+    locale: 'en',
+    step: 'business_address_v1',
+    createdAt: new Date().toISOString(),
+    fields,
+  };
+
+  const promptText = [
+    'Business address step',
+    `formatted_address: ${fields.formatted_address || 'not_provided'}`,
+    `country: ${fields.country || 'not_provided'}`,
+    `unit: ${fields.unit || 'not_provided'}`,
+    `street_address: ${fields.street_address || 'not_provided'}`,
+    `locality: ${fields.locality || 'not_provided'}`,
+    `state: ${fields.state || 'not_provided'}`,
+    `postcode: ${fields.postcode || 'not_provided'}`,
+    `latitude: ${fields.latitude ?? 'not_provided'}`,
+    `longitude: ${fields.longitude ?? 'not_provided'}`,
+    `source: ${fields.source || 'not_provided'}`,
+  ].join('\n');
+
+  return {
+    promptJson,
+    promptText,
+    metadata: {
+      step: 'business_address_v1',
+      completion: isAddressValid(fields) ? 'ready_for_next' : 'in_progress',
+      labels: Object.keys(fields),
+    },
+  };
 };
 
-type ReviewState = {
-  draftId: string;
-  provider: string;
-  promptJson: PromptJson;
-  optimizedPublication: OptimizedPublication;
-};
-
-const OPERATING_TIME_OPTIONS = ['<1 year', '>1 <5 years', '>5 <10 years', '>10 years'];
-const REGISTRATION_OPTIONS = ['Registered business', 'Not registered yet'];
-
-const emptyForm: PublishWizardForm = {
-  business_name: '',
-  location: '',
-  industry: '',
-  time_operating: '',
-  business_stage: '',
-  product_description: '',
-  problem_solved: '',
-  differentiation: '',
-  monthly_revenue: '',
-  avg_ticket: '',
-  monthly_customers: '',
-  growth_rate: '',
-  social_media: '',
-  capital_needed: '',
-  funds_usage: '',
-  investment_offer: '',
-  target_customer: '',
-  market_size: '',
-  competition: '',
-  founder_info: '',
-  team_info: '',
-  testimonials: '',
-  achievements: '',
-  timing_reason: '',
-};
-
-const steps = [
-  'Basic information',
-  'Value proposition',
-  'Traction',
-  'Investment',
-  'Market',
-  'Team',
-  'Media',
-  'Extra',
-] as const;
-
-const requiredByStep: Array<Array<keyof PublishWizardForm>> = [
-  ['business_name', 'location', 'industry', 'time_operating', 'business_stage'],
-  ['product_description', 'problem_solved', 'differentiation'],
-  ['monthly_revenue', 'avg_ticket', 'monthly_customers', 'growth_rate'],
-  ['capital_needed', 'funds_usage', 'investment_offer'],
-  ['target_customer', 'market_size', 'competition'],
-  ['founder_info', 'team_info'],
-  [],
-  [],
-];
-
-const surfaceClassName =
-  'rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl';
-
-const fieldClassName =
-  'w-full rounded-[22px] border border-[#E7ECF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-3.5 text-[0.95rem] font-medium tracking-[-0.025em] text-[#162033] outline-none shadow-[0_16px_32px_rgba(31,38,64,0.05)] transition placeholder:text-[#9BA5B9] focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:opacity-60';
-
-const primaryButtonClassName =
-  'flex min-h-[52px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-sm font-semibold text-white shadow-[0_20px_38px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60';
-
-const secondaryButtonClassName =
-  'flex min-h-[52px] items-center justify-center rounded-full border border-[#DDD3FF] bg-white px-5 text-sm font-semibold text-[#6B39F4] shadow-[0_14px_28px_rgba(31,38,64,0.06)] transition hover:-translate-y-0.5 hover:bg-[#FBFAFF] disabled:cursor-not-allowed disabled:opacity-60';
-
-const fileToDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(new Error('Could not read the file.'));
-    reader.readAsDataURL(file);
-  });
-
-const moneyNumber = (value: string) => {
-  const parsed = Number(value.replace(/[^0-9.-]/g, ''));
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const moneyLabel = (value: string, fallback = 'Pending') => {
-  const amount = moneyNumber(value);
-  if (amount <= 0) return fallback;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
-const getOptimizedSection = (
-  optimized: OptimizedPublication,
-  keys: string[]
-) => {
-  const optimizedRecord = optimized as Record<string, unknown>;
-  for (const key of keys) {
-    const value = optimizedRecord[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      const sectionValue = value as { paragraph?: unknown };
-      const paragraph =
-        typeof sectionValue.paragraph === 'string' ? sectionValue.paragraph.trim() : '';
-      if (paragraph) return paragraph;
-    }
-  }
-  return '';
-};
-
-const buildPreviewSections = (
-  optimized: OptimizedPublication
-): OpportunitySection[] => {
-  const definitions: Array<{
-    title: string;
-    icon: OpportunitySection['icon'];
-    keys: string[];
-  }> = [
-    {
-      title: 'Overview',
-      icon: 'overview',
-      keys: ['overview'],
-    },
-    {
-      title: 'What we do',
-      icon: 'what',
-      keys: ['whatWeDo', 'what_we_do'],
-    },
-    {
-      title: 'How we do it',
-      icon: 'how',
-      keys: ['howWeDoIt', 'how_we_do_it'],
-    },
-    {
-      title: 'Financial information',
-      icon: 'financial',
-      keys: ['financialInformation', 'financial_information'],
-    },
-    {
-      title: 'Investment',
-      icon: 'investment',
-      keys: ['investment'],
-    },
-    {
-      title: 'Target',
-      icon: 'target',
-      keys: ['target'],
-    },
-    {
-      title: 'Team',
-      icon: 'team',
-      keys: ['team'],
-    },
-    {
-      title: 'Gallery',
-      icon: 'gallery',
-      keys: ['gallery'],
-    },
-    {
-      title: 'Extras',
-      icon: 'extras',
-      keys: ['extras'],
-    },
-  ];
-
-  return definitions
-    .map((definition) => ({
-      title: definition.title,
-      body: getOptimizedSection(optimized, definition.keys),
-      icon: definition.icon,
-    }))
-    .filter((section) => section.body);
-};
-
-const buildFallbackPreviewSections = (form: PublishWizardForm): OpportunitySection[] => {
-  const sections: OpportunitySection[] = [
-    {
-      title: 'Overview',
-      body: form.product_description,
-      icon: 'overview',
-    },
-    {
-      title: 'What we do',
-      body: [
-        form.product_description ? `Product or service: ${form.product_description}` : '',
-        form.problem_solved ? `Problem solved: ${form.problem_solved}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'what',
-    },
-    {
-      title: 'How we do it',
-      body: form.differentiation,
-      icon: 'how',
-    },
-    {
-      title: 'Financial information',
-      body: [
-        form.monthly_revenue ? `Monthly revenue: ${form.monthly_revenue}` : '',
-        form.avg_ticket ? `Average ticket: ${form.avg_ticket}` : '',
-        form.monthly_customers ? `Monthly customers: ${form.monthly_customers}` : '',
-        form.growth_rate ? `Growth: ${form.growth_rate}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'financial',
-    },
-    {
-      title: 'Investment',
-      body: [
-        form.capital_needed ? `Capital needed: ${form.capital_needed}` : '',
-        form.funds_usage ? `Use of funds: ${form.funds_usage}` : '',
-        form.investment_offer ? `Annual interest rate: ${form.investment_offer}% EA` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'investment',
-    },
-    {
-      title: 'Target',
-      body: [form.target_customer, form.market_size, form.competition].filter(Boolean).join('\n\n'),
-      icon: 'target',
-    },
-    {
-      title: 'Team',
-      body: [
-        form.founder_info ? `Founder: ${form.founder_info}` : '',
-        form.team_info ? `Team: ${form.team_info}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'team',
-    },
-    {
-      title: 'Extras',
-      body: [
-        form.testimonials ? `Testimonials: ${form.testimonials}` : '',
-        form.achievements ? `Achievements: ${form.achievements}` : '',
-        form.timing_reason ? `Timing: ${form.timing_reason}` : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'extras',
-    },
-  ];
-
-  return sections.filter((section) => section.body);
-};
-
-const buildPublicationSections = (
-  form: PublishWizardForm,
-  optimized: OptimizedPublication
-): OpportunitySection[] => {
-  const optimizedSections = buildPreviewSections(optimized);
-  return optimizedSections.length ? optimizedSections : buildFallbackPreviewSections(form);
-};
-
-const buildPreviewMetrics = (form: PublishWizardForm): OpportunityMetric[] => [
-  {
-    label: 'Funding Goal',
-    value: moneyLabel(form.capital_needed),
-    icon: 'goal',
-  },
-  {
-    label: 'Annual Rate',
-    value: form.investment_offer ? `${form.investment_offer}% EA` : 'Pending',
-    icon: 'rate',
-  },
-  {
-    label: 'Monthly Sales',
-    value: moneyLabel(form.monthly_revenue),
-    icon: 'sales',
-  },
-  {
-    label: 'Active Clients',
-    value: form.monthly_customers || 'Pending',
-    icon: 'clients',
-  },
-];
-
-const addDays = (days: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-};
-
-const inferOpeningDate = (timeOperating: string) => {
-  const date = new Date();
-  if (timeOperating === '<1 year') date.setMonth(date.getMonth() - 6);
-  else if (timeOperating === '>1 <5 years') date.setFullYear(date.getFullYear() - 2);
-  else if (timeOperating === '>5 <10 years') date.setFullYear(date.getFullYear() - 7);
-  else date.setFullYear(date.getFullYear() - 11);
-  return date.toISOString().slice(0, 10);
-};
-
-const firstSentence = (value: string) =>
-  value
-    .split(/[.\n]/)
-    .map((item) => item.trim())
-    .find(Boolean) ?? '';
-
-const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (typeof error === 'object' && error && 'message' in error) {
-    return String((error as { message?: unknown }).message ?? error);
-  }
-  return String(error);
-};
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const coerceText = (value: unknown) => (typeof value === 'string' ? value : '');
-
-const normalizeDraftForm = (value: unknown): PublishWizardForm => {
-  const source = isPlainObject(value) ? value : {};
-  return (Object.keys(emptyForm) as Array<keyof PublishWizardForm>).reduce(
-    (draftForm, key) => ({
-      ...draftForm,
-      [key]: coerceText(source[key]),
-    }),
-    { ...emptyForm }
-  );
-};
-
-const normalizeStringArray = (value: unknown, maxItems: number) =>
-  Array.isArray(value)
-    ? value
-        .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
-        .slice(0, maxItems)
-    : [];
-
-const promptValue = (value: string) => value.replace(/\s+/g, ' ').trim() || 'No proporcionado';
-
-const buildPublicationPromptText = (form: PublishWizardForm) => `Genera una publicación de inversión para el siguiente negocio:
-
-Nombre: ${promptValue(form.business_name)}
-Ubicación: ${promptValue(form.location)}
-Industria: ${promptValue(form.industry)}
-Tiempo operando: ${promptValue(form.time_operating)}
-Etapa: ${promptValue(form.business_stage)}
-
-Producto/Servicio: ${promptValue(form.product_description)}
-Problema que resuelve: ${promptValue(form.problem_solved)}
-Diferenciación: ${promptValue(form.differentiation)}
-
-Ventas mensuales: ${promptValue(form.monthly_revenue)}
-Ticket promedio: ${promptValue(form.avg_ticket)}
-Clientes mensuales: ${promptValue(form.monthly_customers)}
-Crecimiento: ${promptValue(form.growth_rate)}
-Redes sociales: ${promptValue(form.social_media)}
-
-Capital requerido: ${promptValue(form.capital_needed)}
-Uso de fondos: ${promptValue(form.funds_usage)}
-Oferta de inversión: ${promptValue(form.investment_offer)}
-
-Cliente ideal: ${promptValue(form.target_customer)}
-Tamaño de mercado: ${promptValue(form.market_size)}
-Competencia: ${promptValue(form.competition)}
-
-Fundador: ${promptValue(form.founder_info)}
-Equipo: ${promptValue(form.team_info)}
-
-Testimonios: ${promptValue(form.testimonials)}
-Logros: ${promptValue(form.achievements)}
-Momento de inversión: ${promptValue(form.timing_reason)}
-
-Hazlo altamente persuasivo y listo para publicación.`;
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label className="text-[0.72rem] font-semibold text-[#596277]">{children}</label>;
-}
-
-function TextInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-}) {
+function RoleRestrictedState() {
   return (
-    <div className="flex flex-col gap-2">
-      <FieldLabel>{label}</FieldLabel>
-      <input
-        value={value}
-        type={type}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className={fieldClassName}
-      />
-    </div>
-  );
-}
+    <>
+      <DesktopAppShell
+        title="Publish project"
+        subtitle="This area is available only for entrepreneur profiles."
+        eyebrow="Access"
+        maxWidthClassName="max-w-none"
+      >
+        <DesktopSectionCard title="Entrepreneur-only workspace">
+          <p className="text-sm leading-6 text-[#66728A]">
+            Switch to entrepreneur profile mode to access the new step-by-step publication flow.
+          </p>
+        </DesktopSectionCard>
+      </DesktopAppShell>
 
-function TextArea({
-  label,
-  value,
-  onChange,
-  placeholder,
-  helper,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  helper?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <FieldLabel>{label}</FieldLabel>
-      {helper ? <p className="text-xs leading-5 text-[#7B879C]">{helper}</p> : null}
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className={`${fieldClassName} min-h-28 resize-none leading-6`}
-      />
-    </div>
-  );
-}
+      <main className="min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828] lg:hidden">
+        <div className="mx-auto w-full max-w-md">
+          <PageBackButton fallbackHref="/feed" label="Back" />
+          <section className={`${mobileSurfaceClassName} mt-4`}>
+            <p className="text-sm leading-6 text-[#667085]">
+              This area is available only for entrepreneur profiles.
+            </p>
+          </section>
+        </div>
+      </main>
 
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: readonly string[];
-  placeholder: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <FieldLabel>{label}</FieldLabel>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={fieldClassName}>
-        <option value="">{placeholder}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="M12 15V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M5 19h14" />
-    </svg>
-  );
-}
-
-function SectionSurface({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <section className={`${surfaceClassName} ${className}`}>{children}</section>;
-}
-
-function LoadingOverlay({ label }: { label: string }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-6 backdrop-blur-sm">
-      <div className="w-full max-w-xs rounded-3xl border border-white/20 bg-white/10 p-8 text-center text-white shadow-2xl">
-        <TransactionLoader />
-        <p className="mt-6 text-sm font-medium text-white/85">{label}</p>
+      <div className="lg:hidden">
+        <BottomNav />
       </div>
-    </div>
+    </>
   );
 }
 
 export default function PublishPage() {
-  const t = useTranslations('Publish');
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, rolSeleccionado, smartWalletAddress } = useInvestApp();
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
-  const videoInputRef = useRef<HTMLInputElement | null>(null);
-  const [form, setForm] = useState<PublishWizardForm>(emptyForm);
-  const [stepIndex, setStepIndex] = useState(0);
-  const [projectPhotos, setProjectPhotos] = useState<string[]>([]);
-  const [projectVideos, setProjectVideos] = useState<string[]>([]);
-  const [videoUrl, setVideoUrl] = useState('');
-  const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
-  const [savedDraft, setSavedDraft] = useState<PublicationPromptDraft | null>(null);
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [hasExistingProject, setHasExistingProject] = useState(false);
-  const [checkingProject, setCheckingProject] = useState(true);
-  const [status, setStatus] = useState('');
-  const [savingDraft, setSavingDraft] = useState(false);
-  const [finalizing, setFinalizing] = useState(false);
-  const [publishing, setPublishing] = useState(false);
-  const [review, setReview] = useState<ReviewState | null>(null);
+  const { faseApp, rolSeleccionado } = useInvestApp();
 
-  const stepLabels = useMemo(
-    () => [
-      t('stepBasicInformation'),
-      t('stepValueProposition'),
-      t('stepTraction'),
-      t('stepInvestment'),
-      t('stepMarket'),
-      t('stepTeam'),
-      t('stepMedia'),
-      t('stepExtra'),
-    ],
-    [t]
+  const [checkingProject, setCheckingProject] = useState(true);
+  const [hasExistingProject, setHasExistingProject] = useState(false);
+
+  const [status, setStatus] = useState('');
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  const [address, setAddress] = useState<PublishAddressStepFields>(emptyAddress);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
+  const [geolocationLoading, setGeolocationLoading] = useState(false);
+
+  const canContinue = useMemo(
+    () => isAddressValid(address) && !checkingProject && !hasExistingProject && !savingDraft,
+    [address, checkingProject, hasExistingProject, savingDraft]
   );
-  const currentStep = stepLabels[stepIndex] ?? steps[stepIndex];
-  const progress = Math.round(((stepIndex + 1) / steps.length) * 100);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -663,1019 +208,449 @@ export default function PublishPage() {
   }, [faseApp, router]);
 
   useEffect(() => {
-    const loadState = async () => {
-      if (!user?.id || rolSeleccionado !== 'emprendedor') return;
-      setCheckingProject(true);
+    let active = true;
 
-      const [projectsResponse, profileResponse, draftResponse] = await Promise.all([
+    const loadState = async () => {
+      if (!user?.id || rolSeleccionado !== 'emprendedor') {
+        if (active) {
+          setCheckingProject(false);
+          setHasExistingProject(false);
+          setStatus('');
+        }
+        return;
+      }
+
+      if (active) {
+        setCheckingProject(true);
+        setStatus('');
+      }
+
+      const [projectsResponse, draftResponse] = await Promise.all([
         fetchCurrentUserProjects(getAccessToken),
-        fetchCurrentUserProfile<ProfileSnapshot | null>(getAccessToken),
         fetchCurrentUserPublicationDraft(getAccessToken),
       ]);
 
+      if (!active) return;
+
       if (projectsResponse.error) {
-        setStatus(t('verifyProjectStateError', { error: projectsResponse.error }));
+        setStatus('Could not verify your current project state right now.');
+        setHasExistingProject(false);
       } else {
         setHasExistingProject(((projectsResponse.data ?? []) as ProjectRecord[]).length > 0);
       }
 
-      if (!profileResponse.error) {
-        setProfile(profileResponse.data ?? null);
-      }
-
-      if (!draftResponse.error) {
-        setSavedDraft(draftResponse.data ?? null);
+      if (!draftResponse.error && draftResponse.data) {
+        const promptJson = draftResponse.data.promptJson;
+        if (promptJson && typeof promptJson === 'object' && !Array.isArray(promptJson)) {
+          const fields = (promptJson as { fields?: unknown }).fields;
+          setAddress(normalizeDraftAddress(fields));
+          setDraftId(draftResponse.data.id);
+        }
       }
 
       setCheckingProject(false);
     };
 
     void loadState();
-  }, [getAccessToken, rolSeleccionado, t, user?.id]);
 
-  const updateForm = (key: keyof PublishWizardForm, value: string) => {
-    setReview(null);
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+    return () => {
+      active = false;
+    };
+  }, [getAccessToken, rolSeleccionado, user?.id]);
 
-  const promptJson = useMemo<PromptJson>(
-    () => ({
-      version: 1,
-      locale: 'en',
-      createdAt: new Date().toISOString(),
-      fields: form,
-      sections: [
-        {
-          title: '1. Basic business information',
-          fields: [
-            { key: 'business_name', label: 'Business name', value: form.business_name },
-            { key: 'location', label: 'Location', value: form.location },
-            { key: 'industry', label: 'Industry', value: form.industry },
-            { key: 'time_operating', label: 'Time operating', value: form.time_operating },
-            { key: 'business_stage', label: 'Business stage', value: form.business_stage },
-          ],
-        },
-        {
-          title: '2. What you do',
-          fields: [
-            { key: 'product_description', label: 'What you sell exactly', value: form.product_description },
-            { key: 'problem_solved', label: 'Problem solved', value: form.problem_solved },
-            { key: 'differentiation', label: 'Differentiation', value: form.differentiation },
-          ],
-        },
-        {
-          title: '3. Traction',
-          fields: [
-            { key: 'monthly_revenue', label: 'Current monthly revenue', value: form.monthly_revenue },
-            { key: 'avg_ticket', label: 'Average ticket per customer', value: form.avg_ticket },
-            { key: 'monthly_customers', label: 'Monthly customers', value: form.monthly_customers },
-            { key: 'growth_rate', label: 'Growth rate', value: form.growth_rate },
-            { key: 'social_media', label: 'Social media', value: form.social_media },
-          ],
-        },
-        {
-          title: '4. Investment requested',
-          fields: [
-            { key: 'capital_needed', label: 'Capital needed', value: form.capital_needed },
-            { key: 'funds_usage', label: 'Use of funds', value: form.funds_usage },
-            { key: 'investment_offer', label: 'Investment offer', value: form.investment_offer },
-          ],
-        },
-        {
-          title: '5. Market and opportunity',
-          fields: [
-            { key: 'target_customer', label: 'Target customer', value: form.target_customer },
-            { key: 'market_size', label: 'Market size', value: form.market_size },
-            { key: 'competition', label: 'Competition and differentiation', value: form.competition },
-          ],
-        },
-        {
-          title: '6. Team',
-          fields: [
-            { key: 'founder_info', label: 'Founder info', value: form.founder_info },
-            { key: 'team_info', label: 'Team info', value: form.team_info },
-          ],
-        },
-        {
-          title: '7. Media content',
-          fields: [
-            { key: 'photo_count', label: 'Photos', value: `${projectPhotos.length} photo(s) uploaded` },
-            {
-              key: 'video_count',
-              label: 'Videos',
-              value: `${projectVideos.length + (videoUrl.trim() ? 1 : 0)} video source(s) added`,
-            },
-          ],
-        },
-        {
-          title: '8. Extra',
-          fields: [
-            { key: 'testimonials', label: 'Customer testimonials', value: form.testimonials },
-            { key: 'achievements', label: 'Achievements', value: form.achievements },
-            { key: 'timing_reason', label: 'Why now', value: form.timing_reason },
-          ],
-        },
-      ],
-      media: {
-        photoCount: projectPhotos.length,
-        videoCount: projectVideos.length + (videoUrl.trim() ? 1 : 0),
-        videoUrl: videoUrl.trim() || null,
-      },
-    }),
-    [form, projectPhotos.length, projectVideos.length, videoUrl]
-  );
+  useEffect(() => {
+    if (!isAddressModalOpen) return;
+    if (searchQuery.trim().length < 3) return;
 
-  const promptText = useMemo(() => buildPublicationPromptText(form), [form]);
+    let active = true;
 
-  const draftMetadata = useMemo(
-    () => ({
-      step_index: stepIndex,
-      media: {
-        photo_urls: projectPhotos,
-        video_urls: projectVideos,
-        video_url: videoUrl.trim() || null,
-        video_count: projectVideos.length + (videoUrl.trim() ? 1 : 0),
-      },
-    }),
-    [projectPhotos, projectVideos, stepIndex, videoUrl]
-  );
+    const timer = window.setTimeout(async () => {
+      const { data, error } = await searchBusinessAddress(searchQuery.trim(), 'en');
+      if (!active) return;
 
-  const profileName = useMemo(() => {
-    const name = `${profile?.name ?? ''} ${profile?.surname ?? ''}`.trim();
-    return name || firstSentence(form.founder_info) || `${form.business_name} founder`;
-  }, [form.business_name, form.founder_info, profile?.name, profile?.surname]);
-
-  const validateStep = useCallback(
-    (targetStep: number) => {
-      const missing = requiredByStep[targetStep].find((field) => !form[field].trim());
-      if (missing) {
-        setStatus('Complete all required fields in this section.');
-        return false;
+      if (error) {
+        setStatus(`Address search failed: ${error}`);
+        setSearchResults([]);
+      } else {
+        setSearchResults(data);
       }
 
-      setStatus('');
-      return true;
-    },
-    [form]
-  );
+      setIsSearching(false);
+    }, 360);
 
-  const goNext = () => {
-    if (!validateStep(stepIndex)) return;
-    setStepIndex((prev) => Math.min(prev + 1, steps.length - 1));
-  };
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      setIsSearching(false);
+    };
+  }, [isAddressModalOpen, searchQuery]);
 
-  const goBack = () => {
-    setStatus('');
-    setStepIndex((prev) => Math.max(prev - 1, 0));
-  };
+  useEffect(() => {
+    if (!hasInteracted || !user?.id || rolSeleccionado !== 'emprendedor' || hasExistingProject) return;
 
-  const resumeDraft = (draft: PublicationPromptDraft) => {
-    const promptData = isPlainObject(draft.promptJson) ? draft.promptJson : {};
-    const metadata = isPlainObject(draft.metadata) ? draft.metadata : {};
-    const media = isPlainObject(metadata.media) ? metadata.media : {};
-    const savedStepIndex = Number(metadata.step_index ?? 0);
-
-    setForm(normalizeDraftForm(promptData.fields));
-    setProjectPhotos(normalizeStringArray(media.photo_urls, 12));
-    setProjectVideos(normalizeStringArray(media.video_urls, 2));
-    setVideoUrl(coerceText(media.video_url));
-    setStepIndex(
-      Number.isFinite(savedStepIndex) ? Math.max(0, Math.min(steps.length - 1, savedStepIndex)) : 0
-    );
-    setDraftId(draft.id);
-    setReview(null);
-    setStatus('Draft resumed. You can keep editing.');
-  };
-
-  const saveDraft = async () => {
-    if (!user?.id || hasExistingProject || checkingProject || savingDraft) return;
-
-    setSavingDraft(true);
-    setStatus('');
-
-    const { data, error } = await saveCurrentUserPublicationDraft(getAccessToken, {
-      id: draftId,
-      promptJson,
-      promptText,
-      metadata: draftMetadata,
-    });
-
-    if (error || !data) {
-      setStatus(`Could not save the draft: ${error ?? 'Unknown error.'}`);
-      setSavingDraft(false);
-      return;
-    }
-
-    setDraftId(data.id);
-    setSavedDraft(data);
-    setStatus('Draft saved. You can resume it later from this page.');
-    setSavingDraft(false);
-  };
-
-  const validateAll = () => {
-    for (let index = 0; index < requiredByStep.length; index += 1) {
-      const missing = requiredByStep[index].find((field) => !form[field].trim());
-      if (missing) {
-        setStepIndex(index);
-        setStatus('Complete all required fields before finishing.');
-        return false;
-      }
-    }
-
-    if (projectPhotos.length < 5) {
-      setStepIndex(6);
-      setStatus('Upload at least 5 photos so the publication can stand out.');
-      return false;
-    }
-
-    if (moneyNumber(form.capital_needed) <= 0) {
-      setStepIndex(3);
-      setStatus('Add a valid capital amount.');
-      return false;
-    }
-
-    if (moneyNumber(form.investment_offer) < 0) {
-      setStepIndex(3);
-      setStatus('Add a valid interest rate.');
-      return false;
-    }
-
-    return true;
-  };
-
-  const onPickPhotos = async (files: FileList | null) => {
-    if (!files) return;
-    const selected = Array.from(files);
-    if (selected.length > 12) {
-      setStatus('You can upload up to 12 photos.');
-      return;
-    }
-
-    try {
-      const urls = await Promise.all(selected.slice(0, 12).map(fileToDataUrl));
-      setProjectPhotos(urls);
-      setReview(null);
-      setStatus('');
-    } catch (error) {
-      setStatus(`Could not read the images: ${getErrorMessage(error)}`);
-    }
-  };
-
-  const onPickVideos = async (files: FileList | null) => {
-    if (!files) return;
-    const selected = Array.from(files);
-    if (selected.length > 2) {
-      setStatus('You can upload up to 2 videos.');
-      return;
-    }
-
-    try {
-      const urls = await Promise.all(selected.slice(0, 2).map(fileToDataUrl));
-      setProjectVideos(urls);
-      setReview(null);
-      setStatus('');
-    } catch (error) {
-      setStatus(`Could not read the videos: ${getErrorMessage(error)}`);
-    }
-  };
-
-  const updateVideoUrl = (value: string) => {
-    setReview(null);
-    setVideoUrl(value);
-  };
-
-  const finalizePrompt = async () => {
-    if (!user?.id || hasExistingProject || checkingProject) return;
-    if (!validateAll()) return;
-
-    setFinalizing(true);
-    setStatus('');
-
-    try {
-      const { data, error } = await createCurrentUserPublicationPrompt(getAccessToken, {
+    const timer = window.setTimeout(async () => {
+      setSavingDraft(true);
+      const payload = buildDraftPayload(address);
+      const { data, error } = await saveCurrentUserPublicationDraft(getAccessToken, {
         id: draftId,
-        promptJson,
-        promptText,
-        metadata: draftMetadata,
+        promptJson: payload.promptJson,
+        promptText: payload.promptText,
+        metadata: payload.metadata,
       });
 
       if (error || !data) {
-        throw new Error(error ?? 'Could not prepare the publication.');
+        setStatus(`Could not save address step: ${error ?? 'Unknown error.'}`);
+      } else {
+        setDraftId(data.id);
       }
 
-      setReview({
-        draftId: data.id,
-        provider: data.provider,
-        promptJson,
-        optimizedPublication: data.optimizedPublication,
-      });
-      setDraftId(data.id);
-      setStatus('Review the optimized publication before publishing.');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-      setStatus(`Could not prepare the publication: ${getErrorMessage(error)}`);
-    } finally {
-      setFinalizing(false);
-    }
-  };
+      setSavingDraft(false);
+    }, 900);
 
-  const buildProjectPayload = (): ProjectMutationPayload | null => {
-    if (!review) return null;
+    return () => window.clearTimeout(timer);
+  }, [address, draftId, getAccessToken, hasExistingProject, hasInteracted, rolSeleccionado, user?.id]);
 
-    const optimized = review.optimizedPublication;
-    const selectedDescription =
-      optimized.description?.trim() ||
-      `${optimized.summary ?? ''}\n\n${form.problem_solved}\n\n${form.funds_usage}`.trim();
-    const country = profile?.country?.trim() || 'Not specified';
-
-    return {
-      owner_wallet: smartWalletAddress ?? null,
-      title: (
-        optimized.title?.trim() ||
-        optimized.tittle?.trim() ||
-        `${form.business_name} investment opportunity`
-      ).slice(0, 120),
-      business_name: form.business_name,
-      sector: form.industry,
-      legal_representative: profileName,
-      nit: null,
-      opening_date: inferOpeningDate(form.time_operating),
-      address: form.location,
-      phone: profile?.phone_number?.trim() || 'Not specified',
-      city: 'Not specified',
-      country,
-      description: selectedDescription.slice(0, 2500),
-      amount_requested: moneyNumber(form.capital_needed),
-      minimum_investment: 50,
-      currency: 'USD',
-      installment_count: 6,
-      publication_end_date: addDays(90),
-      interest_rate: moneyNumber(form.investment_offer),
-      photo_urls: projectPhotos.slice(0, 12),
-      video_url: (projectVideos[0] ?? videoUrl.trim()) || null,
-      metadata: {
-        submitted_from: 'guided_publish_page',
-        publication_prompt_id: review.draftId,
-        publication_prompt_provider: review.provider,
-        publication_prompt_json: review.promptJson,
-        optimized_publication: optimized,
-        publication_form_fields: form,
-        business_stage: form.business_stage,
-        media: {
-          photo_count: projectPhotos.length,
-          video_count: projectVideos.length + (videoUrl.trim() ? 1 : 0),
-          video_url: videoUrl.trim() || null,
-        },
-      },
-    };
-  };
-
-  const publishProject = async () => {
-    if (!user?.id || !review || hasExistingProject) return;
-
-    const payload = buildProjectPayload();
-    if (!payload) return;
-
-    setPublishing(true);
+  const applyAddressRecord = (record: BusinessAddressRecord, source: Exclude<AddressSource, ''>) => {
+    setAddress(toAddressFromGeocode(record, source));
+    setSearchQuery(record.formatted_address);
     setStatus('');
+    setHasInteracted(true);
+  };
 
-    const { error } = await createCurrentUserProject(getAccessToken, payload);
-    if (error) {
-      setStatus(t('publishError', { error }));
-      setPublishing(false);
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setStatus('Geolocation is not available in this browser.');
       return;
     }
 
-    setStatus(t('publishSuccess'));
-    setPublishing(false);
-    router.push('/feed');
+    setGeolocationLoading(true);
+    setStatus('');
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const { data, error } = await reverseBusinessAddress(latitude, longitude, 'en');
+
+        if (error || !data) {
+          setStatus(`Could not resolve your location: ${error ?? 'Unknown geolocation error.'}`);
+        } else {
+          applyAddressRecord(data, 'use_my_location');
+        }
+
+        setGeolocationLoading(false);
+      },
+      (error) => {
+        setGeolocationLoading(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setStatus('Location permission was denied. Enable it and try again.');
+          return;
+        }
+        setStatus('Could not get your location right now. Please try again.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+      }
+    );
   };
 
-  const renderStep = () => {
-    switch (stepIndex) {
-      case 0:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextInput
-              label={t('businessName')}
-              value={form.business_name}
-              onChange={(value) => updateForm('business_name', value)}
-              placeholder={t('businessNamePlaceholder')}
-            />
-            <TextInput
-              label={t('location')}
-              value={form.location}
-              onChange={(value) => updateForm('location', value)}
-              placeholder={t('locationPlaceholder')}
-            />
-            <SelectField
-              label={t('industryQuestion')}
-              value={form.industry}
-              onChange={(value) => updateForm('industry', value)}
-              options={SECTOR_OPTIONS_ENGLISH}
-              placeholder={t('selectCategory')}
-            />
-            <SelectField
-              label={t('timeOperatingQuestion')}
-              value={form.time_operating}
-              onChange={(value) => updateForm('time_operating', value)}
-              options={OPERATING_TIME_OPTIONS}
-              placeholder={t('selectOption')}
-            />
-            <SelectField
-              label={t('businessStage')}
-              value={form.business_stage}
-              onChange={(value) => updateForm('business_stage', value)}
-              options={REGISTRATION_OPTIONS}
-              placeholder={t('selectStage')}
-            />
-          </div>
-        );
-      case 1:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextArea
-              label={t('productQuestion')}
-              value={form.product_description}
-              onChange={(value) => updateForm('product_description', value)}
-              placeholder={t('productPlaceholder')}
-            />
-            <TextArea
-              label={t('problemQuestion')}
-              value={form.problem_solved}
-              onChange={(value) => updateForm('problem_solved', value)}
-              placeholder={t('problemPlaceholder')}
-            />
-            <TextArea
-              label={t('differentiationQuestion')}
-              value={form.differentiation}
-              onChange={(value) => updateForm('differentiation', value)}
-              helper={t('differentiationHelper')}
-            />
-          </div>
-        );
-      case 2:
-        return (
-          <div className="flex flex-col gap-4">
-            <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              {t('tractionHint')}
-            </div>
-            <TextInput
-              label={t('monthlyRevenue')}
-              value={form.monthly_revenue}
-              onChange={(value) => updateForm('monthly_revenue', value)}
-              placeholder={t('monthlyRevenuePlaceholder')}
-            />
-            <TextInput
-              label={t('avgTicket')}
-              value={form.avg_ticket}
-              onChange={(value) => updateForm('avg_ticket', value)}
-              placeholder={t('avgTicketPlaceholder')}
-            />
-            <TextInput
-              label={t('monthlyCustomers')}
-              value={form.monthly_customers}
-              onChange={(value) => updateForm('monthly_customers', value)}
-              type="number"
-              placeholder={t('monthlyCustomersPlaceholder')}
-            />
-            <TextInput
-              label={t('growthRate')}
-              value={form.growth_rate}
-              onChange={(value) => updateForm('growth_rate', value)}
-              placeholder={t('growthRatePlaceholder')}
-            />
-            <TextInput
-              label={t('socialMedia')}
-              value={form.social_media}
-              onChange={(value) => updateForm('social_media', value)}
-              placeholder={t('socialMediaPlaceholder')}
-            />
-          </div>
-        );
-      case 3:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextInput
-              label={t('capitalNeeded')}
-              value={form.capital_needed}
-              onChange={(value) => updateForm('capital_needed', value)}
-              type="number"
-              placeholder={t('capitalNeededPlaceholder')}
-            />
-            <TextArea
-              label={t('fundsUsage')}
-              value={form.funds_usage}
-              onChange={(value) => updateForm('funds_usage', value)}
-              placeholder={t('fundsUsagePlaceholder')}
-            />
-            <TextInput
-              label={t('investmentOffer')}
-              value={form.investment_offer}
-              onChange={(value) => updateForm('investment_offer', value)}
-              type="number"
-              placeholder={t('investmentOfferPlaceholder')}
-            />
-          </div>
-        );
-      case 4:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextArea
-              label={t('targetCustomer')}
-              value={form.target_customer}
-              onChange={(value) => updateForm('target_customer', value)}
-            />
-            <TextArea
-              label={t('marketSize')}
-              value={form.market_size}
-              onChange={(value) => updateForm('market_size', value)}
-              placeholder={t('marketSizePlaceholder')}
-            />
-            <TextArea
-              label={t('competition')}
-              value={form.competition}
-              onChange={(value) => updateForm('competition', value)}
-            />
-          </div>
-        );
-      case 5:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextArea
-              label={t('founderInfo')}
-              value={form.founder_info}
-              onChange={(value) => updateForm('founder_info', value)}
-              placeholder={t('founderInfoPlaceholder')}
-            />
-            <TextArea
-              label={t('teamInfo')}
-              value={form.team_info}
-              onChange={(value) => updateForm('team_info', value)}
-              placeholder={t('teamInfoPlaceholder')}
-            />
-          </div>
-        );
-      case 6:
-        return (
-          <div className="flex flex-col gap-4">
-            <div className="rounded-[24px] border border-[#E7ECF4] bg-[#FAF9FF] px-4 py-4 text-xs leading-5 text-[#667085]">
-              {t('mediaHint')}
-            </div>
-            <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-              <p className="text-sm font-semibold text-[#1C2336]">{t('photos')}</p>
-              <p className="mt-1 text-xs leading-5 text-[#7B879C]">{t('photosDescription')}</p>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(event) => onPickPhotos(event.target.files)}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => photoInputRef.current?.click()}
-                className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
-              >
-                <UploadIcon />
-                {t('uploadImages')}
-              </button>
-              {projectPhotos.length ? (
-                <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {t('photosUploaded', { count: projectPhotos.length })}
-                </p>
-              ) : null}
-            </div>
-            <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-              <p className="text-sm font-semibold text-[#1C2336]">{t('video')}</p>
-              <p className="mt-1 text-xs leading-5 text-[#7B879C]">
-                {t('videoDescription')}
-              </p>
-              <TextInput
-                label={t('videoUrl')}
-                value={videoUrl}
-                onChange={updateVideoUrl}
-                placeholder={t('videoPlaceholder')}
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                accept="video/*"
-                multiple
-                onChange={(event) => onPickVideos(event.target.files)}
-                className="hidden"
-              />
-              <button
-                type="button"
-                onClick={() => videoInputRef.current?.click()}
-                className={`${secondaryButtonClassName} mt-3 w-full gap-2`}
-              >
-                <UploadIcon />
-                {t('uploadVideos')}
-              </button>
-              {projectVideos.length ? (
-                <p className="mt-3 text-xs font-semibold text-[#6B39F4]">
-                  {t('videosUploaded', { count: projectVideos.length })}
-                </p>
-              ) : null}
-              {videoUrl.trim() ? (
-                <p className="mt-2 text-xs font-semibold text-[#6B39F4]">{t('videoUrlAdded')}</p>
-              ) : null}
-            </div>
-          </div>
-        );
-      default:
-        return (
-          <div className="flex flex-col gap-4">
-            <TextArea
-              label={t('testimonials')}
-              value={form.testimonials}
-              onChange={(value) => updateForm('testimonials', value)}
-              placeholder={t('optionalPlaceholder')}
-            />
-            <TextArea
-              label={t('achievements')}
-              value={form.achievements}
-              onChange={(value) => updateForm('achievements', value)}
-              placeholder={t('achievementsPlaceholder')}
-            />
-            <TextArea
-              label={t('timingReason')}
-              value={form.timing_reason}
-              onChange={(value) => updateForm('timing_reason', value)}
-              placeholder={t('timingReasonPlaceholder')}
-            />
-          </div>
-        );
-    }
+  const updateField = (key: keyof PublishAddressStepFields, value: string) => {
+    setAddress((previous) => {
+      const next: PublishAddressStepFields = {
+        ...previous,
+        [key]: value,
+      };
+
+      if (key !== 'source') {
+        next.source = 'manual_edit';
+      }
+
+      return next;
+    });
+    setHasInteracted(true);
+  };
+
+  const handleContinue = () => {
+    if (!canContinue) return;
+    setStatus('Step 1 saved. Ready for step 2.');
+    setIsAddressModalOpen(false);
   };
 
   if (rolSeleccionado !== 'emprendedor') {
-    return (
-      <>
-        <DesktopAppShell
-          title={t('publishProject')}
-          subtitle={t('entrepreneurWorkspaceSubtitle')}
-          eyebrow={t('access')}
-          maxWidthClassName="max-w-none"
-        >
-          <DesktopSectionCard title={t('entrepreneurOnlyArea')} subtitle={t('entrepreneurOnlyAreaSubtitle')}>
-            <button
-              type="button"
-              onClick={() => router.push('/feed')}
-              className="h-11 rounded-xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-4 text-sm font-bold text-white shadow-[0_16px_30px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
-            >
-              {t('backToFeed')}
-            </button>
-          </DesktopSectionCard>
-        </DesktopAppShell>
-
-        <main className="min-h-screen bg-[linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_100%)] px-4 pb-32 pt-8 text-[#101828] lg:hidden">
-          <div className="mx-auto w-full max-w-md">
-            <PageBackButton fallbackHref="/feed" label={t('back')} />
-            <SectionSurface className="mt-4 text-sm leading-6 text-[#667085]">
-              {t('entrepreneurOnlyMobile')}
-            </SectionSurface>
-          </div>
-        </main>
-        <div className="lg:hidden">
-          <BottomNav />
-        </div>
-      </>
-    );
+    return <RoleRestrictedState />;
   }
 
   return (
     <>
-      {(finalizing || publishing) ? <LoadingOverlay label={finalizing ? t('sending') : t('publishing')} /> : null}
-
-      {!hasExistingProject && review ? (
-        <>
-          <div className="lg:hidden">
-            <InvestmentOpportunityDetail
-              title={
-                review.optimizedPublication.title ||
-                review.optimizedPublication.tittle ||
-                t('investmentOpportunityTitle', { business: form.business_name })
-              }
-              subtitle={review.optimizedPublication.summary || t('investInBusinessToday', { business: form.business_name || t('thisBusiness') })}
-              location={form.location || profile?.country || t('locationPending')}
-              category={form.industry || t('business')}
-              rate={form.investment_offer ? `${form.investment_offer}% EA` : undefined}
-              images={projectPhotos}
-              metrics={buildPreviewMetrics(form)}
-              sections={buildPublicationSections(form, review.optimizedPublication)}
-              primaryActionLabel={publishing ? t('publishing') : t('publish')}
-              secondaryActionLabel={t('editDetails')}
-              onPrimaryAction={publishProject}
-              onSecondaryAction={() => setReview(null)}
-              onBack={() => setReview(null)}
-              primaryDisabled={publishing}
-              secondaryDisabled={publishing}
-            />
-          </div>
-
-          <DesktopAppShell
-            title={review.optimizedPublication.title || review.optimizedPublication.tittle || t('investmentOpportunityTitle', { business: form.business_name })}
-            subtitle={review.optimizedPublication.summary || t('investInBusinessToday', { business: form.business_name || t('thisBusiness') })}
-            eyebrow={t('publicationReview')}
-            maxWidthClassName="max-w-none"
-          >
-            <section className="grid grid-cols-[minmax(0,1fr)_420px] gap-6">
-              <DesktopSectionCard title={t('optimizedInvestorStory')} subtitle={t('optimizedInvestorStorySubtitle')}>
-                <div className="space-y-5">
-                  <div
-                    className="h-[320px] overflow-hidden rounded-[24px] bg-[#F1ECFF] bg-cover bg-center shadow-[0_24px_58px_rgba(21,28,44,0.10)]"
-                    style={{ backgroundImage: projectPhotos[0] ? `url(${JSON.stringify(projectPhotos[0])})` : undefined }}
-                  />
-                  <div className="grid grid-cols-3 gap-3">
-                    {buildPreviewMetrics(form).map((metric) => (
-                      <div key={metric.label} className="rounded-2xl border border-[#E9ECF4] bg-[#FAFBFF] p-4">
-                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{metric.label}</p>
-                        <p className="mt-2 text-lg font-bold tracking-[-0.04em] text-[#111827]">{metric.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="space-y-4">
-                    {buildPublicationSections(form, review.optimizedPublication).slice(0, 4).map((section) => (
-                      <div key={section.title} className="rounded-2xl border border-[#E9ECF4] bg-white p-4">
-                        <h3 className="text-sm font-bold text-[#111827]">{section.title}</h3>
-                        <p className="mt-2 text-sm leading-6 text-[#66728A]">{section.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </DesktopSectionCard>
-              <DesktopSectionCard title={t('publishControls')} subtitle={t('publishControlsSubtitle')}>
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={publishProject}
-                    disabled={publishing}
-                    className="h-12 w-full rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
-                  >
-                    {publishing ? t('publishing') : t('publishProject')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setReview(null)}
-                    disabled={publishing}
-                    className="h-12 w-full rounded-2xl border border-[#D9CCFF] bg-white text-sm font-bold text-[#6B39F4] transition hover:bg-[#F8F5FF] disabled:opacity-60"
-                  >
-                    {t('editDetails')}
-                  </button>
-                </div>
-              </DesktopSectionCard>
-            </section>
-          </DesktopAppShell>
-        </>
-      ) : (
-      <>
       <DesktopAppShell
-        title={t('publishProject')}
-        subtitle={t('publishSubtitle')}
-        eyebrow={t('guidedPublish')}
+        title="Set up your InvestApp listing"
+        subtitle="It is easy to create a great listing. Let us start with your business address."
+        eyebrow="Step 1 of 8"
         maxWidthClassName="max-w-none"
       >
-        <section className="grid grid-cols-3 gap-4">
-          <DesktopMetricCard label={t('progress')} value={`${progress}%`} detail={t('stepProgress', { current: stepIndex + 1, total: steps.length })} tone="purple" />
-          <DesktopMetricCard label={t('media')} value={projectPhotos.length + projectVideos.length} detail={t('assetsAttached')} tone="blue" />
-          <DesktopMetricCard label={t('draft')} value={draftId || savedDraft ? t('saved') : t('new')} detail={t('publicationWorkspace')} tone={draftId || savedDraft ? 'green' : 'amber'} />
-        </section>
+        <div
+          style={{ fontFamily: desktopFontFamily }}
+          className="grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+        >
+          <section className="flex flex-col justify-center">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#2E7CF6]">Business setup</p>
+            <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+              Set your business address
+            </h2>
+            <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+              Start by selecting the exact address of your venture. We will prefill the structured
+              fields for country, unit, street, locality, state, and postcode.
+            </p>
 
-        <section className="grid grid-cols-[280px_minmax(0,1fr)_340px] gap-6">
-          <DesktopSectionCard title={t('steps')} subtitle={t('stepsSubtitle')}>
-            <div className="space-y-2">
-              {steps.map((step, index) => (
-                <button
-                  key={`desktop-step-${step}`}
-                  type="button"
-                  onClick={() => setStepIndex(index)}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
-                    index === stepIndex ? 'bg-[#F1ECFF] text-[#6B39F4]' : 'text-[#59657D] hover:bg-[#F8F9FB]'
-                  }`}
-                >
-                  <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-xs font-bold shadow-[0_8px_18px_rgba(21,28,44,0.05)]">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-bold">{stepLabels[index] ?? step}</span>
-                </button>
-              ))}
+            <button
+              type="button"
+              onClick={() => setIsAddressModalOpen(true)}
+              className="mt-10 flex h-[68px] w-full max-w-xl items-center gap-3 rounded-full border border-[#CCD9E8] bg-white px-6 text-left text-lg text-[#0B1325] shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition hover:border-[#2E7CF6]/50"
+            >
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EAF3FF] text-[#2E7CF6]">
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+              </span>
+              <span className="truncate">
+                {address.formatted_address || 'Enter your business address'}
+              </span>
+            </button>
+
+            <div className="mt-6 text-sm text-[#5D6A7F]">
+              {checkingProject ? 'Checking your profile status...' : null}
+              {!checkingProject && hasExistingProject
+                ? 'You already have a published project. Manage updates from Portfolio.'
+                : null}
+              {savingDraft ? 'Saving your responses...' : null}
+              {!checkingProject && !hasExistingProject && !savingDraft && isAddressValid(address)
+                ? 'Address details are complete.'
+                : null}
             </div>
-          </DesktopSectionCard>
 
-          <DesktopSectionCard
-            title={currentStep}
-            subtitle={t('currentStepSubtitle')}
-          >
-            {checkingProject ? (
-              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-5 text-sm font-semibold text-[#66728A]">
-                {t('checkingCurrentBusiness')}
-              </div>
-            ) : null}
-            {!checkingProject && hasExistingProject ? (
-              <div className="rounded-2xl border border-[#D9CCFF] bg-[#F8F5FF] px-4 py-5 text-sm font-semibold leading-6 text-[#5B2FF4]">
-                {t('existingProjectNotice')}
-                <button
-                  type="button"
-                  onClick={() => router.push('/portfolio')}
-                  className="mt-4 h-11 rounded-xl bg-[#6B39F4] px-4 text-sm font-bold text-white"
-                >
-                  {t('goToPortfolio')}
-                </button>
-              </div>
-            ) : null}
-            {!hasExistingProject ? (
-              <div className="space-y-5">
-                <div className="h-2 overflow-hidden rounded-full bg-[#ECEFFD]">
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                {renderStep()}
-                <div className="grid grid-cols-4 gap-3">
-                  <button type="button" onClick={goBack} disabled={stepIndex === 0 || finalizing || savingDraft} className={secondaryButtonClassName}>
-                    {t('previous')}
-                  </button>
-                  <button type="button" onClick={() => void saveDraft()} disabled={savingDraft || finalizing || checkingProject} className={secondaryButtonClassName}>
-                    {savingDraft ? t('saving') : t('saveDraft')}
-                  </button>
-                  {stepIndex === steps.length - 1 ? (
-                    <button type="button" onClick={finalizePrompt} disabled={finalizing || checkingProject} className={`${primaryButtonClassName} col-span-2`}>
-                      {t('finish')}
-                    </button>
-                  ) : (
-                    <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
-                      {t('next')}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </DesktopSectionCard>
+            {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
 
-          <DesktopSectionCard title={t('listingHealth')} subtitle={t('listingHealthSubtitle')}>
-            <div className="space-y-3">
-              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('business')}</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{form.business_name || t('pendingName')}</p>
-              </div>
-              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('capital')}</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{form.capital_needed || t('pendingAmount')}</p>
-              </div>
-              <div className="rounded-2xl bg-[#F8F9FB] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A95A8]">{t('photos')}</p>
-                <p className="mt-1 text-sm font-bold text-[#111827]">{t('uploadedCount', { count: projectPhotos.length })}</p>
-              </div>
-              {savedDraft && !draftId && !review ? (
-                <button
-                  type="button"
-                  onClick={() => resumeDraft(savedDraft)}
-                  className="h-11 w-full rounded-xl border border-[#D9CCFF] bg-[#F8F5FF] text-sm font-bold text-[#6B39F4] transition hover:bg-[#F1ECFF]"
-                >
-                  {t('resumeSavedDraft')}
-                </button>
-              ) : null}
-              {status ? (
-                <div className="rounded-2xl border border-[#E9ECF4] bg-[#FAFBFF] px-4 py-3 text-xs leading-5 text-[#66728A]">
-                  {status}
-                </div>
-              ) : null}
+            <div className="mt-12 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={!canContinue}
+                className="h-12 rounded-full bg-[linear-gradient(135deg,#2E7CF6_0%,#1F6CF4_45%,#0FA47A_100%)] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(32,97,241,0.24)] transition disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Continue
+              </button>
+              <p className="text-xs text-[#73839A]">Enabled once all required address fields are valid.</p>
             </div>
-          </DesktopSectionCard>
-        </section>
+          </section>
+
+          <section className="relative flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="relative h-full w-full max-w-[620px] overflow-hidden rounded-[38px] border border-[#DFE9F5] bg-[linear-gradient(180deg,#EEF5FF_0%,#ECF3FF_36%,#EAF6F2_100%)] p-10"
+            >
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-x-9 top-9 h-[180px] rounded-[24px] bg-white/55 blur-2xl"
+              />
+
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative mx-auto mt-8 h-[420px] w-[420px]"
+              >
+                <Image
+                  src="/assets/publish/shop.svg"
+                  alt="Business address onboarding illustration"
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </motion.div>
+
+              <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-[#DCE8F6] bg-white/88 p-4 text-sm text-[#3C4D66] backdrop-blur-sm">
+                <p className="font-semibold text-[#0F172A]">Address preview</p>
+                <p className="mt-1 truncate">{address.formatted_address || 'Your selected address will appear here.'}</p>
+              </div>
+            </motion.div>
+          </section>
+        </div>
       </DesktopAppShell>
+
+      <AnimatePresence>
+        {isAddressModalOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[90] hidden items-center justify-center bg-[#0B1325]/40 px-8 backdrop-blur-[2px] lg:flex"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-3xl rounded-[30px] border border-[#E4ECF6] bg-white p-7 shadow-[0_36px_80px_rgba(15,23,42,0.24)]"
+              initial={{ opacity: 0, y: 30, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2E7CF6]">Address modal</p>
+                  <h3 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-[#0F172A]">
+                    Enter your business address
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D4DEEA] text-[#64748B] transition hover:border-[#A6B6C9] hover:text-[#0F172A]"
+                  aria-label="Close address modal"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m6 6 12 12" />
+                    <path d="m18 6-12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setSearchQuery(nextValue);
+                    if (nextValue.trim().length < 3) setSearchResults([]);
+                    setIsSearching(nextValue.trim().length >= 3);
+                    setStatus('');
+                  }}
+                  placeholder="Search your address"
+                  className={inputClassName}
+                />
+
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={geolocationLoading}
+                  className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#CDE4D8] bg-[#ECF9F2] px-4 text-sm font-semibold text-[#0B7A52] transition hover:bg-[#E0F6EB] disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="7" />
+                    <path d="M12 2v3" />
+                    <path d="M12 19v3" />
+                    <path d="m5 5 2 2" />
+                    <path d="m17 17 2 2" />
+                  </svg>
+                  {geolocationLoading ? 'Resolving your location...' : 'Use my location'}
+                </button>
+              </div>
+
+              <div className="mt-4 max-h-44 overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE]">
+                {isSearching ? <p className="px-4 py-3 text-sm text-[#64748B]">Searching addresses...</p> : null}
+                {!isSearching && searchResults.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-[#94A3B8]">
+                    Type at least 3 characters to search for matching addresses.
+                  </p>
+                ) : null}
+                {!isSearching && searchResults.length > 0
+                  ? searchResults.map((result) => (
+                      <button
+                        key={`${result.provider_place_id}-${result.formatted_address}`}
+                        type="button"
+                        onClick={() => applyAddressRecord(result, 'manual_search')}
+                        className="w-full border-b border-[#E9F0F8] px-4 py-3 text-left text-sm text-[#0F172A] transition hover:bg-[#EDF4FF] last:border-b-0"
+                      >
+                        {result.formatted_address}
+                      </button>
+                    ))
+                  : null}
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <input
+                  className={inputClassName}
+                  placeholder="Country"
+                  value={address.country}
+                  onChange={(event) => updateField('country', event.target.value)}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="Unit"
+                  value={address.unit}
+                  onChange={(event) => updateField('unit', event.target.value)}
+                />
+                <input
+                  className={`${inputClassName} col-span-2`}
+                  placeholder="Street address"
+                  value={address.street_address}
+                  onChange={(event) => updateField('street_address', event.target.value)}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="Locality"
+                  value={address.locality}
+                  onChange={(event) => updateField('locality', event.target.value)}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="State"
+                  value={address.state}
+                  onChange={(event) => updateField('state', event.target.value)}
+                />
+                <input
+                  className={inputClassName}
+                  placeholder="Postcode"
+                  value={address.postcode}
+                  onChange={(event) => updateField('postcode', event.target.value)}
+                />
+              </div>
+
+              <div className="mt-6 flex items-center justify-between gap-3">
+                <p className="text-xs text-[#64748B]">
+                  Required: country, street, locality, state, postcode, and formatted address.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={!canContinue}
+                  className="h-11 rounded-full bg-[linear-gradient(135deg,#2E7CF6_0%,#1F6CF4_45%,#0FA47A_100%)] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(32,97,241,0.24)] transition disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
         <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-28 top-56 h-64 w-64 rounded-full bg-[#B9A8FF]/16 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          <PageBackButton fallbackHref="/feed" label={t('back')} />
+          <PageBackButton fallbackHref="/feed" label="Back" />
 
           <header className="flex flex-col gap-2">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-              {t('guidedPublish')}
+              Guided flow v2
             </p>
-            <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">
-              {t('publishProject')}
-            </h1>
+            <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">Publish project</h1>
             <p className="text-sm leading-6 text-[#7B879C]">
-              {t('publishSubtitle')}
+              Mobile flow will be styled in a separate iteration.
             </p>
           </header>
 
-          {checkingProject ? (
-            <SectionSurface className="text-sm text-[#667085]">{t('checkingCurrentBusiness')}</SectionSurface>
-          ) : null}
-
-          {!checkingProject && hasExistingProject ? (
-            <SectionSurface className="text-sm leading-6 text-[#667085]">
-              {t('existingProjectNotice')}
-              <button
-                type="button"
-                onClick={() => router.push('/portfolio')}
-                className={`${primaryButtonClassName} mt-4 w-full`}
-              >
-                {t('goToPortfolio')}
-              </button>
-            </SectionSurface>
-          ) : null}
-
-          {!hasExistingProject && savedDraft && !draftId && !review ? (
-            <SectionSurface className="text-sm leading-6 text-[#667085]">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                {t('savedDraft')}
-              </p>
-              <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                {t('resumePublication')}
-              </h2>
-              <p className="mt-2">
-                {t('resumePublicationDescription')}
-              </p>
-              <button
-                type="button"
-                onClick={() => resumeDraft(savedDraft)}
-                className={`${primaryButtonClassName} mt-4 w-full`}
-              >
-                {t('resume')}
-              </button>
-            </SectionSurface>
-          ) : null}
-
-          {!hasExistingProject && !review ? (
-            <SectionSurface>
-              <div className="mb-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                      {t('stepProgress', { current: stepIndex + 1, total: steps.length })}
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                      {currentStep}
-                    </h2>
-                  </div>
-                  <span className="rounded-full border border-[#DDD3FF] bg-[#F7F2FF] px-3 py-1 text-xs font-semibold text-[#6B39F4]">
-                    {progress}%
-                  </span>
-                </div>
-                <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#ECEFFD]">
-                  <div
-                    className="h-full rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-
-              {renderStep()}
-
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={goBack}
-                  disabled={stepIndex === 0 || finalizing || savingDraft}
-                  className={secondaryButtonClassName}
-                >
-                  {t('previous')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void saveDraft()}
-                  disabled={savingDraft || finalizing || checkingProject}
-                  className={secondaryButtonClassName}
-                >
-                  {savingDraft ? t('saving') : t('saveDraft')}
-                </button>
-                {stepIndex === steps.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={finalizePrompt}
-                    disabled={finalizing || checkingProject}
-                    className={`${primaryButtonClassName} col-span-2`}
-                  >
-                    {t('finish')}
-                  </button>
-                ) : (
-                  <button type="button" onClick={goNext} className={`${primaryButtonClassName} col-span-2`}>
-                    {t('next')}
-                  </button>
-                )}
-              </div>
-            </SectionSurface>
-          ) : null}
-
-          {status ? (
-            <SectionSurface className="text-xs leading-6 text-[#7B879C]">{status}</SectionSurface>
-          ) : null}
+          <section className={mobileSurfaceClassName}>
+            <p className="text-sm leading-6 text-[#667085]">
+              Web step 1 was implemented first. Mobile styling will be delivered next.
+            </p>
+          </section>
         </div>
       </main>
-      </>
-      )}
 
-      {!review ? <div className="lg:hidden"><BottomNav /></div> : null}
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </>
   );
 }
