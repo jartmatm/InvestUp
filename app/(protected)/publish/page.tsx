@@ -91,6 +91,13 @@ const businessCategories: BusinessCategory[] = [
   { id: 'tourism_hospitality', label: 'Tourism & Hospitality' },
 ];
 
+const operatingTimeOptions = [
+  '< 5 months',
+  '5 months - 1 year',
+  '1 - 3 years',
+  '> 5 years',
+] as const;
+
 const isAddressValid = (address: PublishAddressStepFields) =>
   requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
 
@@ -371,9 +378,10 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
+  const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
 
   const canContinueStep1 = useMemo(
     () =>
@@ -402,6 +410,15 @@ export default function PublishPage() {
       !hasExistingProject &&
       !savingDraft,
     [businessName, checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep5 = useMemo(
+    () =>
+      selectedOperatingTime.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [selectedOperatingTime, checkingProject, hasExistingProject, savingDraft]
   );
 
   useEffect(() => {
@@ -594,8 +611,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep4) return;
-    setStatus('Step 4 ready. Continue to the next step.');
+    if (currentStep === 4) {
+      if (!canContinueStep4) return;
+      setCurrentStep(5);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep5) return;
+    setStatus('Step 5 ready. Continue to the next step.');
   };
 
   const handleSaveAndExit = async () => {
@@ -646,7 +670,7 @@ export default function PublishPage() {
           {currentStep > 1 ? (
             <button
               type="button"
-              onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4) : 1))}
+              onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5) : 1))}
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
             >
@@ -699,7 +723,7 @@ export default function PublishPage() {
                   Choose one category to continue.
                 </p>
               </>
-            ) : (
+            ) : currentStep === 4 ? (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
                   Great, now let&apos;s name your business
@@ -714,6 +738,15 @@ export default function PublishPage() {
                   placeholder="Enter your business name"
                   className={`${inputClassName} mt-8 max-w-xl text-base`}
                 />
+              </>
+            ) : (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  How long has your business been operating?
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  Choose the option that best matches your current stage.
+                </p>
               </>
             )}
 
@@ -744,6 +777,13 @@ export default function PublishPage() {
               businessName.trim().length > 0
                 ? `Business name: ${businessName.trim()}.`
                 : null}
+              {currentStep === 5 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              selectedOperatingTime
+                ? `Operating time: ${selectedOperatingTime}.`
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -759,7 +799,9 @@ export default function PublishPage() {
                       ? !canContinueStep2
                       : currentStep === 3
                         ? !canContinueStep3
-                        : !canContinueStep4
+                        : currentStep === 4
+                          ? !canContinueStep4
+                          : !canContinueStep5
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -795,6 +837,33 @@ export default function PublishPage() {
                         <BusinessCategoryIcon id={category.id} />
                       </div>
                       <p className="text-xs font-medium leading-4 text-[#0B1325]">{category.label}</p>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            ) : currentStep === 5 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-[620px] space-y-3"
+              >
+                {operatingTimeOptions.map((option) => {
+                  const isSelected = selectedOperatingTime === option;
+                  return (
+                    <motion.button
+                      key={option}
+                      type="button"
+                      onClick={() => setSelectedOperatingTime(option)}
+                      whileHover={{ y: -1 }}
+                      whileTap={{ scale: 0.995 }}
+                      className={`w-full rounded-2xl border px-6 py-5 text-left text-lg font-medium transition ${
+                        isSelected
+                          ? 'border-[#6B39F4] bg-[#F5F0FF] shadow-[0_16px_28px_rgba(107,57,244,0.14)]'
+                          : 'border-[#DCE6F1] bg-white hover:border-[#C8D6E7] hover:bg-[#FCFDFF]'
+                      }`}
+                    >
+                      {option}
                     </motion.button>
                   );
                 })}
