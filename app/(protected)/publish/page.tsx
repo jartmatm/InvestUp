@@ -41,6 +41,7 @@ type PublishAddressStepFields = {
 type BusinessCategory = {
   id: string;
   label: string;
+  icon: string;
 };
 
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
@@ -74,21 +75,21 @@ const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
 
 const businessCategories: BusinessCategory[] = [
-  { id: 'restaurant', label: 'Restaurant' },
-  { id: 'ecommerce', label: 'E-commerce' },
-  { id: 'saas', label: 'SaaS' },
-  { id: 'retail', label: 'Retail' },
-  { id: 'health', label: 'Health & Wellness' },
-  { id: 'education', label: 'Education' },
-  { id: 'fintech', label: 'Fintech' },
-  { id: 'real_estate', label: 'Real Estate' },
-  { id: 'travel', label: 'Travel' },
-  { id: 'logistics', label: 'Logistics' },
-  { id: 'manufacturing', label: 'Manufacturing' },
-  { id: 'creative', label: 'Creative Studio' },
-  { id: 'agritech', label: 'AgriTech' },
-  { id: 'beauty', label: 'Beauty' },
-  { id: 'other', label: 'Other' },
+  { id: 'technology', label: 'Technology', icon: '💻' },
+  { id: 'health_wellness', label: 'Health & Wellness', icon: '🩺' },
+  { id: 'finance_insurance', label: 'Finance & Insurance', icon: '🏦' },
+  { id: 'education', label: 'Education', icon: '🎓' },
+  { id: 'food_gastronomy', label: 'Food & Gastronomy', icon: '🍽️' },
+  { id: 'retail', label: 'Retail', icon: '🛍️' },
+  { id: 'real_estate', label: 'Real Estate', icon: '🏠' },
+  { id: 'transport_logistics', label: 'Transport & Logistics', icon: '🚚' },
+  { id: 'entertainment_media', label: 'Entertainment & Media', icon: '🎬' },
+  { id: 'construction_architecture', label: 'Construction & Architecture', icon: '🏗️' },
+  { id: 'professional_services', label: 'Professional Services', icon: '💼' },
+  { id: 'manufacturing_industry', label: 'Manufacturing & Industry', icon: '🏭' },
+  { id: 'agriculture_livestock', label: 'Agriculture & Livestock', icon: '🌾' },
+  { id: 'fashion_beauty', label: 'Fashion & Beauty', icon: '💄' },
+  { id: 'tourism_hospitality', label: 'Tourism & Hospitality', icon: '✈️' },
 ];
 
 const isAddressValid = (address: PublishAddressStepFields) =>
@@ -582,7 +583,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="grid w-full grid-cols-3 gap-3"
+                className="mt-12 grid w-full max-w-[620px] grid-cols-3 gap-2"
               >
                 {businessCategories.map((category) => {
                   const isSelected = selectedBusinessCategory === category.label;
@@ -593,16 +594,16 @@ export default function PublishPage() {
                       onClick={() => setSelectedBusinessCategory(category.label)}
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.98 }}
-                      className={`rounded-2xl border px-4 py-5 text-left transition ${
+                      className={`rounded-xl border px-3 py-3 text-left transition ${
                         isSelected
                           ? 'border-[#6B39F4] bg-[#F4EFFF] shadow-[0_14px_30px_rgba(107,57,244,0.16)]'
                           : 'border-[#DCE6F1] bg-white hover:border-[#C8D6E7]'
                       }`}
                     >
-                      <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-[#263444]">
-                        <span className="text-sm font-semibold">{category.label.charAt(0)}</span>
+                      <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#EEF3FB] text-base">
+                        <span aria-hidden="true">{category.icon}</span>
                       </div>
-                      <p className="text-sm font-medium text-[#0B1325]">{category.label}</p>
+                      <p className="text-xs font-medium leading-4 text-[#0B1325]">{category.label}</p>
                     </motion.button>
                   );
                 })}
