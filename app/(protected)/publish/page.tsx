@@ -394,6 +394,14 @@ export default function PublishPage() {
           className="grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           <section className="flex flex-col justify-center">
+            <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+              Set your business address
+            </h2>
+            <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+              Start by selecting the exact address of your venture. We will prefill the structured
+              fields for country, unit, street, locality, state, and postcode.
+            </p>
+
             <button
               type="button"
               onClick={() => setIsAddressModalOpen(true)}
@@ -432,7 +440,6 @@ export default function PublishPage() {
               >
                 Continue
               </button>
-              <p className="text-xs text-[#73839A]">Enabled once all required address fields are valid.</p>
             </div>
           </section>
 
@@ -441,18 +448,12 @@ export default function PublishPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.55, ease: 'easeOut' }}
-              className="relative h-full w-full max-w-[620px] overflow-hidden rounded-[38px] border border-[#DFE9F5] bg-[linear-gradient(180deg,#EEF5FF_0%,#ECF3FF_36%,#EAF6F2_100%)] p-10"
+              className="relative h-full w-full overflow-visible"
             >
               <motion.div
                 animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 5.6, repeat: Infinity, ease: 'easeInOut' }}
-                className="absolute inset-x-9 top-9 h-[180px] rounded-[24px] bg-white/55 blur-2xl"
-              />
-
-              <motion.div
-                animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative mx-auto mt-4 h-[460px] w-[300px]"
+                className="relative mx-auto h-[920px] w-[600px]"
               >
                 <Lottie
                   animationData={publishAddressStepAnimation}
@@ -461,11 +462,6 @@ export default function PublishPage() {
                   className="h-full w-full"
                 />
               </motion.div>
-
-              <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-[#DCE8F6] bg-white/88 p-4 text-sm text-[#3C4D66] backdrop-blur-sm">
-                <p className="font-semibold text-[#0F172A]">Address preview</p>
-                <p className="mt-1 truncate">{address.formatted_address || 'Your selected address will appear here.'}</p>
-              </div>
             </motion.div>
           </section>
         </div>
