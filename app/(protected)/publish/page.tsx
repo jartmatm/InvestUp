@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
-import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
+import publishStep2Animation from '@/components/animations/publish-step2.json';
 import PageBackButton from '@/components/PageBackButton';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -199,8 +199,8 @@ export default function PublishPage() {
   const [geolocationLoading, setGeolocationLoading] = useState(false);
 
   const canContinue = useMemo(
-    () => isAddressValid(address) && !checkingProject && !hasExistingProject && !savingDraft,
-    [address, checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject && !savingDraft,
+    [checkingProject, hasExistingProject, savingDraft]
   );
 
   useEffect(() => {
@@ -373,8 +373,28 @@ export default function PublishPage() {
 
   const handleContinue = () => {
     if (!canContinue) return;
-    setStatus('Step 1 saved. Ready for step 2.');
-    setIsAddressModalOpen(false);
+    setStatus('Step 2 ready. Continue to the next step.');
+  };
+
+  const handleSaveAndExit = async () => {
+    if (!user?.id || rolSeleccionado !== 'emprendedor' || hasExistingProject) {
+      router.push('/feed');
+      return;
+    }
+
+    setSavingDraft(true);
+    const payload = buildDraftPayload(address);
+    await saveCurrentUserPublicationDraft(getAccessToken, {
+      id: draftId,
+      promptJson: payload.promptJson,
+      promptText: payload.promptText,
+      metadata: {
+        ...payload.metadata,
+        step: 'entrepreneur_business_intro_v2',
+      },
+    });
+    setSavingDraft(false);
+    router.push('/feed');
   };
 
   if (rolSeleccionado !== 'emprendedor') {
@@ -391,32 +411,24 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className="relative grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
+          <button
+            type="button"
+            onClick={() => void handleSaveAndExit()}
+            className="absolute right-10 top-8 h-10 rounded-full border border-black bg-transparent px-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+          >
+            Save and exit
+          </button>
+
           <section className="flex flex-col justify-center">
             <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
-              Set your business address
+              Tell us about your entrepreneur business
             </h2>
             <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
-              Start by selecting the exact address of your venture. We will prefill the structured
-              fields for country, unit, street, locality, state, and postcode.
+              In this step, we will ask you which type of business you have and if investors will fund
+              the entire opportunity or part of it. Then share the location and how many guests can stay.
             </p>
-
-            <button
-              type="button"
-              onClick={() => setIsAddressModalOpen(true)}
-              className="mt-10 flex h-[68px] w-full max-w-xl items-center gap-3 rounded-full border border-[#CCD9E8] bg-white px-6 text-left text-lg text-[#0B1325] shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition hover:border-[#6B39F4]/50"
-            >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EAF3FF] text-[#2E7CF6]">
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-              </span>
-              <span className="truncate">
-                {address.formatted_address || 'Enter your business address'}
-              </span>
-            </button>
 
             <div className="mt-6 text-sm text-[#5D6A7F]">
               {checkingProject ? 'Checking your profile status...' : null}
@@ -453,10 +465,10 @@ export default function PublishPage() {
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative mx-auto h-[920px] w-[600px]"
+                className="relative mx-auto h-[860px] w-[560px]"
               >
                 <Lottie
-                  animationData={publishAddressStepAnimation}
+                  animationData={publishStep2Animation}
                   loop
                   autoplay
                   className="h-full w-full"
