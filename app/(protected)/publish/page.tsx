@@ -760,7 +760,7 @@ export default function PublishPage() {
             </button>
           ) : null}
 
-          <section className="flex flex-col justify-center">
+          <section className={`${currentStep >= 7 ? 'hidden' : 'flex flex-col justify-center'}`}>
             {currentStep === 1 ? (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
@@ -943,7 +943,11 @@ export default function PublishPage() {
             </div>
           </section>
 
-          <section className="relative flex items-center justify-center">
+          <section
+            className={`relative flex items-center justify-center ${
+              currentStep >= 7 ? 'col-span-2 justify-center pt-20' : ''
+            }`}
+          >
             {currentStep === 3 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -1008,6 +1012,15 @@ export default function PublishPage() {
                 transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="w-full max-w-[660px] space-y-4"
               >
+                <div className="text-center">
+                  <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
+                    Let&apos;s capture what your business does and your monthly performance
+                  </h2>
+                  <p className="mx-auto mt-4 max-w-2xl text-[1.12rem] leading-7 text-[#4B5B72]">
+                    These answers help us build a stronger AI-generated publication for investors.
+                  </p>
+                </div>
+
                 <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
                   <p className="text-sm font-semibold text-[#0B1325]">What do you sell exactly?</p>
                   <p className="mt-1 text-xs text-[#5D6A7F]">
@@ -1104,6 +1117,16 @@ export default function PublishPage() {
                     </label>
                   </div>
                 </div>
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    disabled={!canContinueStep7}
+                    className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Continue
+                  </button>
+                </div>
               </motion.div>
             ) : currentStep === 8 ? (
               <motion.div
@@ -1112,6 +1135,15 @@ export default function PublishPage() {
                 transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="w-full max-w-[660px] space-y-4"
               >
+                <div className="text-center">
+                  <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
+                    Define your investment round details
+                  </h2>
+                  <p className="mx-auto mt-4 max-w-2xl text-[1.12rem] leading-7 text-[#4B5B72]">
+                    Share funding amount, usage, interest rate, and closing date so investors can evaluate your offer clearly.
+                  </p>
+                </div>
+
                 <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
                   <label className="block">
                     <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
@@ -1183,6 +1215,16 @@ export default function PublishPage() {
                       className={`${inputClassName} mt-3 text-sm`}
                     />
                   </label>
+                </div>
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    disabled={!canContinueStep8}
+                    className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Continue
+                  </button>
                 </div>
               </motion.div>
             ) : (
