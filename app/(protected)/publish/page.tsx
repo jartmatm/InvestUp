@@ -379,7 +379,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -392,6 +392,9 @@ export default function PublishPage() {
   const [fundUsage, setFundUsage] = useState<string>('');
   const [interestRateEA, setInterestRateEA] = useState<string>('');
   const [roundCloseDate, setRoundCloseDate] = useState<string>('');
+  const [aboutFounder, setAboutFounder] = useState<string>('');
+  const [aboutTeam, setAboutTeam] = useState<string>('');
+  const [businessAchievements, setBusinessAchievements] = useState<string>('');
 
   const canContinueStep1 = useMemo(
     () =>
@@ -472,6 +475,24 @@ export default function PublishPage() {
       fundUsage,
       interestRateEA,
       roundCloseDate,
+      checkingProject,
+      hasExistingProject,
+      savingDraft,
+    ]
+  );
+
+  const canContinueStep9 = useMemo(
+    () =>
+      aboutFounder.trim().length > 0 &&
+      aboutTeam.trim().length > 0 &&
+      businessAchievements.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [
+      aboutFounder,
+      aboutTeam,
+      businessAchievements,
       checkingProject,
       hasExistingProject,
       savingDraft,
@@ -696,8 +717,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep8) return;
-    setStatus('Investment round details captured. Continue to the next section.');
+    if (currentStep === 8) {
+      if (!canContinueStep8) return;
+      setCurrentStep(9);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep9) return;
+    setStatus('Founder and team details captured. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -750,7 +778,8 @@ export default function PublishPage() {
               type="button"
               onClick={() =>
                 setCurrentStep(
-                  (prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8) : 1)
+                  (prev) =>
+                    (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) : 1)
                 )
               }
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
@@ -911,6 +940,13 @@ export default function PublishPage() {
               canContinueStep8
                 ? 'Investment round details are complete.'
                 : null}
+              {currentStep === 9 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              canContinueStep9
+                ? 'Founder and team details are complete.'
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -934,7 +970,9 @@ export default function PublishPage() {
                               ? !canContinueStep6
                               : currentStep === 7
                                 ? !canContinueStep7
-                                : !canContinueStep8
+                                : currentStep === 8
+                                  ? !canContinueStep8
+                                  : !canContinueStep9
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1221,6 +1259,80 @@ export default function PublishPage() {
                     type="button"
                     onClick={handleContinue}
                     disabled={!canContinueStep8}
+                    className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </motion.div>
+            ) : currentStep === 9 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-[700px] space-y-4"
+              >
+                <div className="text-center">
+                  <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
+                    Tell us about you and your team
+                  </h2>
+                  <p className="mx-auto mt-4 max-w-2xl text-[1.12rem] leading-7 text-[#4B5B72]">
+                    This helps investors trust the people behind the business.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <label className="block">
+                    <p className="text-sm font-semibold text-[#0B1325]">
+                      Tell us about yourself
+                    </p>
+                    <p className="mt-1 text-xs text-[#5D6A7F]">
+                      Who you are, brief summary, studies, and relevant experience.
+                    </p>
+                    <textarea
+                      value={aboutFounder}
+                      onChange={(event) => setAboutFounder(event.target.value)}
+                      placeholder="Example: I am a mechanical engineer with 8 years of experience in food operations and scaling SMEs."
+                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                    />
+                  </label>
+
+                  <label className="mt-5 block">
+                    <p className="text-sm font-semibold text-[#0B1325]">
+                      Tell us about your team
+                    </p>
+                    <p className="mt-1 text-xs text-[#5D6A7F]">
+                      Number of employees, roles, and key capabilities.
+                    </p>
+                    <textarea
+                      value={aboutTeam}
+                      onChange={(event) => setAboutTeam(event.target.value)}
+                      placeholder="Example: 12 team members across operations, sales, and finance, with strengths in logistics and customer retention."
+                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                    />
+                  </label>
+                </div>
+
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <label className="block">
+                    <p className="text-sm font-semibold text-[#0B1325]">Achievements</p>
+                    <p className="mt-1 text-xs text-[#5D6A7F]">
+                      Awards, recognitions, certifications, or key business milestones.
+                    </p>
+                    <textarea
+                      value={businessAchievements}
+                      onChange={(event) => setBusinessAchievements(event.target.value)}
+                      placeholder="Example: Winner of local startup challenge 2025 and ISO 9001 certified operations."
+                      className={`${inputClassName} mt-3 min-h-[100px] resize-none text-sm`}
+                    />
+                  </label>
+                </div>
+
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={handleContinue}
+                    disabled={!canContinueStep9}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Continue
