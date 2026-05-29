@@ -8,6 +8,7 @@ import Lottie from 'lottie-react';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
+import publishStep4NameAnimation from '@/components/animations/publish-step4-name.json';
 import publishStep10MediaAnimation from '@/components/animations/publish-step10-media.json';
 import publishStep2Animation from '@/components/animations/publish-step2.json';
 import publishStep6Animation from '@/components/animations/publish-step6.json';
@@ -1629,6 +1630,8 @@ export default function PublishPage() {
                     animationData={
                       currentStep === 1
                         ? publishAddressStepAnimation
+                        : currentStep === 4
+                          ? publishStep4NameAnimation
                         : currentStep === 10
                           ? publishStep10MediaAnimation
                         : currentStep === 6
