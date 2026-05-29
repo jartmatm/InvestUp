@@ -379,7 +379,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -388,6 +388,10 @@ export default function PublishPage() {
   const [monthlySales, setMonthlySales] = useState<string>('');
   const [averageTicket, setAverageTicket] = useState<string>('');
   const [monthlyClients, setMonthlyClients] = useState<string>('');
+  const [capitalRequiredUsd, setCapitalRequiredUsd] = useState<string>('');
+  const [fundUsage, setFundUsage] = useState<string>('');
+  const [interestRateEA, setInterestRateEA] = useState<string>('');
+  const [roundCloseDate, setRoundCloseDate] = useState<string>('');
 
   const canContinueStep1 = useMemo(
     () =>
@@ -448,6 +452,26 @@ export default function PublishPage() {
       monthlySales,
       averageTicket,
       monthlyClients,
+      checkingProject,
+      hasExistingProject,
+      savingDraft,
+    ]
+  );
+
+  const canContinueStep8 = useMemo(
+    () =>
+      Number(capitalRequiredUsd) > 0 &&
+      fundUsage.trim().length > 0 &&
+      Number(interestRateEA) > 0 &&
+      roundCloseDate.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [
+      capitalRequiredUsd,
+      fundUsage,
+      interestRateEA,
+      roundCloseDate,
       checkingProject,
       hasExistingProject,
       savingDraft,
@@ -665,8 +689,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep7) return;
-    setStatus('Financial details captured. Continue to the next section.');
+    if (currentStep === 7) {
+      if (!canContinueStep7) return;
+      setCurrentStep(8);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep8) return;
+    setStatus('Investment round details captured. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -719,7 +750,7 @@ export default function PublishPage() {
               type="button"
               onClick={() =>
                 setCurrentStep(
-                  (prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7) : 1)
+                  (prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8) : 1)
                 )
               }
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
@@ -809,13 +840,22 @@ export default function PublishPage() {
                   help you craft a strong title and description for investors.
                 </p>
               </>
-            ) : (
+            ) : currentStep === 7 ? (
               <>
                 <h2 className="max-w-xl text-[3.3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
                   Let&apos;s capture what your business does and your monthly performance
                 </h2>
                 <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
                   These answers help us build a stronger AI-generated publication for investors.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="max-w-xl text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Define your investment round details
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Share funding amount, usage, interest rate, and closing date so investors can evaluate your offer clearly.
                 </p>
               </>
             )}
@@ -864,6 +904,13 @@ export default function PublishPage() {
               canContinueStep7
                 ? 'Business details and financial metrics are complete.'
                 : null}
+              {currentStep === 8 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              canContinueStep8
+                ? 'Investment round details are complete.'
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -885,7 +932,9 @@ export default function PublishPage() {
                             ? !canContinueStep5
                             : currentStep === 6
                               ? !canContinueStep6
-                              : !canContinueStep7
+                              : currentStep === 7
+                                ? !canContinueStep7
+                                : !canContinueStep8
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1054,6 +1103,86 @@ export default function PublishPage() {
                       </div>
                     </label>
                   </div>
+                </div>
+              </motion.div>
+            ) : currentStep === 8 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-[660px] space-y-4"
+              >
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <label className="block">
+                    <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
+                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
+                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M14.8 8.5c-.7-.7-1.7-1-2.8-1-1.7 0-3 .9-3 2.2 0 1.2 1 1.8 2.7 2.2 1.9.4 3.3.9 3.3 2.5 0 1.5-1.4 2.4-3.3 2.4-1.3 0-2.5-.4-3.4-1.3" />
+                          <path d="M12 6.5v11" />
+                        </svg>
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={capitalRequiredUsd}
+                        onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                        placeholder="0"
+                        className="w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                      />
+                    </div>
+                  </label>
+
+                  <label className="mt-5 block">
+                    <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
+                    <textarea
+                      value={fundUsage}
+                      onChange={(event) => setFundUsage(event.target.value)}
+                      placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
+                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                    />
+                  </label>
+                </div>
+
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
+                  <div className="mt-4 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="range"
+                        min="1"
+                        max="60"
+                        step="0.5"
+                        value={interestRateEA || '1'}
+                        onChange={(event) => setInterestRateEA(event.target.value)}
+                        className="h-2 w-full cursor-pointer accent-[#6B39F4]"
+                      />
+                      <div className="w-[120px]">
+                        <input
+                          type="number"
+                          min="1"
+                          max="60"
+                          step="0.5"
+                          value={interestRateEA}
+                          onChange={(event) => setInterestRateEA(event.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-lg border border-[#DCE6F1] bg-white px-2 py-1.5 text-sm font-semibold text-[#0B1325] outline-none focus:border-[#6B39F4]"
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
+                  </div>
+
+                  <label className="mt-5 block">
+                    <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
+                    <input
+                      type="date"
+                      value={roundCloseDate}
+                      onChange={(event) => setRoundCloseDate(event.target.value)}
+                      className={`${inputClassName} mt-3 text-sm`}
+                    />
+                  </label>
                 </div>
               </motion.div>
             ) : (
