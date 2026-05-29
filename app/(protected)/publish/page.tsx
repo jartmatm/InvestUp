@@ -1,12 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
+import Lottie from 'lottie-react';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
+import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
 import PageBackButton from '@/components/PageBackButton';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -383,9 +384,9 @@ export default function PublishPage() {
   return (
     <>
       <DesktopAppShell
-        title="Set up your InvestApp listing"
-        subtitle="It is easy to create a great listing. Let us start with your business address."
-        eyebrow="Step 1 of 8"
+        title=""
+        subtitle=""
+        hideHeader
         maxWidthClassName="max-w-none"
       >
         <div
@@ -393,19 +394,10 @@ export default function PublishPage() {
           className="grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           <section className="flex flex-col justify-center">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#2E7CF6]">Business setup</p>
-            <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
-              Set your business address
-            </h2>
-            <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
-              Start by selecting the exact address of your venture. We will prefill the structured
-              fields for country, unit, street, locality, state, and postcode.
-            </p>
-
             <button
               type="button"
               onClick={() => setIsAddressModalOpen(true)}
-              className="mt-10 flex h-[68px] w-full max-w-xl items-center gap-3 rounded-full border border-[#CCD9E8] bg-white px-6 text-left text-lg text-[#0B1325] shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition hover:border-[#2E7CF6]/50"
+              className="mt-10 flex h-[68px] w-full max-w-xl items-center gap-3 rounded-full border border-[#CCD9E8] bg-white px-6 text-left text-lg text-[#0B1325] shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition hover:border-[#6B39F4]/50"
             >
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EAF3FF] text-[#2E7CF6]">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -436,7 +428,7 @@ export default function PublishPage() {
                 type="button"
                 onClick={handleContinue}
                 disabled={!canContinue}
-                className="h-12 rounded-full bg-[linear-gradient(135deg,#2E7CF6_0%,#1F6CF4_45%,#0FA47A_100%)] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(32,97,241,0.24)] transition disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Continue
               </button>
@@ -458,16 +450,15 @@ export default function PublishPage() {
               />
 
               <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative mx-auto mt-8 h-[420px] w-[420px]"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
+                className="relative mx-auto mt-4 h-[460px] w-[300px]"
               >
-                <Image
-                  src="/assets/publish/shop.svg"
-                  alt="Business address onboarding illustration"
-                  fill
-                  className="object-contain"
-                  priority
+                <Lottie
+                  animationData={publishAddressStepAnimation}
+                  loop
+                  autoplay
+                  className="h-full w-full"
                 />
               </motion.div>
 
@@ -614,7 +605,7 @@ export default function PublishPage() {
                   type="button"
                   onClick={handleContinue}
                   disabled={!canContinue}
-                  className="h-11 rounded-full bg-[linear-gradient(135deg,#2E7CF6_0%,#1F6CF4_45%,#0FA47A_100%)] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(32,97,241,0.24)] transition disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
                 </button>
