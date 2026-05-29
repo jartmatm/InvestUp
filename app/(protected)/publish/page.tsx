@@ -379,10 +379,15 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
+  const [businessOffer, setBusinessOffer] = useState<string>('');
+  const [businessDifferentiator, setBusinessDifferentiator] = useState<string>('');
+  const [monthlySales, setMonthlySales] = useState<string>('');
+  const [averageTicket, setAverageTicket] = useState<string>('');
+  const [monthlyClients, setMonthlyClients] = useState<string>('');
 
   const canContinueStep1 = useMemo(
     () =>
@@ -425,6 +430,28 @@ export default function PublishPage() {
   const canContinueStep6 = useMemo(
     () => !checkingProject && !hasExistingProject && !savingDraft,
     [checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep7 = useMemo(
+    () =>
+      businessOffer.trim().length > 0 &&
+      businessDifferentiator.trim().length > 0 &&
+      Number(monthlySales) > 0 &&
+      Number(averageTicket) > 0 &&
+      Number(monthlyClients) > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [
+      businessOffer,
+      businessDifferentiator,
+      monthlySales,
+      averageTicket,
+      monthlyClients,
+      checkingProject,
+      hasExistingProject,
+      savingDraft,
+    ]
   );
 
   useEffect(() => {
@@ -631,8 +658,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep6) return;
-    setStatus('Section 2 is ready. Continue to the next step.');
+    if (currentStep === 6) {
+      if (!canContinueStep6) return;
+      setCurrentStep(7);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep7) return;
+    setStatus('Financial details captured. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -684,7 +718,9 @@ export default function PublishPage() {
             <button
               type="button"
               onClick={() =>
-                setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6) : 1))
+                setCurrentStep(
+                  (prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7) : 1)
+                )
               }
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
@@ -754,7 +790,16 @@ export default function PublishPage() {
                   className={`${inputClassName} mt-8 max-w-xl text-base`}
                 />
               </>
-            ) : (
+            ) : currentStep === 5 ? (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  How long has your business been operating?
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  Pick the option that best matches your current stage.
+                </p>
+              </>
+            ) : currentStep === 6 ? (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
                   Step 2. Make your business stand out
@@ -762,6 +807,15 @@ export default function PublishPage() {
                 <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
                   In this section, we will collect key financial information from your business, then
                   help you craft a strong title and description for investors.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="max-w-xl text-[3.3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Let&apos;s capture what your business does and your monthly performance
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  These answers help us build a stronger AI-generated publication for investors.
                 </p>
               </>
             )}
@@ -803,6 +857,13 @@ export default function PublishPage() {
               {currentStep === 6 && !checkingProject && !hasExistingProject && !savingDraft
                 ? 'Financial section intro is ready.'
                 : null}
+              {currentStep === 7 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              canContinueStep7
+                ? 'Business details and financial metrics are complete.'
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -822,7 +883,9 @@ export default function PublishPage() {
                           ? !canContinueStep4
                           : currentStep === 5
                             ? !canContinueStep5
-                            : !canContinueStep6
+                            : currentStep === 6
+                              ? !canContinueStep6
+                              : !canContinueStep7
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -888,6 +951,110 @@ export default function PublishPage() {
                     </motion.button>
                   );
                 })}
+              </motion.div>
+            ) : currentStep === 7 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-[660px] space-y-4"
+              >
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <p className="text-sm font-semibold text-[#0B1325]">What do you sell exactly?</p>
+                  <p className="mt-1 text-xs text-[#5D6A7F]">
+                    Describe the products or services your business offers.
+                  </p>
+                  <textarea
+                    value={businessOffer}
+                    onChange={(event) => setBusinessOffer(event.target.value)}
+                    placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
+                    className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                  />
+
+                  <p className="mt-5 text-sm font-semibold text-[#0B1325]">
+                    What makes you different from competitors?
+                  </p>
+                  <p className="mt-1 text-xs text-[#5D6A7F]">
+                    Tell us what you do differently and why customers choose you.
+                  </p>
+                  <textarea
+                    value={businessDifferentiator}
+                    onChange={(event) => setBusinessDifferentiator(event.target.value)}
+                    placeholder="Example: We deliver in under 30 minutes with nutrition plans customized by dietitians."
+                    className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                  />
+                </div>
+
+                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <p className="text-sm font-semibold text-[#0B1325]">Monthly business metrics</p>
+                  <div className="mt-4 grid grid-cols-1 gap-3">
+                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
+                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M4 18V8" />
+                          <path d="M10 18V6" />
+                          <path d="M16 18V10" />
+                          <path d="M22 18V4" />
+                          <path d="M2 20h20" />
+                        </svg>
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-[#5D6A7F]">Total monthly sales</p>
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlySales}
+                          onChange={(event) => setMonthlySales(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
+                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="5" width="18" height="14" rx="2" />
+                          <path d="M3 10h18" />
+                          <path d="M9 15h2" />
+                        </svg>
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-[#5D6A7F]">Average ticket</p>
+                        <input
+                          type="number"
+                          min="0"
+                          value={averageTicket}
+                          onChange={(event) => setAverageTicket(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                        />
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
+                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="8" cy="9" r="3" />
+                          <path d="M3 20c0-3 2.2-5 5-5s5 2 5 5" />
+                          <circle cx="17" cy="10" r="2" />
+                          <path d="M14.8 20c.2-2 1.8-3.6 4.2-3.9" />
+                        </svg>
+                      </span>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-[#5D6A7F]">Monthly clients</p>
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyClients}
+                          onChange={(event) => setMonthlyClients(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div
