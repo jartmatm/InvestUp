@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
+import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
 import publishStep2Animation from '@/components/animations/publish-step2.json';
 import PageBackButton from '@/components/PageBackButton';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -35,6 +36,11 @@ type PublishAddressStepFields = {
   latitude: number | null;
   longitude: number | null;
   source: AddressSource;
+};
+
+type BusinessCategory = {
+  id: string;
+  label: string;
 };
 
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
@@ -66,6 +72,24 @@ const mobileSurfaceClassName =
 
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
+
+const businessCategories: BusinessCategory[] = [
+  { id: 'restaurant', label: 'Restaurant' },
+  { id: 'ecommerce', label: 'E-commerce' },
+  { id: 'saas', label: 'SaaS' },
+  { id: 'retail', label: 'Retail' },
+  { id: 'health', label: 'Health & Wellness' },
+  { id: 'education', label: 'Education' },
+  { id: 'fintech', label: 'Fintech' },
+  { id: 'real_estate', label: 'Real Estate' },
+  { id: 'travel', label: 'Travel' },
+  { id: 'logistics', label: 'Logistics' },
+  { id: 'manufacturing', label: 'Manufacturing' },
+  { id: 'creative', label: 'Creative Studio' },
+  { id: 'agritech', label: 'AgriTech' },
+  { id: 'beauty', label: 'Beauty' },
+  { id: 'other', label: 'Other' },
+];
 
 const isAddressValid = (address: PublishAddressStepFields) =>
   requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
@@ -197,10 +221,27 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
 
-  const canContinue = useMemo(
+  const canContinueStep1 = useMemo(
+    () =>
+      isAddressValid(address) && !checkingProject && !hasExistingProject && !savingDraft,
+    [address, checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep2 = useMemo(
     () => !checkingProject && !hasExistingProject && !savingDraft,
     [checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep3 = useMemo(
+    () =>
+      selectedBusinessCategory.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [selectedBusinessCategory, checkingProject, hasExistingProject, savingDraft]
   );
 
   useEffect(() => {
@@ -372,8 +413,22 @@ export default function PublishPage() {
   };
 
   const handleContinue = () => {
-    if (!canContinue) return;
-    setStatus('Step 2 ready. Continue to the next step.');
+    if (currentStep === 1) {
+      if (!canContinueStep1) return;
+      setCurrentStep(2);
+      setStatus('');
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (!canContinueStep2) return;
+      setCurrentStep(3);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep3) return;
+    setStatus('Step 3 ready. Continue to the next step.');
   };
 
   const handleSaveAndExit = async () => {
@@ -421,14 +476,63 @@ export default function PublishPage() {
             Save and exit
           </button>
 
+          {currentStep > 1 ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep((prev) => (prev === 3 ? 2 : 1))}
+              className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
+              aria-label="Back to previous step"
+            >
+              {'<'}
+            </button>
+          ) : null}
+
           <section className="flex flex-col justify-center">
-            <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
-              Tell us about your entrepreneur business
-            </h2>
-            <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
-              In this step, we will ask you which type of business you have and if investors will fund
-              the entire opportunity or part of it. Then share the location and how many guests can stay.
-            </p>
+            {currentStep === 1 ? (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  Set your business address
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  Start by selecting the exact address of your venture. We will prefill the structured
+                  fields for country, unit, street, locality, state, and postcode.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsAddressModalOpen(true)}
+                  className="mt-10 flex h-[68px] w-full max-w-xl items-center gap-3 rounded-full border border-[#CCD9E8] bg-white px-6 text-left text-lg text-[#0B1325] shadow-[0_16px_36px_rgba(15,23,42,0.06)] transition hover:border-[#6B39F4]/50"
+                >
+                  <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#EAF3FF] text-[#2E7CF6]">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="7" />
+                      <path d="m21 21-4.35-4.35" />
+                    </svg>
+                  </span>
+                  <span className="truncate">
+                    {address.formatted_address || 'Enter your business address'}
+                  </span>
+                </button>
+              </>
+            ) : currentStep === 2 ? (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  Tell us about your entrepreneur business
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  In this step, we will ask you which type of business you have and if investors will fund
+                  the entire opportunity or part of it. Then share the location and how many guests can stay.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  Which of these best describes your business?
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  Choose one category to continue.
+                </p>
+              </>
+            )}
 
             <div className="mt-6 text-sm text-[#5D6A7F]">
               {checkingProject ? 'Checking your profile status...' : null}
@@ -436,8 +540,19 @@ export default function PublishPage() {
                 ? 'You already have a published project. Manage updates from Portfolio.'
                 : null}
               {savingDraft ? 'Saving your responses...' : null}
-              {!checkingProject && !hasExistingProject && !savingDraft && isAddressValid(address)
+              {currentStep === 1 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              isAddressValid(address)
                 ? 'Address details are complete.'
+                : null}
+              {currentStep === 3 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              selectedBusinessCategory
+                ? `Selected category: ${selectedBusinessCategory}.`
                 : null}
             </div>
 
@@ -447,7 +562,13 @@ export default function PublishPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={!canContinue}
+                disabled={
+                  currentStep === 1
+                    ? !canContinueStep1
+                    : currentStep === 2
+                      ? !canContinueStep2
+                      : !canContinueStep3
+                }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Continue
@@ -456,25 +577,57 @@ export default function PublishPage() {
           </section>
 
           <section className="relative flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.55, ease: 'easeOut' }}
-              className="relative h-full w-full overflow-visible"
-            >
+            {currentStep === 3 ? (
               <motion.div
-                animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
-                className="relative mx-auto h-[860px] w-[560px]"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="grid w-full grid-cols-3 gap-3"
               >
-                <Lottie
-                  animationData={publishStep2Animation}
-                  loop
-                  autoplay
-                  className="h-full w-full"
-                />
+                {businessCategories.map((category) => {
+                  const isSelected = selectedBusinessCategory === category.label;
+                  return (
+                    <motion.button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setSelectedBusinessCategory(category.label)}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      className={`rounded-2xl border px-4 py-5 text-left transition ${
+                        isSelected
+                          ? 'border-[#6B39F4] bg-[#F4EFFF] shadow-[0_14px_30px_rgba(107,57,244,0.16)]'
+                          : 'border-[#DCE6F1] bg-white hover:border-[#C8D6E7]'
+                      }`}
+                    >
+                      <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-[#263444]">
+                        <span className="text-sm font-semibold">{category.label.charAt(0)}</span>
+                      </div>
+                      <p className="text-sm font-medium text-[#0B1325]">{category.label}</p>
+                    </motion.button>
+                  );
+                })}
               </motion.div>
-            </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.55, ease: 'easeOut' }}
+                className="relative h-full w-full overflow-visible"
+              >
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 6.2, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative mx-auto h-[860px] w-[560px]"
+                >
+                  <Lottie
+                    animationData={currentStep === 1 ? publishAddressStepAnimation : publishStep2Animation}
+                    loop
+                    autoplay
+                    className="h-full w-full"
+                  />
+                </motion.div>
+              </motion.div>
+            )}
           </section>
         </div>
       </DesktopAppShell>
@@ -612,7 +765,7 @@ export default function PublishPage() {
                 <button
                   type="button"
                   onClick={handleContinue}
-                  disabled={!canContinue}
+                  disabled={!canContinueStep1}
                   className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
