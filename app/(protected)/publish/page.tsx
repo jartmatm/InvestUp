@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import Lottie from 'lottie-react';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
+import publishStep10MediaAnimation from '@/components/animations/publish-step10-media.json';
 import publishStep2Animation from '@/components/animations/publish-step2.json';
 import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
@@ -42,6 +43,14 @@ type PublishAddressStepFields = {
 type BusinessCategory = {
   id: string;
   label: string;
+};
+
+type UploadMediaItem = {
+  id: string;
+  file: File;
+  name: string;
+  previewUrl: string;
+  type: 'photo' | 'video';
 };
 
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
@@ -379,7 +388,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -395,6 +404,12 @@ export default function PublishPage() {
   const [aboutFounder, setAboutFounder] = useState<string>('');
   const [aboutTeam, setAboutTeam] = useState<string>('');
   const [businessAchievements, setBusinessAchievements] = useState<string>('');
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+  const [pendingMediaItems, setPendingMediaItems] = useState<UploadMediaItem[]>([]);
+  const [uploadedMediaItems, setUploadedMediaItems] = useState<UploadMediaItem[]>([]);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
+  const mediaInputRef = useRef<HTMLInputElement | null>(null);
 
   const canContinueStep1 = useMemo(
     () =>
@@ -497,6 +512,38 @@ export default function PublishPage() {
       hasExistingProject,
       savingDraft,
     ]
+  );
+
+  const mediaCounts = useMemo(
+    () =>
+      uploadedMediaItems.reduce(
+        (totals, item) => {
+          if (item.type === 'video') {
+            totals.videos += 1;
+          } else {
+            totals.photos += 1;
+          }
+          return totals;
+        },
+        { photos: 0, videos: 0 }
+      ),
+    [uploadedMediaItems]
+  );
+
+  const canContinueStep10 = useMemo(
+    () => !checkingProject && !hasExistingProject && !savingDraft,
+    [checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep11 = useMemo(
+    () =>
+      mediaCounts.photos >= 5 &&
+      mediaCounts.videos >= 1 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft &&
+      !isUploadingMedia,
+    [mediaCounts, checkingProject, hasExistingProject, savingDraft, isUploadingMedia]
   );
 
   useEffect(() => {
@@ -607,6 +654,15 @@ export default function PublishPage() {
     return () => window.clearTimeout(timer);
   }, [address, draftId, getAccessToken, hasExistingProject, hasInteracted, rolSeleccionado, user?.id]);
 
+  useEffect(
+    () => () => {
+      [...pendingMediaItems, ...uploadedMediaItems].forEach((item) => {
+        URL.revokeObjectURL(item.previewUrl);
+      });
+    },
+    [pendingMediaItems, uploadedMediaItems]
+  );
+
   const applyAddressRecord = (record: BusinessAddressRecord, source: Exclude<AddressSource, ''>) => {
     setAddress(toAddressFromGeocode(record, source));
     setSearchQuery(record.formatted_address);
@@ -667,6 +723,77 @@ export default function PublishPage() {
     setHasInteracted(true);
   };
 
+  const handleMediaSelection = (fileList: FileList | null) => {
+    if (!fileList) return;
+
+    const mapped = Array.from(fileList)
+      .filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'))
+      .map((file) => ({
+        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+        file,
+        name: file.name,
+        previewUrl: URL.createObjectURL(file),
+        type: file.type.startsWith('video/') ? ('video' as const) : ('photo' as const),
+      }));
+
+    setPendingMediaItems((previous) => [...previous, ...mapped]);
+  };
+
+  const handleRemovePendingMedia = (mediaId: string) => {
+    setPendingMediaItems((previous) => {
+      const target = previous.find((item) => item.id === mediaId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return previous.filter((item) => item.id !== mediaId);
+    });
+  };
+
+  const handleUploadPendingMedia = async () => {
+    if (pendingMediaItems.length === 0) return;
+
+    setIsMediaModalOpen(false);
+    setIsUploadingMedia(true);
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 1800);
+    });
+
+    const sorted = [...pendingMediaItems].sort((a, b) => {
+      if (a.type === b.type) return 0;
+      return a.type === 'video' ? -1 : 1;
+    });
+
+    setUploadedMediaItems((previous) =>
+      [...previous, ...sorted].sort((a, b) => {
+        if (a.type === b.type) return 0;
+        return a.type === 'video' ? -1 : 1;
+      })
+    );
+    setPendingMediaItems([]);
+    setIsUploadingMedia(false);
+  };
+
+  const handleDragStartMedia = (mediaId: string) => {
+    setDraggedMediaId(mediaId);
+  };
+
+  const handleDropMedia = (targetId: string) => {
+    if (!draggedMediaId || draggedMediaId === targetId) return;
+
+    setUploadedMediaItems((previous) => {
+      const fromIndex = previous.findIndex((item) => item.id === draggedMediaId);
+      const toIndex = previous.findIndex((item) => item.id === targetId);
+
+      if (fromIndex === -1 || toIndex === -1) return previous;
+
+      const next = [...previous];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+
+    setDraggedMediaId(null);
+  };
+
   const handleContinue = () => {
     if (currentStep === 1) {
       if (!canContinueStep1) return;
@@ -724,8 +851,22 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep9) return;
-    setStatus('Founder and team details captured. Continue to the next section.');
+    if (currentStep === 9) {
+      if (!canContinueStep9) return;
+      setCurrentStep(10);
+      setStatus('');
+      return;
+    }
+
+    if (currentStep === 10) {
+      if (!canContinueStep10) return;
+      setCurrentStep(11);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep11) return;
+    setStatus('Media set is complete. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -779,7 +920,9 @@ export default function PublishPage() {
               onClick={() =>
                 setCurrentStep(
                   (prev) =>
-                    (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9) : 1)
+                    (prev > 1
+                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11)
+                      : 1)
                 )
               }
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
@@ -789,7 +932,11 @@ export default function PublishPage() {
             </button>
           ) : null}
 
-          <section className={`${currentStep >= 7 ? 'hidden' : 'flex flex-col justify-center'}`}>
+          <section
+            className={`${
+              currentStep >= 7 && currentStep !== 10 ? 'hidden' : 'flex flex-col justify-center'
+            }`}
+          >
             {currentStep === 1 ? (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
@@ -878,13 +1025,22 @@ export default function PublishPage() {
                   These answers help us build a stronger AI-generated publication for investors.
                 </p>
               </>
+            ) : currentStep === 10 ? (
+              <>
+                <h2 className="max-w-xl text-[3.65rem] font-semibold leading-[1.02] tracking-[-0.05em] text-[#0B1325]">
+                  Add some photos and videos of your Business
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  You&apos;ll need 5 photos and 1 video to get started. You can add more or make changes later.
+                </p>
+              </>
             ) : (
               <>
                 <h2 className="max-w-xl text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
-                  Define your investment round details
+                  Upload your business media
                 </h2>
                 <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
-                  Share funding amount, usage, interest rate, and closing date so investors can evaluate your offer clearly.
+                  Add your files and arrange them to match how you want investors to see your business.
                 </p>
               </>
             )}
@@ -947,6 +1103,12 @@ export default function PublishPage() {
               canContinueStep9
                 ? 'Founder and team details are complete.'
                 : null}
+              {currentStep === 11 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft
+                ? `${mediaCounts.photos} photos and ${mediaCounts.videos} video selected.`
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -972,7 +1134,11 @@ export default function PublishPage() {
                                 ? !canContinueStep7
                                 : currentStep === 8
                                   ? !canContinueStep8
-                                  : !canContinueStep9
+                                  : currentStep === 9
+                                    ? !canContinueStep9
+                                    : currentStep === 10
+                                      ? !canContinueStep10
+                                      : !canContinueStep11
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -983,7 +1149,7 @@ export default function PublishPage() {
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep >= 7 ? 'col-span-2 justify-center pt-20' : ''
+              currentStep >= 7 && currentStep !== 10 ? 'col-span-2 justify-center pt-20' : ''
             }`}
           >
             {currentStep === 3 ? (
@@ -1339,6 +1505,114 @@ export default function PublishPage() {
                   </button>
                 </div>
               </motion.div>
+            ) : currentStep === 11 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="w-full max-w-[940px] space-y-6"
+              >
+                {isUploadingMedia ? (
+                  <div className="space-y-5">
+                    <h2 className="text-center text-[2.6rem] font-semibold tracking-[-0.045em] text-[#0B1325]">
+                      Loading photos, please wait a moment
+                    </h2>
+                    <div className="grid grid-cols-3 gap-4">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div
+                          key={`media-skeleton-${index}`}
+                          className="h-44 animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : uploadedMediaItems.length === 0 ? (
+                  <div className="mx-auto flex w-full max-w-[520px] justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setIsMediaModalOpen(true)}
+                      className="group flex h-[260px] w-full flex-col items-center justify-center gap-4 rounded-[28px] border-2 border-dashed border-[#CBD8E8] bg-white transition hover:border-[#6B39F4]/55 hover:bg-[#FCFBFF]"
+                    >
+                      <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#EEF3FB] text-[#111827] transition group-hover:bg-[#EFE7FF]">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-8 w-8"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.9"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M12 5v14" />
+                          <path d="M5 12h14" />
+                        </svg>
+                      </span>
+                      <p className="text-sm font-semibold text-[#0B1325]">
+                        Add photos and videos
+                      </p>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-center">
+                      <h2 className="text-[3rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
+                        Ta-da! How does this look?
+                      </h2>
+                      <p className="mt-3 text-sm text-[#5D6A7F]">Drag to reorder</p>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4">
+                      {uploadedMediaItems.map((item) => (
+                        <div
+                          key={item.id}
+                          draggable
+                          onDragStart={() => handleDragStartMedia(item.id)}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => handleDropMedia(item.id)}
+                          className="group relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD]"
+                        >
+                          {item.type === 'video' ? (
+                            <video
+                              src={item.previewUrl}
+                              className="h-52 w-full object-cover"
+                              controls
+                              muted
+                            />
+                          ) : (
+                            <img
+                              src={item.previewUrl}
+                              alt={item.name}
+                              className="h-52 w-full object-cover"
+                            />
+                          )}
+                          <div className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
+                            {item.type === 'video' ? 'Video' : 'Photo'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setIsMediaModalOpen(true)}
+                        className="rounded-full border border-[#CFDAE8] px-4 py-2 text-xs font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
+                      >
+                        Add more
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleContinue}
+                        disabled={!canContinueStep11}
+                        className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  </>
+                )}
+              </motion.div>
             ) : (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -1355,6 +1629,8 @@ export default function PublishPage() {
                     animationData={
                       currentStep === 1
                         ? publishAddressStepAnimation
+                        : currentStep === 10
+                          ? publishStep10MediaAnimation
                         : currentStep === 6
                           ? publishStep6Animation
                           : publishStep2Animation
@@ -1507,6 +1783,120 @@ export default function PublishPage() {
                   className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Next
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isMediaModalOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[95] hidden items-center justify-center bg-[#0B1325]/45 px-8 backdrop-blur-[2px] lg:flex"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-5xl rounded-[30px] border border-[#E4ECF6] bg-white p-7 shadow-[0_36px_80px_rgba(15,23,42,0.24)]"
+              initial={{ opacity: 0, y: 22, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[#0F172A]">
+                    Upload photos and videos
+                  </h3>
+                  <p className="mt-1 text-sm text-[#64748B]">
+                    Please add at least 5 photos and 1 video.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMediaModalOpen(false)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D4DEEA] text-[#64748B] transition hover:border-[#A6B6C9] hover:text-[#0F172A]"
+                  aria-label="Close media modal"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="m6 6 12 12" />
+                    <path d="m18 6-12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => mediaInputRef.current?.click()}
+                  className="h-11 rounded-full border border-[#CFDAE8] bg-white px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
+                >
+                  Browse
+                </button>
+                <input
+                  ref={mediaInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => {
+                    handleMediaSelection(event.target.files);
+                    event.target.value = '';
+                  }}
+                />
+              </div>
+
+              <div className="mt-5 max-h-[52vh] overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE] p-4">
+                {pendingMediaItems.length === 0 ? (
+                  <p className="py-14 text-center text-sm text-[#8A97AA]">
+                    No files selected yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {pendingMediaItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePendingMedia(item.id)}
+                          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+                          aria-label="Remove media item"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="m6 6 12 12" />
+                            <path d="m18 6-12 12" />
+                          </svg>
+                        </button>
+                        {item.type === 'video' ? (
+                          <video src={item.previewUrl} className="h-64 w-full object-cover" controls muted />
+                        ) : (
+                          <img src={item.previewUrl} alt={item.name} className="h-64 w-full object-cover" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setIsMediaModalOpen(false)}
+                  className="h-11 rounded-full border border-[#CFDAE8] px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#94A8C0]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleUploadPendingMedia()}
+                  disabled={pendingMediaItems.length === 0}
+                  className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Upload
                 </button>
               </div>
             </motion.div>
