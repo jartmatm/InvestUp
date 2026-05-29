@@ -9,6 +9,7 @@ import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
 import publishStep2Animation from '@/components/animations/publish-step2.json';
+import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -378,7 +379,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -419,6 +420,11 @@ export default function PublishPage() {
       !hasExistingProject &&
       !savingDraft,
     [selectedOperatingTime, checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep6 = useMemo(
+    () => !checkingProject && !hasExistingProject && !savingDraft,
+    [checkingProject, hasExistingProject, savingDraft]
   );
 
   useEffect(() => {
@@ -618,8 +624,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep5) return;
-    setStatus('Step 5 ready. Continue to the next step.');
+    if (currentStep === 5) {
+      if (!canContinueStep5) return;
+      setCurrentStep(6);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep6) return;
+    setStatus('Section 2 is ready. Continue to the next step.');
   };
 
   const handleSaveAndExit = async () => {
@@ -670,7 +683,9 @@ export default function PublishPage() {
           {currentStep > 1 ? (
             <button
               type="button"
-              onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5) : 1))}
+              onClick={() =>
+                setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6) : 1))
+              }
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
             >
@@ -742,10 +757,11 @@ export default function PublishPage() {
             ) : (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
-                  How long has your business been operating?
+                  Step 2. Make your business stand out
                 </h2>
                 <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
-                  Choose the option that best matches your current stage.
+                  In this section, we will collect key financial information from your business, then
+                  help you craft a strong title and description for investors.
                 </p>
               </>
             )}
@@ -784,6 +800,9 @@ export default function PublishPage() {
               selectedOperatingTime
                 ? `Operating time: ${selectedOperatingTime}.`
                 : null}
+              {currentStep === 6 && !checkingProject && !hasExistingProject && !savingDraft
+                ? 'Financial section intro is ready.'
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -801,7 +820,9 @@ export default function PublishPage() {
                         ? !canContinueStep3
                         : currentStep === 4
                           ? !canContinueStep4
-                          : !canContinueStep5
+                          : currentStep === 5
+                            ? !canContinueStep5
+                            : !canContinueStep6
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -881,7 +902,13 @@ export default function PublishPage() {
                   className="relative mx-auto h-[860px] w-[560px]"
                 >
                   <Lottie
-                    animationData={currentStep === 1 ? publishAddressStepAnimation : publishStep2Animation}
+                    animationData={
+                      currentStep === 1
+                        ? publishAddressStepAnimation
+                        : currentStep === 6
+                          ? publishStep6Animation
+                          : publishStep2Animation
+                    }
                     loop
                     autoplay
                     className="h-full w-full"
