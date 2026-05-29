@@ -41,7 +41,6 @@ type PublishAddressStepFields = {
 type BusinessCategory = {
   id: string;
   label: string;
-  icon: string;
 };
 
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
@@ -75,25 +74,175 @@ const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
 
 const businessCategories: BusinessCategory[] = [
-  { id: 'technology', label: 'Technology', icon: '💻' },
-  { id: 'health_wellness', label: 'Health & Wellness', icon: '🩺' },
-  { id: 'finance_insurance', label: 'Finance & Insurance', icon: '🏦' },
-  { id: 'education', label: 'Education', icon: '🎓' },
-  { id: 'food_gastronomy', label: 'Food & Gastronomy', icon: '🍽️' },
-  { id: 'retail', label: 'Retail', icon: '🛍️' },
-  { id: 'real_estate', label: 'Real Estate', icon: '🏠' },
-  { id: 'transport_logistics', label: 'Transport & Logistics', icon: '🚚' },
-  { id: 'entertainment_media', label: 'Entertainment & Media', icon: '🎬' },
-  { id: 'construction_architecture', label: 'Construction & Architecture', icon: '🏗️' },
-  { id: 'professional_services', label: 'Professional Services', icon: '💼' },
-  { id: 'manufacturing_industry', label: 'Manufacturing & Industry', icon: '🏭' },
-  { id: 'agriculture_livestock', label: 'Agriculture & Livestock', icon: '🌾' },
-  { id: 'fashion_beauty', label: 'Fashion & Beauty', icon: '💄' },
-  { id: 'tourism_hospitality', label: 'Tourism & Hospitality', icon: '✈️' },
+  { id: 'technology', label: 'Technology' },
+  { id: 'health_wellness', label: 'Health & Wellness' },
+  { id: 'finance_insurance', label: 'Finance & Insurance' },
+  { id: 'education', label: 'Education' },
+  { id: 'food_gastronomy', label: 'Food & Gastronomy' },
+  { id: 'retail', label: 'Retail' },
+  { id: 'real_estate', label: 'Real Estate' },
+  { id: 'transport_logistics', label: 'Transport & Logistics' },
+  { id: 'entertainment_media', label: 'Entertainment & Media' },
+  { id: 'construction_architecture', label: 'Construction & Architecture' },
+  { id: 'professional_services', label: 'Professional Services' },
+  { id: 'manufacturing_industry', label: 'Manufacturing & Industry' },
+  { id: 'agriculture_livestock', label: 'Agriculture & Livestock' },
+  { id: 'fashion_beauty', label: 'Fashion & Beauty' },
+  { id: 'tourism_hospitality', label: 'Tourism & Hospitality' },
 ];
 
 const isAddressValid = (address: PublishAddressStepFields) =>
   requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
+
+function BusinessCategoryIcon({ id }: { id: string }) {
+  const commonProps = {
+    className: 'h-5 w-5',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    strokeWidth: 1.8,
+    viewBox: '0 0 24 24',
+    'aria-hidden': true,
+  };
+
+  switch (id) {
+    case 'technology':
+      return (
+        <svg {...commonProps}>
+          <rect x="4" y="5" width="16" height="11" rx="2" />
+          <path d="M9 20h6" />
+          <path d="M12 16v4" />
+        </svg>
+      );
+    case 'health_wellness':
+      return (
+        <svg {...commonProps}>
+          <path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z" />
+          <path d="M9 12h6" />
+          <path d="M12 9v6" />
+        </svg>
+      );
+    case 'finance_insurance':
+      return (
+        <svg {...commonProps}>
+          <path d="M4 10h16" />
+          <path d="M5 18h14" />
+          <path d="M6 10v8" />
+          <path d="M10 10v8" />
+          <path d="M14 10v8" />
+          <path d="M18 10v8" />
+          <path d="M12 4 4 8h16l-8-4Z" />
+        </svg>
+      );
+    case 'education':
+      return (
+        <svg {...commonProps}>
+          <path d="M3 8 12 4l9 4-9 4-9-4Z" />
+          <path d="M7 10v5c2.8 2 7.2 2 10 0v-5" />
+          <path d="M21 8v6" />
+        </svg>
+      );
+    case 'food_gastronomy':
+      return (
+        <svg {...commonProps}>
+          <path d="M7 4v16" />
+          <path d="M4 4v5a3 3 0 0 0 6 0V4" />
+          <path d="M17 4v16" />
+          <path d="M17 4c2 1 3 3 3 6v2h-3" />
+        </svg>
+      );
+    case 'retail':
+      return (
+        <svg {...commonProps}>
+          <path d="M6 9h12l-1 11H7L6 9Z" />
+          <path d="M9 9a3 3 0 0 1 6 0" />
+          <path d="M5 9h14" />
+        </svg>
+      );
+    case 'real_estate':
+      return (
+        <svg {...commonProps}>
+          <path d="M4 11 12 4l8 7" />
+          <path d="M6 10v10h12V10" />
+          <path d="M10 20v-6h4v6" />
+        </svg>
+      );
+    case 'transport_logistics':
+      return (
+        <svg {...commonProps}>
+          <path d="M3 7h11v10H3V7Z" />
+          <path d="M14 11h4l3 3v3h-7v-6Z" />
+          <circle cx="7" cy="18" r="1.7" />
+          <circle cx="17" cy="18" r="1.7" />
+        </svg>
+      );
+    case 'entertainment_media':
+      return (
+        <svg {...commonProps}>
+          <rect x="4" y="6" width="16" height="12" rx="2" />
+          <path d="m10 10 5 2-5 2v-4Z" />
+          <path d="M8 4v4" />
+          <path d="M16 4v4" />
+        </svg>
+      );
+    case 'construction_architecture':
+      return (
+        <svg {...commonProps}>
+          <path d="M4 20h16" />
+          <path d="M6 20V8l6-4 6 4v12" />
+          <path d="M9 20v-6h6v6" />
+          <path d="M9 10h6" />
+        </svg>
+      );
+    case 'professional_services':
+      return (
+        <svg {...commonProps}>
+          <rect x="4" y="8" width="16" height="11" rx="2" />
+          <path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+          <path d="M4 13h16" />
+        </svg>
+      );
+    case 'manufacturing_industry':
+      return (
+        <svg {...commonProps}>
+          <path d="M4 20V9l5 3V9l5 3V7h6v13H4Z" />
+          <path d="M8 16h1" />
+          <path d="M12 16h1" />
+          <path d="M16 16h1" />
+        </svg>
+      );
+    case 'agriculture_livestock':
+      return (
+        <svg {...commonProps}>
+          <path d="M12 20V10" />
+          <path d="M12 14c-4 0-6-2-7-6 4 0 6 2 7 6Z" />
+          <path d="M12 12c4 0 6-2 7-6-4 0-6 2-7 6Z" />
+          <path d="M5 20h14" />
+        </svg>
+      );
+    case 'fashion_beauty':
+      return (
+        <svg {...commonProps}>
+          <path d="M8 4h8l2 5-3 2v9H9v-9L6 9l2-5Z" />
+          <path d="M10 4c0 2 4 2 4 0" />
+          <path d="M9 14h6" />
+        </svg>
+      );
+    case 'tourism_hospitality':
+      return (
+        <svg {...commonProps}>
+          <path d="M3 11h18" />
+          <path d="M5 11l3 8" />
+          <path d="M19 11l-3 8" />
+          <path d="M8 11a4 4 0 0 1 8 0" />
+          <path d="M12 3v4" />
+        </svg>
+      );
+    default:
+      return <span className="text-xs font-semibold">{id.slice(0, 1).toUpperCase()}</span>;
+  }
+}
 
 const normalizeDraftAddress = (value: unknown): PublishAddressStepFields => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return emptyAddress;
@@ -222,8 +371,9 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
+  const [businessName, setBusinessName] = useState<string>('');
 
   const canContinueStep1 = useMemo(
     () =>
@@ -243,6 +393,15 @@ export default function PublishPage() {
       !hasExistingProject &&
       !savingDraft,
     [selectedBusinessCategory, checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep4 = useMemo(
+    () =>
+      businessName.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [businessName, checkingProject, hasExistingProject, savingDraft]
   );
 
   useEffect(() => {
@@ -428,8 +587,15 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep3) return;
-    setStatus('Step 3 ready. Continue to the next step.');
+    if (currentStep === 3) {
+      if (!canContinueStep3) return;
+      setCurrentStep(4);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep4) return;
+    setStatus('Step 4 ready. Continue to the next step.');
   };
 
   const handleSaveAndExit = async () => {
@@ -480,7 +646,7 @@ export default function PublishPage() {
           {currentStep > 1 ? (
             <button
               type="button"
-              onClick={() => setCurrentStep((prev) => (prev === 3 ? 2 : 1))}
+              onClick={() => setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4) : 1))}
               className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
             >
@@ -524,7 +690,7 @@ export default function PublishPage() {
                   the entire opportunity or part of it. Then share the location and how many guests can stay.
                 </p>
               </>
-            ) : (
+            ) : currentStep === 3 ? (
               <>
                 <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
                   Which of these best describes your business?
@@ -532,6 +698,22 @@ export default function PublishPage() {
                 <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
                   Choose one category to continue.
                 </p>
+              </>
+            ) : (
+              <>
+                <h2 className="max-w-xl text-[4.15rem] font-semibold leading-[0.95] tracking-[-0.055em] text-[#0B1325]">
+                  Great, now let&apos;s name your business
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.32rem] leading-8 text-[#4B5B72]">
+                  Give your venture a clear name investors will recognize instantly.
+                </p>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(event) => setBusinessName(event.target.value)}
+                  placeholder="Enter your business name"
+                  className={`${inputClassName} mt-8 max-w-xl text-base`}
+                />
               </>
             )}
 
@@ -555,6 +737,13 @@ export default function PublishPage() {
               selectedBusinessCategory
                 ? `Selected category: ${selectedBusinessCategory}.`
                 : null}
+              {currentStep === 4 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              businessName.trim().length > 0
+                ? `Business name: ${businessName.trim()}.`
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -568,7 +757,9 @@ export default function PublishPage() {
                     ? !canContinueStep1
                     : currentStep === 2
                       ? !canContinueStep2
-                      : !canContinueStep3
+                      : currentStep === 3
+                        ? !canContinueStep3
+                        : !canContinueStep4
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -600,8 +791,8 @@ export default function PublishPage() {
                           : 'border-[#DCE6F1] bg-white hover:border-[#C8D6E7]'
                       }`}
                     >
-                      <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#EEF3FB] text-base">
-                        <span aria-hidden="true">{category.icon}</span>
+                      <div className="mb-2 inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#EEF3FB] text-black">
+                        <BusinessCategoryIcon id={category.id} />
                       </div>
                       <p className="text-xs font-medium leading-4 text-[#0B1325]">{category.label}</p>
                     </motion.button>
