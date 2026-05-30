@@ -1879,8 +1879,8 @@ export default function PublishPage() {
                             disablePast
                             sx={{
                               width: '100%',
-                              maxHeight: 275,
-                              transform: 'scale(0.95)',
+                              maxHeight: 295,
+                              transform: 'scale(0.98)',
                               transformOrigin: 'top center',
                               '& .MuiPickersDay-root.Mui-selected': {
                                 backgroundColor: '#6B39F4',
@@ -1987,28 +1987,28 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[940px] space-y-6"
+                className="w-full max-w-[1220px] space-y-5"
               >
                 {isUploadingMedia ? (
                   <div className="space-y-5">
                     <h2 className="text-center text-[2.6rem] font-semibold tracking-[-0.045em] text-[#0B1325]">
                       Loading photos, please wait a moment
                     </h2>
-                    <div className="grid grid-cols-3 gap-4">
-                      {Array.from({ length: 6 }).map((_, index) => (
+                    <div className="grid grid-cols-5 gap-3">
+                      {Array.from({ length: 10 }).map((_, index) => (
                         <div
                           key={`media-skeleton-${index}`}
-                          className="h-44 animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
+                          className="h-36 animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
                         />
                       ))}
                     </div>
                   </div>
                 ) : uploadedMediaItems.length === 0 ? (
-                  <div className="mx-auto flex w-full max-w-[520px] justify-center">
+                  <div className="mx-auto flex w-full max-w-[680px] justify-center">
                     <button
                       type="button"
                       onClick={() => setIsMediaModalOpen(true)}
-                      className="group flex h-[260px] w-full flex-col items-center justify-center gap-4 rounded-[28px] border-2 border-dashed border-[#CBD8E8] bg-white transition hover:border-[#6B39F4]/55 hover:bg-[#FCFBFF]"
+                      className="group flex h-[250px] w-full max-w-[640px] flex-col items-center justify-center gap-4 rounded-[24px] border-2 border-dashed border-[#CBD8E8] bg-white px-6 transition hover:border-[#6B39F4]/55 hover:bg-[#FCFBFF]"
                     >
                       <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-[#EEF3FB] text-[#111827] transition group-hover:bg-[#EFE7FF]">
                         <svg
@@ -2035,10 +2035,11 @@ export default function PublishPage() {
                       <h2 className="text-[3rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
                         Ta-da! How does this look?
                       </h2>
-                      <p className="mt-3 text-sm text-[#5D6A7F]">Drag to reorder</p>
+                      <p className="mx-auto mt-3 text-center text-sm text-[#5D6A7F]">Drag to reorder</p>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="max-h-[44vh] overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE] p-3">
+                    <div className="grid grid-cols-5 gap-3">
                       {uploadedMediaItems.map((item) => (
                         <div
                           key={item.id}
@@ -2051,7 +2052,7 @@ export default function PublishPage() {
                           {item.type === 'video' ? (
                             <video
                               src={item.previewUrl}
-                              className="h-52 w-full object-cover"
+                              className="h-36 w-full object-cover"
                               controls
                               muted
                             />
@@ -2059,7 +2060,7 @@ export default function PublishPage() {
                             <img
                               src={item.previewUrl}
                               alt={item.name}
-                              className="h-52 w-full object-cover"
+                              className="h-36 w-full object-cover"
                             />
                           )}
                           <div className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
@@ -2067,6 +2068,7 @@ export default function PublishPage() {
                           </div>
                         </div>
                       ))}
+                    </div>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -2647,13 +2649,22 @@ export default function PublishPage() {
               </div>
 
               <div className="mt-5 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => mediaInputRef.current?.click()}
-                  className="h-11 rounded-full border border-[#CFDAE8] bg-white px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
-                >
-                  Browse
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => mediaInputRef.current?.click()}
+                    className="h-11 rounded-full border border-[#CFDAE8] bg-white px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
+                  >
+                    Browse
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mediaInputRef.current?.click()}
+                    className="h-11 rounded-full border border-[#CFDAE8] bg-[#F8FAFF] px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
+                  >
+                    Add more
+                  </button>
+                </div>
                 <input
                   ref={mediaInputRef}
                   type="file"
