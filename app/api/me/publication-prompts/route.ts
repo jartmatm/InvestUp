@@ -46,33 +46,27 @@ const OPENAI_PUBLICATION_PROMPT_ID =
   process.env.OPENAI_PUBLICATION_PROMPT_ID ??
   'pmpt_69f57f7a85c081979c1668cfaa3bf80d0f79b0106d6c32c4';
 const OPENAI_PUBLICATION_PROMPT_VERSION =
-  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '5';
+  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '6';
 
 const PUBLICATION_PROMPT_VARIABLE_KEYS = [
   'business_name',
-  'location',
-  'industry',
-  'time_operating',
-  'business_stage',
-  'product_description',
-  'problem_solved',
-  'differentiation',
-  'monthly_revenue',
-  'avg_ticket',
-  'monthly_customers',
-  'growth_rate',
-  'social_media',
-  'capital_needed',
+  'business_address',
+  'business_category',
+  'operating_time',
+  'offer_summary',
+  'competitive_edge',
+  'monthly_sales',
+  'average_ticket',
+  'monthly_clients',
+  'capital_required_usd',
   'funds_usage',
-  'investment_offer',
-  'target_customer',
-  'market_size',
-  'competition',
-  'founder_info',
-  'team_info',
-  'testimonials',
-  'achievements',
-  'timing_reason',
+  'interest_rate_ea',
+  'round_close_date',
+  'founder_profile',
+  'team_profile',
+  'business_achievements',
+  'media_photos_count',
+  'media_videos_count',
 ] as const;
 
 const jsonNoStore = (body: unknown, init?: ResponseInit) => {
@@ -146,14 +140,14 @@ const localOptimize = (promptText: string): OptimizedPublication => {
   };
 
   const businessName = getField('business_name', 'Nombre') || 'Business opportunity';
-  const offer = getField('product_description', 'Producto/Servicio');
-  const problem = getField('problem_solved', 'Problema que resuelve');
-  const differentiation = getField('differentiation', 'Diferenciación');
-  const monthlyRevenue = getField('monthly_revenue', 'Ventas mensuales');
-  const growthRate = getField('growth_rate', 'Crecimiento');
+  const offer = getField('offer_summary', 'product_description', 'Producto/Servicio');
+  const problem = getField('competitive_edge', 'problem_solved', 'Problema que resuelve');
+  const differentiation = getField('competitive_edge', 'differentiation', 'Diferenciación');
+  const monthlyRevenue = getField('monthly_sales', 'monthly_revenue', 'Ventas mensuales');
+  const growthRate = getField('interest_rate_ea', 'growth_rate', 'Crecimiento');
   const useOfFunds = getField('funds_usage', 'Uso de fondos');
-  const market = getField('target_customer', 'Cliente ideal');
-  const timingReason = getField('timing_reason', 'Momento de inversión');
+  const market = getField('business_category', 'target_customer', 'Cliente ideal');
+  const timingReason = getField('round_close_date', 'timing_reason', 'Momento de inversión');
   const traction = [monthlyRevenue, growthRate].filter(Boolean).join(' with ');
 
   const summary = `${businessName} is raising growth capital for a business with clear customer demand and a focused use of funds.`;
@@ -190,11 +184,19 @@ const localOptimize = (promptText: string): OptimizedPublication => {
     financialInformation: traction || 'Financial information provided in the founder form.',
     investment: [useOfFunds, timingReason].filter(Boolean).join('\n\n') || 'Investment details provided in the founder form.',
     target: market || 'Target customer details provided in the founder form.',
-    team: getField('founder_info', 'Fundador') || 'Team information provided in the founder form.',
+    team:
+      getField('founder_profile', 'team_profile', 'founder_info', 'Fundador') ||
+      'Team information provided in the founder form.',
     gallery: 'Gallery media is provided by the founder.',
-    extras: [getField('testimonials', 'Testimonios'), getField('achievements', 'Logros'), timingReason]
-      .filter(Boolean)
-      .join('\n\n') || 'Additional details provided in the founder form.',
+    extras:
+      [
+        getField('business_achievements', 'achievements', 'Logros'),
+        getField('media_photos_count'),
+        getField('media_videos_count'),
+        timingReason,
+      ]
+        .filter(Boolean)
+        .join('\n\n') || 'Additional details provided in the founder form.',
   };
 };
 

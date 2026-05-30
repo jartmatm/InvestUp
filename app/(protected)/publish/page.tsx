@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
+import dayjs, { type Dayjs } from 'dayjs';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
@@ -424,6 +428,10 @@ export default function PublishPage() {
   const [aboutFounder, setAboutFounder] = useState<string>('');
   const [aboutTeam, setAboutTeam] = useState<string>('');
   const [businessAchievements, setBusinessAchievements] = useState<string>('');
+  const roundCloseDateValue = useMemo<Dayjs | null>(
+    () => (roundCloseDate ? dayjs(roundCloseDate) : null),
+    [roundCloseDate],
+  );
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [pendingMediaItems, setPendingMediaItems] = useState<UploadMediaItem[]>([]);
   const [uploadedMediaItems, setUploadedMediaItems] = useState<UploadMediaItem[]>([]);
@@ -1812,12 +1820,27 @@ export default function PublishPage() {
 
                     <label className="mt-5 block">
                       <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
-                      <input
-                        type="date"
-                        value={roundCloseDate}
-                        onChange={(event) => setRoundCloseDate(event.target.value)}
-                        className={`${inputClassName} mt-3 text-sm`}
-                      />
+                      <div className="mt-3 overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white p-2">
+                        <LocalizationProvider dateAdapter={AdapterDayjs}>
+                          <DateCalendar
+                            value={roundCloseDateValue}
+                            onChange={(newValue) =>
+                              setRoundCloseDate(newValue ? newValue.format('YYYY-MM-DD') : '')
+                            }
+                            disablePast
+                            sx={{
+                              width: '100%',
+                              maxHeight: 320,
+                              '& .MuiPickersDay-root.Mui-selected': {
+                                backgroundColor: '#6B39F4',
+                              },
+                              '& .MuiPickersDay-root.Mui-selected:hover': {
+                                backgroundColor: '#5A2FCE',
+                              },
+                            }}
+                          />
+                        </LocalizationProvider>
+                      </div>
                     </label>
                   </div>
                 </div>
