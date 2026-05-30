@@ -1285,7 +1285,7 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="relative grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-40 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className="relative grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-visible rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-24 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
@@ -2396,7 +2396,7 @@ export default function PublishPage() {
           </section>
 
           {currentStep !== 17 && currentStep !== 18 ? (
-            <footer className="pointer-events-none absolute bottom-0 left-0 right-0 border-t border-[#E8EEF6] bg-white/95 px-10 py-5 backdrop-blur-sm">
+            <footer className="pointer-events-none absolute -bottom-28 left-0 right-0 border-t border-[#E8EEF6] bg-white/95 px-10 py-5 backdrop-blur-sm">
               <div className="pointer-events-auto flex items-start justify-between">
                 {publishProgressSteps.map((step, index) => {
                   const status = resolveProgressStatus(index);
