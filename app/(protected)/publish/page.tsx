@@ -1285,19 +1285,19 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="relative grid h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-40 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className="relative grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-40 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
               type="button"
               onClick={() => void handleSaveAndExit()}
-              className="absolute right-10 top-8 h-10 rounded-full border border-black bg-transparent px-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+              className="absolute right-10 top-8 z-30 h-10 rounded-full border border-black bg-transparent px-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
             >
               Save and exit
             </button>
           ) : null}
 
-          {currentStep > 1 && currentStep !== 17 && currentStep !== 18 ? (
+          {currentStep > 1 ? (
             <button
               type="button"
               onClick={() =>
@@ -1308,7 +1308,7 @@ export default function PublishPage() {
                       : 1)
                 )
               }
-              className="absolute left-10 top-8 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
+              className="absolute left-10 top-8 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
             >
               {'<'}
@@ -1599,7 +1599,11 @@ export default function PublishPage() {
             </div>
           </section>
 
-          <section className="relative flex items-center justify-center">
+          <section
+            className={`relative flex items-center justify-center ${
+              currentStep === 7 || currentStep === 8 || currentStep === 9 ? 'col-span-2' : ''
+            }`}
+          >
             {currentStep === 3 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -1662,7 +1666,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[980px] space-y-5"
+                className="w-full max-w-[1220px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1771,7 +1775,7 @@ export default function PublishPage() {
                   </div>
                 </div>
                 </div>
-                <div className="flex justify-start pt-2">
+                <div className="flex justify-center pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
@@ -1787,7 +1791,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[980px] space-y-5"
+                className="w-full max-w-[1220px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1887,7 +1891,7 @@ export default function PublishPage() {
                     </label>
                   </div>
                 </div>
-                <div className="flex justify-start pt-2">
+                <div className="flex justify-center pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
@@ -1903,7 +1907,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[980px] space-y-5"
+                className="w-full max-w-[1220px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1963,7 +1967,7 @@ export default function PublishPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-start pt-2">
+                <div className="flex justify-center pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
