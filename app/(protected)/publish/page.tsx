@@ -10,6 +10,9 @@ import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShel
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
 import publishStep4NameAnimation from '@/components/animations/publish-step4-name.json';
 import publishStep10MediaAnimation from '@/components/animations/publish-step10-media.json';
+import publishStep17PublishingAnimation from '@/components/animations/publish-step17-publishing.json';
+import publishStep18SuccessAnimation from '@/components/animations/publish-step18-success.json';
+import publishStep14FinishAnimation from '@/components/animations/publish-step14-finish.json';
 import publishStep2Animation from '@/components/animations/publish-step2.json';
 import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
@@ -109,6 +112,17 @@ const operatingTimeOptions = [
   '5 months - 1 year',
   '1 - 3 years',
   '> 5 years',
+] as const;
+
+const complianceChecklistOptions = [
+  'Confirmation the company is legally registered (NIF/CUIT/RUC, registration number)',
+  'Legal structure: corporation, limited company, S.R.L., etc.',
+  'Company bylaws or incorporation deed',
+  'Licenses, permits, and certifications required for your industry',
+  'Registered intellectual property (patents, trademarks, copyrights)',
+  'Audited financial statements (balance sheet, P&L, cash flow)',
+  'Sales history, margins, and profitability',
+  'Financial projections (3-5 years)',
 ] as const;
 
 const isAddressValid = (address: PublishAddressStepFields) =>
@@ -391,7 +405,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -416,6 +430,10 @@ export default function PublishPage() {
   const [generatedPublication, setGeneratedPublication] = useState<OptimizedPublication | null>(null);
   const [generatedTittle, setGeneratedTittle] = useState<string>('');
   const [generatedDescription, setGeneratedDescription] = useState<string>('');
+  const [complianceSelections, setComplianceSelections] = useState<string[]>([]);
+  const [whatsAppMessage, setWhatsAppMessage] = useState('');
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
 
   const canContinueStep1 = useMemo(
@@ -581,6 +599,43 @@ export default function PublishPage() {
     ]
   );
 
+  const canContinueStep14 = useMemo(
+    () => !checkingProject && !hasExistingProject && !savingDraft,
+    [checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep15 = useMemo(
+    () =>
+      complianceSelections.length > 0 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft,
+    [complianceSelections, checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const canContinueStep16 = useMemo(
+    () => !checkingProject && !hasExistingProject && !savingDraft,
+    [checkingProject, hasExistingProject, savingDraft]
+  );
+
+  const previewPhotos = useMemo(
+    () => uploadedMediaItems.filter((item) => item.type === 'photo'),
+    [uploadedMediaItems]
+  );
+
+  const previewVideo = useMemo(
+    () => uploadedMediaItems.find((item) => item.type === 'video') ?? null,
+    [uploadedMediaItems]
+  );
+
+  const registeredWhatsappNumber = useMemo(() => {
+    const fromUser =
+      (user as { phone?: { number?: string } } | null)?.phone?.number ||
+      (user as { phoneNumber?: string } | null)?.phoneNumber ||
+      '';
+    return String(fromUser).replace(/[^\d+]/g, '');
+  }, [user]);
+
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -697,6 +752,36 @@ export default function PublishPage() {
     },
     [pendingMediaItems, uploadedMediaItems]
   );
+
+  useEffect(() => {
+    if (currentStep !== 16 || previewPhotos.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setActivePhotoIndex((previous) => (previous + 1) % previewPhotos.length);
+    }, 3000);
+
+    return () => window.clearInterval(timer);
+  }, [currentStep, previewPhotos.length]);
+
+  useEffect(() => {
+    if (currentStep !== 17) return;
+
+    const timer = window.setTimeout(() => {
+      setCurrentStep(18);
+    }, 2600);
+
+    return () => window.clearTimeout(timer);
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (currentStep !== 18) return;
+
+    const timer = window.setTimeout(() => {
+      setShowSuccessHomeButton(true);
+    }, 1700);
+
+    return () => window.clearTimeout(timer);
+  }, [currentStep]);
 
   const applyAddressRecord = (record: BusinessAddressRecord, source: Exclude<AddressSource, ''>) => {
     setAddress(toAddressFromGeocode(record, source));
@@ -850,6 +935,43 @@ export default function PublishPage() {
     media_videos_count: String(mediaCounts.videos),
   });
 
+  const handlePublishListing = async () => {
+    setStatus('Saving publication...');
+    const fields = buildPublicationFields();
+    const publicationPayload = {
+      version: 1,
+      locale: 'en',
+      step: 'publication_final_v1',
+      createdAt: new Date().toISOString(),
+      fields,
+      generated: {
+        tittle: generatedTittle,
+        description: generatedDescription,
+      },
+    };
+
+    const result = await saveCurrentUserPublicationDraft(getAccessToken, {
+      id: draftId,
+      promptJson: publicationPayload,
+      promptText: buildPublicationPromptText(fields),
+      metadata: {
+        step: 'publication_final_v1',
+        status: 'published',
+        labels: Object.keys(fields),
+      },
+    });
+
+    if (result.error || !result.data) {
+      setStatus(`Could not save publication: ${result.error ?? 'Unknown error.'}`);
+      return;
+    }
+
+    setDraftId(result.data.id);
+    setStatus('');
+    setShowSuccessHomeButton(false);
+    setCurrentStep(17);
+  };
+
   const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
     Object.entries(fields)
       .map(([key, value]) => `${key}: ${value || 'Not provided'}`)
@@ -981,8 +1103,29 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep13) return;
-    setStatus('Description updated. Continue to the next section.');
+    if (currentStep === 13) {
+      if (!canContinueStep13) return;
+      setCurrentStep(14);
+      setStatus('');
+      return;
+    }
+
+    if (currentStep === 14) {
+      if (!canContinueStep14) return;
+      setCurrentStep(15);
+      setStatus('');
+      return;
+    }
+
+    if (currentStep === 15) {
+      if (!canContinueStep15) return;
+      setCurrentStep(16);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep16) return;
+    setStatus('Preview ready. You can publish now.');
   };
 
   const handleSaveAndExit = async () => {
@@ -1022,22 +1165,24 @@ export default function PublishPage() {
           style={{ fontFamily: desktopFontFamily }}
           className="relative grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
-          <button
-            type="button"
-            onClick={() => void handleSaveAndExit()}
-            className="absolute right-10 top-8 h-10 rounded-full border border-black bg-transparent px-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
-          >
-            Save and exit
-          </button>
+          {currentStep !== 17 && currentStep !== 18 ? (
+            <button
+              type="button"
+              onClick={() => void handleSaveAndExit()}
+              className="absolute right-10 top-8 h-10 rounded-full border border-black bg-transparent px-5 text-sm font-medium text-black transition hover:bg-black hover:text-white"
+            >
+              Save and exit
+            </button>
+          ) : null}
 
-          {currentStep > 1 ? (
+          {currentStep > 1 && currentStep !== 17 && currentStep !== 18 ? (
             <button
               type="button"
               onClick={() =>
                 setCurrentStep(
                   (prev) =>
                     (prev > 1
-                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13)
+                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18)
                       : 1)
                 )
               }
@@ -1050,7 +1195,14 @@ export default function PublishPage() {
 
           <section
             className={`${
-              currentStep >= 7 && currentStep !== 10 && currentStep !== 12 && currentStep !== 13
+              currentStep >= 7 &&
+              currentStep !== 10 &&
+              currentStep !== 12 &&
+              currentStep !== 13 &&
+              currentStep !== 14 &&
+              currentStep !== 15 &&
+              currentStep !== 16 &&
+              currentStep !== 18
                 ? 'hidden'
                 : 'flex flex-col justify-center'
             }`}
@@ -1170,7 +1322,37 @@ export default function PublishPage() {
                   Explain what makes your business unique and attractive for investors.
                 </p>
               </>
-            ) : (
+            ) : currentStep === 14 ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">Step 3</p>
+                <h2 className="mt-2 max-w-xl text-[3.35rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Finish details and go live
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Next, define your pricing, answer a few final questions, and publish whenever you are ready.
+                </p>
+              </>
+            ) : currentStep === 15 ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">Extras</p>
+                <h2 className="mt-2 max-w-xl text-[3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Add key compliance and legal details
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Select the items your business can provide. We will use these details later in your publication profile.
+                </p>
+              </>
+            ) : currentStep === 16 ? (
+              <>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">Preview</p>
+                <h2 className="mt-2 max-w-xl text-[3rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Review your listing before publishing
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Confirm images, description, and compliance details, then publish when ready.
+                </p>
+              </>
+            ) : currentStep === 17 || currentStep === 18 ? null : (
               <>
                 <h2 className="max-w-xl text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
                   Upload your business media
@@ -1259,6 +1441,16 @@ export default function PublishPage() {
               generatedDescription.trim().length > 0
                 ? `${generatedDescription.trim().length}/500 characters used.`
                 : null}
+              {currentStep === 14 && !checkingProject && !hasExistingProject && !savingDraft
+                ? 'Final section intro is ready.'
+                : null}
+              {currentStep === 15 && !checkingProject && !hasExistingProject && !savingDraft
+                ? `${complianceSelections.length} compliance item(s) selected.`
+                : null}
+              {currentStep === 16 && !checkingProject && !hasExistingProject && !savingDraft
+                ? 'Preview generated from your collected data.'
+                : null}
+              {currentStep === 17 || currentStep === 18 ? '' : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -1292,7 +1484,15 @@ export default function PublishPage() {
                                           ? !canContinueStep11
                                           : currentStep === 12
                                             ? !canContinueStep12
-                                            : !canContinueStep13
+                                            : currentStep === 13
+                                              ? !canContinueStep13
+                                              : currentStep === 14
+                                                ? !canContinueStep14
+                                                : currentStep === 15
+                                                  ? !canContinueStep15
+                                                  : currentStep === 16
+                                                    ? !canContinueStep16
+                                                    : true
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1303,7 +1503,14 @@ export default function PublishPage() {
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep >= 7 && currentStep !== 10 && currentStep !== 12 && currentStep !== 13
+              currentStep >= 7 &&
+              currentStep !== 10 &&
+              currentStep !== 12 &&
+              currentStep !== 13 &&
+              currentStep !== 14 &&
+              currentStep !== 15 &&
+              currentStep !== 16 &&
+              currentStep !== 18
                 ? 'col-span-2 justify-center pt-20'
                 : ''
             }`}
@@ -1825,6 +2032,224 @@ export default function PublishPage() {
                   </div>
                 </div>
               </motion.div>
+            ) : currentStep === 15 ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[740px] space-y-4"
+              >
+                <div className="rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                  <p className="text-sm font-semibold text-[#0B1325]">Share safety and business details</p>
+                  <p className="mt-1 text-xs text-[#5D6A7F]">
+                    Does your business have any of these?
+                  </p>
+                  <div className="mt-5 space-y-3">
+                    {complianceChecklistOptions.map((option) => {
+                      const selected = complianceSelections.includes(option);
+                      return (
+                        <label
+                          key={option}
+                          className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition ${
+                            selected
+                              ? 'border-[#6B39F4] bg-[#F5F0FF]'
+                              : 'border-[#DCE6F1] bg-[#FBFDFF] hover:border-[#C8D6E7]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() =>
+                              setComplianceSelections((previous) =>
+                                selected
+                                  ? previous.filter((item) => item !== option)
+                                  : [...previous, option]
+                              )
+                            }
+                            className="mt-0.5 h-4 w-4 accent-[#6B39F4]"
+                          />
+                          <span className="text-sm leading-6 text-[#0F172A]">{option}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#E3EAF2] bg-[#F8FAFD] p-5">
+                  <p className="text-sm font-semibold text-[#0B1325]">Important things to know</p>
+                  <p className="mt-2 text-sm leading-6 text-[#5D6A7F]">
+                    Make sure all disclosures are accurate and aligned with local regulations. Include only verifiable legal, financial, and compliance information in your listing.
+                  </p>
+                </div>
+              </motion.div>
+            ) : currentStep === 16 ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[920px] space-y-5"
+              >
+                <div className="overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                  <div className="relative h-[320px] w-full overflow-hidden bg-[#EEF3FB]">
+                    {previewPhotos.length > 0 ? (
+                      <motion.div
+                        animate={{ x: `-${activePhotoIndex * 100}%` }}
+                        transition={{ duration: 0.6, ease: 'easeInOut' }}
+                        className="flex h-full w-full"
+                      >
+                        {previewPhotos.map((photo) => (
+                          <img
+                            key={photo.id}
+                            src={photo.previewUrl}
+                            alt={photo.name}
+                            className="h-full min-w-full object-cover"
+                          />
+                        ))}
+                      </motion.div>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-[#6A778D]">
+                        Add photos to preview your listing.
+                      </div>
+                    )}
+                    {previewPhotos.length > 0 ? (
+                      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/45 px-3 py-1.5">
+                        {previewPhotos.map((photo, index) => (
+                          <span
+                            key={`photo-dot-${photo.id}`}
+                            className={`h-2 w-2 rounded-full ${
+                              activePhotoIndex === index ? 'bg-white' : 'bg-white/45'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-4 p-6">
+                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[#0B1325]">
+                      {generatedTittle || 'Your business title'}
+                    </h3>
+
+                    <p className="text-sm font-semibold text-[#6B39F4]">
+                      Capital to raise: ${capitalRequiredUsd || '0'} USD
+                    </p>
+
+                    <div className="rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] p-4">
+                      <p className="text-sm font-semibold text-[#0B1325]">
+                        Send a message to the entrepreneur
+                      </p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <input
+                          value={whatsAppMessage}
+                          onChange={(event) => setWhatsAppMessage(event.target.value)}
+                          placeholder="Write your message"
+                          className={`${inputClassName} h-11 text-sm`}
+                        />
+                        <a
+                          href={
+                            registeredWhatsappNumber
+                              ? `https://wa.me/${registeredWhatsappNumber}?text=${encodeURIComponent(
+                                  whatsAppMessage || `Hi, I'd like to know more about ${generatedTittle || 'your business'}.`
+                                )}`
+                              : undefined
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold text-white ${
+                            registeredWhatsappNumber ? 'bg-[#10B981] hover:bg-[#059669]' : 'bg-[#A7B4C8] pointer-events-none'
+                          }`}
+                        >
+                          Send
+                        </a>
+                      </div>
+                    </div>
+
+                    {complianceSelections.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <div className="flex min-w-max gap-2">
+                          {complianceSelections.map((item) => (
+                            <span
+                              key={item}
+                              className="rounded-full border border-[#D5E0ED] bg-[#F8FBFF] px-3 py-1.5 text-xs font-medium text-[#334155]"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <p className="text-sm leading-7 text-[#334155] [text-align:justify]">
+                      {generatedDescription || 'Description will appear here once generated.'}
+                    </p>
+
+                    {previewVideo ? (
+                      <div className="rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD] p-3">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6A778D]">
+                          Featured video
+                        </p>
+                        <video src={previewVideo.previewUrl} controls className="h-56 w-full rounded-xl object-cover" />
+                      </div>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      onClick={() => void handlePublishListing()}
+                      className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
+                    >
+                      Publish
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : currentStep === 17 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="flex h-[74vh] w-full items-center justify-center"
+              >
+                <Lottie
+                  animationData={publishStep17PublishingAnimation}
+                  loop
+                  autoplay
+                  className="h-[740px] w-[740px] max-h-full max-w-full"
+                />
+              </motion.div>
+            ) : currentStep === 18 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="flex h-[74vh] w-full flex-col items-center justify-center"
+              >
+                <Lottie
+                  animationData={publishStep18SuccessAnimation}
+                  loop
+                  autoplay
+                  className="h-[620px] w-[620px] max-h-full max-w-full"
+                />
+                <motion.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: 'easeOut', delay: 0.15 }}
+                  className="mt-2 text-center text-2xl font-semibold tracking-[-0.03em] text-[#0B1325]"
+                >
+                  Congrats, your publication is now online!
+                </motion.p>
+                {showSuccessHomeButton ? (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    onClick={() => router.push('/home')}
+                    className="mt-6 h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
+                  >
+                    Go back to home
+                  </motion.button>
+                ) : null}
+              </motion.div>
             ) : (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -1845,6 +2270,8 @@ export default function PublishPage() {
                           ? publishStep4NameAnimation
                         : currentStep === 10
                           ? publishStep10MediaAnimation
+                        : currentStep === 14
+                          ? publishStep14FinishAnimation
                         : currentStep === 6
                           ? publishStep6Animation
                           : publishStep2Animation
