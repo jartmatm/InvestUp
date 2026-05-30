@@ -15,7 +15,9 @@ import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
+  createCurrentUserPublicationPrompt,
   fetchCurrentUserPublicationDraft,
+  type OptimizedPublication,
   saveCurrentUserPublicationDraft,
 } from '@/utils/client/current-user-publication-prompts';
 import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
@@ -389,7 +391,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -410,6 +412,9 @@ export default function PublishPage() {
   const [uploadedMediaItems, setUploadedMediaItems] = useState<UploadMediaItem[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
+  const [isGeneratingPublication, setIsGeneratingPublication] = useState(false);
+  const [generatedPublication, setGeneratedPublication] = useState<OptimizedPublication | null>(null);
+  const [generatedTittle, setGeneratedTittle] = useState<string>('');
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
 
   const canContinueStep1 = useMemo(
@@ -545,6 +550,17 @@ export default function PublishPage() {
       !savingDraft &&
       !isUploadingMedia,
     [mediaCounts, checkingProject, hasExistingProject, savingDraft, isUploadingMedia]
+  );
+
+  const canContinueStep12 = useMemo(
+    () =>
+      generatedTittle.trim().length > 0 &&
+      generatedTittle.trim().length <= 50 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft &&
+      !isGeneratingPublication,
+    [generatedTittle, checkingProject, hasExistingProject, savingDraft, isGeneratingPublication]
   );
 
   useEffect(() => {
@@ -795,7 +811,63 @@ export default function PublishPage() {
     setDraggedMediaId(null);
   };
 
-  const handleContinue = () => {
+  const buildPublicationFields = () => ({
+    business_name: businessName.trim(),
+    location: address.formatted_address.trim(),
+    industry: selectedBusinessCategory.trim(),
+    time_operating: selectedOperatingTime.trim(),
+    business_stage: '',
+    product_description: businessOffer.trim(),
+    problem_solved: businessDifferentiator.trim(),
+    differentiation: businessDifferentiator.trim(),
+    monthly_revenue: monthlySales.trim(),
+    avg_ticket: averageTicket.trim(),
+    monthly_customers: monthlyClients.trim(),
+    growth_rate: '',
+    social_media: '',
+    capital_needed: capitalRequiredUsd.trim(),
+    funds_usage: fundUsage.trim(),
+    investment_offer: `EA rate ${interestRateEA.trim()}% · round closes ${roundCloseDate.trim()}`.trim(),
+    target_customer: '',
+    market_size: '',
+    competition: '',
+    founder_info: aboutFounder.trim(),
+    team_info: aboutTeam.trim(),
+    testimonials: '',
+    achievements: businessAchievements.trim(),
+    timing_reason: roundCloseDate.trim(),
+    media_summary: `${mediaCounts.photos} photos, ${mediaCounts.videos} video`,
+  });
+
+  const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
+    Object.entries(fields)
+      .map(([key, value]) => `${key}: ${value || 'Not provided'}`)
+      .join('\n');
+
+  const generatePublicationFromCollectedData = async () => {
+    const fields = buildPublicationFields();
+    const promptJson = {
+      version: 1,
+      locale: 'en',
+      step: 'publication_generation_v1',
+      createdAt: new Date().toISOString(),
+      fields,
+    };
+
+    const promptText = buildPublicationPromptText(fields);
+    const result = await createCurrentUserPublicationPrompt(getAccessToken, {
+      promptJson,
+      promptText,
+      metadata: {
+        step: 'publication_generation_v1',
+        labels: Object.keys(fields),
+      },
+    });
+
+    return result;
+  };
+
+  const handleContinue = async () => {
     if (currentStep === 1) {
       if (!canContinueStep1) return;
       setCurrentStep(2);
@@ -866,8 +938,31 @@ export default function PublishPage() {
       return;
     }
 
-    if (!canContinueStep11) return;
-    setStatus('Media set is complete. Continue to the next section.');
+    if (currentStep === 11) {
+      if (!canContinueStep11) return;
+      setIsGeneratingPublication(true);
+      setStatus('Generating publication copy...');
+
+      const response = await generatePublicationFromCollectedData();
+
+      if (response.error || !response.data) {
+        setIsGeneratingPublication(false);
+        setStatus(`Could not generate publication: ${response.error ?? 'Unknown error.'}`);
+        return;
+      }
+
+      const optimized = response.data.optimizedPublication;
+      const tittleValue = (optimized.tittle || optimized.title || '').slice(0, 50);
+      setGeneratedPublication(optimized);
+      setGeneratedTittle(tittleValue);
+      setIsGeneratingPublication(false);
+      setStatus('');
+      setCurrentStep(12);
+      return;
+    }
+
+    if (!canContinueStep12) return;
+    setStatus('Title updated. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -922,7 +1017,7 @@ export default function PublishPage() {
                 setCurrentStep(
                   (prev) =>
                     (prev > 1
-                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11)
+                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12)
                       : 1)
                 )
               }
@@ -935,7 +1030,9 @@ export default function PublishPage() {
 
           <section
             className={`${
-              currentStep >= 7 && currentStep !== 10 ? 'hidden' : 'flex flex-col justify-center'
+              currentStep >= 7 && currentStep !== 10 && currentStep !== 12
+                ? 'hidden'
+                : 'flex flex-col justify-center'
             }`}
           >
             {currentStep === 1 ? (
@@ -1035,6 +1132,15 @@ export default function PublishPage() {
                   You&apos;ll need 5 photos and 1 video to get started. You can add more or make changes later.
                 </p>
               </>
+            ) : currentStep === 12 ? (
+              <>
+                <h2 className="max-w-xl text-[3.2rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Now, let&apos;s give your apartment a title
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Short titles work best. Have fun with it-you can always change it later.
+                </p>
+              </>
             ) : (
               <>
                 <h2 className="max-w-xl text-[3.25rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
@@ -1110,6 +1216,13 @@ export default function PublishPage() {
               !savingDraft
                 ? `${mediaCounts.photos} photos and ${mediaCounts.videos} video selected.`
                 : null}
+              {currentStep === 12 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              generatedTittle.trim().length > 0
+                ? `${generatedTittle.trim().length}/50 characters used.`
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -1139,7 +1252,9 @@ export default function PublishPage() {
                                     ? !canContinueStep9
                                     : currentStep === 10
                                       ? !canContinueStep10
-                                      : !canContinueStep11
+                                      : currentStep === 11
+                                        ? !canContinueStep11
+                                        : !canContinueStep12
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1150,7 +1265,9 @@ export default function PublishPage() {
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep >= 7 && currentStep !== 10 ? 'col-span-2 justify-center pt-20' : ''
+              currentStep >= 7 && currentStep !== 10 && currentStep !== 12
+                ? 'col-span-2 justify-center pt-20'
+                : ''
             }`}
           >
             {currentStep === 3 ? (
@@ -1613,6 +1730,34 @@ export default function PublishPage() {
                     </div>
                   </>
                 )}
+              </motion.div>
+            ) : currentStep === 12 ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[560px]"
+              >
+                <div className="rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                  <label className="block">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B39F4]">
+                      tittle
+                    </p>
+                    <textarea
+                      value={generatedTittle}
+                      onChange={(event) => setGeneratedTittle(event.target.value.slice(0, 50))}
+                      maxLength={50}
+                      rows={4}
+                      className={`${inputClassName} mt-3 resize-none text-base`}
+                    />
+                  </label>
+                  <div className="mt-2 flex items-center justify-between text-xs text-[#6A778D]">
+                    <span>
+                      {generatedPublication ? 'AI publication response received.' : 'Waiting for API response.'}
+                    </span>
+                    <span>{generatedTittle.length}/50</span>
+                  </div>
+                </div>
               </motion.div>
             ) : (
               <motion.div
