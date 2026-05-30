@@ -1803,10 +1803,10 @@ export default function PublishPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-4">
                     <label className="block">
                       <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
-                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                      <div className="mt-2 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-2.5">
                         <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
                           <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="12" cy="12" r="9" />
@@ -1825,20 +1825,19 @@ export default function PublishPage() {
                       </div>
                     </label>
 
-                    <label className="mt-5 block">
+                    <label className="mt-4 block">
                       <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
                       <textarea
                         value={fundUsage}
                         onChange={(event) => setFundUsage(event.target.value)}
                         placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
-                        className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                        className={`${inputClassName} mt-2 min-h-[88px] resize-none text-sm`}
                       />
                     </label>
-                  </div>
 
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                    <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
-                    <div className="mt-4 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-4">
+                    <div className="mt-4">
+                      <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
+                      <div className="mt-2 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
                       <div className="flex items-center gap-3">
                         <input
                           type="range"
@@ -1864,10 +1863,13 @@ export default function PublishPage() {
                       </div>
                       <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
                     </div>
+                    </div>
+                  </div>
 
-                    <label className="mt-5 block">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-4">
+                    <label className="block">
                       <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
-                      <div className="mt-3 overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white p-2">
+                      <div className="mt-2 overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white p-2">
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                           <DateCalendar
                             value={roundCloseDateValue}
@@ -1877,7 +1879,9 @@ export default function PublishPage() {
                             disablePast
                             sx={{
                               width: '100%',
-                              maxHeight: 320,
+                              maxHeight: 275,
+                              transform: 'scale(0.95)',
+                              transformOrigin: 'top center',
                               '& .MuiPickersDay-root.Mui-selected': {
                                 backgroundColor: '#6B39F4',
                               },
