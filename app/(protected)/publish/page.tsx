@@ -391,7 +391,7 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13>(1);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -415,6 +415,7 @@ export default function PublishPage() {
   const [isGeneratingPublication, setIsGeneratingPublication] = useState(false);
   const [generatedPublication, setGeneratedPublication] = useState<OptimizedPublication | null>(null);
   const [generatedTittle, setGeneratedTittle] = useState<string>('');
+  const [generatedDescription, setGeneratedDescription] = useState<string>('');
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
 
   const canContinueStep1 = useMemo(
@@ -561,6 +562,23 @@ export default function PublishPage() {
       !savingDraft &&
       !isGeneratingPublication,
     [generatedTittle, checkingProject, hasExistingProject, savingDraft, isGeneratingPublication]
+  );
+
+  const canContinueStep13 = useMemo(
+    () =>
+      generatedDescription.trim().length > 0 &&
+      generatedDescription.trim().length <= 500 &&
+      !checkingProject &&
+      !hasExistingProject &&
+      !savingDraft &&
+      !isGeneratingPublication,
+    [
+      generatedDescription,
+      checkingProject,
+      hasExistingProject,
+      savingDraft,
+      isGeneratingPublication,
+    ]
   );
 
   useEffect(() => {
@@ -813,30 +831,23 @@ export default function PublishPage() {
 
   const buildPublicationFields = () => ({
     business_name: businessName.trim(),
-    location: address.formatted_address.trim(),
-    industry: selectedBusinessCategory.trim(),
-    time_operating: selectedOperatingTime.trim(),
-    business_stage: '',
-    product_description: businessOffer.trim(),
-    problem_solved: businessDifferentiator.trim(),
-    differentiation: businessDifferentiator.trim(),
-    monthly_revenue: monthlySales.trim(),
-    avg_ticket: averageTicket.trim(),
-    monthly_customers: monthlyClients.trim(),
-    growth_rate: '',
-    social_media: '',
-    capital_needed: capitalRequiredUsd.trim(),
+    business_address: address.formatted_address.trim(),
+    business_category: selectedBusinessCategory.trim(),
+    operating_time: selectedOperatingTime.trim(),
+    offer_summary: businessOffer.trim(),
+    competitive_edge: businessDifferentiator.trim(),
+    monthly_sales: monthlySales.trim(),
+    average_ticket: averageTicket.trim(),
+    monthly_clients: monthlyClients.trim(),
+    capital_required_usd: capitalRequiredUsd.trim(),
     funds_usage: fundUsage.trim(),
-    investment_offer: `EA rate ${interestRateEA.trim()}% · round closes ${roundCloseDate.trim()}`.trim(),
-    target_customer: '',
-    market_size: '',
-    competition: '',
-    founder_info: aboutFounder.trim(),
-    team_info: aboutTeam.trim(),
-    testimonials: '',
-    achievements: businessAchievements.trim(),
-    timing_reason: roundCloseDate.trim(),
-    media_summary: `${mediaCounts.photos} photos, ${mediaCounts.videos} video`,
+    interest_rate_ea: interestRateEA.trim(),
+    round_close_date: roundCloseDate.trim(),
+    founder_profile: aboutFounder.trim(),
+    team_profile: aboutTeam.trim(),
+    business_achievements: businessAchievements.trim(),
+    media_photos_count: String(mediaCounts.photos),
+    media_videos_count: String(mediaCounts.videos),
   });
 
   const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
@@ -953,16 +964,25 @@ export default function PublishPage() {
 
       const optimized = response.data.optimizedPublication;
       const tittleValue = (optimized.tittle || optimized.title || '').slice(0, 50);
+      const descriptionValue = (optimized.description || optimized.summary || '').slice(0, 500);
       setGeneratedPublication(optimized);
       setGeneratedTittle(tittleValue);
+      setGeneratedDescription(descriptionValue);
       setIsGeneratingPublication(false);
       setStatus('');
       setCurrentStep(12);
       return;
     }
 
-    if (!canContinueStep12) return;
-    setStatus('Title updated. Continue to the next section.');
+    if (currentStep === 12) {
+      if (!canContinueStep12) return;
+      setCurrentStep(13);
+      setStatus('');
+      return;
+    }
+
+    if (!canContinueStep13) return;
+    setStatus('Description updated. Continue to the next section.');
   };
 
   const handleSaveAndExit = async () => {
@@ -1017,7 +1037,7 @@ export default function PublishPage() {
                 setCurrentStep(
                   (prev) =>
                     (prev > 1
-                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12)
+                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13)
                       : 1)
                 )
               }
@@ -1030,7 +1050,7 @@ export default function PublishPage() {
 
           <section
             className={`${
-              currentStep >= 7 && currentStep !== 10 && currentStep !== 12
+              currentStep >= 7 && currentStep !== 10 && currentStep !== 12 && currentStep !== 13
                 ? 'hidden'
                 : 'flex flex-col justify-center'
             }`}
@@ -1135,10 +1155,19 @@ export default function PublishPage() {
             ) : currentStep === 12 ? (
               <>
                 <h2 className="max-w-xl text-[3.2rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
-                  Now, let&apos;s give your apartment a title
+                  Let&apos;s craft a strong title for your business
                 </h2>
                 <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
-                  Short titles work best. Have fun with it-you can always change it later.
+                  Keep it short and memorable. You can fine-tune it anytime later.
+                </p>
+              </>
+            ) : currentStep === 13 ? (
+              <>
+                <h2 className="max-w-xl text-[3.2rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                  Create your description
+                </h2>
+                <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
+                  Explain what makes your business unique and attractive for investors.
                 </p>
               </>
             ) : (
@@ -1223,6 +1252,13 @@ export default function PublishPage() {
               generatedTittle.trim().length > 0
                 ? `${generatedTittle.trim().length}/50 characters used.`
                 : null}
+              {currentStep === 13 &&
+              !checkingProject &&
+              !hasExistingProject &&
+              !savingDraft &&
+              generatedDescription.trim().length > 0
+                ? `${generatedDescription.trim().length}/500 characters used.`
+                : null}
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
@@ -1252,9 +1288,11 @@ export default function PublishPage() {
                                     ? !canContinueStep9
                                     : currentStep === 10
                                       ? !canContinueStep10
-                                      : currentStep === 11
-                                        ? !canContinueStep11
-                                        : !canContinueStep12
+                                        : currentStep === 11
+                                          ? !canContinueStep11
+                                          : currentStep === 12
+                                            ? !canContinueStep12
+                                            : !canContinueStep13
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -1265,7 +1303,7 @@ export default function PublishPage() {
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep >= 7 && currentStep !== 10 && currentStep !== 12
+              currentStep >= 7 && currentStep !== 10 && currentStep !== 12 && currentStep !== 13
                 ? 'col-span-2 justify-center pt-20'
                 : ''
             }`}
@@ -1756,6 +1794,34 @@ export default function PublishPage() {
                       {generatedPublication ? 'AI publication response received.' : 'Waiting for API response.'}
                     </span>
                     <span>{generatedTittle.length}/50</span>
+                  </div>
+                </div>
+              </motion.div>
+            ) : currentStep === 13 ? (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="w-full max-w-[560px]"
+              >
+                <div className="rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                  <label className="block">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B39F4]">
+                      description
+                    </p>
+                    <textarea
+                      value={generatedDescription}
+                      onChange={(event) => setGeneratedDescription(event.target.value.slice(0, 500))}
+                      maxLength={500}
+                      rows={9}
+                      className={`${inputClassName} mt-3 resize-none text-base`}
+                    />
+                  </label>
+                  <div className="mt-2 flex items-center justify-between text-xs text-[#6A778D]">
+                    <span>
+                      {generatedPublication ? 'AI publication response received.' : 'Waiting for API response.'}
+                    </span>
+                    <span>{generatedDescription.length}/500</span>
                   </div>
                 </div>
               </motion.div>
