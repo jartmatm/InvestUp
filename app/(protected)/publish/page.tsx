@@ -63,6 +63,13 @@ type UploadMediaItem = {
   type: 'photo' | 'video';
 };
 
+type ProgressStepStatus = 'completed' | 'current' | 'upcoming';
+
+type ProgressStep = {
+  title: string;
+  description: string;
+};
+
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
 
 const emptyAddress: PublishAddressStepFields = {
@@ -85,6 +92,29 @@ const requiredAddressKeys: Array<keyof PublishAddressStepFields> = [
   'state',
   'postcode',
   'formatted_address',
+];
+
+const publishProgressSteps: ProgressStep[] = [
+  {
+    title: 'Business setup',
+    description: 'Address, category, name, and operating stage',
+  },
+  {
+    title: 'Financial profile',
+    description: 'Performance and investment round details',
+  },
+  {
+    title: 'Media upload',
+    description: 'Add photos and videos for your listing',
+  },
+  {
+    title: 'AI copy',
+    description: 'Review and edit generated title and description',
+  },
+  {
+    title: 'Review & publish',
+    description: 'Finalize compliance details and go live',
+  },
 ];
 
 const mobileSurfaceClassName =
@@ -1232,6 +1262,19 @@ export default function PublishPage() {
     return <RoleRestrictedState />;
   }
 
+  const progressStepIndex =
+    currentStep <= 5 ? 0
+    : currentStep <= 9 ? 1
+    : currentStep <= 11 ? 2
+    : currentStep <= 13 ? 3
+    : 4;
+
+  const resolveProgressStatus = (index: number): ProgressStepStatus => {
+    if (index < progressStepIndex) return 'completed';
+    if (index === progressStepIndex) return 'current';
+    return 'upcoming';
+  };
+
   return (
     <>
       <DesktopAppShell
@@ -1242,7 +1285,7 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="relative grid h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className="relative grid h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-40 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
@@ -2347,6 +2390,67 @@ export default function PublishPage() {
               </motion.div>
             )}
           </section>
+
+          {currentStep !== 17 && currentStep !== 18 ? (
+            <footer className="pointer-events-none absolute bottom-0 left-0 right-0 border-t border-[#E8EEF6] bg-white/95 px-10 py-5 backdrop-blur-sm">
+              <div className="pointer-events-auto flex items-start justify-between">
+                {publishProgressSteps.map((step, index) => {
+                  const status = resolveProgressStatus(index);
+                  const isLast = index === publishProgressSteps.length - 1;
+                  const isCurrent = status === 'current';
+                  const isCompleted = status === 'completed';
+                  const lineClass = index < progressStepIndex ? 'bg-[#6B39F4]' : 'bg-[#D6DCE5]';
+
+                  return (
+                    <div key={step.title} className="relative flex flex-1 flex-col items-center">
+                      {index < publishProgressSteps.length - 1 ? (
+                        <div className={`absolute left-1/2 top-5 h-[2px] w-full ${lineClass}`} />
+                      ) : null}
+
+                      <div className="relative z-10 mb-3">
+                        {isLast ? (
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                              isCompleted || isCurrent
+                                ? 'bg-[#6B39F4] text-white'
+                                : 'border-2 border-[#D0D5DD] bg-white text-[#9AA3B2]'
+                            }`}
+                          >
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+                              <path d="m12 2.8 2.78 5.63 6.22.9-4.5 4.39 1.06 6.2L12 17l-5.56 2.92 1.06-6.2L3 9.33l6.22-.9L12 2.8Z" />
+                            </svg>
+                          </div>
+                        ) : isCompleted ? (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6B39F4] text-white">
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m5 12 4.2 4.2L19 6.8" />
+                            </svg>
+                          </div>
+                        ) : isCurrent ? (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[#6B39F4] bg-white">
+                            <div className="h-3 w-3 rounded-full bg-[#6B39F4]" />
+                          </div>
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#D0D5DD] bg-white">
+                            <div className="h-3 w-3 rounded-full bg-[#A2ABB9]" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="max-w-[170px] text-center">
+                        <h3 className={`text-[15px] font-semibold ${isCurrent ? 'text-[#6B39F4]' : 'text-[#0B1325]'}`}>
+                          {step.title}
+                        </h3>
+                        <p className={`mt-1 text-xs leading-5 ${isCurrent ? 'text-[#6B39F4]' : 'text-[#6B7280]'}`}>
+                          {step.description}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </footer>
+          ) : null}
         </div>
       </DesktopAppShell>
 
