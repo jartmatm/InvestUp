@@ -352,6 +352,9 @@ const buildDraftPayload = (fields: PublishAddressStepFields) => {
   };
 };
 
+const isStepInRange = (value: number): value is 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 =>
+  Number.isInteger(value) && value >= 1 && value <= 18;
+
 function RoleRestrictedState() {
   return (
     <>
@@ -676,8 +679,46 @@ export default function PublishPage() {
       if (!draftResponse.error && draftResponse.data) {
         const promptJson = draftResponse.data.promptJson;
         if (promptJson && typeof promptJson === 'object' && !Array.isArray(promptJson)) {
-          const fields = (promptJson as { fields?: unknown }).fields;
+          const source = promptJson as { fields?: unknown; step_index?: unknown };
+          const fields =
+            source.fields && typeof source.fields === 'object' && !Array.isArray(source.fields)
+              ? (source.fields as Record<string, unknown>)
+              : {};
           setAddress(normalizeDraftAddress(fields));
+          setSelectedBusinessCategory(typeof fields.business_category === 'string' ? fields.business_category : '');
+          setBusinessName(typeof fields.business_name === 'string' ? fields.business_name : '');
+          setSelectedOperatingTime(typeof fields.operating_time === 'string' ? fields.operating_time : '');
+          setBusinessOffer(typeof fields.offer_summary === 'string' ? fields.offer_summary : '');
+          setBusinessDifferentiator(
+            typeof fields.competitive_edge === 'string' ? fields.competitive_edge : ''
+          );
+          setMonthlySales(typeof fields.monthly_sales === 'string' ? fields.monthly_sales : '');
+          setAverageTicket(typeof fields.average_ticket === 'string' ? fields.average_ticket : '');
+          setMonthlyClients(typeof fields.monthly_clients === 'string' ? fields.monthly_clients : '');
+          setCapitalRequiredUsd(
+            typeof fields.capital_required_usd === 'string' ? fields.capital_required_usd : ''
+          );
+          setFundUsage(typeof fields.funds_usage === 'string' ? fields.funds_usage : '');
+          setInterestRateEA(typeof fields.interest_rate_ea === 'string' ? fields.interest_rate_ea : '');
+          setRoundCloseDate(typeof fields.round_close_date === 'string' ? fields.round_close_date : '');
+          setAboutFounder(typeof fields.founder_profile === 'string' ? fields.founder_profile : '');
+          setAboutTeam(typeof fields.team_profile === 'string' ? fields.team_profile : '');
+          setBusinessAchievements(
+            typeof fields.business_achievements === 'string' ? fields.business_achievements : ''
+          );
+          setGeneratedTittle(typeof fields.generated_tittle === 'string' ? fields.generated_tittle : '');
+          setGeneratedDescription(
+            typeof fields.generated_description === 'string' ? fields.generated_description : ''
+          );
+          if (Array.isArray(fields.compliance_items)) {
+            setComplianceSelections(
+              fields.compliance_items.filter((item): item is string => typeof item === 'string')
+            );
+          }
+          const stepValue = Number(source.step_index);
+          if (isStepInRange(stepValue) && stepValue < 17) {
+            setCurrentStep(stepValue);
+          }
           setDraftId(draftResponse.data.id);
         }
       }
@@ -1135,15 +1176,45 @@ export default function PublishPage() {
     }
 
     setSavingDraft(true);
-    const payload = buildDraftPayload(address);
+    const fields = {
+      ...buildPublicationFields(),
+      country: address.country,
+      unit: address.unit,
+      street_address: address.street_address,
+      locality: address.locality,
+      state: address.state,
+      postcode: address.postcode,
+      formatted_address: address.formatted_address,
+      latitude: address.latitude,
+      longitude: address.longitude,
+      source: address.source,
+      generated_tittle: generatedTittle,
+      generated_description: generatedDescription,
+      compliance_items: complianceSelections,
+    };
+    const payload = {
+      promptJson: {
+        version: 1,
+        locale: 'en',
+        step: 'publish_flow_v1',
+        step_index: currentStep,
+        createdAt: new Date().toISOString(),
+        fields,
+      },
+      promptText: Object.entries(fields)
+        .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+        .join('\n'),
+      metadata: {
+        step: 'publish_flow_v1',
+        step_index: currentStep,
+        labels: Object.keys(fields),
+      },
+    };
     await saveCurrentUserPublicationDraft(getAccessToken, {
       id: draftId,
       promptJson: payload.promptJson,
       promptText: payload.promptText,
-      metadata: {
-        ...payload.metadata,
-        step: 'entrepreneur_business_intro_v2',
-      },
+      metadata: payload.metadata,
     });
     setSavingDraft(false);
     router.push('/feed');
@@ -1163,7 +1234,7 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="relative grid min-h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className="relative grid h-[74vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-hidden rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
@@ -1376,30 +1447,6 @@ export default function PublishPage() {
               isAddressValid(address)
                 ? 'Address details are complete.'
                 : null}
-              {currentStep === 3 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              selectedBusinessCategory
-                ? `Selected category: ${selectedBusinessCategory}.`
-                : null}
-              {currentStep === 4 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              businessName.trim().length > 0
-                ? `Business name: ${businessName.trim()}.`
-                : null}
-              {currentStep === 5 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              selectedOperatingTime
-                ? `Operating time: ${selectedOperatingTime}.`
-                : null}
-              {currentStep === 6 && !checkingProject && !hasExistingProject && !savingDraft
-                ? 'Financial section intro is ready.'
-                : null}
               {currentStep === 7 &&
               !checkingProject &&
               !hasExistingProject &&
@@ -1501,20 +1548,7 @@ export default function PublishPage() {
             </div>
           </section>
 
-          <section
-            className={`relative flex items-center justify-center ${
-              currentStep >= 7 &&
-              currentStep !== 10 &&
-              currentStep !== 12 &&
-              currentStep !== 13 &&
-              currentStep !== 14 &&
-              currentStep !== 15 &&
-              currentStep !== 16 &&
-              currentStep !== 18
-                ? 'col-span-2 justify-center pt-20'
-                : ''
-            }`}
-          >
+          <section className="relative flex items-center justify-center">
             {currentStep === 3 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
@@ -1577,7 +1611,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[660px] space-y-4"
+                className="w-full max-w-[980px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1588,35 +1622,36 @@ export default function PublishPage() {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <p className="text-sm font-semibold text-[#0B1325]">What do you sell exactly?</p>
-                  <p className="mt-1 text-xs text-[#5D6A7F]">
-                    Describe the products or services your business offers.
-                  </p>
-                  <textarea
-                    value={businessOffer}
-                    onChange={(event) => setBusinessOffer(event.target.value)}
-                    placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
-                    className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <p className="text-sm font-semibold text-[#0B1325]">What do you sell exactly?</p>
+                    <p className="mt-1 text-xs text-[#5D6A7F]">
+                      Describe the products or services your business offers.
+                    </p>
+                    <textarea
+                      value={businessOffer}
+                      onChange={(event) => setBusinessOffer(event.target.value)}
+                      placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
+                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                    />
 
-                  <p className="mt-5 text-sm font-semibold text-[#0B1325]">
-                    What makes you different from competitors?
-                  </p>
-                  <p className="mt-1 text-xs text-[#5D6A7F]">
-                    Tell us what you do differently and why customers choose you.
-                  </p>
-                  <textarea
-                    value={businessDifferentiator}
-                    onChange={(event) => setBusinessDifferentiator(event.target.value)}
-                    placeholder="Example: We deliver in under 30 minutes with nutrition plans customized by dietitians."
-                    className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                  />
-                </div>
+                    <p className="mt-5 text-sm font-semibold text-[#0B1325]">
+                      What makes you different from competitors?
+                    </p>
+                    <p className="mt-1 text-xs text-[#5D6A7F]">
+                      Tell us what you do differently and why customers choose you.
+                    </p>
+                    <textarea
+                      value={businessDifferentiator}
+                      onChange={(event) => setBusinessDifferentiator(event.target.value)}
+                      placeholder="Example: We deliver in under 30 minutes with nutrition plans customized by dietitians."
+                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                    />
+                  </div>
 
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <p className="text-sm font-semibold text-[#0B1325]">Monthly business metrics</p>
-                  <div className="mt-4 grid grid-cols-1 gap-3">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <p className="text-sm font-semibold text-[#0B1325]">Monthly business metrics</p>
+                    <div className="mt-4 grid grid-cols-1 gap-3">
                     <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
                       <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
                         <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -1628,7 +1663,7 @@ export default function PublishPage() {
                         </svg>
                       </span>
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5D6A7F]">Total monthly sales</p>
+                        <p className="text-xs font-medium text-[#5D6A7F]">Total monthly sales (Units)</p>
                         <input
                           type="number"
                           min="0"
@@ -1649,7 +1684,7 @@ export default function PublishPage() {
                         </svg>
                       </span>
                       <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5D6A7F]">Average ticket</p>
+                        <p className="text-xs font-medium text-[#5D6A7F]">Average ticket (USD)</p>
                         <input
                           type="number"
                           min="0"
@@ -1684,7 +1719,8 @@ export default function PublishPage() {
                     </label>
                   </div>
                 </div>
-                <div className="flex justify-center pt-2">
+                </div>
+                <div className="flex justify-start pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
@@ -1700,7 +1736,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[660px] space-y-4"
+                className="w-full max-w-[980px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1711,79 +1747,81 @@ export default function PublishPage() {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <label className="block">
-                    <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
-                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
-                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="9" />
-                          <path d="M14.8 8.5c-.7-.7-1.7-1-2.8-1-1.7 0-3 .9-3 2.2 0 1.2 1 1.8 2.7 2.2 1.9.4 3.3.9 3.3 2.5 0 1.5-1.4 2.4-3.3 2.4-1.3 0-2.5-.4-3.4-1.3" />
-                          <path d="M12 6.5v11" />
-                        </svg>
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={capitalRequiredUsd}
-                        onChange={(event) => setCapitalRequiredUsd(event.target.value)}
-                        placeholder="0"
-                        className="w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
-                      />
-                    </div>
-                  </label>
-
-                  <label className="mt-5 block">
-                    <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
-                    <textarea
-                      value={fundUsage}
-                      onChange={(event) => setFundUsage(event.target.value)}
-                      placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
-                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                    />
-                  </label>
-                </div>
-
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
-                  <div className="mt-4 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="1"
-                        max="60"
-                        step="0.5"
-                        value={interestRateEA || '1'}
-                        onChange={(event) => setInterestRateEA(event.target.value)}
-                        className="h-2 w-full cursor-pointer accent-[#6B39F4]"
-                      />
-                      <div className="w-[120px]">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <label className="block">
+                      <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
+                      <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
+                          <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="9" />
+                            <path d="M14.8 8.5c-.7-.7-1.7-1-2.8-1-1.7 0-3 .9-3 2.2 0 1.2 1 1.8 2.7 2.2 1.9.4 3.3.9 3.3 2.5 0 1.5-1.4 2.4-3.3 2.4-1.3 0-2.5-.4-3.4-1.3" />
+                            <path d="M12 6.5v11" />
+                          </svg>
+                        </span>
                         <input
                           type="number"
+                          min="0"
+                          value={capitalRequiredUsd}
+                          onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                          placeholder="0"
+                          className="w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                        />
+                      </div>
+                    </label>
+
+                    <label className="mt-5 block">
+                      <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
+                      <textarea
+                        value={fundUsage}
+                        onChange={(event) => setFundUsage(event.target.value)}
+                        placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
+                        className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
+                    <div className="mt-4 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="range"
                           min="1"
                           max="60"
                           step="0.5"
-                          value={interestRateEA}
+                          value={interestRateEA || '1'}
                           onChange={(event) => setInterestRateEA(event.target.value)}
-                          placeholder="0"
-                          className="w-full rounded-lg border border-[#DCE6F1] bg-white px-2 py-1.5 text-sm font-semibold text-[#0B1325] outline-none focus:border-[#6B39F4]"
+                          className="h-2 w-full cursor-pointer accent-[#6B39F4]"
                         />
+                        <div className="w-[120px]">
+                          <input
+                            type="number"
+                            min="1"
+                            max="60"
+                            step="0.5"
+                            value={interestRateEA}
+                            onChange={(event) => setInterestRateEA(event.target.value)}
+                            placeholder="0"
+                            className="w-full rounded-lg border border-[#DCE6F1] bg-white px-2 py-1.5 text-sm font-semibold text-[#0B1325] outline-none focus:border-[#6B39F4]"
+                          />
+                        </div>
                       </div>
+                      <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
                     </div>
-                    <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
-                  </div>
 
-                  <label className="mt-5 block">
-                    <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
-                    <input
-                      type="date"
-                      value={roundCloseDate}
-                      onChange={(event) => setRoundCloseDate(event.target.value)}
-                      className={`${inputClassName} mt-3 text-sm`}
-                    />
-                  </label>
+                    <label className="mt-5 block">
+                      <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
+                      <input
+                        type="date"
+                        value={roundCloseDate}
+                        onChange={(event) => setRoundCloseDate(event.target.value)}
+                        className={`${inputClassName} mt-3 text-sm`}
+                      />
+                    </label>
+                  </div>
                 </div>
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-start pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
@@ -1799,7 +1837,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[700px] space-y-4"
+                className="w-full max-w-[980px] space-y-5"
               >
                 <div className="text-center">
                   <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
@@ -1810,54 +1848,56 @@ export default function PublishPage() {
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <label className="block">
-                    <p className="text-sm font-semibold text-[#0B1325]">
-                      Tell us about yourself
-                    </p>
-                    <p className="mt-1 text-xs text-[#5D6A7F]">
-                      Who you are, brief summary, studies, and relevant experience.
-                    </p>
-                    <textarea
-                      value={aboutFounder}
-                      onChange={(event) => setAboutFounder(event.target.value)}
-                      placeholder="Example: I am a mechanical engineer with 8 years of experience in food operations and scaling SMEs."
-                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                    />
-                  </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <label className="block">
+                      <p className="text-sm font-semibold text-[#0B1325]">
+                        Tell us about yourself
+                      </p>
+                      <p className="mt-1 text-xs text-[#5D6A7F]">
+                        Who you are, brief summary, studies, and relevant experience.
+                      </p>
+                      <textarea
+                        value={aboutFounder}
+                        onChange={(event) => setAboutFounder(event.target.value)}
+                        placeholder="Example: I am a mechanical engineer with 8 years of experience in food operations and scaling SMEs."
+                        className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                      />
+                    </label>
 
-                  <label className="mt-5 block">
-                    <p className="text-sm font-semibold text-[#0B1325]">
-                      Tell us about your team
-                    </p>
-                    <p className="mt-1 text-xs text-[#5D6A7F]">
-                      Number of employees, roles, and key capabilities.
-                    </p>
-                    <textarea
-                      value={aboutTeam}
-                      onChange={(event) => setAboutTeam(event.target.value)}
-                      placeholder="Example: 12 team members across operations, sales, and finance, with strengths in logistics and customer retention."
-                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                    />
-                  </label>
+                    <label className="mt-5 block">
+                      <p className="text-sm font-semibold text-[#0B1325]">
+                        Tell us about your team
+                      </p>
+                      <p className="mt-1 text-xs text-[#5D6A7F]">
+                        Number of employees, roles, and key capabilities.
+                      </p>
+                      <textarea
+                        value={aboutTeam}
+                        onChange={(event) => setAboutTeam(event.target.value)}
+                        placeholder="Example: 12 team members across operations, sales, and finance, with strengths in logistics and customer retention."
+                        className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
+                    <label className="block">
+                      <p className="text-sm font-semibold text-[#0B1325]">Achievements</p>
+                      <p className="mt-1 text-xs text-[#5D6A7F]">
+                        Awards, recognitions, certifications, or key business milestones.
+                      </p>
+                      <textarea
+                        value={businessAchievements}
+                        onChange={(event) => setBusinessAchievements(event.target.value)}
+                        placeholder="Example: Winner of local startup challenge 2025 and ISO 9001 certified operations."
+                        className={`${inputClassName} mt-3 min-h-[280px] resize-none text-sm`}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                  <label className="block">
-                    <p className="text-sm font-semibold text-[#0B1325]">Achievements</p>
-                    <p className="mt-1 text-xs text-[#5D6A7F]">
-                      Awards, recognitions, certifications, or key business milestones.
-                    </p>
-                    <textarea
-                      value={businessAchievements}
-                      onChange={(event) => setBusinessAchievements(event.target.value)}
-                      placeholder="Example: Winner of local startup challenge 2025 and ISO 9001 certified operations."
-                      className={`${inputClassName} mt-3 min-h-[100px] resize-none text-sm`}
-                    />
-                  </label>
-                </div>
-
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-start pt-2">
                   <button
                     type="button"
                     onClick={handleContinue}
@@ -2419,7 +2459,10 @@ export default function PublishPage() {
                 </p>
                 <button
                   type="button"
-                  onClick={handleContinue}
+                  onClick={() => {
+                    if (!canContinueStep1) return;
+                    setIsAddressModalOpen(false);
+                  }}
                   disabled={!canContinueStep1}
                   className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
