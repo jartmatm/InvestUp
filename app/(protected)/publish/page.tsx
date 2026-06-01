@@ -738,46 +738,42 @@ export default function PublishPage() {
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
   const canContinueStep1 = useMemo(
-    () =>
-      isAddressValid(address) && !checkingProject && !hasExistingProject && !savingDraft,
-    [address, checkingProject, hasExistingProject, savingDraft]
+    () => isAddressValid(address) && !checkingProject && !hasExistingProject,
+    [address, checkingProject, hasExistingProject]
   );
 
   const canContinueStep2 = useMemo(
-    () => !checkingProject && !hasExistingProject && !savingDraft,
-    [checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject,
+    [checkingProject, hasExistingProject]
   );
 
   const canContinueStep3 = useMemo(
     () =>
       selectedBusinessCategory.trim().length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
-    [selectedBusinessCategory, checkingProject, hasExistingProject, savingDraft]
+      !hasExistingProject,
+    [selectedBusinessCategory, checkingProject, hasExistingProject]
   );
 
   const canContinueStep4 = useMemo(
     () =>
       businessName.trim().length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
-    [businessName, checkingProject, hasExistingProject, savingDraft]
+      !hasExistingProject,
+    [businessName, checkingProject, hasExistingProject]
   );
 
   const canContinueStep5 = useMemo(
     () =>
       selectedOperatingTime.trim().length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
-    [selectedOperatingTime, checkingProject, hasExistingProject, savingDraft]
+      !hasExistingProject,
+    [selectedOperatingTime, checkingProject, hasExistingProject]
   );
 
   const canContinueStep6 = useMemo(
-    () => !checkingProject && !hasExistingProject && !savingDraft,
-    [checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject,
+    [checkingProject, hasExistingProject]
   );
 
   const canContinueStep7 = useMemo(
@@ -788,8 +784,7 @@ export default function PublishPage() {
       Number(averageTicket) > 0 &&
       Number(monthlyClients) > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
+      !hasExistingProject,
     [
       businessOffer,
       businessDifferentiator,
@@ -798,7 +793,6 @@ export default function PublishPage() {
       monthlyClients,
       checkingProject,
       hasExistingProject,
-      savingDraft,
     ]
   );
 
@@ -809,8 +803,7 @@ export default function PublishPage() {
       Number(interestRateEA) > 0 &&
       roundCloseDate.trim().length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
+      !hasExistingProject,
     [
       capitalRequiredUsd,
       fundUsage,
@@ -818,7 +811,6 @@ export default function PublishPage() {
       roundCloseDate,
       checkingProject,
       hasExistingProject,
-      savingDraft,
     ]
   );
 
@@ -827,14 +819,12 @@ export default function PublishPage() {
       aboutFounder.trim().length > 0 &&
       aboutTeam.trim().length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
+      !hasExistingProject,
     [
       aboutFounder,
       aboutTeam,
       checkingProject,
       hasExistingProject,
-      savingDraft,
     ]
   );
 
@@ -855,8 +845,8 @@ export default function PublishPage() {
   );
 
   const canContinueStep10 = useMemo(
-    () => !checkingProject && !hasExistingProject && !savingDraft,
-    [checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject,
+    [checkingProject, hasExistingProject]
   );
 
   const canContinueStep11 = useMemo(
@@ -865,9 +855,8 @@ export default function PublishPage() {
       mediaCounts.videos >= 1 &&
       !checkingProject &&
       !hasExistingProject &&
-      !savingDraft &&
       !isUploadingMedia,
-    [mediaCounts, checkingProject, hasExistingProject, savingDraft, isUploadingMedia]
+    [mediaCounts, checkingProject, hasExistingProject, isUploadingMedia]
   );
 
   const canContinueStep12 = useMemo(
@@ -876,9 +865,8 @@ export default function PublishPage() {
       generatedTittle.trim().length <= 50 &&
       !checkingProject &&
       !hasExistingProject &&
-      !savingDraft &&
       !isGeneratingPublication,
-    [generatedTittle, checkingProject, hasExistingProject, savingDraft, isGeneratingPublication]
+    [generatedTittle, checkingProject, hasExistingProject, isGeneratingPublication]
   );
 
   const canContinueStep13 = useMemo(
@@ -887,34 +875,31 @@ export default function PublishPage() {
       generatedDescription.trim().length <= 5000 &&
       !checkingProject &&
       !hasExistingProject &&
-      !savingDraft &&
       !isGeneratingPublication,
     [
       generatedDescription,
       checkingProject,
       hasExistingProject,
-      savingDraft,
       isGeneratingPublication,
     ]
   );
 
   const canContinueStep14 = useMemo(
-    () => !checkingProject && !hasExistingProject && !savingDraft,
-    [checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject,
+    [checkingProject, hasExistingProject]
   );
 
   const canContinueStep15 = useMemo(
     () =>
       complianceSelections.length > 0 &&
       !checkingProject &&
-      !hasExistingProject &&
-      !savingDraft,
-    [complianceSelections, checkingProject, hasExistingProject, savingDraft]
+      !hasExistingProject,
+    [complianceSelections, checkingProject, hasExistingProject]
   );
 
   const canContinueStep16 = useMemo(
-    () => !checkingProject && !hasExistingProject && !savingDraft,
-    [checkingProject, hasExistingProject, savingDraft]
+    () => !checkingProject && !hasExistingProject,
+    [checkingProject, hasExistingProject]
   );
 
   const previewPhotos = useMemo(
@@ -1305,6 +1290,16 @@ export default function PublishPage() {
     });
 
     setDraggedMediaId(null);
+  };
+
+  const handleRemoveUploadedMedia = (mediaId: string) => {
+    setUploadedMediaItems((previous) => {
+      const target = previous.find((item) => item.id === mediaId);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return previous.filter((item) => item.id !== mediaId);
+    });
   };
 
   const buildPublicationFields = () => ({
@@ -2519,6 +2514,29 @@ export default function PublishPage() {
                             onDrop={() => handleDropMedia(item.id)}
                             className="group relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD]"
                           >
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleRemoveUploadedMedia(item.id);
+                              }}
+                              className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#FF4D4F] text-white shadow-[0_10px_20px_rgba(239,68,68,0.3)] transition hover:bg-[#E63537]"
+                              aria-label="Remove media"
+                            >
+                              <svg
+                                viewBox="0 0 24 24"
+                                className="h-3.5 w-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M8 6V4h8v2" />
+                                <path d="M19 6l-1 14H6L5 6" />
+                                <path d="M10 11v6" />
+                                <path d="M14 11v6" />
+                              </svg>
+                            </button>
                             {item.type === 'video' ? (
                               <AspectRatio customRatio={1.6}>
                                 <video
