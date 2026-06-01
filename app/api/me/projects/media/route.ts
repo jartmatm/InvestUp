@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 const PROJECT_MEDIA_BUCKET = 'project-media';
 const MAX_FILES = 12;
-const MAX_FILE_SIZE_BYTES = 60 * 1024 * 1024;
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = [
   'image/webp',
   'image/jpeg',
@@ -53,7 +53,7 @@ const ensureProjectMediaBucket = async () => {
 
   const { error: createError } = await supabase.storage.createBucket(PROJECT_MEDIA_BUCKET, {
     public: true,
-    fileSizeLimit: String(MAX_FILE_SIZE_BYTES),
+    fileSizeLimit: MAX_FILE_SIZE_BYTES,
     allowedMimeTypes: [...ALLOWED_MIME_TYPES],
   });
 
