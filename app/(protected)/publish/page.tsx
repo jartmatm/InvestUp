@@ -689,6 +689,7 @@ export default function PublishPage() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
@@ -1273,102 +1274,123 @@ export default function PublishPage() {
   });
 
   const handlePublishListing = async () => {
-    setStatus('Saving publication...');
+    if (isPublishing) return;
+    setIsPublishing(true);
+    setStatus('Uploading media...');
     const fields = buildPublicationFields();
-    const mediaUploadResult = await uploadCurrentUserProjectMedia(
-      getAccessToken,
-      uploadedMediaItems.map((item) => item.file)
-    );
+    try {
+      const mediaFiles = uploadedMediaItems.map((item) => item.file);
+      const isRemoteUrl = (value: string) => /^https?:\/\//i.test(value.trim());
 
-    if (mediaUploadResult.error || !mediaUploadResult.data) {
-      setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
-      return;
-    }
+      let uploadedPhotos: string[] = [];
+      let uploadedVideo: string | null = null;
 
-    const uploadedPhotos = mediaUploadResult.data
-      .filter((item) => item.type === 'photo')
-      .map((item) => item.publicUrl);
-    const uploadedVideo = mediaUploadResult.data.find((item) => item.type === 'video')?.publicUrl ?? null;
+      if (mediaFiles.length > 0) {
+        const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, mediaFiles);
+        if (mediaUploadResult.error || !mediaUploadResult.data) {
+          setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
+          return;
+        }
+        uploadedPhotos = mediaUploadResult.data
+          .filter((item) => item.type === 'photo')
+          .map((item) => item.publicUrl);
+        uploadedVideo =
+          mediaUploadResult.data.find((item) => item.type === 'video')?.publicUrl ?? null;
+      } else {
+        uploadedPhotos = previewPhotos
+          .map((item) => item.previewUrl)
+          .filter((url) => isRemoteUrl(url));
+        uploadedVideo =
+          previewVideo && isRemoteUrl(previewVideo.previewUrl) ? previewVideo.previewUrl : null;
+      }
 
-    if (uploadedPhotos.length === 0) {
-      setStatus('Could not publish project: at least one photo is required.');
-      return;
-    }
+      if (uploadedPhotos.length === 0) {
+        setStatus('Could not publish project: at least one photo is required.');
+        return;
+      }
 
-    const normalizedAmountRequested = Number(capitalRequiredUsd) > 0 ? Number(capitalRequiredUsd) : 1000;
-    const normalizedMinimumInvestment = Math.max(50, Math.floor(normalizedAmountRequested * 0.05));
-    const normalizedInterestRate = Number(interestRateEA) >= 0 ? Number(interestRateEA) : 0;
-    const publicationEndDate =
-      roundCloseDate && dayjs(roundCloseDate).isAfter(dayjs())
-        ? roundCloseDate
-        : dayjs().add(30, 'day').format('YYYY-MM-DD');
-    const openingDate = dayjs().format('YYYY-MM-DD');
-    const phoneNumber = registeredWhatsappNumber || '0000000000';
+      setStatus('Creating publication...');
+      const normalizedAmountRequested =
+        Number(capitalRequiredUsd) > 0 ? Number(capitalRequiredUsd) : 1000;
+      const normalizedMinimumInvestment = Math.max(
+        50,
+        Math.floor(normalizedAmountRequested * 0.05)
+      );
+      const normalizedInterestRate = Number(interestRateEA) >= 0 ? Number(interestRateEA) : 0;
+      const publicationEndDate =
+        roundCloseDate && dayjs(roundCloseDate).isAfter(dayjs())
+          ? roundCloseDate
+          : dayjs().add(30, 'day').format('YYYY-MM-DD');
+      const openingDate = dayjs().format('YYYY-MM-DD');
+      const phoneNumber = registeredWhatsappNumber || '0000000000';
 
-    const publishProjectResult = await createCurrentUserProject(getAccessToken, {
-      title: generatedTittle.trim() || businessName.trim() || 'Business opportunity',
-      business_name: businessName.trim() || 'Business',
-      sector: selectedBusinessCategory.trim() || 'General',
-      legal_representative: aboutFounder.trim() || businessName.trim() || 'Business owner',
-      opening_date: openingDate,
-      address: address.formatted_address.trim() || 'Address not provided',
-      phone: phoneNumber,
-      city: address.locality.trim() || 'Unknown city',
-      country: address.country.trim() || 'Unknown country',
-      description: generatedDescription.trim() || businessOffer.trim() || 'Business opportunity',
-      publication_end_date: publicationEndDate,
-      currency: 'USD',
-      amount_requested: normalizedAmountRequested,
-      minimum_investment: normalizedMinimumInvestment,
-      installment_count: 12,
-      interest_rate: normalizedInterestRate,
-      photo_urls: uploadedPhotos,
-      video_url: uploadedVideo,
-      metadata: {
-        source: 'publish_wizard',
-        operating_time: selectedOperatingTime,
-        funds_usage: fundUsage,
-        compliance_selections: complianceSelections,
-      },
-    });
+      const publishProjectResult = await createCurrentUserProject(getAccessToken, {
+        title: generatedTittle.trim() || businessName.trim() || 'Business opportunity',
+        business_name: businessName.trim() || 'Business',
+        sector: selectedBusinessCategory.trim() || 'General',
+        legal_representative: aboutFounder.trim() || businessName.trim() || 'Business owner',
+        opening_date: openingDate,
+        address: address.formatted_address.trim() || 'Address not provided',
+        phone: phoneNumber,
+        city: address.locality.trim() || 'Unknown city',
+        country: address.country.trim() || 'Unknown country',
+        description: generatedDescription.trim() || businessOffer.trim() || 'Business opportunity',
+        publication_end_date: publicationEndDate,
+        currency: 'USD',
+        amount_requested: normalizedAmountRequested,
+        minimum_investment: normalizedMinimumInvestment,
+        installment_count: 12,
+        interest_rate: normalizedInterestRate,
+        photo_urls: uploadedPhotos,
+        video_url: uploadedVideo,
+        metadata: {
+          source: 'publish_wizard',
+          operating_time: selectedOperatingTime,
+          funds_usage: fundUsage,
+          compliance_selections: complianceSelections,
+        },
+      });
 
-    if (publishProjectResult.error || !publishProjectResult.data) {
-      setStatus(`Could not publish project: ${publishProjectResult.error ?? 'Unknown error.'}`);
-      return;
-    }
+      if (publishProjectResult.error || !publishProjectResult.data) {
+        setStatus(`Could not publish project: ${publishProjectResult.error ?? 'Unknown error.'}`);
+        return;
+      }
 
-    const publicationPayload = {
-      version: 1,
-      locale: 'en',
-      step: 'publication_final_v1',
-      createdAt: new Date().toISOString(),
-      fields,
-      generated: {
-        tittle: generatedTittle,
-        description: generatedDescription,
-      },
-    };
-
-    const result = await saveCurrentUserPublicationDraft(getAccessToken, {
-      id: draftId,
-      promptJson: publicationPayload,
-      promptText: buildPublicationPromptText(fields),
-      metadata: {
+      const publicationPayload = {
+        version: 1,
+        locale: 'en',
         step: 'publication_final_v1',
-        status: 'published',
-        labels: Object.keys(fields),
-      },
-    });
+        createdAt: new Date().toISOString(),
+        fields,
+        generated: {
+          tittle: generatedTittle,
+          description: generatedDescription,
+        },
+      };
 
-    if (result.error || !result.data) {
-      setStatus(`Could not save publication: ${result.error ?? 'Unknown error.'}`);
-      return;
+      const result = await saveCurrentUserPublicationDraft(getAccessToken, {
+        id: draftId,
+        promptJson: publicationPayload,
+        promptText: buildPublicationPromptText(fields),
+        metadata: {
+          step: 'publication_final_v1',
+          status: 'published',
+          labels: Object.keys(fields),
+        },
+      });
+
+      if (result.error || !result.data) {
+        setStatus(`Could not save publication: ${result.error ?? 'Unknown error.'}`);
+        return;
+      }
+
+      setDraftId(result.data.id);
+      setStatus('');
+      setShowSuccessHomeButton(false);
+      goToStep(17);
+    } finally {
+      setIsPublishing(false);
     }
-
-    setDraftId(result.data.id);
-    setStatus('');
-    setShowSuccessHomeButton(false);
-    goToStep(17);
   };
 
   const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
@@ -2641,12 +2663,14 @@ export default function PublishPage() {
                     ) : null}
 
                     <div className="flex justify-center pb-2">
+                      {status ? <p className="mr-4 self-center text-sm text-[#0B7A52]">{status}</p> : null}
                       <button
                         type="button"
                         onClick={() => void handlePublishListing()}
+                        disabled={isPublishing}
                         className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
                       >
-                        Publish
+                        {isPublishing ? 'Publishing...' : 'Publish'}
                       </button>
                     </div>
                   </div>
