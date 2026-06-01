@@ -1862,66 +1862,69 @@ export default function PublishPage() {
               </>
             )}
 
-            <div className="mt-6 text-sm text-[#5D6A7F]">
-              {checkingProject ? 'Checking your profile status...' : null}
-              {!checkingProject && hasExistingProject
-                ? 'You already have a published project. Manage updates from Portfolio.'
-                : null}
-              {savingDraft ? 'Saving your responses...' : null}
-              {currentStep === 1 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              isAddressValid(address)
-                ? ''
-                : null}
-              {currentStep === 7 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              canContinueStep7
-                ? 'Business details and financial metrics are complete.'
-                : null}
-              {currentStep === 8 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              canContinueStep8
-                ? 'Investment round details are complete.'
-                : null}
-              {currentStep === 9 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              canContinueStep9
-                ? 'Founder and team details are complete.'
-                : null}
-              {currentStep === 11 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft
-                ? `${mediaCounts.photos} photos and ${mediaCounts.videos} video selected.`
-                : null}
-              {currentStep === 13 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              generatedDescription.trim().length > 0
-                ? `${generatedDescription.trim().length}/500 characters used.`
-                : null}
-              {currentStep === 14 && !checkingProject && !hasExistingProject && !savingDraft
-                ? 'Final section intro is ready.'
-                : null}
-              {currentStep === 15 && !checkingProject && !hasExistingProject && !savingDraft
-                ? `${complianceSelections.length} compliance item(s) selected.`
-                : null}
-              {currentStep === 16 && !checkingProject && !hasExistingProject && !savingDraft
-                ? 'Preview generated from your collected data.'
-                : null}
-              {currentStep === 17 || currentStep === 18 ? '' : null}
-            </div>
+            {currentStep !== 17 && currentStep !== 18 ? (
+              <>
+                <div className="mt-6 text-sm text-[#5D6A7F]">
+                  {checkingProject ? 'Checking your profile status...' : null}
+                  {!checkingProject && hasExistingProject
+                    ? 'You already have a published project. Manage updates from Portfolio.'
+                    : null}
+                  {savingDraft ? 'Saving your responses...' : null}
+                  {currentStep === 1 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft &&
+                  isAddressValid(address)
+                    ? ''
+                    : null}
+                  {currentStep === 7 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft &&
+                  canContinueStep7
+                    ? 'Business details and financial metrics are complete.'
+                    : null}
+                  {currentStep === 8 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft &&
+                  canContinueStep8
+                    ? 'Investment round details are complete.'
+                    : null}
+                  {currentStep === 9 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft &&
+                  canContinueStep9
+                    ? 'Founder and team details are complete.'
+                    : null}
+                  {currentStep === 11 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft
+                    ? `${mediaCounts.photos} photos and ${mediaCounts.videos} video selected.`
+                    : null}
+                  {currentStep === 13 &&
+                  !checkingProject &&
+                  !hasExistingProject &&
+                  !savingDraft &&
+                  generatedDescription.trim().length > 0
+                    ? `${generatedDescription.trim().length}/500 characters used.`
+                    : null}
+                  {currentStep === 14 && !checkingProject && !hasExistingProject && !savingDraft
+                    ? 'Final section intro is ready.'
+                    : null}
+                  {currentStep === 15 && !checkingProject && !hasExistingProject && !savingDraft
+                    ? `${complianceSelections.length} compliance item(s) selected.`
+                    : null}
+                  {currentStep === 16 && !checkingProject && !hasExistingProject && !savingDraft
+                    ? 'Preview generated from your collected data.'
+                    : null}
+                </div>
 
-            {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
+                {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
+              </>
+            ) : null}
 
             {currentStep === 12 ? (
               <div className="mt-8 max-w-xl rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
@@ -1940,51 +1943,53 @@ export default function PublishPage() {
               </div>
             ) : null}
 
-            <div className="mt-12 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={
-                  currentStep === 1
-                    ? !canContinueStep1
-                    : currentStep === 2
-                      ? !canContinueStep2
-                      : currentStep === 3
-                        ? !canContinueStep3
-                        : currentStep === 4
-                          ? !canContinueStep4
-                          : currentStep === 5
-                            ? !canContinueStep5
-                            : currentStep === 6
-                              ? !canContinueStep6
-                              : currentStep === 7
-                                ? !canContinueStep7
-                                : currentStep === 8
-                                  ? !canContinueStep8
-                                  : currentStep === 9
-                                    ? !canContinueStep9
-                                    : currentStep === 10
-                                      ? !canContinueStep10
-                                        : currentStep === 11
-                                          ? !canContinueStep11
-                                          : currentStep === 12
-                                            ? !canContinueStep12
-                                            : currentStep === 13
-                                              ? !canContinueStep13
-                                              : currentStep === 14
-                                                ? !canContinueStep14
-                                                : currentStep === 15
-                                                  ? !canContinueStep15
-                                                  : currentStep === 16
-                                                    ? !canContinueStep16
-                                                    : true
-                    || isContinuing
-                }
-                className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isContinuing ? 'Saving...' : 'Continue'}
-              </button>
-            </div>
+            {currentStep !== 17 && currentStep !== 18 ? (
+              <div className="mt-12 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={
+                    currentStep === 1
+                      ? !canContinueStep1
+                      : currentStep === 2
+                        ? !canContinueStep2
+                        : currentStep === 3
+                          ? !canContinueStep3
+                          : currentStep === 4
+                            ? !canContinueStep4
+                            : currentStep === 5
+                              ? !canContinueStep5
+                              : currentStep === 6
+                                ? !canContinueStep6
+                                : currentStep === 7
+                                  ? !canContinueStep7
+                                  : currentStep === 8
+                                    ? !canContinueStep8
+                                    : currentStep === 9
+                                      ? !canContinueStep9
+                                      : currentStep === 10
+                                        ? !canContinueStep10
+                                          : currentStep === 11
+                                            ? !canContinueStep11
+                                            : currentStep === 12
+                                              ? !canContinueStep12
+                                              : currentStep === 13
+                                                ? !canContinueStep13
+                                                : currentStep === 14
+                                                  ? !canContinueStep14
+                                                  : currentStep === 15
+                                                    ? !canContinueStep15
+                                                    : currentStep === 16
+                                                      ? !canContinueStep16
+                                                      : true
+                      || isContinuing
+                  }
+                  className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {isContinuing ? 'Saving...' : 'Continue'}
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section

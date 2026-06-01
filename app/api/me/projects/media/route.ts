@@ -65,8 +65,16 @@ export async function POST(request: NextRequest) {
   let formData: FormData;
   try {
     formData = await request.formData();
-  } catch {
-    return jsonNoStore({ error: 'Invalid upload payload.' }, { status: 400 });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Malformed multipart payload.';
+    return jsonNoStore(
+      {
+        error: 'Invalid upload payload.',
+        details:
+          `Could not parse multipart form data. This is often caused by request body size limits or malformed payloads. ${message}`,
+      },
+      { status: 400 }
+    );
   }
 
   const files = formData
