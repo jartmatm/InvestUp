@@ -1820,50 +1820,50 @@ export default function PublishPage() {
               </div>
             ) : null}
 
-            {currentStep !== 12 ? (
-              <div className="mt-12 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleContinue}
-                  disabled={
-                    currentStep === 1
-                      ? !canContinueStep1
-                      : currentStep === 2
-                        ? !canContinueStep2
-                        : currentStep === 3
-                          ? !canContinueStep3
-                          : currentStep === 4
-                            ? !canContinueStep4
-                            : currentStep === 5
-                              ? !canContinueStep5
-                              : currentStep === 6
-                                ? !canContinueStep6
-                                : currentStep === 7
-                                  ? !canContinueStep7
-                                  : currentStep === 8
-                                    ? !canContinueStep8
-                                    : currentStep === 9
-                                      ? !canContinueStep9
-                                      : currentStep === 10
-                                        ? !canContinueStep10
-                                          : currentStep === 11
-                                            ? !canContinueStep11
+            <div className="mt-12 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={
+                  currentStep === 1
+                    ? !canContinueStep1
+                    : currentStep === 2
+                      ? !canContinueStep2
+                      : currentStep === 3
+                        ? !canContinueStep3
+                        : currentStep === 4
+                          ? !canContinueStep4
+                          : currentStep === 5
+                            ? !canContinueStep5
+                            : currentStep === 6
+                              ? !canContinueStep6
+                              : currentStep === 7
+                                ? !canContinueStep7
+                                : currentStep === 8
+                                  ? !canContinueStep8
+                                  : currentStep === 9
+                                    ? !canContinueStep9
+                                    : currentStep === 10
+                                      ? !canContinueStep10
+                                        : currentStep === 11
+                                          ? !canContinueStep11
+                                          : currentStep === 12
+                                            ? !canContinueStep12
                                             : currentStep === 13
-                                                ? !canContinueStep13
-                                                : currentStep === 14
-                                                  ? !canContinueStep14
-                                                  : currentStep === 15
-                                                    ? !canContinueStep15
-                                                    : currentStep === 16
-                                                      ? !canContinueStep16
-                                                      : true
-                  }
-                  className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Continue
-                </button>
-              </div>
-            ) : null}
+                                              ? !canContinueStep13
+                                              : currentStep === 14
+                                                ? !canContinueStep14
+                                                : currentStep === 15
+                                                  ? !canContinueStep15
+                                                  : currentStep === 16
+                                                    ? !canContinueStep16
+                                                    : true
+                }
+                className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Continue
+              </button>
+            </div>
           </section>
 
           <section
