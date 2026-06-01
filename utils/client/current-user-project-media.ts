@@ -15,29 +15,41 @@ export async function uploadCurrentUserProjectMedia(
     return { data: null, error: 'Missing Privy access token.' };
   }
 
-  const formData = new FormData();
-  files.forEach((file) => formData.append('files', file));
+  const uploaded: Array<{ type: 'photo' | 'video'; publicUrl: string }> = [];
 
-  const response = await fetch('/api/me/projects/media', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: formData,
-    cache: 'no-store',
-  });
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append('files', file);
 
-  const json = (await response.json().catch(() => null)) as
-    | { data?: Array<{ type: 'photo' | 'video'; publicUrl: string }> | null; error?: string; details?: string | null }
-    | null;
+    const response = await fetch('/api/me/projects/media', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
-    const baseMessage = json?.error ?? 'Project media upload failed.';
-    return {
-      data: null,
-      error: json?.details ? `${baseMessage}: ${json.details}` : baseMessage,
-    };
+    const json = (await response.json().catch(() => null)) as
+      | {
+          data?: Array<{ type: 'photo' | 'video'; publicUrl: string }> | null;
+          error?: string;
+          details?: string | null;
+        }
+      | null;
+
+    if (!response.ok) {
+      const baseMessage = json?.error ?? `Project media upload failed for "${file.name}".`;
+      return {
+        data: null,
+        error: json?.details ? `${baseMessage}: ${json.details}` : baseMessage,
+      };
+    }
+
+    if (Array.isArray(json?.data)) {
+      uploaded.push(...json.data);
+    }
   }
 
-  return { data: json?.data ?? [], error: null };
+  return { data: uploaded, error: null };
 }

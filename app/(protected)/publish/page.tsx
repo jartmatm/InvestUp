@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -690,6 +690,7 @@ export default function PublishPage() {
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishRequested, setPublishRequested] = useState(false);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
@@ -1092,16 +1093,6 @@ export default function PublishPage() {
   }, [currentStep, previewPhotos.length]);
 
   useEffect(() => {
-    if (currentStep !== 17) return;
-
-    const timer = window.setTimeout(() => {
-      goToStep(18, false);
-    }, 2600);
-
-    return () => window.clearTimeout(timer);
-  }, [currentStep]);
-
-  useEffect(() => {
     if (currentStep !== 18) return;
 
     const timer = window.setTimeout(() => {
@@ -1273,7 +1264,12 @@ export default function PublishPage() {
     media_videos_count: String(mediaCounts.videos),
   });
 
-  const handlePublishListing = async () => {
+  const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
+    Object.entries(fields)
+      .map(([key, value]) => `${key}: ${value || 'Not provided'}`)
+      .join('\n');
+
+  const handlePublishListing = useCallback(async () => {
     if (isPublishing) return;
     setIsPublishing(true);
     setStatus('Uploading media...');
@@ -1289,6 +1285,7 @@ export default function PublishPage() {
         const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, mediaFiles);
         if (mediaUploadResult.error || !mediaUploadResult.data) {
           setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
+          goToStep(16, false);
           return;
         }
         uploadedPhotos = mediaUploadResult.data
@@ -1306,6 +1303,7 @@ export default function PublishPage() {
 
       if (uploadedPhotos.length === 0) {
         setStatus('Could not publish project: at least one photo is required.');
+        goToStep(16, false);
         return;
       }
 
@@ -1353,6 +1351,7 @@ export default function PublishPage() {
 
       if (publishProjectResult.error || !publishProjectResult.data) {
         setStatus(`Could not publish project: ${publishProjectResult.error ?? 'Unknown error.'}`);
+        goToStep(16, false);
         return;
       }
 
@@ -1381,22 +1380,51 @@ export default function PublishPage() {
 
       if (result.error || !result.data) {
         setStatus(`Could not save publication: ${result.error ?? 'Unknown error.'}`);
+        goToStep(16, false);
         return;
       }
 
       setDraftId(result.data.id);
       setStatus('');
       setShowSuccessHomeButton(false);
-      goToStep(17);
+      goToStep(18, false);
     } finally {
       setIsPublishing(false);
+      setPublishRequested(false);
     }
-  };
+  }, [
+    isPublishing,
+    buildPublicationFields,
+    getAccessToken,
+    uploadedMediaItems,
+    previewPhotos,
+    previewVideo,
+    capitalRequiredUsd,
+    interestRateEA,
+    roundCloseDate,
+    registeredWhatsappNumber,
+    generatedTittle,
+    businessName,
+    selectedBusinessCategory,
+    aboutFounder,
+    address.formatted_address,
+    address.locality,
+    address.country,
+    generatedDescription,
+    businessOffer,
+    selectedOperatingTime,
+    fundUsage,
+    complianceSelections,
+    draftId,
+    goToStep,
+    buildPublicationPromptText,
+  ]);
 
-  const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
-    Object.entries(fields)
-      .map(([key, value]) => `${key}: ${value || 'Not provided'}`)
-      .join('\n');
+  useEffect(() => {
+    if (currentStep !== 17 || !publishRequested || isPublishing) return;
+
+    void handlePublishListing();
+  }, [currentStep, publishRequested, isPublishing, handlePublishListing]);
 
   const generatePublicationFromCollectedData = async () => {
     const fields = buildPublicationFields();
@@ -2666,7 +2694,12 @@ export default function PublishPage() {
                       {status ? <p className="mr-4 self-center text-sm text-[#0B7A52]">{status}</p> : null}
                       <button
                         type="button"
-                        onClick={() => void handlePublishListing()}
+                        onClick={() => {
+                          if (isPublishing) return;
+                          setPublishRequested(true);
+                          setStatus('');
+                          goToStep(17, false);
+                        }}
                         disabled={isPublishing}
                         className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
                       >
@@ -2681,7 +2714,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="flex h-full w-full items-center justify-center"
+                className="flex h-full w-full flex-col items-center justify-center"
               >
                 <Lottie
                   animationData={publishStep17PublishingAnimation}
@@ -2689,6 +2722,9 @@ export default function PublishPage() {
                   autoplay
                   className="h-[92%] w-[92%] max-h-full max-w-full"
                 />
+                <p className="mt-2 text-center text-base font-medium text-[#334155]">
+                  {status || 'Publishing your project...'}
+                </p>
               </motion.div>
             ) : currentStep === 18 ? (
               <motion.div
