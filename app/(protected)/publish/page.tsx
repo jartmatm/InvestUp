@@ -29,7 +29,8 @@ import {
   type OptimizedPublication,
   saveCurrentUserPublicationDraft,
 } from '@/utils/client/current-user-publication-prompts';
-import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
+import { uploadCurrentUserProjectMedia } from '@/utils/client/current-user-project-media';
+import { createCurrentUserProject, fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import {
   reverseBusinessAddress,
   searchBusinessAddress,
@@ -687,6 +688,7 @@ export default function PublishPage() {
   const [whatsAppMessage, setWhatsAppMessage] = useState('');
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
@@ -1273,6 +1275,68 @@ export default function PublishPage() {
   const handlePublishListing = async () => {
     setStatus('Saving publication...');
     const fields = buildPublicationFields();
+    const mediaUploadResult = await uploadCurrentUserProjectMedia(
+      getAccessToken,
+      uploadedMediaItems.map((item) => item.file)
+    );
+
+    if (mediaUploadResult.error || !mediaUploadResult.data) {
+      setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
+      return;
+    }
+
+    const uploadedPhotos = mediaUploadResult.data
+      .filter((item) => item.type === 'photo')
+      .map((item) => item.publicUrl);
+    const uploadedVideo = mediaUploadResult.data.find((item) => item.type === 'video')?.publicUrl ?? null;
+
+    if (uploadedPhotos.length === 0) {
+      setStatus('Could not publish project: at least one photo is required.');
+      return;
+    }
+
+    const normalizedAmountRequested = Number(capitalRequiredUsd) > 0 ? Number(capitalRequiredUsd) : 1000;
+    const normalizedMinimumInvestment = Math.max(50, Math.floor(normalizedAmountRequested * 0.05));
+    const normalizedInterestRate = Number(interestRateEA) >= 0 ? Number(interestRateEA) : 0;
+    const publicationEndDate =
+      roundCloseDate && dayjs(roundCloseDate).isAfter(dayjs())
+        ? roundCloseDate
+        : dayjs().add(30, 'day').format('YYYY-MM-DD');
+    const openingDate = dayjs().format('YYYY-MM-DD');
+    const phoneNumber = registeredWhatsappNumber || '0000000000';
+
+    const publishProjectResult = await createCurrentUserProject(getAccessToken, {
+      title: generatedTittle.trim() || businessName.trim() || 'Business opportunity',
+      business_name: businessName.trim() || 'Business',
+      sector: selectedBusinessCategory.trim() || 'General',
+      legal_representative: aboutFounder.trim() || businessName.trim() || 'Business owner',
+      opening_date: openingDate,
+      address: address.formatted_address.trim() || 'Address not provided',
+      phone: phoneNumber,
+      city: address.locality.trim() || 'Unknown city',
+      country: address.country.trim() || 'Unknown country',
+      description: generatedDescription.trim() || businessOffer.trim() || 'Business opportunity',
+      publication_end_date: publicationEndDate,
+      currency: 'USD',
+      amount_requested: normalizedAmountRequested,
+      minimum_investment: normalizedMinimumInvestment,
+      installment_count: 12,
+      interest_rate: normalizedInterestRate,
+      photo_urls: uploadedPhotos,
+      video_url: uploadedVideo,
+      metadata: {
+        source: 'publish_wizard',
+        operating_time: selectedOperatingTime,
+        funds_usage: fundUsage,
+        compliance_selections: complianceSelections,
+      },
+    });
+
+    if (publishProjectResult.error || !publishProjectResult.data) {
+      setStatus(`Could not publish project: ${publishProjectResult.error ?? 'Unknown error.'}`);
+      return;
+    }
+
     const publicationPayload = {
       version: 1,
       locale: 'en',
@@ -1336,6 +1400,9 @@ export default function PublishPage() {
   };
 
   const handleContinue = async () => {
+    if (isContinuing) return;
+    setIsContinuing(true);
+    try {
     if (currentStep === 1) {
       if (!canContinueStep1) return;
       goToStep(2);
@@ -1461,6 +1528,9 @@ export default function PublishPage() {
 
     if (!canContinueStep16) return;
     setStatus('Preview ready. You can publish now.');
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   const handleSaveAndExit = async () => {
@@ -1858,10 +1928,11 @@ export default function PublishPage() {
                                                   : currentStep === 16
                                                     ? !canContinueStep16
                                                     : true
+                    || isContinuing
                 }
                 className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Continue
+                {isContinuing ? 'Saving...' : 'Continue'}
               </button>
             </div>
           </section>
@@ -2054,10 +2125,10 @@ export default function PublishPage() {
                   <button
                     type="button"
                     onClick={handleContinue}
-                    disabled={!canContinueStep7}
+                    disabled={!canContinueStep7 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Continue
+                    {isContinuing ? 'Saving...' : 'Continue'}
                   </button>
                 </div>
               </motion.div>
@@ -2174,10 +2245,10 @@ export default function PublishPage() {
                   <button
                     type="button"
                     onClick={handleContinue}
-                    disabled={!canContinueStep8}
+                    disabled={!canContinueStep8 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Continue
+                    {isContinuing ? 'Saving...' : 'Continue'}
                   </button>
                 </div>
               </motion.div>
@@ -2250,10 +2321,10 @@ export default function PublishPage() {
                   <button
                     type="button"
                     onClick={handleContinue}
-                    disabled={!canContinueStep9}
+                    disabled={!canContinueStep9 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Continue
+                    {isContinuing ? 'Saving...' : 'Continue'}
                   </button>
                 </div>
               </motion.div>
@@ -2360,10 +2431,10 @@ export default function PublishPage() {
                       <button
                         type="button"
                         onClick={handleContinue}
-                        disabled={!canContinueStep11}
+                        disabled={!canContinueStep11 || isContinuing}
                         className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Continue
+                        {isContinuing ? 'Saving...' : 'Continue'}
                       </button>
                     </div>
                   </>

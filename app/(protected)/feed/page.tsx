@@ -9,7 +9,6 @@ import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
 import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
 import { Avatar } from '@/components/tailgrids/core/avatar';
-import { Button } from '@/components/tailgrids/core/button';
 import { Card, CardContent } from '@/components/tailgrids/core/card';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
@@ -529,7 +528,7 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex h-[272px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex h-[328px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
       <div className="relative h-3/4 min-h-0">
         <AspectRatio ratio="video" className="h-full w-full">
@@ -540,21 +539,19 @@ function DesktopProjectCard({
           )}
         </AspectRatio>
 
-        <Button
-          variant="ghost"
-          iconOnly
-          size="sm"
+        <button
+          type="button"
           onClick={(event) => {
             event.stopPropagation();
             onToggleWishlist(project.id);
           }}
-          className={`absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-white/40 bg-black/28 text-white shadow-[0_12px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition ${
+          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center bg-transparent p-0 text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)] transition ${
             isWishlisted ? 'text-[#FFD1DB]' : ''
           }`}
           aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
         >
           <IconHeart filled={isWishlisted} />
-        </Button>
+        </button>
       </div>
       <CardContent className="flex h-1/4 min-h-0 flex-col justify-between border-t border-white/60 bg-white/72 p-3 backdrop-blur-md">
         <h3 className="line-clamp-2 text-[0.96rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
@@ -698,7 +695,7 @@ function DesktopMarketplaceLayout({
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[272px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[328px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -1226,21 +1223,21 @@ export default function FeedPage() {
                       className="cursor-pointer text-left [perspective:1400px]"
                     >
                       <div
-                        className={`relative h-[232px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                        className={`relative h-[280px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                           isFlipped ? '[transform:rotateY(180deg)]' : ''
                         }`}
                       >
                         <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
                           <div className="relative">
-                            <AspectRatio ratio="video" className="h-[174px] w-full">
+                            <AspectRatio ratio="video" className="h-[208px] w-full">
                               {coverImage ? (
                                 <img
                                   src={coverImage}
                                   alt={project.title}
-                                  className="h-[174px] w-full object-cover"
+                                  className="h-[208px] w-full object-cover"
                                 />
                               ) : (
-                                <div className="flex h-[174px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
+                                <div className="flex h-[208px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
                                   {t('publishedVenture')}
                                 </div>
                               )}
@@ -1254,10 +1251,10 @@ export default function FeedPage() {
                                 event.stopPropagation();
                                 toggleWishlist(project.id);
                               }}
-                              className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/25 bg-[#5B4B3E]/70 backdrop-blur-xl transition ${
+                              className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)] transition ${
                                 isWishlisted
-                                  ? 'text-[#FFD1DB] shadow-[0_12px_24px_rgba(17,24,39,0.18)]'
-                                  : 'text-white shadow-[0_12px_24px_rgba(17,24,39,0.14)]'
+                                  ? 'text-[#FFD1DB]'
+                                  : 'text-white'
                               }`}
                               aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
                               aria-pressed={isWishlisted}
@@ -1266,7 +1263,7 @@ export default function FeedPage() {
                             </button>
                           </div>
 
-                          <div className="flex h-[58px] flex-col justify-between p-2">
+                          <div className="flex h-[72px] flex-col justify-between p-2">
                             <p className="line-clamp-2 text-[0.72rem] font-semibold leading-[1.12] tracking-[-0.025em] text-[#162033]">
                               {project.title}
                             </p>
