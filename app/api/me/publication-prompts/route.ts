@@ -43,10 +43,10 @@ const JSON_HEADERS = {
 } as const;
 
 const OPENAI_PUBLICATION_PROMPT_ID =
-  process.env.OPENAI_PUBLICATION_PROMPT_ID ??
-  'pmpt_69f57f7a85c081979c1668cfaa3bf80d0f79b0106d6c32c4';
+  process.env.OPENAI_PUBLICATION_PROMPT_ID ?? 'investup-publication-wizard-v1';
 const OPENAI_PUBLICATION_PROMPT_VERSION =
-  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '6';
+  process.env.OPENAI_PUBLICATION_PROMPT_VERSION ?? '1';
+const OPENAI_PUBLICATION_MODEL = process.env.OPENAI_PUBLICATION_MODEL ?? 'gpt-4.1-mini';
 
 const PUBLICATION_PROMPT_VARIABLE_KEYS = [
   'business_name',
@@ -371,6 +371,41 @@ const buildPromptVariables = (formFields: Record<string, unknown>) =>
     return variables;
   }, {});
 
+const buildOpenAiPublicationSystemPrompt = () => `
+You are an expert fintech marketplace copywriter for InvestUp.
+Write investor-facing content in clear English, professional and concise, never hypey.
+
+Hard requirements:
+- Return ONLY valid JSON (no markdown, no code fences, no extra text).
+- Use exactly these top-level keys:
+  title, summary, description, highlights, traction, use_of_funds, market_opportunity, investor_notes,
+  sections
+- sections must be an object with exactly these keys:
+  overview, what_we_do, how_we_do_it, financial_information, investment, target, team, gallery, extras
+- title max 50 chars.
+- description max 500 chars.
+- highlights must be an array with 3 to 5 short bullet-style strings.
+- If data is missing, infer conservatively and state assumptions neutrally.
+- Do not invent legal guarantees, returns, or risk-free statements.
+`.trim();
+
+const buildOpenAiPublicationUserPrompt = (formFields: Record<string, unknown>, promptText: string) => {
+  const variables = buildPromptVariables(formFields);
+  const formattedVariables = Object.entries(variables)
+    .map(([key, value]) => `- ${key}: ${value || 'Not provided'}`)
+    .join('\n');
+
+  return `
+Create the publication JSON from this wizard data.
+
+Wizard tags:
+${formattedVariables}
+
+Raw collected prompt text:
+${promptText}
+`.trim();
+};
+
 const extractResponseText = (payload: unknown) => {
   if (!isPlainObject(payload)) return '';
 
@@ -406,11 +441,28 @@ async function optimizeWithOpenAi(promptText: string, formFields: Record<string,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      prompt: {
-        id: OPENAI_PUBLICATION_PROMPT_ID,
-        version: OPENAI_PUBLICATION_PROMPT_VERSION,
-        variables: buildPromptVariables(formFields),
-      },
+      model: OPENAI_PUBLICATION_MODEL,
+      input: [
+        {
+          role: 'system',
+          content: [
+            {
+              type: 'input_text',
+              text: buildOpenAiPublicationSystemPrompt(),
+            },
+          ],
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: buildOpenAiPublicationUserPrompt(formFields, promptText),
+            },
+          ],
+        },
+      ],
+      temperature: 0.4,
     }),
   });
 
@@ -430,7 +482,7 @@ async function optimizeWithOpenAi(promptText: string, formFields: Record<string,
   const parsed = parseJsonObject(content);
 
   return {
-    provider: 'openai-responses-prompt',
+    provider: `openai-responses-${OPENAI_PUBLICATION_MODEL}`,
     optimizedPublication: parsed
       ? normalizeOptimizedPublication(parsed, promptText)
       : normalizeOpenAiTextPublication(content, promptText),
