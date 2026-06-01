@@ -63,6 +63,8 @@ type UploadMediaItem = {
   type: 'photo' | 'video';
 };
 
+type PublishStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18;
+
 type ProgressStepStatus = 'completed' | 'current' | 'upcoming';
 
 type ProgressStep = {
@@ -120,15 +122,33 @@ const publishProgressSteps: ProgressStep[] = [
 const mobileSurfaceClassName =
   'rounded-[26px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_52px_rgba(17,24,39,0.08)] backdrop-blur-sm';
 
+const wizardStepSkeletonDurationMs = 320;
+
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
 
 const mediaImageMaxDimension = 1600;
 const mediaImageWebpQuality = 0.82;
+const mediaVideoWebmBitrate = 900_000;
+const mediaVideoWebmAudioBitrate = 96_000;
 
 const toWebpFileName = (name: string) => {
   const baseName = name.replace(/\.[^/.]+$/, '');
   return `${baseName || 'business-media'}.webp`;
+};
+
+const toWebmFileName = (name: string) => {
+  const baseName = name.replace(/\.[^/.]+$/, '');
+  return `${baseName || 'business-media'}.webm`;
+};
+
+const getSupportedWebmMimeType = () => {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+    return null;
+  }
+
+  const preferredTypes = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+  return preferredTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) ?? null;
 };
 
 const compressImageToWebp = async (file: File): Promise<File> => {
@@ -170,6 +190,114 @@ const compressImageToWebp = async (file: File): Promise<File> => {
   } catch {
     return file;
   } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
+const compressVideoToWebm = async (file: File): Promise<File> => {
+  if (!file.type.startsWith('video/')) return file;
+  if (typeof document === 'undefined' || typeof MediaRecorder === 'undefined') return file;
+
+  const mimeType = getSupportedWebmMimeType();
+  if (!mimeType) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.src = objectUrl;
+  video.muted = true;
+  video.playsInline = true;
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const onLoadedMetadata = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = () => {
+        cleanup();
+        reject(new Error('Could not load selected video.'));
+      };
+      const cleanup = () => {
+        video.removeEventListener('loadedmetadata', onLoadedMetadata);
+        video.removeEventListener('error', onError);
+      };
+
+      video.addEventListener('loadedmetadata', onLoadedMetadata);
+      video.addEventListener('error', onError);
+    });
+
+    const capture = (video as HTMLVideoElement & {
+      captureStream?: () => MediaStream;
+      mozCaptureStream?: () => MediaStream;
+    }).captureStream?.() ??
+      (video as HTMLVideoElement & { mozCaptureStream?: () => MediaStream }).mozCaptureStream?.();
+
+    if (!capture) return file;
+
+    const recordedChunks: BlobPart[] = [];
+    const recorder = new MediaRecorder(capture, {
+      mimeType,
+      videoBitsPerSecond: mediaVideoWebmBitrate,
+      audioBitsPerSecond: mediaVideoWebmAudioBitrate,
+    });
+
+    const recordingComplete = new Promise<Blob>((resolve, reject) => {
+      recorder.addEventListener('dataavailable', (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      });
+
+      recorder.addEventListener('stop', () => {
+        if (recordedChunks.length === 0) {
+          reject(new Error('No data recorded while converting video.'));
+          return;
+        }
+
+        resolve(new Blob(recordedChunks, { type: 'video/webm' }));
+      });
+
+      recorder.addEventListener('error', () => {
+        reject(new Error('MediaRecorder failed while converting video.'));
+      });
+    });
+
+    recorder.start();
+    const playPromise = video.play();
+    if (playPromise) {
+      await playPromise.catch(() => {
+        throw new Error('Could not play selected video for conversion.');
+      });
+    }
+
+    await new Promise<void>((resolve) => {
+      const onEnded = () => {
+        video.removeEventListener('ended', onEnded);
+        resolve();
+      };
+      video.addEventListener('ended', onEnded);
+    });
+
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+
+    const convertedBlob = await recordingComplete;
+    if (convertedBlob.size <= 0) return file;
+
+    if (convertedBlob.size >= file.size && file.type === 'video/webm') {
+      return file;
+    }
+
+    return new File([convertedBlob], toWebmFileName(file.name), {
+      type: 'video/webm',
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    video.pause();
     URL.revokeObjectURL(objectUrl);
   }
 };
@@ -437,7 +565,7 @@ const buildDraftPayload = (fields: PublishAddressStepFields) => {
   };
 };
 
-const isStepInRange = (value: number): value is 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 =>
+const isStepInRange = (value: number): value is PublishStep =>
   Number.isInteger(value) && value >= 1 && value <= 18;
 
 function RoleRestrictedState() {
@@ -474,6 +602,36 @@ function RoleRestrictedState() {
   );
 }
 
+function WizardStepSkeletonOverlay() {
+  return (
+    <div className="absolute inset-0 z-40 rounded-[34px] bg-white/90 p-10 pb-24 backdrop-blur-[1px]">
+      <div className="grid h-full grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9">
+        <div className="flex flex-col justify-center gap-5">
+          <div className="h-5 w-24 animate-pulse rounded-full bg-[#E7EDF6]" />
+          <div className="h-16 w-[84%] animate-pulse rounded-3xl bg-[#E7EDF6]" />
+          <div className="h-16 w-[76%] animate-pulse rounded-3xl bg-[#EDF2F9]" />
+          <div className="h-12 w-[52%] animate-pulse rounded-full bg-[#E3EAF5]" />
+          <div className="h-11 w-40 animate-pulse rounded-full bg-[#DEDDFB]" />
+        </div>
+
+        <div className="flex items-center justify-center">
+          <div className="w-full max-w-[1040px] space-y-4">
+            <div className="h-11 w-56 animate-pulse rounded-2xl bg-[#E7EDF6]" />
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={`wizard-overlay-skeleton-${index}`} className="h-36 animate-pulse rounded-3xl bg-[#EEF3FB]" />
+              ))}
+            </div>
+            <div className="flex justify-end">
+              <div className="h-11 w-36 animate-pulse rounded-full bg-[#DDD8FC]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PublishPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -493,7 +651,8 @@ export default function PublishPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18>(1);
+  const [currentStep, setCurrentStep] = useState<PublishStep>(1);
+  const [isStepTransitionLoading, setIsStepTransitionLoading] = useState(false);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
   const [selectedOperatingTime, setSelectedOperatingTime] = useState<string>('');
@@ -527,6 +686,7 @@ export default function PublishPage() {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
+  const stepSkeletonTimeoutRef = useRef<number | null>(null);
 
   const canContinueStep1 = useMemo(
     () =>
@@ -728,6 +888,35 @@ export default function PublishPage() {
     return String(fromUser).replace(/[^\d+]/g, '');
   }, [user]);
 
+  const goToStep = (nextStep: PublishStep, withSkeleton = true) => {
+    setCurrentStep(nextStep);
+
+    if (!withSkeleton) {
+      setIsStepTransitionLoading(false);
+      return;
+    }
+
+    setIsStepTransitionLoading(true);
+
+    if (stepSkeletonTimeoutRef.current !== null) {
+      window.clearTimeout(stepSkeletonTimeoutRef.current);
+    }
+
+    stepSkeletonTimeoutRef.current = window.setTimeout(() => {
+      setIsStepTransitionLoading(false);
+      stepSkeletonTimeoutRef.current = null;
+    }, wizardStepSkeletonDurationMs);
+  };
+
+  useEffect(
+    () => () => {
+      if (stepSkeletonTimeoutRef.current !== null) {
+        window.clearTimeout(stepSkeletonTimeoutRef.current);
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
@@ -806,7 +995,7 @@ export default function PublishPage() {
           }
           const stepValue = Number(source.step_index);
           if (isStepInRange(stepValue) && stepValue < 17) {
-            setCurrentStep(stepValue);
+            goToStep(stepValue, false);
           }
           setDraftId(draftResponse.data.id);
         }
@@ -897,7 +1086,7 @@ export default function PublishPage() {
     if (currentStep !== 17) return;
 
     const timer = window.setTimeout(() => {
-      setCurrentStep(18);
+      goToStep(18, false);
     }, 2600);
 
     return () => window.clearTimeout(timer);
@@ -983,7 +1172,8 @@ export default function PublishPage() {
     const mapped = await Promise.all(
       files.map(async (file) => {
         const type = file.type.startsWith('video/') ? ('video' as const) : ('photo' as const);
-        const preparedFile = type === 'photo' ? await compressImageToWebp(file) : file;
+        const preparedFile =
+          type === 'photo' ? await compressImageToWebp(file) : await compressVideoToWebm(file);
 
         return {
           id: `${preparedFile.name}-${preparedFile.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
@@ -1108,7 +1298,7 @@ export default function PublishPage() {
     setDraftId(result.data.id);
     setStatus('');
     setShowSuccessHomeButton(false);
-    setCurrentStep(17);
+    goToStep(17);
   };
 
   const buildPublicationPromptText = (fields: ReturnType<typeof buildPublicationFields>) =>
@@ -1142,70 +1332,70 @@ export default function PublishPage() {
   const handleContinue = async () => {
     if (currentStep === 1) {
       if (!canContinueStep1) return;
-      setCurrentStep(2);
+      goToStep(2);
       setStatus('');
       return;
     }
 
     if (currentStep === 2) {
       if (!canContinueStep2) return;
-      setCurrentStep(3);
+      goToStep(3);
       setStatus('');
       return;
     }
 
     if (currentStep === 3) {
       if (!canContinueStep3) return;
-      setCurrentStep(4);
+      goToStep(4);
       setStatus('');
       return;
     }
 
     if (currentStep === 4) {
       if (!canContinueStep4) return;
-      setCurrentStep(5);
+      goToStep(5);
       setStatus('');
       return;
     }
 
     if (currentStep === 5) {
       if (!canContinueStep5) return;
-      setCurrentStep(6);
+      goToStep(6);
       setStatus('');
       return;
     }
 
     if (currentStep === 6) {
       if (!canContinueStep6) return;
-      setCurrentStep(7);
+      goToStep(7);
       setStatus('');
       return;
     }
 
     if (currentStep === 7) {
       if (!canContinueStep7) return;
-      setCurrentStep(8);
+      goToStep(8);
       setStatus('');
       return;
     }
 
     if (currentStep === 8) {
       if (!canContinueStep8) return;
-      setCurrentStep(9);
+      goToStep(9);
       setStatus('');
       return;
     }
 
     if (currentStep === 9) {
       if (!canContinueStep9) return;
-      setCurrentStep(10);
+      goToStep(10);
       setStatus('');
       return;
     }
 
     if (currentStep === 10) {
       if (!canContinueStep10) return;
-      setCurrentStep(11);
+      goToStep(11);
       setStatus('');
       return;
     }
@@ -1231,34 +1421,34 @@ export default function PublishPage() {
       setGeneratedDescription(descriptionValue);
       setIsGeneratingPublication(false);
       setStatus('');
-      setCurrentStep(12);
+      goToStep(12);
       return;
     }
 
     if (currentStep === 12) {
       if (!canContinueStep12) return;
-      setCurrentStep(13);
+      goToStep(13);
       setStatus('');
       return;
     }
 
     if (currentStep === 13) {
       if (!canContinueStep13) return;
-      setCurrentStep(14);
+      goToStep(14);
       setStatus('');
       return;
     }
 
     if (currentStep === 14) {
       if (!canContinueStep14) return;
-      setCurrentStep(15);
+      goToStep(15);
       setStatus('');
       return;
     }
 
     if (currentStep === 15) {
       if (!canContinueStep15) return;
-      setCurrentStep(16);
+      goToStep(16);
       setStatus('');
       return;
     }
@@ -1335,6 +1525,8 @@ export default function PublishPage() {
     return 'upcoming';
   };
 
+  const showWizardSkeleton = checkingProject || isStepTransitionLoading;
+
   return (
     <>
       <DesktopAppShell
@@ -1347,6 +1539,8 @@ export default function PublishPage() {
           style={{ fontFamily: desktopFontFamily }}
           className="relative grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-visible rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-24 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
         >
+          {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
+
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
               type="button"
@@ -1360,14 +1554,7 @@ export default function PublishPage() {
           {currentStep > 1 ? (
             <button
               type="button"
-              onClick={() =>
-                setCurrentStep(
-                  (prev) =>
-                    (prev > 1
-                      ? ((prev - 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18)
-                      : 1)
-                )
-              }
+              onClick={() => goToStep((currentStep - 1) as PublishStep)}
               className="absolute left-10 top-8 z-30 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D9E2EC] bg-white text-xl font-semibold leading-none text-[#0B1325] transition hover:border-[#B8C7D9]"
               aria-label="Back to previous step"
             >
