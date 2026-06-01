@@ -218,8 +218,8 @@ function buildProjectPayload({
     return { error: 'Complete all required project fields.', data: null };
   }
 
-  if (description.length > 2500) {
-    return { error: 'Maximum description length: 2500 characters.', data: null };
+  if (description.length > 5000) {
+    return { error: 'Maximum description length: 5000 characters.', data: null };
   }
 
   if (!amountRequested || amountRequested <= 0) {
