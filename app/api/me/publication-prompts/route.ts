@@ -162,7 +162,7 @@ const localOptimize = (promptText: string): OptimizedPublication => {
   ]
     .filter(Boolean)
     .join('\n\n')
-    .slice(0, 2500);
+    .slice(0, 5000);
 
   return {
     title: `${businessName} growth round`.slice(0, 120),
@@ -279,7 +279,7 @@ const normalizeOptimizedPublication = (value: unknown, fallbackText: string): Op
   return {
     title: getText('title', 'tittle', 'project_title', 'headline') || fallback.title,
     summary: getText('summary', 'short_summary', 'executive_summary') || fallback.summary,
-    description: (getText('description', 'publication', 'body', 'pitch') || fallback.description).slice(0, 2500),
+    description: (getText('description', 'publication', 'body', 'pitch') || fallback.description).slice(0, 5000),
     highlights,
     traction: getText('traction', 'traction_summary') || fallback.traction,
     useOfFunds: getText('useOfFunds', 'use_of_funds', 'funds_usage') || fallback.useOfFunds,
@@ -332,7 +332,7 @@ const normalizeOpenAiTextPublication = (content: string, fallbackText: string): 
   return {
     title: (paragraphs[0] || fallback.title).slice(0, 120),
     summary: (paragraphs[1] || paragraphs[0] || fallback.summary).slice(0, 600),
-    description: clean.slice(0, 2500),
+    description: clean.slice(0, 5000),
     highlights: bulletHighlights.length >= 2 ? bulletHighlights : fallback.highlights,
     traction: fallback.traction,
     useOfFunds: fallback.useOfFunds,
@@ -383,7 +383,7 @@ Hard requirements:
 - sections must be an object with exactly these keys:
   overview, what_we_do, how_we_do_it, financial_information, investment, target, team, gallery, extras
 - title max 50 chars.
-- description max 500 chars.
+- description max 5000 chars.
 - highlights must be an array with 3 to 5 short bullet-style strings.
 - If data is missing, infer conservatively and state assumptions neutrally.
 - Do not invent legal guarantees, returns, or risk-free statements.

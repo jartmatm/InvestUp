@@ -8,7 +8,19 @@ export const dynamic = 'force-dynamic';
 const PROJECT_MEDIA_BUCKET = 'project-media';
 const MAX_FILES = 12;
 const MAX_FILE_SIZE_BYTES = 60 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/webp', 'video/webm'] as const;
+const ALLOWED_MIME_TYPES = [
+  'image/webp',
+  'image/jpeg',
+  'image/png',
+  'video/webm',
+  'video/mp4',
+  'video/quicktime',
+  'video/x-m4v',
+  'video/3gpp',
+  'video/x-msvideo',
+  'video/x-ms-wmv',
+  'video/mpeg',
+] as const;
 
 const JSON_HEADERS = {
   'Cache-Control': 'private, no-store',
@@ -99,9 +111,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+    const isAllowedImage = file.type === 'image/webp';
+    const isAllowedVideo = file.type.startsWith('video/');
+    if (!isAllowedImage && !isAllowedVideo) {
       return jsonNoStore(
-        { error: `File "${file.name}" type is not supported. Use WEBP images or WEBM videos.` },
+        { error: `File "${file.name}" type is not supported. Use WEBP images or common video formats.` },
         { status: 400 }
       );
     }
@@ -116,7 +130,9 @@ export async function POST(request: NextRequest) {
 
     for (let index = 0; index < files.length; index += 1) {
       const file = files[index];
-      const ext = file.type === 'video/webm' ? 'webm' : 'webp';
+      const ext = file.type.startsWith('video/')
+        ? file.name.split('.').pop()?.trim().toLowerCase() || 'mp4'
+        : 'webp';
       const baseName = sanitizeSegment(file.name.replace(/\.[^/.]+$/, '')) || `media-${index + 1}`;
       const storagePath = `users/${userFolder}/${now}-${index + 1}-${baseName}.${ext}`;
       const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -135,7 +151,7 @@ export async function POST(request: NextRequest) {
 
       const { data: publicData } = supabase.storage.from(PROJECT_MEDIA_BUCKET).getPublicUrl(storagePath);
       uploaded.push({
-        type: file.type === 'video/webm' ? 'video' : 'photo',
+        type: file.type.startsWith('video/') ? 'video' : 'photo',
         publicUrl: publicData.publicUrl,
       });
     }

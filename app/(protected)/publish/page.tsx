@@ -341,6 +341,37 @@ const complianceChecklistOptions = [
   'Financial projections (3-5 years)',
 ] as const;
 
+const buildLongDescriptionFromOptimized = (optimized: OptimizedPublication) => {
+  const sectionToText = (value: string | { paragraph?: string | null } | undefined) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value.trim();
+    return (value.paragraph ?? '').trim();
+  };
+
+  const chunks = [
+    optimized.description,
+    optimized.summary,
+    sectionToText(optimized.overview),
+    sectionToText(optimized.whatWeDo),
+    sectionToText(optimized.howWeDoIt),
+    sectionToText(optimized.financialInformation),
+    sectionToText(optimized.investment),
+    sectionToText(optimized.target),
+    sectionToText(optimized.team),
+    sectionToText(optimized.gallery),
+    sectionToText(optimized.extras),
+  ]
+    .map((value) => (value ?? '').trim())
+    .filter(Boolean);
+
+  const uniqueChunks: string[] = [];
+  chunks.forEach((chunk) => {
+    if (!uniqueChunks.includes(chunk)) uniqueChunks.push(chunk);
+  });
+
+  return uniqueChunks.join('\n\n').slice(0, 5000);
+};
+
 const isAddressValid = (address: PublishAddressStepFields) =>
   requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
 
@@ -795,14 +826,12 @@ export default function PublishPage() {
     () =>
       aboutFounder.trim().length > 0 &&
       aboutTeam.trim().length > 0 &&
-      businessAchievements.trim().length > 0 &&
       !checkingProject &&
       !hasExistingProject &&
       !savingDraft,
     [
       aboutFounder,
       aboutTeam,
-      businessAchievements,
       checkingProject,
       hasExistingProject,
       savingDraft,
@@ -855,7 +884,7 @@ export default function PublishPage() {
   const canContinueStep13 = useMemo(
     () =>
       generatedDescription.trim().length > 0 &&
-      generatedDescription.trim().length <= 500 &&
+      generatedDescription.trim().length <= 5000 &&
       !checkingProject &&
       !hasExistingProject &&
       !savingDraft &&
@@ -1578,7 +1607,7 @@ export default function PublishPage() {
 
       const optimized = response.data.optimizedPublication;
       const tittleValue = (optimized.tittle || optimized.title || '').slice(0, 50);
-      const descriptionValue = (optimized.description || optimized.summary || '').slice(0, 500);
+      const descriptionValue = buildLongDescriptionFromOptimized(optimized);
       setGeneratedPublication(optimized);
       setGeneratedTittle(tittleValue);
       setGeneratedDescription(descriptionValue);
@@ -1949,7 +1978,7 @@ export default function PublishPage() {
                   !hasExistingProject &&
                   !savingDraft &&
                   generatedDescription.trim().length > 0
-                    ? `${generatedDescription.trim().length}/500 characters used.`
+                    ? `${generatedDescription.trim().length}/5000 characters used.`
                     : null}
                   {currentStep === 14 && !checkingProject && !hasExistingProject && !savingDraft
                     ? 'Final section intro is ready.'
@@ -2549,8 +2578,8 @@ export default function PublishPage() {
                     </p>
                     <textarea
                       value={generatedDescription}
-                      onChange={(event) => setGeneratedDescription(event.target.value.slice(0, 500))}
-                      maxLength={500}
+                      onChange={(event) => setGeneratedDescription(event.target.value.slice(0, 5000))}
+                      maxLength={5000}
                       rows={9}
                       className={`${inputClassName} mt-3 resize-none text-base`}
                     />
@@ -2559,7 +2588,7 @@ export default function PublishPage() {
                     <span>
                       {generatedPublication ? 'AI publication response received.' : 'Waiting for API response.'}
                     </span>
-                    <span>{generatedDescription.length}/500</span>
+                    <span>{generatedDescription.length}/5000</span>
                   </div>
                 </div>
               </motion.div>
