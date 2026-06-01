@@ -687,6 +687,7 @@ export default function PublishPage() {
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
+  const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
   const canContinueStep1 = useMemo(
     () =>
@@ -1063,13 +1064,17 @@ export default function PublishPage() {
     return () => window.clearTimeout(timer);
   }, [address, draftId, getAccessToken, hasExistingProject, hasInteracted, rolSeleccionado, user?.id]);
 
+  useEffect(() => {
+    mediaItemsRef.current = [...pendingMediaItems, ...uploadedMediaItems];
+  }, [pendingMediaItems, uploadedMediaItems]);
+
   useEffect(
     () => () => {
-      [...pendingMediaItems, ...uploadedMediaItems].forEach((item) => {
+      mediaItemsRef.current.forEach((item) => {
         URL.revokeObjectURL(item.previewUrl);
       });
     },
-    [pendingMediaItems, uploadedMediaItems]
+    []
   );
 
   useEffect(() => {
@@ -2431,7 +2436,7 @@ export default function PublishPage() {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="flex h-full w-full flex-col gap-4"
+                className="flex h-full w-full min-h-0 flex-col gap-4 pb-20"
               >
                 <div className="mx-auto max-w-3xl text-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">Preview</p>
@@ -2443,7 +2448,7 @@ export default function PublishPage() {
                   </p>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[#DCE6F1] bg-white pb-8 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
                   <div className="relative h-[300px] w-full overflow-hidden bg-[#EEF3FB]">
                     {previewPhotos.length > 0 ? (
                       <motion.div
