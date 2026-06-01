@@ -123,6 +123,57 @@ const mobileSurfaceClassName =
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
 
+const mediaImageMaxDimension = 1600;
+const mediaImageWebpQuality = 0.82;
+
+const toWebpFileName = (name: string) => {
+  const baseName = name.replace(/\.[^/.]+$/, '');
+  return `${baseName || 'business-media'}.webp`;
+};
+
+const compressImageToWebp = async (file: File): Promise<File> => {
+  if (!file.type.startsWith('image/') || file.type === 'image/webp') return file;
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error('Could not load selected image.'));
+      nextImage.src = objectUrl;
+    });
+
+    const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = largestSide > mediaImageMaxDimension ? mediaImageMaxDimension / largestSide : 1;
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', mediaImageWebpQuality);
+    });
+
+    if (!blob) return file;
+
+    return new File([blob], toWebpFileName(file.name), {
+      type: 'image/webp',
+      lastModified: Date.now(),
+    });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+};
+
 const businessCategories: BusinessCategory[] = [
   { id: 'technology', label: 'Technology' },
   { id: 'health_wellness', label: 'Health & Wellness' },
@@ -922,18 +973,27 @@ export default function PublishPage() {
     setHasInteracted(true);
   };
 
-  const handleMediaSelection = (fileList: FileList | null) => {
+  const handleMediaSelection = async (fileList: FileList | null) => {
     if (!fileList) return;
 
-    const mapped = Array.from(fileList)
-      .filter((file) => file.type.startsWith('image/') || file.type.startsWith('video/'))
-      .map((file) => ({
-        id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
-        file,
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        type: file.type.startsWith('video/') ? ('video' as const) : ('photo' as const),
-      }));
+    const files = Array.from(fileList).filter(
+      (file) => file.type.startsWith('image/') || file.type.startsWith('video/')
+    );
+
+    const mapped = await Promise.all(
+      files.map(async (file) => {
+        const type = file.type.startsWith('video/') ? ('video' as const) : ('photo' as const);
+        const preparedFile = type === 'photo' ? await compressImageToWebp(file) : file;
+
+        return {
+          id: `${preparedFile.name}-${preparedFile.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+          file: preparedFile,
+          name: preparedFile.name,
+          previewUrl: URL.createObjectURL(preparedFile),
+          type,
+        };
+      })
+    );
 
     setPendingMediaItems((previous) => [...previous, ...mapped]);
   };
@@ -1323,7 +1383,6 @@ export default function PublishPage() {
               currentStep !== 13 &&
               currentStep !== 14 &&
               currentStep !== 15 &&
-              currentStep !== 16 &&
               currentStep !== 18
                 ? 'hidden'
                 : 'flex flex-col justify-center'
@@ -1525,13 +1584,6 @@ export default function PublishPage() {
               !savingDraft
                 ? `${mediaCounts.photos} photos and ${mediaCounts.videos} video selected.`
                 : null}
-              {currentStep === 12 &&
-              !checkingProject &&
-              !hasExistingProject &&
-              !savingDraft &&
-              generatedTittle.trim().length > 0
-                ? `${generatedTittle.trim().length}/50 characters used.`
-                : null}
               {currentStep === 13 &&
               !checkingProject &&
               !hasExistingProject &&
@@ -1552,6 +1604,23 @@ export default function PublishPage() {
             </div>
 
             {status ? <p className="mt-2 text-sm text-[#0B7A52]">{status}</p> : null}
+
+            {currentStep === 12 ? (
+              <div className="mt-8 max-w-xl rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                <label className="block">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B39F4]">
+                    tittle
+                  </p>
+                  <textarea
+                    value={generatedTittle}
+                    onChange={(event) => setGeneratedTittle(event.target.value.slice(0, 50))}
+                    maxLength={50}
+                    rows={4}
+                    className={`${inputClassName} mt-3 resize-none text-base`}
+                  />
+                </label>
+              </div>
+            ) : null}
 
             <div className="mt-12 flex items-center gap-3">
               <button
@@ -1601,7 +1670,7 @@ export default function PublishPage() {
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep === 7 || currentStep === 8 || currentStep === 9 ? 'col-span-2' : ''
+              currentStep === 7 || currentStep === 8 || currentStep === 9 || currentStep === 11 || currentStep === 16 ? 'col-span-2' : ''
             }`}
           >
             {currentStep === 3 ? (
@@ -1987,18 +2056,18 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[1220px] space-y-5"
+                className="w-full max-w-none space-y-5"
               >
                 {isUploadingMedia ? (
-                  <div className="space-y-5">
+                  <div className="mx-auto w-full max-w-[1440px] space-y-5">
                     <h2 className="text-center text-[2.6rem] font-semibold tracking-[-0.045em] text-[#0B1325]">
                       Loading photos, please wait a moment
                     </h2>
-                    <div className="grid grid-cols-5 gap-3">
+                    <div className="grid w-full grid-cols-5 gap-3">
                       {Array.from({ length: 10 }).map((_, index) => (
                         <div
                           key={`media-skeleton-${index}`}
-                          className="h-36 animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
+                          className="aspect-[16/10] animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
                         />
                       ))}
                     </div>
@@ -2038,40 +2107,40 @@ export default function PublishPage() {
                       <p className="mx-auto mt-3 text-center text-sm text-[#5D6A7F]">Drag to reorder</p>
                     </div>
 
-                    <div className="max-h-[44vh] overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE] p-3">
-                    <div className="grid grid-cols-5 gap-3">
-                      {uploadedMediaItems.map((item) => (
-                        <div
-                          key={item.id}
-                          draggable
-                          onDragStart={() => handleDragStartMedia(item.id)}
-                          onDragOver={(event) => event.preventDefault()}
-                          onDrop={() => handleDropMedia(item.id)}
-                          className="group relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD]"
-                        >
-                          {item.type === 'video' ? (
-                            <video
-                              src={item.previewUrl}
-                              className="h-36 w-full object-cover"
-                              controls
-                              muted
-                            />
-                          ) : (
-                            <img
-                              src={item.previewUrl}
-                              alt={item.name}
-                              className="h-36 w-full object-cover"
-                            />
-                          )}
-                          <div className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
-                            {item.type === 'video' ? 'Video' : 'Photo'}
+                    <div className="mx-auto max-h-[44vh] w-full max-w-[1440px] overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE] p-3">
+                      <div className="grid w-full grid-cols-5 gap-3">
+                        {uploadedMediaItems.map((item) => (
+                          <div
+                            key={item.id}
+                            draggable
+                            onDragStart={() => handleDragStartMedia(item.id)}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={() => handleDropMedia(item.id)}
+                            className="group relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD]"
+                          >
+                            {item.type === 'video' ? (
+                              <video
+                                src={item.previewUrl}
+                                className="aspect-[16/10] w-full object-cover"
+                                controls
+                                muted
+                              />
+                            ) : (
+                              <img
+                                src={item.previewUrl}
+                                alt={item.name}
+                                className="aspect-[16/10] w-full object-cover"
+                              />
+                            )}
+                            <div className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
+                              {item.type === 'video' ? 'Video' : 'Photo'}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
+                    <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between">
                       <button
                         type="button"
                         onClick={() => setIsMediaModalOpen(true)}
@@ -2092,35 +2161,7 @@ export default function PublishPage() {
                   </>
                 )}
               </motion.div>
-            ) : currentStep === 12 ? (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="w-full max-w-[560px]"
-              >
-                <div className="rounded-3xl border border-[#DCE6F1] bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
-                  <label className="block">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B39F4]">
-                      tittle
-                    </p>
-                    <textarea
-                      value={generatedTittle}
-                      onChange={(event) => setGeneratedTittle(event.target.value.slice(0, 50))}
-                      maxLength={50}
-                      rows={4}
-                      className={`${inputClassName} mt-3 resize-none text-base`}
-                    />
-                  </label>
-                  <div className="mt-2 flex items-center justify-between text-xs text-[#6A778D]">
-                    <span>
-                      {generatedPublication ? 'AI publication response received.' : 'Waiting for API response.'}
-                    </span>
-                    <span>{generatedTittle.length}/50</span>
-                  </div>
-                </div>
-              </motion.div>
-            ) : currentStep === 13 ? (
+            ) : currentStep === 12 ? null : currentStep === 13 ? (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -2160,7 +2201,7 @@ export default function PublishPage() {
                   <p className="mt-1 text-xs text-[#5D6A7F]">
                     Does your business have any of these?
                   </p>
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-5 max-h-[42vh] space-y-3 overflow-y-auto pr-2">
                     {complianceChecklistOptions.map((option) => {
                       const selected = complianceSelections.includes(option);
                       return (
@@ -2200,13 +2241,23 @@ export default function PublishPage() {
               </motion.div>
             ) : currentStep === 16 ? (
               <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
-                className="w-full max-w-[920px] space-y-5"
+                className="flex h-full w-full flex-col gap-4"
               >
-                <div className="overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
-                  <div className="relative h-[320px] w-full overflow-hidden bg-[#EEF3FB]">
+                <div className="mx-auto max-w-3xl text-center">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6B39F4]">Preview</p>
+                  <h2 className="mt-2 text-[2.85rem] font-semibold leading-[1.04] tracking-[-0.05em] text-[#0B1325]">
+                    Review your listing before publishing
+                  </h2>
+                  <p className="mt-4 text-[1rem] leading-7 text-[#4B5B72]">
+                    Confirm images, description, and compliance details, then publish when ready.
+                  </p>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
+                  <div className="relative h-[300px] w-full overflow-hidden bg-[#EEF3FB]">
                     {previewPhotos.length > 0 ? (
                       <motion.div
                         animate={{ x: `-${activePhotoIndex * 100}%` }}
@@ -2242,15 +2293,15 @@ export default function PublishPage() {
                   </div>
 
                   <div className="space-y-4 p-6">
-                    <h3 className="text-2xl font-semibold tracking-[-0.03em] text-[#0B1325]">
+                    <h3 className="text-center text-2xl font-semibold tracking-[-0.03em] text-[#0B1325]">
                       {generatedTittle || 'Your business title'}
                     </h3>
 
-                    <p className="text-sm font-semibold text-[#6B39F4]">
+                    <p className="text-center text-sm font-semibold text-[#6B39F4]">
                       Capital to raise: ${capitalRequiredUsd || '0'} USD
                     </p>
 
-                    <div className="rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] p-4">
+                    <div className="mx-auto max-w-3xl rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] p-4">
                       <p className="text-sm font-semibold text-[#0B1325]">
                         Send a message to the entrepreneur
                       </p>
@@ -2308,13 +2359,15 @@ export default function PublishPage() {
                       </div>
                     ) : null}
 
-                    <button
-                      type="button"
-                      onClick={() => void handlePublishListing()}
-                      className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
-                    >
-                      Publish
-                    </button>
+                    <div className="flex justify-center pb-2">
+                      <button
+                        type="button"
+                        onClick={() => void handlePublishListing()}
+                        className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
+                      >
+                        Publish
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -2672,7 +2725,7 @@ export default function PublishPage() {
                   multiple
                   className="hidden"
                   onChange={(event) => {
-                    handleMediaSelection(event.target.files);
+                    void handleMediaSelection(event.target.files);
                     event.target.value = '';
                   }}
                 />
