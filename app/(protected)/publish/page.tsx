@@ -852,7 +852,6 @@ export default function PublishPage() {
   const canContinueStep11 = useMemo(
     () =>
       mediaCounts.photos >= 5 &&
-      mediaCounts.videos >= 1 &&
       !checkingProject &&
       !hasExistingProject &&
       !isUploadingMedia,
@@ -1864,7 +1863,7 @@ export default function PublishPage() {
                   Add some photos and videos of your Business
                 </h2>
                 <p className="mt-6 max-w-xl text-[1.2rem] leading-8 text-[#4B5B72]">
-                  You&apos;ll need 5 photos and 1 video to get started. You can add more or make changes later.
+                  You&apos;ll need at least 5 photos to get started. You can add a video optionally and make changes later.
                 </p>
               </>
             ) : currentStep === 12 ? (
@@ -3114,7 +3113,7 @@ export default function PublishPage() {
                     Upload photos and videos
                   </h3>
                   <p className="mt-1 text-sm text-[#64748B]">
-                    Please add at least 5 photos and 1 video.
+                    Please add at least 5 photos. Video is optional.
                   </p>
                 </div>
                 <button
@@ -3134,7 +3133,7 @@ export default function PublishPage() {
                 <FileUpload.DropZone
                   accept="image/*,video/*"
                   allowsMultiple
-                  hint="PNG, JPG, WEBP or videos (MP4/WEBM). Minimum 5 photos and 1 video."
+                  hint="PNG, JPG, WEBP or videos (MP4/WEBM). Minimum 5 photos. Video optional."
                   onDropFiles={(files) => {
                     void handleMediaSelection(files);
                   }}
