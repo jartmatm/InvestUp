@@ -96,7 +96,37 @@ const REQUEST_HEADERS = {
   Accept: 'application/json',
 } as const;
 
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const searchCache = new Map<string, { expiresAt: number; data: ReturnType<typeof normalizePlace>[] }>();
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchWithRetryOn429 = async (url: string) => {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: REQUEST_HEADERS,
+    cache: 'no-store',
+  });
+
+  if (response.status !== 429) return response;
+
+  await sleep(1100);
+
+  return fetch(url, {
+    method: 'GET',
+    headers: REQUEST_HEADERS,
+    cache: 'no-store',
+  });
+};
+
 const searchAddress = async (query: string, language: string) => {
+  const cacheKey = `${language}:${query.toLowerCase()}`;
+  const now = Date.now();
+  const cached = searchCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
   const url = new URL('/search', NOMINATIM_BASE_URL);
   url.searchParams.set('q', query);
   url.searchParams.set('format', 'jsonv2');
@@ -104,18 +134,16 @@ const searchAddress = async (query: string, language: string) => {
   url.searchParams.set('limit', '5');
   url.searchParams.set('accept-language', language || 'en');
 
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: REQUEST_HEADERS,
-    cache: 'no-store',
-  });
+  const response = await fetchWithRetryOn429(url.toString());
 
   if (!response.ok) {
     throw new Error(`Geocoding provider returned ${response.status}.`);
   }
 
   const data = (await response.json()) as NominatimPlace[];
-  return data.map((item) => normalizePlace(item));
+  const normalized = data.map((item) => normalizePlace(item));
+  searchCache.set(cacheKey, { expiresAt: now + SEARCH_CACHE_TTL_MS, data: normalized });
+  return normalized;
 };
 
 const reverseAddress = async (latitude: number, longitude: number, language: string) => {

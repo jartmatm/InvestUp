@@ -344,6 +344,18 @@ const complianceChecklistOptions = [
 const isAddressValid = (address: PublishAddressStepFields) =>
   requiredAddressKeys.every((key) => String(address[key]).trim().length > 0);
 
+const buildFormattedAddressFromManualFields = (address: PublishAddressStepFields) =>
+  [
+    [address.street_address, address.unit].filter(Boolean).join(', ').trim(),
+    address.locality,
+    address.state,
+    address.postcode,
+    address.country,
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join(', ');
+
 function BusinessCategoryIcon({ id }: { id: string }) {
   const commonProps = {
     className: 'h-5 w-5',
@@ -1028,14 +1040,18 @@ export default function PublishPage() {
       if (!active) return;
 
       if (error) {
-        setStatus(`Address search failed: ${error}`);
-        setSearchResults([]);
+        if (error.includes('returned 429')) {
+          setStatus('Address service is busy. Please wait a few seconds and try again.');
+        } else {
+          setStatus(`Address search failed: ${error}`);
+        }
       } else {
+        setStatus('');
         setSearchResults(data);
       }
 
       setIsSearching(false);
-    }, 360);
+    }, 700);
 
     return () => {
       active = false;
@@ -1160,6 +1176,25 @@ export default function PublishPage() {
       return next;
     });
     setHasInteracted(true);
+  };
+
+  const handleSaveManualAddress = () => {
+    const manualAddressWithFormatted: PublishAddressStepFields = {
+      ...address,
+      formatted_address:
+        address.formatted_address.trim() || buildFormattedAddressFromManualFields(address),
+      source: address.source || 'manual_edit',
+    };
+
+    if (!isAddressValid(manualAddressWithFormatted)) {
+      setStatus('Complete country, street, locality, state, postcode, and formatted address.');
+      return;
+    }
+
+    setAddress(manualAddressWithFormatted);
+    setHasInteracted(true);
+    setStatus('');
+    setIsAddressModalOpen(false);
   };
 
   const handleMediaSelection = async (fileList: FileList | null) => {
@@ -2991,18 +3026,14 @@ export default function PublishPage() {
 
               <div className="mt-6 flex items-center justify-between gap-3">
                 <p className="text-xs text-[#64748B]">
-                  Required: country, street, locality, state, postcode, and formatted address.
+                  Required: country, street, locality, state, postcode. Formatted address is generated automatically.
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!canContinueStep1) return;
-                    setIsAddressModalOpen(false);
-                  }}
-                  disabled={!canContinueStep1}
+                  onClick={handleSaveManualAddress}
                   className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Next
+                  Save address
                 </button>
               </div>
             </motion.div>
