@@ -1317,7 +1317,12 @@ export default function PublishPage() {
       let uploadedVideo: string | null = null;
 
       if (mediaFiles.length > 0) {
-        const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, mediaFiles);
+        const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, mediaFiles, {
+          timeoutMs: 120_000,
+          onProgress: ({ index, total, fileName }) => {
+            setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
+          },
+        });
         if (mediaUploadResult.error || !mediaUploadResult.data) {
           setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
           goToStep(16, false);
