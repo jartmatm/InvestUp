@@ -1543,7 +1543,11 @@ export default function PublishPage() {
       >
         <div
           style={{ fontFamily: desktopFontFamily }}
-          className="relative grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 overflow-visible rounded-[34px] border border-[#E3EAF2] bg-white p-10 pb-24 shadow-[0_26px_70px_rgba(15,23,42,0.06)]"
+          className={`relative overflow-visible rounded-[34px] border border-[#E3EAF2] bg-white p-10 shadow-[0_26px_70px_rgba(15,23,42,0.06)] ${
+            currentStep === 17 || currentStep === 18
+              ? 'flex h-[82vh] items-center justify-center'
+              : 'grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 pb-24'
+          }`}
         >
           {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
 
@@ -1576,6 +1580,7 @@ export default function PublishPage() {
               currentStep !== 13 &&
               currentStep !== 14 &&
               currentStep !== 15 &&
+              currentStep !== 17 &&
               currentStep !== 18
                 ? 'hidden'
                 : 'flex flex-col justify-center'
@@ -1815,55 +1820,63 @@ export default function PublishPage() {
               </div>
             ) : null}
 
-            <div className="mt-12 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={
-                  currentStep === 1
-                    ? !canContinueStep1
-                    : currentStep === 2
-                      ? !canContinueStep2
-                      : currentStep === 3
-                        ? !canContinueStep3
-                        : currentStep === 4
-                          ? !canContinueStep4
-                          : currentStep === 5
-                            ? !canContinueStep5
-                            : currentStep === 6
-                              ? !canContinueStep6
-                              : currentStep === 7
-                                ? !canContinueStep7
-                                : currentStep === 8
-                                  ? !canContinueStep8
-                                  : currentStep === 9
-                                    ? !canContinueStep9
-                                    : currentStep === 10
-                                      ? !canContinueStep10
-                                        : currentStep === 11
-                                          ? !canContinueStep11
-                                          : currentStep === 12
-                                            ? !canContinueStep12
+            {currentStep !== 12 ? (
+              <div className="mt-12 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={
+                    currentStep === 1
+                      ? !canContinueStep1
+                      : currentStep === 2
+                        ? !canContinueStep2
+                        : currentStep === 3
+                          ? !canContinueStep3
+                          : currentStep === 4
+                            ? !canContinueStep4
+                            : currentStep === 5
+                              ? !canContinueStep5
+                              : currentStep === 6
+                                ? !canContinueStep6
+                                : currentStep === 7
+                                  ? !canContinueStep7
+                                  : currentStep === 8
+                                    ? !canContinueStep8
+                                    : currentStep === 9
+                                      ? !canContinueStep9
+                                      : currentStep === 10
+                                        ? !canContinueStep10
+                                          : currentStep === 11
+                                            ? !canContinueStep11
                                             : currentStep === 13
-                                              ? !canContinueStep13
-                                              : currentStep === 14
-                                                ? !canContinueStep14
-                                                : currentStep === 15
-                                                  ? !canContinueStep15
-                                                  : currentStep === 16
-                                                    ? !canContinueStep16
-                                                    : true
-                }
-                className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Continue
-              </button>
-            </div>
+                                                ? !canContinueStep13
+                                                : currentStep === 14
+                                                  ? !canContinueStep14
+                                                  : currentStep === 15
+                                                    ? !canContinueStep15
+                                                    : currentStep === 16
+                                                      ? !canContinueStep16
+                                                      : true
+                  }
+                  className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Continue
+                </button>
+              </div>
+            ) : null}
           </section>
 
           <section
             className={`relative flex items-center justify-center ${
-              currentStep === 7 || currentStep === 8 || currentStep === 9 || currentStep === 11 || currentStep === 16 ? 'col-span-2' : ''
+              currentStep === 7 ||
+              currentStep === 8 ||
+              currentStep === 9 ||
+              currentStep === 11 ||
+              currentStep === 16 ||
+              currentStep === 17 ||
+              currentStep === 18
+                ? 'col-span-2'
+                : ''
             }`}
           >
             {currentStep === 3 ? (
@@ -2573,13 +2586,13 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="flex h-[74vh] w-full items-center justify-center"
+                className="flex h-full w-full items-center justify-center"
               >
                 <Lottie
                   animationData={publishStep17PublishingAnimation}
                   loop
                   autoplay
-                  className="h-[740px] w-[740px] max-h-full max-w-full"
+                  className="h-[92%] w-[92%] max-h-full max-w-full"
                 />
               </motion.div>
             ) : currentStep === 18 ? (
@@ -2587,13 +2600,13 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="flex h-[74vh] w-full flex-col items-center justify-center"
+                className="flex h-full w-full flex-col items-center justify-center"
               >
                 <Lottie
                   animationData={publishStep18SuccessAnimation}
                   loop
                   autoplay
-                  className="h-[620px] w-[620px] max-h-full max-w-full"
+                  className="h-[82%] w-[82%] max-h-full max-w-full"
                 />
                 <motion.p
                   initial={{ opacity: 0, y: 12 }}

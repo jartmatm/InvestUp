@@ -331,11 +331,6 @@ const DESKTOP_CATEGORY_OPTIONS = [
 const getRateLabel = (project: FeedProject, fallback: string) =>
   project.interest_rate ? `${project.interest_rate}% EA` : fallback;
 
-const getProjectVideoUrl = (project: FeedProject) =>
-  typeof project.video_url === 'string' && project.video_url.trim().length > 0
-    ? project.video_url
-    : null;
-
 const getInitials = (value: string) => {
   const parts = value.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return 'U';
@@ -520,7 +515,6 @@ function DesktopProjectCard({
   project: FeedProject;
 }) {
   const t = useTranslations('Feed');
-  const videoUrl = getProjectVideoUrl(project);
   const coverImage = getProjectCoverImage(project);
   const category = toEnglishSector(project.sector) || t('uncategorized');
 
@@ -535,20 +529,11 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex aspect-[2/3] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex h-[272px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative min-h-0 flex-[3]">
+      <div className="relative h-3/4 min-h-0">
         <AspectRatio ratio="video" className="h-full w-full">
-          {videoUrl ? (
-            <video
-              src={videoUrl}
-              poster={coverImage ?? undefined}
-              muted
-              playsInline
-              preload="metadata"
-              className="h-full w-full object-cover"
-            />
-          ) : coverImage ? (
+          {coverImage ? (
             <img src={coverImage} alt={project.title} className="h-full w-full object-cover" />
           ) : (
             <div className="h-full w-full bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)]" />
@@ -571,7 +556,7 @@ function DesktopProjectCard({
           <IconHeart filled={isWishlisted} />
         </Button>
       </div>
-      <CardContent className="flex min-h-0 flex-1 flex-col justify-between p-3">
+      <CardContent className="flex h-1/4 min-h-0 flex-col justify-between border-t border-white/60 bg-white/72 p-3 backdrop-blur-md">
         <h3 className="line-clamp-2 text-[0.96rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
           {project.title}
         </h3>
@@ -709,11 +694,11 @@ function DesktopMarketplaceLayout({
             />
 
             {loading ? (
-              <div className="mt-1 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
+              <div className="mt-2 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-4 overflow-y-auto pr-1">
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="aspect-[2/3] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[272px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -727,7 +712,7 @@ function DesktopMarketplaceLayout({
             ) : null}
 
             {!loading && !status && filteredProjects.length > 0 ? (
-              <div className="mt-1 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-5 overflow-y-auto pr-1">
+              <div className="mt-2 grid max-h-[calc(100vh-510px)] grid-cols-4 gap-4 overflow-y-auto pr-1">
                 {filteredProjects.map((project) => (
                   <DesktopProjectCard
                     key={`desktop-project-${project.id}`}
@@ -1214,7 +1199,6 @@ export default function FeedPage() {
                   );
                   const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending');
                   const categoryLabel = toEnglishSector(project.sector) || t('uncategorized');
-                  const videoUrl = getProjectVideoUrl(project);
                   const coverImage = getProjectCoverImage(project);
                   const isOwnProject = Boolean(
                     user?.id && project.owner_user_id && project.owner_user_id === user.id
@@ -1249,16 +1233,7 @@ export default function FeedPage() {
                         <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
                           <div className="relative">
                             <AspectRatio ratio="video" className="h-[174px] w-full">
-                              {videoUrl ? (
-                                <video
-                                  src={videoUrl}
-                                  poster={coverImage ?? undefined}
-                                  muted
-                                  playsInline
-                                  preload="metadata"
-                                  className="h-[174px] w-full object-cover"
-                                />
-                              ) : coverImage ? (
+                              {coverImage ? (
                                 <img
                                   src={coverImage}
                                   alt={project.title}

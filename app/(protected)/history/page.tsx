@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { Avatar } from '@/components/tailgrids/core/avatar';
 import { Button } from '@/components/tailgrids/core/button';
 import {
@@ -347,22 +348,6 @@ function IconSort() {
   );
 }
 
-function IconChevronDown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
-  );
-}
-
 function IconCopy() {
   return (
     <svg
@@ -672,51 +657,42 @@ export default function HistoryPage() {
             />
           </label>
 
-          <select
+          <AppCombobox
             value={movementFilter}
-            onChange={(event) => setMovementFilter(event.target.value as MovementFilter)}
-            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-          >
-            {movementTypeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {tx(option.labelKey)}
-              </option>
-            ))}
-          </select>
+            onChange={(next) => setMovementFilter(next as MovementFilter)}
+            options={movementTypeOptions.map((option) => ({
+              value: option.value,
+              label: tx(option.labelKey),
+            }))}
+          />
 
-          <select
+          <AppCombobox
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {tx(option.labelKey)}
-              </option>
-            ))}
-          </select>
+            onChange={(next) => setStatusFilter(next as StatusFilter)}
+            options={statusOptions.map((option) => ({
+              value: option.value,
+              label: tx(option.labelKey),
+            }))}
+          />
 
-          <select
+          <AppCombobox
             value={directionFilter}
-            onChange={(event) => setDirectionFilter(event.target.value as DirectionFilter)}
-            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-          >
-            <option value="all">{t('allDirections')}</option>
-            <option value="incoming">{t('incoming')}</option>
-            <option value="outgoing">{t('outgoing')}</option>
-          </select>
+            onChange={(next) => setDirectionFilter(next as DirectionFilter)}
+            options={[
+              { value: 'all', label: t('allDirections') },
+              { value: 'incoming', label: t('incoming') },
+              { value: 'outgoing', label: t('outgoing') },
+            ]}
+          />
 
-          <select
+          <AppCombobox
             value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as SortFilter)}
-            className="h-11 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {tx(option.labelKey)}
-              </option>
-            ))}
-          </select>
+            onChange={(next) => setSortBy(next as SortFilter)}
+            options={sortOptions.map((option) => ({
+              value: option.value,
+              label: tx(option.labelKey),
+            }))}
+          />
         </div>
       </DesktopSectionCard>
 
@@ -971,60 +947,45 @@ export default function HistoryPage() {
                   <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#6B39F4]">
                     <IconTag />
                   </span>
-                  <select
+                  <AppCombobox
                     value={movementFilter}
-                    onChange={(event) => setMovementFilter(event.target.value as MovementFilter)}
-                    className="w-full appearance-none rounded-[22px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] py-4 pl-14 pr-12 text-[1rem] font-medium tracking-[-0.02em] text-[#17203A] outline-none shadow-[0_12px_24px_rgba(31,38,64,0.04)] transition focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                  >
-                    {movementTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {tx(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                    <IconChevronDown />
-                  </span>
+                    onChange={(next) => setMovementFilter(next as MovementFilter)}
+                    options={movementTypeOptions.map((option) => ({
+                      value: option.value,
+                      label: tx(option.labelKey),
+                    }))}
+                    className="pl-10"
+                  />
                 </div>
 
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#6B39F4]">
                     <IconShield />
                   </span>
-                  <select
+                  <AppCombobox
                     value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                    className="w-full appearance-none rounded-[22px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] py-4 pl-14 pr-12 text-[1rem] font-medium tracking-[-0.02em] text-[#17203A] outline-none shadow-[0_12px_24px_rgba(31,38,64,0.04)] transition focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {tx(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                    <IconChevronDown />
-                  </span>
+                    onChange={(next) => setStatusFilter(next as StatusFilter)}
+                    options={statusOptions.map((option) => ({
+                      value: option.value,
+                      label: tx(option.labelKey),
+                    }))}
+                    className="pl-10"
+                  />
                 </div>
 
                 <div className="relative">
                   <span className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-[#6B39F4]">
                     <IconSort />
                   </span>
-                  <select
+                  <AppCombobox
                     value={sortBy}
-                    onChange={(event) => setSortBy(event.target.value as SortFilter)}
-                    className="w-full appearance-none rounded-[22px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] py-4 pl-14 pr-12 text-[1rem] font-medium tracking-[-0.02em] text-[#17203A] outline-none shadow-[0_12px_24px_rgba(31,38,64,0.04)] transition focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {tx(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                    <IconChevronDown />
-                  </span>
+                    onChange={(next) => setSortBy(next as SortFilter)}
+                    options={sortOptions.map((option) => ({
+                      value: option.value,
+                      label: tx(option.labelKey),
+                    }))}
+                    className="pl-10"
+                  />
                 </div>
               </div>
 

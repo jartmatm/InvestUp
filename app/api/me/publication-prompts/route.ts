@@ -487,14 +487,21 @@ export async function PUT(request: NextRequest) {
 
   const supabase = getSupabaseAdminClient();
   const formFields = isPlainObject(promptJson.fields) ? promptJson.fields : {};
+  const metadata = isPlainObject(body.metadata) ? body.metadata : {};
+  const metadataStatus = coerceText(metadata.status);
+  const metadataStep = coerceText(metadata.step);
+  const draftStatus =
+    metadataStatus === 'published' || metadataStep === 'publication_final_v1'
+      ? 'published'
+      : 'draft';
   const payload = {
     user_id: verified.userId,
     prompt_json: promptJson,
     prompt_text: promptText,
     optimized_publication: null,
     provider: null,
-    status: 'draft',
-    metadata: buildPromptMetadata(formFields, body.metadata),
+    status: draftStatus,
+    metadata: buildPromptMetadata(formFields, metadata),
   };
 
   try {

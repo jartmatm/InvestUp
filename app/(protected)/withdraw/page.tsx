@@ -10,6 +10,7 @@ import {
   DesktopMetricCard,
   DesktopSectionCard,
 } from '@/components/DesktopAppShell';
+import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
@@ -310,22 +311,6 @@ function IconAmount() {
       <circle cx="12" cy="12" r="8" />
       <path d="M14 9.5c0-.9-.9-1.5-2-1.5s-2 .6-2 1.5c0 2 4 1.1 4 3.1 0 .9-.9 1.6-2 1.6s-2-.6-2-1.6" />
       <path d="M12 7.2v9.6" />
-    </svg>
-  );
-}
-
-function IconChevronDown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
@@ -731,18 +716,14 @@ export default function WithdrawPage() {
             {isBankMethod ? (
               <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
                 {withdrawCountryConfig.bankOptions.length > 0 ? (
-                  <select
+                  <AppCombobox
                     value={form.bankName}
-                    onChange={(event) => updateForm('bankName', event.target.value)}
-                    className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                  >
-                    <option value="">{withdrawCountryConfig.bankPlaceholder}</option>
-                    {withdrawCountryConfig.bankOptions.map((bank) => (
-                      <option key={bank} value={bank}>
-                        {bank}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(next) => updateForm('bankName', next)}
+                    options={[
+                      { value: '', label: withdrawCountryConfig.bankPlaceholder },
+                      ...withdrawCountryConfig.bankOptions.map((bank) => ({ value: bank, label: bank })),
+                    ]}
+                  />
                 ) : (
                   <input
                     value={form.bankName}
@@ -757,30 +738,28 @@ export default function WithdrawPage() {
                   placeholder={withdrawCountryConfig.accountNumberPlaceholder}
                   className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
                 />
-                <select
+                <AppCombobox
                   value={form.accountType}
-                  onChange={(event) => updateForm('accountType', event.target.value)}
-                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                >
-                  <option value="">{withdrawCountryConfig.accountTypePlaceholder}</option>
-                  {withdrawCountryConfig.accountTypes.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  onChange={(next) => updateForm('accountType', next)}
+                  options={[
+                    { value: '', label: withdrawCountryConfig.accountTypePlaceholder },
+                    ...withdrawCountryConfig.accountTypes.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })),
+                  ]}
+                />
+                <AppCombobox
                   value={form.identificationType}
-                  onChange={(event) => updateForm('identificationType', event.target.value)}
-                  className="h-14 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                >
-                  <option value="">{withdrawCountryConfig.identificationTypePlaceholder}</option>
-                  {withdrawCountryConfig.identificationTypes.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => updateForm('identificationType', next)}
+                  options={[
+                    { value: '', label: withdrawCountryConfig.identificationTypePlaceholder },
+                    ...withdrawCountryConfig.identificationTypes.map((option) => ({
+                      value: option.value,
+                      label: option.label,
+                    })),
+                  ]}
+                />
                 <input
                   value={form.identificationNumber}
                   onChange={(event) => updateForm('identificationNumber', event.target.value)}
@@ -988,23 +967,14 @@ export default function WithdrawPage() {
               <div className="mt-4 space-y-2.5">
                 <FieldShell icon={<IconBank />}>
                   {withdrawCountryConfig.bankOptions.length > 0 ? (
-                    <div className="relative">
-                      <select
-                        value={bankNameValid ? form.bankName : ''}
-                        onChange={(event) => updateForm('bankName', event.target.value)}
-                        className={`${formInputClassName} appearance-none pr-10`}
-                      >
-                        <option value="">{withdrawCountryConfig.bankPlaceholder}</option>
-                        {withdrawCountryConfig.bankOptions.map((bank) => (
-                          <option key={bank} value={bank}>
-                            {bank}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                        <IconChevronDown />
-                      </span>
-                    </div>
+                    <AppCombobox
+                      value={bankNameValid ? form.bankName : ''}
+                      onChange={(next) => updateForm('bankName', next)}
+                      options={[
+                        { value: '', label: withdrawCountryConfig.bankPlaceholder },
+                        ...withdrawCountryConfig.bankOptions.map((bank) => ({ value: bank, label: bank })),
+                      ]}
+                    />
                   ) : (
                     <input
                       type="text"
@@ -1029,43 +999,31 @@ export default function WithdrawPage() {
                 </FieldShell>
 
                 <FieldShell icon={<IconAccountType />}>
-                  <div className="relative">
-                    <select
-                      value={accountTypeValid ? form.accountType : ''}
-                      onChange={(event) => updateForm('accountType', event.target.value)}
-                      className={`${formInputClassName} appearance-none pr-10`}
-                    >
-                      <option value="">{withdrawCountryConfig.accountTypePlaceholder}</option>
-                      {withdrawCountryConfig.accountTypes.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                      <IconChevronDown />
-                    </span>
-                  </div>
+                  <AppCombobox
+                    value={accountTypeValid ? form.accountType : ''}
+                    onChange={(next) => updateForm('accountType', next)}
+                    options={[
+                      { value: '', label: withdrawCountryConfig.accountTypePlaceholder },
+                      ...withdrawCountryConfig.accountTypes.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                      })),
+                    ]}
+                  />
                 </FieldShell>
 
                 <FieldShell icon={<IconIdentification />}>
-                  <div className="relative">
-                    <select
-                      value={identificationTypeValid ? form.identificationType : ''}
-                      onChange={(event) => updateForm('identificationType', event.target.value)}
-                      className={`${formInputClassName} appearance-none pr-10`}
-                    >
-                      <option value="">{withdrawCountryConfig.identificationTypePlaceholder}</option>
-                      {withdrawCountryConfig.identificationTypes.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[#7F899D]">
-                      <IconChevronDown />
-                    </span>
-                  </div>
+                  <AppCombobox
+                    value={identificationTypeValid ? form.identificationType : ''}
+                    onChange={(next) => updateForm('identificationType', next)}
+                    options={[
+                      { value: '', label: withdrawCountryConfig.identificationTypePlaceholder },
+                      ...withdrawCountryConfig.identificationTypes.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                      })),
+                    ]}
+                  />
                 </FieldShell>
 
                 <FieldShell icon={<IconHash />}>

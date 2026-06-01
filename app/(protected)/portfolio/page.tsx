@@ -10,6 +10,7 @@ import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShel
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import InvestorPortfolioDashboard from '@/components/InvestorPortfolioDashboard';
@@ -178,9 +179,6 @@ const getErrorMessage = (error: unknown) => {
 
 const surfaceClassName =
   'rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl';
-
-const fieldClassName =
-  'w-full rounded-[22px] border border-[#E7ECF4] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-3.5 text-[0.95rem] font-medium tracking-[-0.025em] text-[#162033] outline-none shadow-[0_16px_32px_rgba(31,38,64,0.05)] transition placeholder:text-[#9BA5B9] focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:opacity-60';
 
 const inputClassName =
   '!rounded-[22px] !border-[#E7ECF4] !bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] !px-4 !py-3.5 !text-[0.95rem] !font-medium !tracking-[-0.025em] !text-[#162033] !shadow-[0_16px_32px_rgba(31,38,64,0.05)] placeholder:!text-[#9BA5B9] focus:!border-[#D7C8FF] focus:!ring-4 focus:!ring-[#6B39F4]/10';
@@ -741,18 +739,14 @@ export default function PortfolioPage() {
                   placeholder={t('businessName')}
                   className={inputClassName}
                 />
-                <select
+                <AppCombobox
                   value={form.sector}
-                  onChange={(event) => onChangeForm('sector', event.target.value)}
-                  className={fieldClassName}
-                >
-                  <option value="">{t('economicSector')}</option>
-                  {SECTOR_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(next) => onChangeForm('sector', next)}
+                  options={[
+                    { value: '', label: t('economicSector') },
+                    ...SECTOR_OPTIONS.map((option) => ({ value: option, label: option })),
+                  ]}
+                />
                 <Input
                   value={form.legalRepresentative}
                   onChange={(value) => onChangeForm('legalRepresentative', value)}
@@ -785,34 +779,25 @@ export default function PortfolioPage() {
                   className={inputClassName}
                 />
 
-                <select
+                <AppCombobox
                   value={form.country}
-                  onChange={(event) => {
-                    const code = event.target.value;
+                  onChange={(code) => {
                     setForm((prev) => ({ ...prev, country: code, city: '' }));
                   }}
-                  className={fieldClassName}
-                >
-                  <option value="">{t('country')}</option>
-                  {COUNTRY_OPTIONS.map((option) => (
-                    <option key={option.code} value={option.code}>
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  options={[
+                    { value: '', label: t('country') },
+                    ...COUNTRY_OPTIONS.map((option) => ({ value: option.code, label: option.name })),
+                  ]}
+                />
+                <AppCombobox
                   value={form.city}
-                  onChange={(event) => onChangeForm('city', event.target.value)}
+                  onChange={(next) => onChangeForm('city', next)}
                   disabled={!form.country}
-                  className={fieldClassName}
-                >
-                  <option value="">{form.country ? t('city') : t('selectCountryFirst')}</option>
-                  {cityOptions.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: '', label: form.country ? t('city') : t('selectCountryFirst') },
+                    ...cityOptions.map((city) => ({ value: city, label: city })),
+                  ]}
+                />
 
                 <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
                   <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
@@ -902,17 +887,17 @@ export default function PortfolioPage() {
                   placeholder={t('installmentsTerm')}
                   className={inputClassName}
                 />
-                <select
+                <AppCombobox
                   value={form.currency}
-                  onChange={(event) => onChangeForm('currency', event.target.value)}
-                  className={fieldClassName}
-                >
-                  <option value="USD">USD</option>
-                  <option value="EUR">EUR</option>
-                  <option value="COP">COP</option>
-                  <option value="ARS">ARS</option>
-                  <option value="MXN">MXN</option>
-                </select>
+                  onChange={(next) => onChangeForm('currency', next)}
+                  options={[
+                    { value: 'USD', label: 'USD' },
+                    { value: 'EUR', label: 'EUR' },
+                    { value: 'COP', label: 'COP' },
+                    { value: 'ARS', label: 'ARS' },
+                    { value: 'MXN', label: 'MXN' },
+                  ]}
+                />
                 <Input
                   value={form.interestRateEa}
                   onChange={(value) => onChangeForm('interestRateEa', value)}

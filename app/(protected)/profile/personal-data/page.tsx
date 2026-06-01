@@ -12,6 +12,7 @@ import {
   DesktopSectionCard,
 } from '@/components/DesktopAppShell';
 import { Avatar } from '@/components/tailgrids/core/avatar';
+import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { Button } from '@/components/tailgrids/core/button';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
@@ -398,22 +399,6 @@ function IconPhone() {
       strokeLinejoin="round"
     >
       <path d="M6.5 4.5h3l1.3 3.3-1.8 1.8a14.6 14.6 0 0 0 5.4 5.4l1.8-1.8 3.3 1.3v3a1.5 1.5 0 0 1-1.6 1.5A15.9 15.9 0 0 1 5 6.1 1.5 1.5 0 0 1 6.5 4.5Z" />
-    </svg>
-  );
-}
-
-function IconChevronDown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
@@ -875,25 +860,37 @@ export default function PersonalDataPage() {
               <input value={form.surname} onChange={(event) => updateForm('surname', event.target.value)} placeholder={t('surname')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
               <input value={form.email} onChange={(event) => updateForm('email', event.target.value)} disabled={!canEditEmail} placeholder={t('email')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]" />
               <input value={form.phone_number} onChange={(event) => updateForm('phone_number', event.target.value)} placeholder={t('phoneNumber')} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
-              <select value={form.country} onChange={(event) => onCountryChange(event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
-                <option value="">{t('country')}</option>
-                {countryOptions.map((option) => (
-                  <option key={option.code} value={option.code}>{option.name}</option>
-                ))}
-              </select>
-              <select value={form.gender} onChange={(event) => updateForm('gender', event.target.value)} className="h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10">
-                <option value="">{t('gender')}</option>
-                <option value="female">{t('female')}</option>
-                <option value="male">{t('male')}</option>
-                <option value="non_binary">{t('nonBinary')}</option>
-                <option value="prefer_not_to_say">{t('preferNotToSay')}</option>
-              </select>
+              <AppCombobox
+                value={form.country}
+                onChange={onCountryChange}
+                options={[
+                  { value: '', label: t('country') },
+                  ...countryOptions.map((option) => ({ value: option.code, label: option.name })),
+                ]}
+              />
+              <AppCombobox
+                value={form.gender}
+                onChange={(next) => updateForm('gender', next)}
+                options={[
+                  { value: '', label: t('gender') },
+                  { value: 'female', label: t('female') },
+                  { value: 'male', label: t('male') },
+                  { value: 'non_binary', label: t('nonBinary') },
+                  { value: 'prefer_not_to_say', label: t('preferNotToSay') },
+                ]}
+              />
               <input value={form.address} onChange={(event) => updateForm('address', event.target.value)} placeholder={t('address')} className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10" />
-              <select value={form.role} onChange={(event) => updateForm('role', event.target.value)} disabled={loadingRoleEligibility || isRoleSelectionLocked} className="col-span-2 h-12 rounded-2xl border border-[#E2E6F0] bg-white px-4 text-sm font-semibold text-[#17203A] outline-none focus:border-[#BBA7FF] focus:ring-4 focus:ring-[#6B39F4]/10 disabled:bg-[#F8F9FB] disabled:text-[#9BA5B8]">
-                <option value="">{t('role')}</option>
-                <option value="investor">{t('investor')}</option>
-                <option value="entrepreneur">{t('entrepreneur')}</option>
-              </select>
+              <AppCombobox
+                className="col-span-2"
+                value={form.role}
+                disabled={loadingRoleEligibility || isRoleSelectionLocked}
+                onChange={(next) => updateForm('role', next)}
+                options={[
+                  { value: '', label: t('role') },
+                  { value: 'investor', label: t('investor') },
+                  { value: 'entrepreneur', label: t('entrepreneur') },
+                ]}
+              />
             </div>
             {status ? (
               <div className={`mt-5 rounded-2xl border px-4 py-3 text-sm font-semibold ${statusClassName}`}>
@@ -1184,41 +1181,30 @@ export default function PersonalDataPage() {
               </FieldShell>
 
               <FieldShell label={t('gender')} icon={<IconGender />}>
-                <div className="relative">
-                  <select
-                    value={form.gender}
-                    onChange={(event) => updateForm('gender', event.target.value)}
-                    className={`${fieldControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('gender')}</option>
-                    <option value="male">{t('male')}</option>
-                    <option value="female">{t('female')}</option>
-                    <option value="prefer no say">{t('preferNotToSay')}</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.gender}
+                  onChange={(next) => updateForm('gender', next)}
+                  options={[
+                    { value: '', label: t('gender') },
+                    { value: 'male', label: t('male') },
+                    { value: 'female', label: t('female') },
+                    { value: 'prefer_not_to_say', label: t('preferNotToSay') },
+                  ]}
+                />
               </FieldShell>
 
               <FieldShell label={t('country')} icon={<IconGlobe />}>
-                <div className="relative">
-                  <select
-                    value={form.country}
-                    onChange={(event) => onCountryChange(event.target.value)}
-                    className={`${fieldControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('country')}</option>
-                    {countryOptions.map((option) => (
-                      <option key={option.code} value={option.code}>
-                        {option.name} ({option.dialCode})
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.country}
+                  onChange={onCountryChange}
+                  options={[
+                    { value: '', label: t('country') },
+                    ...countryOptions.map((option) => ({
+                      value: option.code,
+                      label: `${option.name} (${option.dialCode})`,
+                    })),
+                  ]}
+                />
               </FieldShell>
 
               <FieldShell label={t('address')} icon={<IconMapPin />}>
@@ -1249,21 +1235,16 @@ export default function PersonalDataPage() {
                     : t('roleHelper')
                 }
               >
-                <div className="relative">
-                  <select
-                    value={form.role}
-                    onChange={(event) => updateForm('role', event.target.value)}
-                    disabled={loadingRoleEligibility || isRoleSelectionLocked}
-                    className={`${fieldControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('role')}</option>
-                    <option value="investor">{t('investorProfile')}</option>
-                    <option value="entrepreneur">{t('entrepreneurProfile')}</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.role}
+                  disabled={loadingRoleEligibility || isRoleSelectionLocked}
+                  onChange={(next) => updateForm('role', next)}
+                  options={[
+                    { value: '', label: t('role') },
+                    { value: 'investor', label: t('investorProfile') },
+                    { value: 'entrepreneur', label: t('entrepreneurProfile') },
+                  ]}
+                />
               </FieldShell>
 
               {status ? (

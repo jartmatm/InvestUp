@@ -13,6 +13,7 @@ import {
   ProfileSurface,
   profileControlClassName,
 } from '@/components/profile/ProfilePageShell';
+import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   fetchCurrentUserProfile,
@@ -199,22 +200,6 @@ function IconPhone() {
       strokeLinejoin="round"
     >
       <path d="M6.5 4.5h3l1.3 3.3-1.8 1.8a14.6 14.6 0 0 0 5.4 5.4l1.8-1.8 3.3 1.3v3a1.5 1.5 0 0 1-1.6 1.5A15.9 15.9 0 0 1 5 6.1 1.5 1.5 0 0 1 6.5 4.5Z" />
-    </svg>
-  );
-}
-
-function IconChevronDown() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
@@ -463,23 +448,14 @@ export default function BankAccountPage() {
           {isBankMethod ? (
             <div className="flex flex-col gap-3">
               <ProfileFieldShell label={t('selectBank')} icon={<IconBank />}>
-                <div className="relative">
-                  <select
-                    value={form.bankName}
-                    onChange={(event) => updateForm('bankName', event.target.value)}
-                    className={`${profileControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('selectBankPlaceholder')}</option>
-                    {BANK_OPTIONS.map((bank) => (
-                      <option key={bank} value={bank}>
-                        {bank}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.bankName}
+                  onChange={(next) => updateForm('bankName', next)}
+                  options={[
+                    { value: '', label: t('selectBankPlaceholder') },
+                    ...BANK_OPTIONS.map((bank) => ({ value: bank, label: bank })),
+                  ]}
+                />
               </ProfileFieldShell>
 
               <ProfileFieldShell label={t('accountNumber')} icon={<IconHash />}>
@@ -494,41 +470,31 @@ export default function BankAccountPage() {
               </ProfileFieldShell>
 
               <ProfileFieldShell label={t('accountType')} icon={<IconBank />}>
-                <div className="relative">
-                  <select
-                    value={form.accountType}
-                    onChange={(event) => updateForm('accountType', event.target.value as AccountType)}
-                    className={`${profileControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('accountType')}</option>
-                    <option value="ahorros">{t('savings')}</option>
-                    <option value="corriente">{t('checking')}</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.accountType}
+                  onChange={(next) => updateForm('accountType', next as AccountType)}
+                  options={[
+                    { value: '', label: t('accountType') },
+                    { value: 'ahorros', label: t('savings') },
+                    { value: 'corriente', label: t('checking') },
+                  ]}
+                />
               </ProfileFieldShell>
 
               <ProfileFieldShell label={t('identificationType')} icon={<IconUserCard />}>
-                <div className="relative">
-                  <select
-                    value={form.identificationType}
-                    onChange={(event) =>
-                      updateForm('identificationType', event.target.value as IdentificationType)
-                    }
-                    className={`${profileControlClassName} appearance-none pr-8`}
-                  >
-                    <option value="">{t('identificationType')}</option>
-                    <option value="cc">CC</option>
-                    <option value="ti">TI</option>
-                    <option value="te">TE</option>
-                    <option value="pasaporte">{t('passport')}</option>
-                  </select>
-                  <span className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-[#96A0B5]">
-                    <IconChevronDown />
-                  </span>
-                </div>
+                <AppCombobox
+                  value={form.identificationType}
+                  onChange={(next) =>
+                    updateForm('identificationType', next as IdentificationType)
+                  }
+                  options={[
+                    { value: '', label: t('identificationType') },
+                    { value: 'cc', label: 'CC' },
+                    { value: 'ti', label: 'TI' },
+                    { value: 'te', label: 'TE' },
+                    { value: 'pasaporte', label: t('passport') },
+                  ]}
+                />
               </ProfileFieldShell>
 
               <ProfileFieldShell label={t('identificationNumber')} icon={<IconHash />}>
