@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
+import { Avatar } from '@/components/tailgrids/core/avatar';
 import {
   DesktopAppShell,
   DesktopEmptyState,
@@ -253,16 +254,13 @@ function ContactAvatar({
   sizeClassName?: string;
 }) {
   return (
-    <div
-      className={`relative overflow-hidden rounded-full border border-white/75 bg-[linear-gradient(180deg,#F5F0FF_0%,#FFFFFF_100%)] ${sizeClassName}`}
-    >
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={label} className="h-full w-full object-cover" />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-[#6B39F4]">
-          {initialsFrom(label)}
-        </div>
-      )}
+    <div className={`relative ${sizeClassName}`}>
+      <Avatar
+        src={avatarUrl ?? undefined}
+        alt={label}
+        fallback={initialsFrom(label)}
+        className={`rounded-full border border-white/75 bg-[linear-gradient(180deg,#F5F0FF_0%,#FFFFFF_100%)] ${sizeClassName}`}
+      />
       <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-white bg-[#6B39F4]" />
     </div>
   );

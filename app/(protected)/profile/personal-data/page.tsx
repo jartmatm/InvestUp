@@ -11,6 +11,8 @@ import {
   DesktopMetricCard,
   DesktopSectionCard,
 } from '@/components/DesktopAppShell';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
 import {
@@ -830,17 +832,13 @@ export default function PersonalDataPage() {
         <section className="grid grid-cols-[360px_minmax(0,1fr)] gap-6">
           <DesktopSectionCard title={t('identityProfile')} subtitle={t('identityProfileSubtitle')}>
             <div className="flex flex-col items-center text-center">
-              <div className="relative h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
-                {form.avatar_url ? (
-                  <span
-                    className="block h-full w-full rounded-full bg-cover bg-center"
-                    style={{ backgroundImage: `url("${form.avatar_url}")` }}
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center rounded-full text-[2.2rem] font-semibold text-[#5D35E8]">
-                    {avatarInitial}
-                  </span>
-                )}
+              <div className="relative">
+                <Avatar
+                  src={form.avatar_url ? form.avatar_url : undefined}
+                  alt={displayName}
+                  fallback={avatarInitial}
+                  className="h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] text-[2.2rem] font-semibold text-[#5D35E8] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]"
+                />
                 <span className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_24px_rgba(107,57,244,0.28)]">
                   <IconCamera />
                 </span>
@@ -902,14 +900,14 @@ export default function PersonalDataPage() {
                 {status}
               </div>
             ) : null}
-            <button
-              type="button"
+            <Button
               onClick={() => void saveProfile()}
               disabled={saving || loadingProfile}
+              variant="primary"
               className="mt-5 h-12 rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
             >
               {saving ? t('saving') : t('saveProfile')}
-            </button>
+            </Button>
           </DesktopSectionCard>
         </section>
       </DesktopAppShell>
@@ -920,14 +918,16 @@ export default function PersonalDataPage() {
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
           <header className="flex flex-col gap-4">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              iconOnly
+              size="sm"
               onClick={() => router.push('/profile')}
               className="flex min-h-[44px] w-11 items-center justify-center rounded-full border border-white/90 bg-white/88 text-[#1C2336] shadow-[0_16px_34px_rgba(31,38,64,0.08)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white"
               aria-label={t('backToProfile')}
             >
               <IconBack />
-            </button>
+            </Button>
 
             <div className="flex flex-col gap-1">
               <span className="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[#8A93A8]">
@@ -944,17 +944,13 @@ export default function PersonalDataPage() {
 
           <Surface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
             <div className="flex flex-col items-center text-center">
-              <div className="relative h-28 w-28 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
-                {form.avatar_url ? (
-                  <span
-                    className="block h-full w-full rounded-full bg-cover bg-center"
-                    style={{ backgroundImage: `url("${form.avatar_url}")` }}
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center rounded-full text-[2rem] font-semibold text-[#5D35E8]">
-                    {avatarInitial}
-                  </span>
-                )}
+              <div className="relative">
+                <Avatar
+                  src={form.avatar_url ? form.avatar_url : undefined}
+                  alt={displayName}
+                  fallback={avatarInitial}
+                  className="h-28 w-28 rounded-full border-[4px] border-white bg-[#F4F0FF] text-[2rem] font-semibold text-[#5D35E8] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]"
+                />
                 <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_24px_rgba(107,57,244,0.28)]">
                   <IconCamera />
                 </span>
@@ -1277,14 +1273,14 @@ export default function PersonalDataPage() {
               ) : null}
 
               <div className="rounded-[26px] border border-[#ECE8FF] bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(246,244,255,0.98)_100%)] p-3 shadow-[0_18px_36px_rgba(31,38,64,0.08)]">
-                <button
-                  type="button"
+                <Button
+                  variant="primary"
                   onClick={saveProfile}
                   disabled={saving || loadingProfile}
                   className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving ? t('saving') : t('saveChanges')}
-                </button>
+                </Button>
               </div>
             </div>
           </Surface>

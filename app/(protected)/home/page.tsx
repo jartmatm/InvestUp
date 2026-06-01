@@ -10,6 +10,7 @@ import DesktopSidebar from '@/components/DesktopSidebar';
 import SharedDesktopTopbar from '@/components/DesktopTopbar';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import InvestorWalletCard from '@/components/InvestorWalletCard';
+import { Avatar } from '@/components/tailgrids/core/avatar';
 import {
   formatNextRepaymentDate,
   getInvestmentHealth,
@@ -416,18 +417,13 @@ function DesktopAvatar({
   loading: boolean;
   sizeClassName?: string;
 }) {
-  const t = useTranslations('Home');
   return (
-    <span
-      className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)] ${sizeClassName}`}
-      style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-    >
-      {avatarUrl ? null : loading ? (
-        <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
-      ) : (
-        initialsFrom(displayName)
-      )}
-    </span>
+    <Avatar
+      src={avatarUrl ?? undefined}
+      alt={displayName}
+      fallback={loading ? '' : initialsFrom(displayName)}
+      className={`shrink-0 rounded-full bg-[#EEF2FF] font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)] ${sizeClassName}`}
+    />
   );
 }
 

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
+import Alert from '@/components/tailgrids/core/alert';
 import { useInvestApp } from '@/lib/investapp-context';
 import type { AppNotification } from '@/lib/app-notifications';
 
@@ -112,15 +113,19 @@ export default function NotificationsPage() {
         </div>
 
         {!notificationsEnabled ? (
-          <div className="rounded-[20px] border border-[#DF1C41]/15 bg-[#FFF1F3] px-4 py-4 text-sm text-[#C42847]">
-            {t('disabledNotice')}
-          </div>
+          <Alert
+            variant="warning"
+            title={t('disabled')}
+            message={t('disabledNotice')}
+          />
         ) : null}
 
         {notifications.length === 0 ? (
-          <div className="rounded-[20px] border border-white/25 bg-white/20 px-4 py-5 text-sm text-[#818898] backdrop-blur-md">
-            {t('empty')}
-          </div>
+          <Alert
+            variant="info"
+            title={t('notificationCenter')}
+            message={t('empty')}
+          />
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (

@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
 import { getLanguageOption, isLocale, type AppLocale } from '@/i18n/locales';
 import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -228,8 +230,10 @@ function DesktopMenuItem({
 
   if (onClick) {
     return (
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        appearance="fill"
+        size="sm"
         role="menuitem"
         onClick={() => {
           onSelect();
@@ -238,7 +242,7 @@ function DesktopMenuItem({
         className={className}
       >
         {content}
-      </button>
+      </Button>
     );
   }
 
@@ -405,8 +409,10 @@ export default function DesktopUserMenu({
 
   return (
     <div ref={menuRef} className="relative">
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        appearance="fill"
+        size="sm"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -415,22 +421,18 @@ export default function DesktopUserMenu({
           open ? 'border-[#D9CCFF] bg-white shadow-[0_16px_36px_rgba(21,28,44,0.08)]' : ''
         }`}
       >
-        <span
-          className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-          style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-        >
-          {avatarUrl ? null : loading ? (
-            <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
-          ) : (
-            initialsFrom(safeName)
-          )}
-        </span>
+        <Avatar
+          src={avatarUrl ?? undefined}
+          alt={safeName}
+          fallback={loading ? '' : initialsFrom(safeName)}
+          className="h-11 w-11 shrink-0 rounded-full bg-[#EEF2FF] text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+        />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-bold text-[#111827]">{safeName}</span>
           <span className="block truncate text-xs font-medium text-[#73809A]">{roleLabel}</span>
         </span>
         <MenuChevron open={open} />
-      </button>
+      </Button>
 
       {open ? (
         <div
@@ -440,16 +442,12 @@ export default function DesktopUserMenu({
         >
           <div className="rounded-[22px] bg-[linear-gradient(135deg,#FFFFFF_0%,#F4F0FF_100%)] p-4 ring-1 ring-[#EEE8FF]">
             <div className="flex items-center gap-3">
-              <span
-                className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF2FF] bg-cover bg-center text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
-                style={{ backgroundImage: avatarUrl ? `url(${JSON.stringify(avatarUrl)})` : undefined }}
-              >
-                {avatarUrl ? null : loading ? (
-                  <span className="h-full w-full animate-pulse bg-[#ECE7FF]" />
-                ) : (
-                  initialsFrom(safeName)
-                )}
-              </span>
+              <Avatar
+                src={avatarUrl ?? undefined}
+                alt={safeName}
+                fallback={loading ? '' : initialsFrom(safeName)}
+                className="h-12 w-12 shrink-0 rounded-full bg-[#EEF2FF] text-sm font-bold text-[#6B39F4] ring-2 ring-white shadow-[0_12px_28px_rgba(21,28,44,0.10)]"
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold tracking-[-0.035em] text-[#111827]">{safeName}</p>
                 <p className="mt-0.5 text-xs font-semibold text-[#73809A]">{roleLabel}</p>

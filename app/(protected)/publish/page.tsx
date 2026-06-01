@@ -20,6 +20,8 @@ import publishStep14FinishAnimation from '@/components/animations/publish-step14
 import publishStep2Animation from '@/components/animations/publish-step2.json';
 import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
+import { FileUpload } from '@/components/application/file-upload/file-upload-base';
+import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   createCurrentUserPublicationPrompt,
@@ -685,7 +687,6 @@ export default function PublishPage() {
   const [whatsAppMessage, setWhatsAppMessage] = useState('');
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [showSuccessHomeButton, setShowSuccessHomeButton] = useState(false);
-  const mediaInputRef = useRef<HTMLInputElement | null>(null);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
@@ -1747,7 +1748,7 @@ export default function PublishPage() {
               !hasExistingProject &&
               !savingDraft &&
               isAddressValid(address)
-                ? 'Address details are complete.'
+                ? ''
                 : null}
               {currentStep === 7 &&
               !checkingProject &&
@@ -2311,12 +2312,14 @@ export default function PublishPage() {
                             className="group relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-[#F8FAFD]"
                           >
                             {item.type === 'video' ? (
-                              <video
-                                src={item.previewUrl}
-                                className="aspect-[16/10] w-full object-cover"
-                                controls
-                                muted
-                              />
+                              <AspectRatio customRatio={1.6}>
+                                <video
+                                  src={item.previewUrl}
+                                  className="h-full w-full object-cover"
+                                  controls
+                                  muted
+                                />
+                              </AspectRatio>
                             ) : (
                               <img
                                 src={item.previewUrl}
@@ -2547,7 +2550,9 @@ export default function PublishPage() {
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#6A778D]">
                           Featured video
                         </p>
-                        <video src={previewVideo.previewUrl} controls className="h-56 w-full rounded-xl object-cover" />
+                        <AspectRatio ratio="video" className="overflow-hidden rounded-xl">
+                          <video src={previewVideo.previewUrl} controls className="h-full w-full object-cover" />
+                        </AspectRatio>
                       </div>
                     ) : null}
 
@@ -2893,33 +2898,15 @@ export default function PublishPage() {
                 </button>
               </div>
 
-              <div className="mt-5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => mediaInputRef.current?.click()}
-                    className="h-11 rounded-full border border-[#CFDAE8] bg-white px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
-                  >
-                    Browse
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => mediaInputRef.current?.click()}
-                    className="h-11 rounded-full border border-[#CFDAE8] bg-[#F8FAFF] px-5 text-sm font-semibold text-[#0B1325] transition hover:border-[#6B39F4]/45"
-                  >
-                    Add more
-                  </button>
-                </div>
-                <input
-                  ref={mediaInputRef}
-                  type="file"
+              <div className="mt-5">
+                <FileUpload.DropZone
                   accept="image/*,video/*"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => {
-                    void handleMediaSelection(event.target.files);
-                    event.target.value = '';
+                  allowsMultiple
+                  hint="PNG, JPG, WEBP or videos (MP4/WEBM). Minimum 5 photos and 1 video."
+                  onDropFiles={(files) => {
+                    void handleMediaSelection(files);
                   }}
+                  className="border border-dashed border-[#CFDAE8] bg-[#F8FAFF] text-[#4B5565] ring-0"
                 />
               </div>
 
@@ -2947,7 +2934,9 @@ export default function PublishPage() {
                           </svg>
                         </button>
                         {item.type === 'video' ? (
-                          <video src={item.previewUrl} className="h-64 w-full object-cover" controls muted />
+                          <AspectRatio ratio="video">
+                            <video src={item.previewUrl} className="h-full w-full object-cover" controls muted />
+                          </AspectRatio>
                         ) : (
                           <img src={item.previewUrl} alt={item.name} className="h-64 w-full object-cover" />
                         )}

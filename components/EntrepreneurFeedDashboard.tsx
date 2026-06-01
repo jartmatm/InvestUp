@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { Avatar as TailgridsAvatar } from '@/components/tailgrids/core/avatar';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { getInvestmentHealth, getInvestmentHealthMeta } from '@/lib/investor-overview';
 import {
@@ -269,20 +270,13 @@ function Avatar({
   label: string;
   className?: string;
 }) {
-  return imageUrl ? (
-    <div
-      role="img"
-      aria-label={label}
-      className={`overflow-hidden rounded-full bg-[#EDE8FF] bg-cover bg-center ${className}`}
-      style={{ backgroundImage: `url("${imageUrl}")` }}
+  return (
+    <TailgridsAvatar
+      src={imageUrl ?? undefined}
+      alt={label}
+      fallback={initialsFrom(label)}
+      className={`rounded-full bg-[#EDE8FF] text-white shadow-[0_14px_28px_rgba(107,57,244,0.20)] ${className}`}
     />
-  ) : (
-    <div
-      className={`flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-sm font-semibold text-white shadow-[0_14px_28px_rgba(107,57,244,0.20)] ${className}`}
-      aria-label={label}
-    >
-      {initialsFrom(label)}
-    </div>
   );
 }
 

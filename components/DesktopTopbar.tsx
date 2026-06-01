@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
+import { Button } from '@/components/tailgrids/core/button';
 import { isLocale, type AppLocale } from '@/i18n/locales';
 import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -174,14 +175,16 @@ export default function DesktopTopbar({
       <div className="ml-auto flex items-center gap-3 pl-10 xl:pl-16 2xl:pl-24">
         {actions}
         {notificationOnClick ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            iconOnly
+            size="sm"
             aria-label={t('notifications')}
             onClick={notificationOnClick}
             className={notificationClassName}
           >
             {notificationContent}
-          </button>
+          </Button>
         ) : (
           <Link href={localizePath(notificationHref, activeLocale)} aria-label={t('notifications')} className={notificationClassName}>
             {notificationContent}

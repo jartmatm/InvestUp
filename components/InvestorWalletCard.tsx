@@ -2,6 +2,8 @@ import {
   formatInvestmentCardNumber,
   getInvestmentCardBackground,
 } from '@/lib/investor-overview';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
 
 type InvestorWalletCardProps = {
   statusLabel: string;
@@ -35,8 +37,10 @@ export default function InvestorWalletCard({
   onClick,
 }: InvestorWalletCardProps) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      appearance="fill"
+      size="lg"
       onClick={onClick}
       className="relative h-[186px] w-full overflow-hidden rounded-[26px] p-4 text-left text-white shadow-[0_24px_50px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5"
       style={{ backgroundImage: getInvestmentCardBackground(investmentId) }}
@@ -61,18 +65,12 @@ export default function InvestorWalletCard({
           </div>
           <div className="relative h-12 w-12 shrink-0">
             <div className="absolute inset-[-8px] rounded-full bg-white/35 blur-xl" />
-            <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-white/25 bg-white/20">
-              {thumbnailUrl ? (
-                <span
-                  className="block h-full w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${thumbnailUrl})` }}
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-white">
-                  {initialsFrom(businessName)}
-                </div>
-              )}
-            </div>
+            <Avatar
+              src={thumbnailUrl ?? undefined}
+              alt={businessName}
+              fallback={initialsFrom(businessName)}
+              className="h-12 w-12 rounded-2xl border border-white/25 bg-white/20 text-sm font-semibold text-white"
+            />
           </div>
         </div>
 
@@ -94,6 +92,6 @@ export default function InvestorWalletCard({
           </div>
         </div>
       </div>
-    </button>
+    </Button>
   );
 }

@@ -8,6 +8,7 @@ import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
+import { Avatar } from '@/components/tailgrids/core/avatar';
 import {
   formatNextRepaymentDate,
   getInvestmentHealth,
@@ -801,16 +802,12 @@ function InsightCard() {
 
 function DesktopActivityThumb({ coverImage, label }: { coverImage: string | null; label: string }) {
   return (
-    <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-full bg-[#F1ECFF] bg-cover bg-center text-[#6B39F4] ring-1 ring-[#E9ECF4]">
-      {coverImage ? (
-        <span
-          className="block h-full w-full bg-cover bg-center"
-          style={{ backgroundImage: `url(${JSON.stringify(coverImage)})` }}
-        />
-      ) : (
-        <span className="text-sm font-bold">{initialsFrom(label)}</span>
-      )}
-    </span>
+    <Avatar
+      src={coverImage ?? undefined}
+      alt={label}
+      fallback={initialsFrom(label)}
+      className="h-14 w-14 shrink-0 rounded-full bg-[#F1ECFF] text-sm font-bold text-[#6B39F4] ring-1 ring-[#E9ECF4]"
+    />
   );
 }
 

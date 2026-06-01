@@ -6,6 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { Avatar } from '@/components/tailgrids/core/avatar';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
@@ -230,15 +231,13 @@ export default function RepaymentsPage() {
                 >
                   <div className={`relative h-64 w-full transition-transform duration-500 [transform-style:preserve-3d] ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}>
                     <div className={`absolute inset-0 flex flex-col items-center justify-center rounded-[24px] p-5 text-center text-white shadow-[0_16px_36px_rgba(15,23,42,0.16)] [backface-visibility:hidden] ${themes[index % themes.length]}`}>
-                      <div className="h-20 w-20 overflow-hidden rounded-full border border-white/25 bg-white/20">
-                        {card.avatarUrl ? (
-                          <img src={card.avatarUrl} alt={card.displayName} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-white">
-                            {initialsFrom(card.displayName)}
-                          </div>
-                        )}
-                      </div>
+                      <Avatar
+                        src={card.avatarUrl ?? undefined}
+                        alt={card.displayName}
+                        fallback={initialsFrom(card.displayName)}
+                        size="xxl"
+                        className="rounded-full ring-2 ring-white/25"
+                      />
                       <p className="mt-4 text-lg font-semibold">{card.displayName}</p>
                       <p className="mt-2 text-xs uppercase tracking-[0.2em] text-white/70">{t('tapDetails')}</p>
                     </div>

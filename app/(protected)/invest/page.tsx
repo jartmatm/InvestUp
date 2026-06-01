@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
+import { Avatar } from '@/components/tailgrids/core/avatar';
 import { useInvestApp } from '@/lib/investapp-context';
 import { getPendingInvestment } from '@/lib/pending-investment';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -165,18 +166,13 @@ function ContactAvatar({
   textClassName?: string;
 }) {
   return (
-    <div
-      className={`relative overflow-hidden rounded-full border border-white/70 bg-white/70 ${sizeClassName}`}
-    >
-      {avatarUrl ? (
-        <img src={avatarUrl} alt={label} className="h-full w-full object-cover" />
-      ) : (
-        <div
-          className={`flex h-full w-full items-center justify-center font-semibold text-[#6B39F4] ${textClassName}`}
-        >
-          {initialsFrom(label)}
-        </div>
-      )}
+    <div className={`relative ${sizeClassName}`}>
+      <Avatar
+        src={avatarUrl ?? undefined}
+        alt={label}
+        fallback={initialsFrom(label)}
+        className={`rounded-full border border-white/70 bg-white/70 ${sizeClassName} ${textClassName}`}
+      />
       <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border border-white bg-[#37D39F]" />
     </div>
   );

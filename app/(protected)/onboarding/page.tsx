@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import Alert from '@/components/tailgrids/core/alert';
 import { useInvestApp } from '@/lib/investapp-context';
 
 type OnboardingStage = 'slides' | 'profile';
@@ -331,7 +332,11 @@ export default function OnboardingPage() {
             {savingRole ? t('saving') : t('continue')}
           </button>
 
-          {status ? <p className="mt-4 text-center text-sm text-rose-600">{status}</p> : null}
+          {status ? (
+            <div className="mt-4">
+              <Alert variant="danger" title="Action required" message={status} />
+            </div>
+          ) : null}
         </section>
       </main>
     );
@@ -374,7 +379,11 @@ export default function OnboardingPage() {
             </p>
           </div>
 
-          {status ? <p className="mb-3 text-xs font-medium text-rose-600">{status}</p> : null}
+          {status ? (
+            <div className="mb-3 w-full max-w-[21rem]">
+              <Alert variant="danger" message={status} />
+            </div>
+          ) : null}
 
           <button
             type="button"

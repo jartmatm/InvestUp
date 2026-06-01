@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
+import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
 
 export type OpportunityMetric = {
   label: string;
@@ -39,6 +40,7 @@ export type InvestmentOpportunityDetailProps = {
   category?: string;
   rate?: string;
   images?: string[];
+  videoUrl?: string | null;
   metrics: OpportunityMetric[];
   sections: OpportunitySection[];
   primaryActionLabel: string;
@@ -134,6 +136,7 @@ export default function InvestmentOpportunityDetail({
   category,
   rate,
   images,
+  videoUrl,
   metrics,
   sections,
   primaryActionLabel,
@@ -198,7 +201,8 @@ export default function InvestmentOpportunityDetail({
             </div>
 
             <div className="order-1 md:order-2">
-              <div className="relative">
+              <div className="space-y-3">
+                <div className="relative">
                 <ProjectPhotoCarousel
                   images={normalizedImages}
                   alt={title}
@@ -207,6 +211,14 @@ export default function InvestmentOpportunityDetail({
                   emptyClassName="flex h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]"
                 />
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/24 to-transparent" />
+              </div>
+                {videoUrl ? (
+                  <div className="overflow-hidden rounded-[20px] border border-[#E4E9F2] bg-white/80 p-2 shadow-[0_12px_30px_rgba(27,35,58,0.08)]">
+                    <AspectRatio ratio="video" className="overflow-hidden rounded-[14px]">
+                      <video src={videoUrl} controls className="h-full w-full object-cover" />
+                    </AspectRatio>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

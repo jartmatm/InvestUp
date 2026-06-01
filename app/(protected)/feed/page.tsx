@@ -7,7 +7,10 @@ import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
-import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
+import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
+import { Card, CardContent } from '@/components/tailgrids/core/card';
 import { useInvestApp } from '@/lib/investapp-context';
 import { isProjectPubliclyVisible } from '@/lib/project-status';
 import { toEnglishSector } from '@/lib/sector-labels';
@@ -39,6 +42,7 @@ type FeedProject = {
   country: string | null;
   publication_end_date: string | null;
   photo_urls: string[] | null;
+  video_url: string | null;
 };
 
 type SortKey = 'latest' | 'rate' | 'progress' | 'goal';
@@ -286,15 +290,12 @@ function FeaturedReelsCarousel({
           >
             <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.24),transparent_42%)] opacity-90" />
 
-            <span
-              className="absolute left-3 top-3 grid h-9 w-9 place-items-center rounded-full border-2 border-white bg-[#F7F8FC] bg-cover bg-center text-[0.68rem] font-bold text-[#6B39F4] shadow-[0_10px_22px_rgba(20,28,55,0.14)] ring-1 ring-[#EEF1F8]"
-              style={{
-                backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined,
-              }}
-              aria-hidden="true"
-            >
-              {avatarImage ? null : getInitials(ownerName)}
-            </span>
+            <Avatar
+              src={avatarImage ?? undefined}
+              alt={ownerName}
+              fallback={getInitials(ownerName)}
+              className="absolute left-3 top-3 h-9 w-9 rounded-full border-2 border-white bg-[#F7F8FC] text-[0.68rem] font-bold text-[#6B39F4] shadow-[0_10px_22px_rgba(20,28,55,0.14)] ring-1 ring-[#EEF1F8]"
+            />
 
             <span className="absolute inset-x-3 bottom-3">
               <span className="line-clamp-3 text-[0.88rem] font-semibold leading-[1.12] tracking-[-0.04em] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.36)]">
@@ -327,11 +328,13 @@ const DESKTOP_CATEGORY_OPTIONS = [
   'Entertainment',
 ];
 
-const getLocationLabel = (project: FeedProject, fallback: string) =>
-  [project.city, project.country].filter(Boolean).join(', ') || fallback;
-
 const getRateLabel = (project: FeedProject, fallback: string) =>
   project.interest_rate ? `${project.interest_rate}% EA` : fallback;
+
+const getProjectVideoUrl = (project: FeedProject) =>
+  typeof project.video_url === 'string' && project.video_url.trim().length > 0
+    ? project.video_url
+    : null;
 
 const getInitials = (value: string) => {
   const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -486,12 +489,12 @@ function DesktopReelsSection({
               className="group relative h-[clamp(230px,27vh,306px)] w-[clamp(168px,13.2vw,218px)] shrink-0 snap-start overflow-hidden rounded-[18px] bg-cover bg-center text-left shadow-[0_22px_48px_rgba(17,24,39,0.12)] ring-1 ring-black/5 transition duration-200 hover:-translate-y-1 hover:scale-[1.03] hover:shadow-[0_28px_70px_rgba(17,24,39,0.18)]"
               style={{ backgroundImage: cardBackground }}
             >
-              <span
-                className="absolute left-3 top-3 grid h-10 w-10 place-items-center rounded-full border-2 border-white bg-[#F8F9FB] bg-cover bg-center text-[0.7rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
-                style={{ backgroundImage: avatarImage ? toCssImageUrl(avatarImage) : undefined }}
-              >
-                {avatarImage ? null : getInitials(ownerName)}
-              </span>
+              <Avatar
+                src={avatarImage ?? undefined}
+                alt={ownerName}
+                fallback={getInitials(ownerName)}
+                className="absolute left-3 top-3 h-10 w-10 rounded-full border-2 border-white bg-[#F8F9FB] text-[0.7rem] font-bold text-[#6B39F4] shadow-[0_12px_26px_rgba(0,0,0,0.16)]"
+              />
               <span className="absolute inset-x-4 bottom-4">
                 <span className="line-clamp-3 text-[1rem] font-bold leading-tight tracking-[-0.04em] text-white">
                   {project.title}
@@ -517,15 +520,12 @@ function DesktopProjectCard({
   project: FeedProject;
 }) {
   const t = useTranslations('Feed');
+  const videoUrl = getProjectVideoUrl(project);
   const coverImage = getProjectCoverImage(project);
-  const sector = toEnglishSector(project.sector) || t('uncategorized');
-  const location = getLocationLabel(project, t('locationPending'));
-  const cardBackground = coverImage
-    ? toCssImageUrl(coverImage)
-    : 'linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)';
+  const category = toEnglishSector(project.sector) || t('uncategorized');
 
   return (
-    <article
+    <Card
       role="button"
       tabIndex={0}
       onClick={() => onOpenProject(project.id)}
@@ -535,11 +535,30 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex aspect-[2/3] flex-col overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex aspect-[2/3] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative min-h-0 flex-[3] bg-cover bg-center" style={{ backgroundImage: cardBackground }}>
-        <button
-          type="button"
+      <div className="relative min-h-0 flex-[3]">
+        <AspectRatio ratio="video" className="h-full w-full">
+          {videoUrl ? (
+            <video
+              src={videoUrl}
+              poster={coverImage ?? undefined}
+              muted
+              playsInline
+              preload="metadata"
+              className="h-full w-full object-cover"
+            />
+          ) : coverImage ? (
+            <img src={coverImage} alt={project.title} className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)]" />
+          )}
+        </AspectRatio>
+
+        <Button
+          variant="ghost"
+          iconOnly
+          size="sm"
           onClick={(event) => {
             event.stopPropagation();
             onToggleWishlist(project.id);
@@ -550,23 +569,21 @@ function DesktopProjectCard({
           aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
         >
           <IconHeart filled={isWishlisted} />
-        </button>
+        </Button>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col justify-between p-3">
-        <h3 className="line-clamp-1 text-[0.96rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+      <CardContent className="flex min-h-0 flex-1 flex-col justify-between p-3">
+        <h3 className="line-clamp-2 text-[0.96rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
           {project.title}
         </h3>
-        <p className="line-clamp-1 text-[0.78rem] font-medium text-[#6C7890]">
-          {sector} - {location}
-        </p>
+        <p className="line-clamp-1 text-[0.78rem] font-medium text-[#6C7890]">{category}</p>
         <div className="flex items-center justify-between gap-3">
           <span className="inline-flex items-center rounded-full bg-[#ECFFF5] px-2.5 py-1 text-[0.72rem] font-bold text-[#12895B]">
             {getRateLabel(project, t('ratePending'))}
           </span>
           <span className="text-[0.72rem] font-semibold text-[#8F98AA]">{t('interestRate')}</span>
         </div>
-      </div>
-    </article>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1196,6 +1213,9 @@ export default function FeedPage() {
                     t('noAmount')
                   );
                   const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending');
+                  const categoryLabel = toEnglishSector(project.sector) || t('uncategorized');
+                  const videoUrl = getProjectVideoUrl(project);
+                  const coverImage = getProjectCoverImage(project);
                   const isOwnProject = Boolean(
                     user?.id && project.owner_user_id && project.owner_user_id === user.id
                   );
@@ -1228,15 +1248,28 @@ export default function FeedPage() {
                       >
                         <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
                           <div className="relative">
-                            <ProjectPhotoCarousel
-                              images={project.photo_urls}
-                              alt={project.title}
-                              className="h-[174px] w-full"
-                              imageClassName="h-[174px] w-full object-cover"
-                              emptyClassName="flex h-[174px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]"
-                              showIndicators={false}
-                              stopPropagation
-                            />
+                            <AspectRatio ratio="video" className="h-[174px] w-full">
+                              {videoUrl ? (
+                                <video
+                                  src={videoUrl}
+                                  poster={coverImage ?? undefined}
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  className="h-[174px] w-full object-cover"
+                                />
+                              ) : coverImage ? (
+                                <img
+                                  src={coverImage}
+                                  alt={project.title}
+                                  className="h-[174px] w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-[174px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
+                                  {t('publishedVenture')}
+                                </div>
+                              )}
+                            </AspectRatio>
 
                             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.16)_100%)]" />
 
@@ -1262,6 +1295,7 @@ export default function FeedPage() {
                             <p className="line-clamp-2 text-[0.72rem] font-semibold leading-[1.12] tracking-[-0.025em] text-[#162033]">
                               {project.title}
                             </p>
+                            <p className="line-clamp-1 text-[0.56rem] font-medium text-[#7C859A]">{categoryLabel}</p>
 
                             <div className="mt-1 flex items-center justify-between gap-1.5">
                               <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2 py-0.5 text-[0.56rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">

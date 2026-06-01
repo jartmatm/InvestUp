@@ -7,6 +7,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
 import { getLanguageOption, isLocale } from '@/i18n/locales';
 import { useInvestApp } from '@/lib/investapp-context';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
@@ -320,29 +322,23 @@ function ProfileCard({
     <section className="rounded-[24px] border border-[#E9ECF4] bg-[linear-gradient(135deg,#FFFFFF_0%,#F8F6FF_100%)] p-7 shadow-[0_18px_42px_rgba(21,28,44,0.06)]">
       <div className="flex items-center justify-between gap-8">
         <div className="flex min-w-0 items-center gap-6">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            iconOnly
+            size="lg"
             aria-label={t('editProfilePhoto')}
             className="relative shrink-0 rounded-full transition hover:scale-[1.02]"
           >
-            <span className="block h-[112px] w-[112px] overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]">
-              {avatarUrl ? (
-                <span
-                  className="block h-full w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${JSON.stringify(avatarUrl)})` }}
-                />
-              ) : loading ? (
-                <span className="block h-full w-full animate-pulse bg-[#ECE7FF]" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-3xl font-semibold text-[#6B39F4]">
-                  {initialsFrom(displayName)}
-                </span>
-              )}
-            </span>
+            <Avatar
+              src={avatarUrl ?? undefined}
+              alt={displayName}
+              fallback={loading ? '' : initialsFrom(displayName)}
+              className="h-[112px] w-[112px] rounded-full border-[3px] border-white bg-[#F4F0FF] text-3xl font-semibold text-[#6B39F4] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]"
+            />
             <span className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_28px_rgba(107,57,244,0.32)]">
               <IconEditProfile />
             </span>
-          </button>
+          </Button>
 
           <div className="min-w-0">
             <h2 className="text-[1.8rem] font-bold tracking-[-0.055em] text-[#111827]">{displayName}</h2>
@@ -639,30 +635,24 @@ export default function ProfilePage() {
           <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-white/70 blur-3xl" />
           <div className="pointer-events-none absolute left-1/2 top-9 h-28 w-28 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-2xl" />
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            iconOnly
+            size="lg"
             aria-label={t('editProfilePhoto')}
             onClick={() => router.push('/profile/personal-data')}
             className="relative mx-auto block rounded-full transition hover:scale-[1.02]"
           >
-            <span className="block h-[88px] w-[88px] overflow-hidden rounded-full border-[3px] border-white bg-[#F4F0FF] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]">
-              {avatarUrl ? (
-                <span
-                  className="block h-full w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${avatarUrl})` }}
-                />
-              ) : loading ? (
-                <span className="block h-full w-full animate-pulse bg-[#ECE7FF]" />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-[#6B39F4]">
-                  {mobileSafeName.slice(0, 1).toUpperCase()}
-                </span>
-              )}
-            </span>
+            <Avatar
+              src={avatarUrl ?? undefined}
+              alt={mobileSafeName}
+              fallback={loading ? '' : mobileSafeName.slice(0, 1).toUpperCase()}
+              className="h-[88px] w-[88px] rounded-full border-[3px] border-white bg-[#F4F0FF] text-2xl font-semibold text-[#6B39F4] shadow-[0_18px_42px_rgba(31,38,64,0.14)] ring-1 ring-[#DFD8FF]"
+            />
             <span className="absolute bottom-1 right-0 flex h-8 w-8 items-center justify-center rounded-full border-[3px] border-white bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_28px_rgba(107,57,244,0.32)]">
               <IconEditProfile />
             </span>
-          </button>
+          </Button>
 
           <p className="mt-5 text-[0.78rem] font-semibold uppercase tracking-[0.28em] text-[#8A93A6]">
             {t('investApp')}

@@ -443,6 +443,7 @@ export default function FeedDetailPage() {
         category={project.sector ? toEnglishSector(project.sector) : t('Detail.business')}
         rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
         images={project.photo_urls ?? []}
+        videoUrl={project.video_url}
         metrics={buildDetailMetrics(project, formFields, detailT)}
         sections={buildDetailSections(project, formFields, optimizedPublication, detailT)}
         primaryActionLabel={primaryActionLabel}

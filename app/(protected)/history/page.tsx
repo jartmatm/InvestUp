@@ -6,6 +6,8 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { Avatar } from '@/components/tailgrids/core/avatar';
+import { Button } from '@/components/tailgrids/core/button';
 import {
   DesktopAppShell,
   DesktopEmptyState,
@@ -1177,18 +1179,12 @@ export default function HistoryPage() {
 
                     <div className="flex items-end justify-between gap-4">
                       <div className="flex min-w-0 items-start gap-3.5">
-                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-[2px] border-white bg-[#F4F0FF] shadow-[0_12px_24px_rgba(31,38,64,0.08)]">
-                          {senderAvatarUrl ? (
-                            <span
-                              className="block h-full w-full bg-cover bg-center"
-                              style={{ backgroundImage: `url(${senderAvatarUrl})` }}
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-[#6B39F4]">
-                              {initialsFrom(senderDisplayName)}
-                            </div>
-                          )}
-                        </div>
+                        <Avatar
+                          src={senderAvatarUrl ?? undefined}
+                          alt={senderDisplayName}
+                          fallback={initialsFrom(senderDisplayName)}
+                          className="h-14 w-14 shrink-0 rounded-full border-[2px] border-white bg-[#F4F0FF] text-sm font-semibold text-[#6B39F4] shadow-[0_12px_24px_rgba(31,38,64,0.08)]"
+                        />
 
                         <div className="min-w-0">
                           <p className="text-[0.82rem] font-semibold tracking-[-0.02em] text-[#121A31]">
@@ -1203,8 +1199,10 @@ export default function HistoryPage() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        iconOnly
+                        size="md"
                         onClick={(event) => {
                           event.stopPropagation();
                           void handleCopy(transaction);
@@ -1217,7 +1215,7 @@ export default function HistoryPage() {
                         }`}
                       >
                         {copyActive ? <IconCheck /> : <IconCopy />}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </button>
