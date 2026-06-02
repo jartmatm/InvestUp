@@ -27,6 +27,7 @@
     "@tailgrids/icons": "^2.0.0",
     "@untitledui/file-icons": "^0.0.9",
     "@untitledui/icons": "^0.0.22",
+    "@vis.gl/react-google-maps": "^1.8.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "dayjs": "^1.11.21",

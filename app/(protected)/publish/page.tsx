@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -126,6 +127,8 @@ const mobileSurfaceClassName =
   'rounded-[26px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_52px_rgba(17,24,39,0.08)] backdrop-blur-sm';
 
 const wizardStepSkeletonDurationMs = 320;
+const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+const defaultMobileMapCenter = { lat: -37.8136, lng: 144.9631 };
 
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
@@ -337,7 +340,7 @@ const operatingTimeDescriptions: Record<(typeof operatingTimeOptions)[number], s
   '> 5 years': 'You have a mature business with long-term operating experience.',
 };
 
-const mobileStepOneProgressSteps = [1, 2, 3, 4, 5, 6] as const;
+const mobileStepOneProgressSteps = [2, 3, 4, 5, 1, 6] as const;
 
 const countryOptions = [
   'Australia',
@@ -754,8 +757,10 @@ function MobileMapPreview({
   address: PublishAddressStepFields;
   compact?: boolean;
 }) {
-  const primaryLabel = address.locality || address.state || address.country || 'Your business';
-  const secondaryLabel = address.country || 'Location';
+  const mapCenter =
+    typeof address.latitude === 'number' && typeof address.longitude === 'number'
+      ? { lat: address.latitude, lng: address.longitude }
+      : defaultMobileMapCenter;
 
   return (
     <div
@@ -763,25 +768,31 @@ function MobileMapPreview({
         compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
       }`}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,#E8F5CF_0_14%,transparent_15%),radial-gradient(circle_at_78%_22%,#DDF1C6_0_18%,transparent_19%),radial-gradient(circle_at_28%_78%,#EFF2D4_0_20%,transparent_21%),linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)]" />
-      <div className="absolute -left-8 top-8 h-40 w-48 rotate-[-16deg] rounded-[48%] bg-[#EAF3CF]/90" />
-      <div className="absolute right-[-3rem] top-10 h-56 w-48 rotate-[18deg] rounded-[44%] bg-[#DFF0C2]/90" />
-      <div className="absolute bottom-[-3rem] left-10 h-52 w-64 rotate-[12deg] rounded-[46%] bg-[#F4EBD0]/90" />
-      <div className="absolute inset-0 opacity-55">
-        <span className="absolute left-[-10%] top-[36%] h-1 w-[120%] rotate-[17deg] rounded-full bg-white/70" />
-        <span className="absolute left-[-12%] top-[58%] h-1 w-[120%] rotate-[-11deg] rounded-full bg-white/70" />
-        <span className="absolute left-[24%] top-[-8%] h-[120%] w-1 rotate-[8deg] rounded-full bg-white/70" />
-        <span className="absolute left-[68%] top-[-8%] h-[120%] w-1 rotate-[-15deg] rounded-full bg-white/70" />
-      </div>
-      <div className="absolute left-[8%] top-[18%] text-[clamp(0.8rem,3.5vw,1.08rem)] font-extrabold tracking-[-0.04em] text-[#6D7E68]/65">
-        {secondaryLabel}
-      </div>
-      <div className="absolute bottom-[16%] right-[8%] text-[clamp(0.8rem,3.5vw,1.08rem)] font-extrabold tracking-[-0.04em] text-[#6D7E68]/65">
-        {primaryLabel}
-      </div>
-      <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
-        <span className="h-[62%] w-[62%] rounded-full bg-black" />
-      </div>
+      {googleMapsApiKey ? (
+        <APIProvider apiKey={googleMapsApiKey}>
+          <Map
+            center={mapCenter}
+            defaultZoom={typeof address.latitude === 'number' && typeof address.longitude === 'number' ? 15 : 4}
+            disableDefaultUI
+            gestureHandling="greedy"
+            mapTypeControl={false}
+            streetViewControl={false}
+            fullscreenControl={false}
+            className="h-full w-full"
+          >
+            <Marker position={mapCenter} />
+          </Map>
+        </APIProvider>
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,#E8F5CF_0_14%,transparent_15%),radial-gradient(circle_at_78%_22%,#DDF1C6_0_18%,transparent_19%),radial-gradient(circle_at_28%_78%,#EFF2D4_0_20%,transparent_21%),linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)]">
+          <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
+            <span className="h-[62%] w-[62%] rounded-full bg-black" />
+          </div>
+          <p className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/85 px-4 py-3 text-xs font-semibold text-[#334155] shadow-[0_10px_24px_rgba(15,23,42,0.12)]">
+            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable Google Maps.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2017,6 +2028,57 @@ export default function PublishPage() {
                                   : currentStep === 16
                                     ? canContinueStep16
                                     : false;
+
+  const handleMobileContinue = async () => {
+    if (isContinuing) return;
+
+    if (currentStep === 5) {
+      if (!canContinueStep5) return;
+      setIsContinuing(true);
+      try {
+        goToStep(1);
+        setStatus('');
+      } finally {
+        setIsContinuing(false);
+      }
+      return;
+    }
+
+    if (currentStep === 1) {
+      if (!canContinueStep1) return;
+      setIsContinuing(true);
+      try {
+        goToStep(6);
+        setStatus('');
+      } finally {
+        setIsContinuing(false);
+      }
+      return;
+    }
+
+    await handleContinue();
+  };
+
+  const handleMobileBack = () => {
+    if (currentStep === 2) {
+      setShowMobileIntro(true);
+      return;
+    }
+
+    if (currentStep === 1) {
+      goToStep(5);
+      return;
+    }
+
+    if (currentStep === 6) {
+      goToStep(1);
+      return;
+    }
+
+    if (currentStep > 1) {
+      goToStep((currentStep - 1) as PublishStep);
+    }
+  };
 
   const showWizardSkeleton = checkingProject || isStepTransitionLoading;
 
@@ -3705,7 +3767,7 @@ export default function PublishPage() {
         <MobilePublishIntroSplash
           onClose={() => router.push('/feed')}
           onStart={() => {
-            goToStep(1, false);
+            goToStep(2, false);
             setShowMobileIntro(false);
           }}
         />
@@ -3996,20 +4058,14 @@ export default function PublishPage() {
               <div className="flex items-center justify-between gap-5 pb-[max(env(safe-area-inset-bottom),0rem)]">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (currentStep <= 2) {
-                      setShowMobileIntro(true);
-                      return;
-                    }
-                    goToStep((currentStep - 1) as PublishStep);
-                  }}
+                  onClick={handleMobileBack}
                   className="text-[clamp(1rem,4.2vw,1.25rem)] font-extrabold tracking-[-0.035em] text-[#242424] underline decoration-2 underline-offset-4 transition active:scale-[0.98]"
                 >
                   Back
                 </button>
                 <button
                   type="button"
-                  onClick={handleContinue}
+                  onClick={() => void handleMobileContinue()}
                   disabled={!canContinueCurrentStep || isContinuing}
                   className="flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(9rem,34vw,12rem)] items-center justify-center rounded-[16px] bg-[#6B39F4] px-6 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[#DCDCDC] disabled:shadow-none"
                 >
