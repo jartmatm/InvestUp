@@ -138,20 +138,19 @@ const buildDetailMetrics = (
   },
   {
     label: 'Monthly clients',
-    value: coerceText(formFields.monthly_clients) || coerceText(formFields.monthly_customers) || t('ratePending'),
+    value: coerceText(formFields.monthly_clients) || t('ratePending'),
     icon: 'clients',
   },
   {
     label: 'Monthly sales',
     value:
       coerceText(formFields.monthly_sales) ||
-      coerceText(formFields.monthly_revenue) ||
       formatAmount(coerceNumber(formFields.monthly_sales), project.currency, t('noAmount')),
     icon: 'sales',
   },
   {
     label: 'Average ticket',
-    value: coerceText(formFields.average_ticket) || coerceText(formFields.avg_ticket) || t('ratePending'),
+    value: coerceText(formFields.average_ticket) || t('ratePending'),
     icon: 'ticket',
   },
 ];
@@ -232,91 +231,64 @@ const buildFallbackDetailSections = (
   formFields: Record<string, unknown>,
   t: Translate
 ): OpportunitySection[] => {
+  const businessName = coerceText(formFields.business_name) || project.business_name || project.title || 'Business';
+  const generatedPublication = isPlainObject(project.metadata?.generated_publication)
+    ? project.metadata.generated_publication
+    : {};
+  const description =
+    coerceText(formFields.offer_summary) ||
+    coerceText(generatedPublication.description) ||
+    project.description;
+  const financialSnapshot = [
+    coerceText(formFields.operating_time) ? `Operating time: ${coerceText(formFields.operating_time)}` : '',
+    coerceText(formFields.monthly_sales) ? `Monthly sales: ${coerceText(formFields.monthly_sales)}` : '',
+    coerceText(formFields.monthly_clients) ? `Monthly clients: ${coerceText(formFields.monthly_clients)}` : '',
+    coerceText(formFields.average_ticket) ? `Average ticket: ${coerceText(formFields.average_ticket)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
   const sections: OpportunitySection[] = [
     {
-      title: t('Detail.overview'),
-      body: project.description,
+      title: `About ${businessName}`,
+      body: description,
       icon: 'overview',
     },
     {
-      title: t('Detail.whatWeDo'),
-      body:
-        [
-          coerceText(formFields.product_description)
-            ? t('Detail.productOrService', { value: coerceText(formFields.product_description) })
-            : '',
-          coerceText(formFields.problem_solved)
-            ? t('Detail.problemSolved', { value: coerceText(formFields.problem_solved) })
-            : '',
-        ]
-          .filter(Boolean)
-          .join('\n\n') || project.description,
+      title: 'Description',
+      body: description,
       icon: 'what',
     },
     {
-      title: t('Detail.howWeDoIt'),
-      body: coerceText(formFields.differentiation),
-      icon: 'how',
+      title: 'Value',
+      body: [coerceText(formFields.competitive_edge), financialSnapshot].filter(Boolean).join('\n\n'),
+      icon: 'traction',
     },
     {
-      title: t('Detail.financialInformation'),
-      body: [
-        coerceText(formFields.monthly_revenue)
-          ? t('Detail.monthlyRevenue', { value: coerceText(formFields.monthly_revenue) })
-          : '',
-        coerceText(formFields.avg_ticket) ? t('Detail.averageTicket', { value: coerceText(formFields.avg_ticket) }) : '',
-        coerceText(formFields.monthly_customers)
-          ? t('Detail.monthlyCustomers', { value: coerceText(formFields.monthly_customers) })
-          : '',
-        coerceText(formFields.growth_rate) ? t('Detail.growth', { value: coerceText(formFields.growth_rate) }) : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'financial',
-    },
-    {
-      title: t('Detail.investment'),
+      title: 'Use of Funds',
       body: [
         project.amount_requested !== null && project.amount_requested !== undefined
-          ? t('Detail.capitalNeeded', {
-              value: formatAmount(project.amount_requested, project.currency, t('noAmount')),
-            })
+          ? `Capital needed: ${formatAmount(project.amount_requested, project.currency, t('noAmount'))}`
           : '',
-        coerceText(formFields.funds_usage) ? t('Detail.useOfFunds', { value: coerceText(formFields.funds_usage) }) : '',
-        project.interest_rate ? t('Detail.annualInterestRate', { value: `${project.interest_rate}% EA` }) : '',
+        coerceText(formFields.funds_usage) ? `Use of funds: ${coerceText(formFields.funds_usage)}` : '',
+        coerceText(formFields.interest_rate_ea) ? `Interest rate: ${coerceText(formFields.interest_rate_ea)}` : '',
+        coerceText(formFields.round_close_date) ? `Round closing date: ${coerceText(formFields.round_close_date)}` : '',
       ]
         .filter(Boolean)
         .join('\n\n'),
-      icon: 'investment',
+      icon: 'funds',
     },
     {
-      title: t('Detail.target'),
-      body: [formFields.target_customer, formFields.market_size, formFields.competition]
-        .map(coerceText)
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'target',
-    },
-    {
-      title: t('Detail.team'),
-      body: [
-        coerceText(formFields.founder_info) ? t('Detail.founder', { value: coerceText(formFields.founder_info) }) : '',
-        coerceText(formFields.team_info) ? t('Detail.teamLabel', { value: coerceText(formFields.team_info) }) : '',
-      ]
+      title: 'Owner Profile',
+      body: [coerceText(formFields.founder_profile), coerceText(formFields.team_profile), coerceText(formFields.business_achievements)]
         .filter(Boolean)
         .join('\n\n'),
       icon: 'team',
     },
     {
-      title: t('Detail.extras'),
-      body: [
-        coerceText(formFields.testimonials) ? t('Detail.testimonials', { value: coerceText(formFields.testimonials) }) : '',
-        coerceText(formFields.achievements) ? t('Detail.achievements', { value: coerceText(formFields.achievements) }) : '',
-        coerceText(formFields.timing_reason) ? t('Detail.timing', { value: coerceText(formFields.timing_reason) }) : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n'),
-      icon: 'extras',
+      title: 'Gallery',
+      body: 'Founder-provided media for this publication.',
+      icon: 'gallery',
     },
   ];
 

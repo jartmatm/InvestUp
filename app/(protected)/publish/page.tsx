@@ -679,6 +679,141 @@ function WizardStepSkeletonOverlay() {
   );
 }
 
+function MobileIntroIcon({ type }: { type: 'describe' | 'standout' | 'publish' }) {
+  const commonPathProps = {
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  };
+
+  return (
+    <span className="flex h-[clamp(4.75rem,18vw,6.7rem)] w-[clamp(4.75rem,18vw,6.7rem)] shrink-0 items-center justify-center rounded-[26%] bg-[#F7F7F7] text-black shadow-[0_16px_32px_rgba(15,23,42,0.08)]">
+      {type === 'describe' ? (
+        <svg viewBox="0 0 64 64" className="h-[66%] w-[66%]" fill="none" aria-hidden="true">
+          <path d="M14 49V23l18-10 18 10v26" {...commonPathProps} />
+          <path d="M23 49V32h18v17" {...commonPathProps} />
+          <path d="M20 25h.01M32 21h.01M44 25h.01" {...commonPathProps} />
+          <path d="M13 52h38" {...commonPathProps} />
+          <path d="M47 16c4 1.5 6.5 4.9 6.5 9 0 6.6-6.5 12.2-6.5 12.2S40.5 31.6 40.5 25c0-4.1 2.5-7.5 6.5-9Z" {...commonPathProps} />
+          <circle cx="47" cy="25" r="2.4" fill="currentColor" />
+        </svg>
+      ) : null}
+      {type === 'standout' ? (
+        <svg viewBox="0 0 64 64" className="h-[66%] w-[66%]" fill="none" aria-hidden="true">
+          <rect x="14" y="14" width="28" height="36" rx="4" {...commonPathProps} />
+          <path d="M20 23h16M20 31h12M20 39h16" {...commonPathProps} />
+          <path d="M43 26l5.2 2.2L54 26l-2.2 5.2L54 37l-5.8-2.2L43 37l2.2-5.8L43 26Z" {...commonPathProps} />
+          <path d="M11 50h42" {...commonPathProps} />
+          <path d="M45 45h8" {...commonPathProps} />
+        </svg>
+      ) : null}
+      {type === 'publish' ? (
+        <svg viewBox="0 0 64 64" className="h-[66%] w-[66%]" fill="none" aria-hidden="true">
+          <path d="M16 49h32" {...commonPathProps} />
+          <path d="M20 49V18h24v31" {...commonPathProps} />
+          <path d="M29 49V36h8v13" {...commonPathProps} />
+          <path d="M27 25h10" {...commonPathProps} />
+          <path d="M45 17l4-4 4 4" {...commonPathProps} />
+          <path d="M49 13v17" {...commonPathProps} />
+          <path d="M13 28l6-6" {...commonPathProps} />
+          <path d="M13 22h6v6" {...commonPathProps} />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+function MobilePublishIntroSplash({
+  onClose,
+  onStart,
+}: {
+  onClose: () => void;
+  onStart: () => void;
+}) {
+  const steps = [
+    {
+      number: '1',
+      title: 'Describe your venture',
+      description:
+        'Share the basics investors need first: location, category, and your registered business name.',
+      icon: 'describe' as const,
+    },
+    {
+      number: '2',
+      title: 'Make it stand out',
+      description:
+        'Add at least five photos, optional videos, a strong title, and a clear description. We will help polish it.',
+      icon: 'standout' as const,
+    },
+    {
+      number: '3',
+      title: 'Finish and publish',
+      description:
+        'Choose your funding goal, installments, interest rate, review the details, and launch your listing.',
+      icon: 'publish' as const,
+    },
+  ];
+
+  return (
+    <main className="relative flex h-[100dvh] min-h-[620px] flex-col overflow-hidden bg-white text-[#222222] lg:hidden">
+      <div className="flex shrink-0 items-center px-[clamp(1.25rem,5.8vw,2rem)] pt-[max(env(safe-area-inset-top),1rem)]">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close publish flow"
+          className="flex h-12 w-12 items-center justify-center rounded-full text-[#222222] transition active:scale-95"
+        >
+          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+            <path d="M6 6l12 12" />
+            <path d="M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-[clamp(1.45rem,6vw,2.35rem)] pb-5">
+        <section className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
+          <h1 className="mt-[clamp(4rem,12vh,8.6rem)] max-w-[13ch] text-[clamp(2.65rem,10vw,4.35rem)] font-bold leading-[1.04] tracking-[-0.065em] text-[#222222]">
+            Getting started with InvestApp is simple
+          </h1>
+
+          <div className="mt-[clamp(2.5rem,7vh,4.8rem)]">
+            {steps.map((step, index) => (
+              <div key={step.number}>
+                <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[clamp(0.9rem,3.5vw,1.4rem)] py-[clamp(1.35rem,3.8vh,2.35rem)]">
+                  <p className="self-start pt-1 text-[clamp(1.45rem,5.6vw,2rem)] font-medium leading-none text-[#222222]">
+                    {step.number}
+                  </p>
+                  <div className="min-w-0">
+                    <h2 className="text-[clamp(1.42rem,5.7vw,2.05rem)] font-bold leading-[1.14] tracking-[-0.035em] text-[#222222]">
+                      {step.title}
+                    </h2>
+                    <p className="mt-2 text-[clamp(1rem,4.2vw,1.34rem)] font-medium leading-[1.28] tracking-[-0.02em] text-[#717171]">
+                      {step.description}
+                    </p>
+                  </div>
+                  <MobileIntroIcon type={step.icon} />
+                </article>
+                {index < steps.length - 1 ? <div className="h-px bg-[#EBEBEB]" /> : null}
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="shrink-0 bg-white px-[clamp(1.45rem,6vw,2.35rem)] pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+        <button
+          type="button"
+          onClick={onStart}
+          className="mx-auto flex min-h-[clamp(3.75rem,8vh,4.75rem)] w-full max-w-[560px] items-center justify-center rounded-[18px] bg-[#6B39F4] px-6 text-[clamp(1.05rem,4.4vw,1.35rem)] font-bold tracking-[-0.02em] text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition active:scale-[0.985]"
+        >
+          Let&apos;s get started
+        </button>
+      </div>
+    </main>
+  );
+}
+
 export default function PublishPage() {
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
@@ -735,6 +870,7 @@ export default function PublishPage() {
   const [isContinuing, setIsContinuing] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishRequested, setPublishRequested] = useState(false);
+  const [showMobileIntro, setShowMobileIntro] = useState(true);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
 
@@ -3250,33 +3386,42 @@ export default function PublishPage() {
         ) : null}
       </AnimatePresence>
 
-      <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
-        <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+      {showMobileIntro ? (
+        <MobilePublishIntroSplash
+          onClose={() => router.push('/feed')}
+          onStart={() => setShowMobileIntro(false)}
+        />
+      ) : (
+        <>
+          <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
+            <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
 
-        <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          <PageBackButton fallbackHref="/feed" label="Back" />
+            <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
+              <PageBackButton fallbackHref="/feed" label="Back" />
 
-          <header className="flex flex-col gap-2">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-              Guided flow v2
-            </p>
-            <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">Publish project</h1>
-            <p className="text-sm leading-6 text-[#7B879C]">
-              Mobile flow will be styled in a separate iteration.
-            </p>
-          </header>
+              <header className="flex flex-col gap-2">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
+                  Guided flow v2
+                </p>
+                <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">Publish project</h1>
+                <p className="text-sm leading-6 text-[#7B879C]">
+                  Mobile flow will be styled in a separate iteration.
+                </p>
+              </header>
 
-          <section className={mobileSurfaceClassName}>
-            <p className="text-sm leading-6 text-[#667085]">
-              Web step 1 was implemented first. Mobile styling will be delivered next.
-            </p>
-          </section>
-        </div>
-      </main>
+              <section className={mobileSurfaceClassName}>
+                <p className="text-sm leading-6 text-[#667085]">
+                  Web step 1 was implemented first. Mobile styling will be delivered next.
+                </p>
+              </section>
+            </div>
+          </main>
 
-      <div className="lg:hidden">
-        <BottomNav />
-      </div>
+          <div className="lg:hidden">
+            <BottomNav />
+          </div>
+        </>
+      )}
     </>
   );
 }
