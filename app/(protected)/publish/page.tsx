@@ -679,6 +679,33 @@ function WizardStepSkeletonOverlay() {
   );
 }
 
+function MobileWizardStepSkeletonOverlay() {
+  return (
+    <div className="absolute inset-0 z-40 bg-white/90 px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[max(env(safe-area-inset-bottom),0.8rem)] pt-[max(env(safe-area-inset-top),0.8rem)] backdrop-blur-[1px]">
+      <div className="mx-auto flex h-full w-full max-w-[560px] flex-col">
+        <div className="flex items-center justify-between">
+          <div className="h-11 w-11 animate-pulse rounded-full bg-[#ECEEF3]" />
+          <div className="h-12 w-36 animate-pulse rounded-full bg-[#ECEEF3]" />
+        </div>
+        <div className="flex min-h-0 flex-1 items-end justify-center py-5">
+          <div className="h-[42dvh] max-h-96 w-full animate-pulse rounded-[32px] bg-[#F0F2F6]" />
+        </div>
+        <div className="space-y-3 pb-5">
+          <div className="h-6 w-24 animate-pulse rounded-full bg-[#ECEEF3]" />
+          <div className="h-12 w-[92%] animate-pulse rounded-2xl bg-[#E5E8EF]" />
+          <div className="h-12 w-[70%] animate-pulse rounded-2xl bg-[#EEF0F5]" />
+          <div className="h-20 w-full animate-pulse rounded-3xl bg-[#F0F2F6]" />
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          <div className="h-2 animate-pulse rounded-full bg-[#DED8FE]" />
+          <div className="h-2 animate-pulse rounded-full bg-[#ECEEF3]" />
+          <div className="h-2 animate-pulse rounded-full bg-[#ECEEF3]" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MobileIntroIcon({ type }: { type: 'describe' | 'standout' | 'publish' }) {
   const commonPathProps = {
     stroke: 'currentColor',
@@ -1857,6 +1884,46 @@ export default function PublishPage() {
     return 'upcoming';
   };
 
+  const mobileProgressMilestone =
+    currentStep <= 5 ? 1
+    : currentStep <= 13 ? 2
+    : 3;
+
+  const canContinueCurrentStep =
+    currentStep === 1
+      ? canContinueStep1
+      : currentStep === 2
+        ? canContinueStep2
+        : currentStep === 3
+          ? canContinueStep3
+          : currentStep === 4
+            ? canContinueStep4
+            : currentStep === 5
+              ? canContinueStep5
+              : currentStep === 6
+                ? canContinueStep6
+                : currentStep === 7
+                  ? canContinueStep7
+                  : currentStep === 8
+                    ? canContinueStep8
+                    : currentStep === 9
+                      ? canContinueStep9
+                      : currentStep === 10
+                        ? canContinueStep10
+                        : currentStep === 11
+                          ? canContinueStep11
+                          : currentStep === 12
+                            ? canContinueStep12
+                            : currentStep === 13
+                              ? canContinueStep13
+                              : currentStep === 14
+                                ? canContinueStep14
+                                : currentStep === 15
+                                  ? canContinueStep15
+                                  : currentStep === 16
+                                    ? canContinueStep16
+                                    : false;
+
   const showWizardSkeleton = checkingProject || isStepTransitionLoading;
 
   return (
@@ -1875,7 +1942,7 @@ export default function PublishPage() {
               : 'grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 pb-24'
           }`}
         >
-          {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
+          {showWizardSkeleton ? <MobileWizardStepSkeletonOverlay /> : null}
 
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
@@ -3388,38 +3455,109 @@ export default function PublishPage() {
       {showMobileIntro ? (
         <MobilePublishIntroSplash
           onClose={() => router.push('/feed')}
-          onStart={() => setShowMobileIntro(false)}
+          onStart={() => {
+            goToStep(2, false);
+            setShowMobileIntro(false);
+          }}
         />
       ) : (
-        <>
-          <main className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_50%_-8%,rgba(124,92,255,0.14),transparent_34%),linear-gradient(180deg,#FAFAFE_0%,#F6F7FC_52%,#F8F9FD_100%)] pb-36 text-[#101828] lg:hidden">
-            <div className="pointer-events-none absolute left-1/2 top-[-9rem] h-72 w-72 -translate-x-1/2 rounded-full bg-[#7C5CFF]/10 blur-3xl" />
+        <main className="relative flex h-[100dvh] flex-col overflow-hidden bg-white text-[#1F1F1F] lg:hidden">
+          {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
 
-            <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-              <PageBackButton fallbackHref="/feed" label="Back" />
+          <header className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-[clamp(1rem,5vw,1.75rem)] pt-[max(env(safe-area-inset-top),0.65rem)]">
+            <button
+              type="button"
+              onClick={() => void handleSaveAndExit()}
+              aria-label="Close publish flow and save draft"
+              className="flex h-[clamp(2.5rem,10vw,3rem)] w-[clamp(2.5rem,10vw,3rem)] items-center justify-center rounded-full text-[#1F1F1F] transition active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" className="h-[68%] w-[68%]" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+                <path d="M6 6l12 12" />
+                <path d="M18 6L6 18" />
+              </svg>
+            </button>
 
-              <header className="flex flex-col gap-2">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#8A93A8]">
-                  Guided flow v2
-                </p>
-                <h1 className="text-[2rem] font-semibold tracking-[-0.065em] text-[#1C2336]">Publish project</h1>
-                <p className="text-sm leading-6 text-[#7B879C]">
-                  Mobile flow will be styled in a separate iteration.
-                </p>
-              </header>
+            <button
+              type="button"
+              className="h-[clamp(2.8rem,10.5vw,3.45rem)] rounded-full border border-[#DEDEDE] bg-white px-[clamp(1rem,5vw,1.6rem)] text-[clamp(0.92rem,4vw,1.18rem)] font-extrabold tracking-[-0.035em] text-[#252525] shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.98]"
+            >
+              Need help?
+            </button>
+          </header>
 
-              <section className={mobileSurfaceClassName}>
-                <p className="text-sm leading-6 text-[#667085]">
-                  Web step 1 was implemented first. Mobile styling will be delivered next.
-                </p>
-              </section>
+          <section className="mx-auto grid min-h-0 w-full max-w-[560px] flex-1 grid-rows-[minmax(0,1.08fr)_auto_auto] px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
+            <motion.div
+              initial={{ opacity: 0, y: 10, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.45, ease: 'easeOut' }}
+              className="flex min-h-0 items-end justify-center"
+            >
+              <Lottie
+                animationData={publishStep2Animation}
+                loop
+                autoplay
+                className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
+              />
+            </motion.div>
+
+            <div className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]">
+              <p className="text-[clamp(1.05rem,4.4vw,1.38rem)] font-extrabold leading-none tracking-[-0.035em] text-[#242424]">
+                Step 1
+              </p>
+              <h1 className="mt-[clamp(0.55rem,1.6dvh,0.9rem)] max-w-[11.5ch] text-[clamp(2.25rem,10vw,4.05rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-[#1F1F1F]">
+                Tell us about your entrepreneur business
+              </h1>
+              <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] text-[clamp(0.98rem,4.2vw,1.42rem)] font-medium leading-[1.32] tracking-[-0.026em] text-[#333333]">
+                We&apos;ll ask what type of business you run, what investors will fund, and the first details
+                that help your opportunity feel clear and investable.
+              </p>
             </div>
-          </main>
 
-          <div className="lg:hidden">
-            <BottomNav />
-          </div>
-        </>
+            <div className="space-y-[clamp(1rem,2.8dvh,1.45rem)]">
+              <div className="grid grid-cols-3 gap-1.5">
+                {[1, 2, 3].map((milestone) => (
+                  <span
+                    key={milestone}
+                    className={`h-[clamp(0.42rem,1.6vw,0.56rem)] rounded-full ${
+                      milestone <= mobileProgressMilestone ? 'bg-[#6B39F4]' : 'bg-[#E9E9E9]'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-5 pb-[max(env(safe-area-inset-bottom),0rem)]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentStep <= 2) {
+                      setShowMobileIntro(true);
+                      return;
+                    }
+                    goToStep((currentStep - 1) as PublishStep);
+                  }}
+                  className="text-[clamp(1rem,4.2vw,1.25rem)] font-extrabold tracking-[-0.035em] text-[#242424] underline decoration-2 underline-offset-4 transition active:scale-[0.98]"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleContinue}
+                  disabled={!canContinueCurrentStep || isContinuing}
+                  className="flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(9rem,34vw,12rem)] items-center justify-center rounded-[16px] bg-[#6B39F4] px-6 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {isContinuing ? (
+                    <>
+                      <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
+        </main>
       )}
     </>
   );
