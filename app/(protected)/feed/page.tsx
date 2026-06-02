@@ -528,7 +528,7 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex h-[368px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex h-[500px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
       <div className="relative h-[70%] min-h-0">
         <AspectRatio ratio="video" className="h-full w-full">
@@ -554,7 +554,7 @@ function DesktopProjectCard({
         </button>
       </div>
       <CardContent className="flex h-[30%] min-h-0 flex-col justify-between border-t border-white/60 bg-white/72 p-3.5 backdrop-blur-md">
-        <h3 className="line-clamp-2 text-[1rem] font-bold leading-snug text-[#111827]">
+        <h3 className="line-clamp-3 text-[1rem] font-bold leading-snug text-[#111827]">
           {project.title}
         </h3>
         <p className="line-clamp-1 text-[0.78rem] font-medium text-[#6C7890]">{category}</p>
@@ -695,7 +695,7 @@ function DesktopMarketplaceLayout({
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[368px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[500px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
