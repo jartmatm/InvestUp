@@ -3527,6 +3527,49 @@ export default function PublishPage() {
                   })}
                 </div>
               </motion.div>
+            ) : currentStep === 4 ? (
+              <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,0.98fr)_auto]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="flex min-h-0 items-end justify-center"
+                >
+                  <Lottie
+                    animationData={publishStep4NameAnimation}
+                    loop
+                    autoplay
+                    className="h-full max-h-[clamp(16rem,42dvh,26rem)] w-full"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
+                  className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]"
+                >
+                  <h1 className="max-w-[10.5ch] text-[clamp(2.18rem,9.4vw,3.85rem)] font-extrabold leading-[0.96] tracking-[-0.07em] text-[#1F1F1F]">
+                    Great, now let&apos;s name your business
+                  </h1>
+                  <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] text-[clamp(0.96rem,4.05vw,1.32rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#343434]">
+                    Give your venture a clear name investors will recognize instantly.
+                  </p>
+
+                  <label className="mt-[clamp(1rem,2.8dvh,1.55rem)] block rounded-[24px] border border-[#DEDEDE] bg-white p-[clamp(0.8rem,3.5vw,1rem)] shadow-[0_12px_28px_rgba(15,23,42,0.05)] transition focus-within:border-[#6B39F4]">
+                    <span className="mb-2 block px-2 text-[clamp(0.72rem,3vw,0.86rem)] font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                      Business name
+                    </span>
+                    <input
+                      type="text"
+                      value={businessName}
+                      onChange={(event) => setBusinessName(event.target.value)}
+                      placeholder="Enter your business name"
+                      className="h-[clamp(3.15rem,7.2dvh,4rem)] w-full rounded-[18px] border border-[#EFEFEF] bg-[#FAFAFA] px-4 text-[clamp(1rem,4.2vw,1.25rem)] font-bold tracking-[-0.035em] text-[#1F1F1F] outline-none transition placeholder:text-[#A5A5A5] focus:border-[#6B39F4] focus:bg-white focus:ring-4 focus:ring-[#6B39F4]/10"
+                    />
+                  </label>
+                </motion.div>
+              </div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
