@@ -688,7 +688,7 @@ function MobileIntroIcon({ type }: { type: 'describe' | 'standout' | 'publish' }
   };
 
   return (
-    <span className="flex h-[clamp(4.75rem,18vw,6.7rem)] w-[clamp(4.75rem,18vw,6.7rem)] shrink-0 items-center justify-center rounded-[26%] bg-[#F7F7F7] text-black shadow-[0_16px_32px_rgba(15,23,42,0.08)]">
+    <span className="flex h-[clamp(3.35rem,14vw,5.25rem)] w-[clamp(3.35rem,14vw,5.25rem)] shrink-0 items-center justify-center rounded-[28%] bg-[#F7F7F7] text-black shadow-[0_12px_26px_rgba(15,23,42,0.07)]">
       {type === 'describe' ? (
         <svg viewBox="0 0 64 64" className="h-[66%] w-[66%]" fill="none" aria-hidden="true">
           <path d="M14 49V23l18-10 18 10v26" {...commonPathProps} />
@@ -756,56 +756,55 @@ function MobilePublishIntroSplash({
   ];
 
   return (
-    <main className="relative flex h-[100dvh] min-h-[620px] flex-col overflow-hidden bg-white text-[#222222] lg:hidden">
-      <div className="flex shrink-0 items-center px-[clamp(1.25rem,5.8vw,2rem)] pt-[max(env(safe-area-inset-top),1rem)]">
+    <main className="relative flex h-[100dvh] flex-col overflow-hidden bg-white text-[#1F1F1F] lg:hidden">
+      <div className="flex shrink-0 items-center px-[clamp(1rem,5vw,1.75rem)] pt-[max(env(safe-area-inset-top),0.65rem)]">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close publish flow"
-          className="flex h-12 w-12 items-center justify-center rounded-full text-[#222222] transition active:scale-95"
+          className="flex h-[clamp(2.5rem,10vw,3rem)] w-[clamp(2.5rem,10vw,3rem)] items-center justify-center rounded-full text-[#1F1F1F] transition active:scale-95"
         >
-          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+          <svg viewBox="0 0 24 24" className="h-[68%] w-[68%]" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
             <path d="M6 6l12 12" />
             <path d="M18 6L6 18" />
           </svg>
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-[clamp(1.45rem,6vw,2.35rem)] pb-5">
-        <section className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
-          <h1 className="mt-[clamp(4rem,12vh,8.6rem)] max-w-[13ch] text-[clamp(2.65rem,10vw,4.35rem)] font-bold leading-[1.04] tracking-[-0.065em] text-[#222222]">
+      <div className="min-h-0 flex-1 px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.45rem,1.7dvh,0.9rem)]">
+        <section className="mx-auto grid h-full w-full max-w-[560px] grid-rows-[auto_1fr]">
+          <h1 className="mt-[clamp(1.1rem,5.2dvh,3.6rem)] max-w-[12.5ch] text-[clamp(2.08rem,8.3vw,3.35rem)] font-extrabold leading-[1.02] tracking-[-0.064em] text-[#1F1F1F]">
             Getting started with InvestApp is simple
           </h1>
 
-          <div className="mt-[clamp(2.5rem,7vh,4.8rem)]">
-            {steps.map((step, index) => (
+          <div className="mt-[clamp(1rem,3.8dvh,2.7rem)] min-h-0 divide-y divide-[#ECECEC]">
+            {steps.map((step) => (
               <div key={step.number}>
-                <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[clamp(0.9rem,3.5vw,1.4rem)] py-[clamp(1.35rem,3.8vh,2.35rem)]">
-                  <p className="self-start pt-1 text-[clamp(1.45rem,5.6vw,2rem)] font-medium leading-none text-[#222222]">
+                <article className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[clamp(0.65rem,3vw,1.15rem)] py-[clamp(0.75rem,2.6dvh,1.65rem)]">
+                  <p className="self-start pt-0.5 text-[clamp(1.18rem,4.8vw,1.7rem)] font-medium leading-none text-[#1F1F1F]">
                     {step.number}
                   </p>
                   <div className="min-w-0">
-                    <h2 className="text-[clamp(1.42rem,5.7vw,2.05rem)] font-bold leading-[1.14] tracking-[-0.035em] text-[#222222]">
+                    <h2 className="text-[clamp(1.15rem,5vw,1.75rem)] font-extrabold leading-[1.06] tracking-[-0.038em] text-[#1F1F1F]">
                       {step.title}
                     </h2>
-                    <p className="mt-2 text-[clamp(1rem,4.2vw,1.34rem)] font-medium leading-[1.28] tracking-[-0.02em] text-[#717171]">
+                    <p className="mt-[clamp(0.35rem,1dvh,0.55rem)] text-[clamp(0.82rem,3.55vw,1.08rem)] font-medium leading-[1.22] tracking-[-0.018em] text-[#6F6F6F]">
                       {step.description}
                     </p>
                   </div>
                   <MobileIntroIcon type={step.icon} />
                 </article>
-                {index < steps.length - 1 ? <div className="h-px bg-[#EBEBEB]" /> : null}
               </div>
             ))}
           </div>
         </section>
       </div>
 
-      <div className="shrink-0 bg-white px-[clamp(1.45rem,6vw,2.35rem)] pb-[max(env(safe-area-inset-bottom),1rem)] pt-3">
+      <div className="shrink-0 bg-white px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-[clamp(0.35rem,1.3dvh,0.85rem)]">
         <button
           type="button"
           onClick={onStart}
-          className="mx-auto flex min-h-[clamp(3.75rem,8vh,4.75rem)] w-full max-w-[560px] items-center justify-center rounded-[18px] bg-[#6B39F4] px-6 text-[clamp(1.05rem,4.4vw,1.35rem)] font-bold tracking-[-0.02em] text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition active:scale-[0.985]"
+          className="mx-auto flex min-h-[clamp(3.2rem,7.4dvh,4.25rem)] w-full max-w-[560px] items-center justify-center rounded-[18px] bg-[#6B39F4] px-6 text-[clamp(0.98rem,4.1vw,1.24rem)] font-bold tracking-[-0.02em] text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition active:scale-[0.985]"
         >
           Let&apos;s get started
         </button>
