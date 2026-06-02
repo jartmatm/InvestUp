@@ -388,9 +388,9 @@ const buildFormattedAddressFromManualFields = (address: PublishAddressStepFields
     .filter(Boolean)
     .join(', ');
 
-function BusinessCategoryIcon({ id }: { id: string }) {
+function BusinessCategoryIcon({ id, className = 'h-5 w-5' }: { id: string; className?: string }) {
   const commonProps = {
-    className: 'h-5 w-5',
+    className,
     fill: 'none',
     stroke: 'currentColor',
     strokeLinecap: 'round' as const,
@@ -1942,7 +1942,7 @@ export default function PublishPage() {
               : 'grid h-[80vh] grid-cols-[minmax(0,0.95fr)_minmax(420px,0.8fr)] gap-9 pb-24'
           }`}
         >
-          {showWizardSkeleton ? <MobileWizardStepSkeletonOverlay /> : null}
+          {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
 
           {currentStep !== 17 && currentStep !== 18 ? (
             <button
@@ -3462,7 +3462,7 @@ export default function PublishPage() {
         />
       ) : (
         <main className="relative flex h-[100dvh] flex-col overflow-hidden bg-white text-[#1F1F1F] lg:hidden">
-          {showWizardSkeleton ? <WizardStepSkeletonOverlay /> : null}
+          {showWizardSkeleton ? <MobileWizardStepSkeletonOverlay /> : null}
 
           <header className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-[clamp(1rem,5vw,1.75rem)] pt-[max(env(safe-area-inset-top),0.65rem)]">
             <button
@@ -3485,35 +3485,80 @@ export default function PublishPage() {
             </button>
           </header>
 
-          <section className="mx-auto grid min-h-0 w-full max-w-[560px] flex-1 grid-rows-[minmax(0,1.08fr)_auto_auto] px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.985 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="flex min-h-0 items-end justify-center"
-            >
-              <Lottie
-                animationData={publishStep2Animation}
-                loop
-                autoplay
-                className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
-              />
-            </motion.div>
+          <section className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
+            {currentStep === 3 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.6rem,6dvh,4.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[13ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Which of these best describes your business?
+                </h1>
 
-            <div className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]">
-              <p className="text-[clamp(1.05rem,4.4vw,1.38rem)] font-extrabold leading-none tracking-[-0.035em] text-[#242424]">
-                Step 1
-              </p>
-              <h1 className="mt-[clamp(0.55rem,1.6dvh,0.9rem)] max-w-[11.5ch] text-[clamp(2.25rem,10vw,4.05rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-[#1F1F1F]">
-                Tell us about your entrepreneur business
-              </h1>
-              <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] text-[clamp(0.98rem,4.2vw,1.42rem)] font-medium leading-[1.32] tracking-[-0.026em] text-[#333333]">
-                We&apos;ll ask what type of business you run, what investors will fund, and the first details
-                that help your opportunity feel clear and investable.
-              </p>
-            </div>
+                <div className="mt-[clamp(1.45rem,4dvh,2.45rem)] grid grid-cols-2 gap-[clamp(0.75rem,3.3vw,1.1rem)] pb-6">
+                  {businessCategories.map((category) => {
+                    const isSelected = selectedBusinessCategory === category.label;
+                    return (
+                      <motion.button
+                        key={category.id}
+                        type="button"
+                        onClick={() => setSelectedBusinessCategory(category.label)}
+                        whileTap={{ scale: 0.985 }}
+                        className={`flex min-h-[clamp(7.2rem,19dvh,10rem)] flex-col items-start justify-between rounded-[18px] border bg-white p-[clamp(0.9rem,4vw,1.35rem)] text-left transition ${
+                          isSelected
+                            ? 'border-[#6B39F4] shadow-[0_16px_30px_rgba(107,57,244,0.16)] ring-2 ring-[#6B39F4]/15'
+                            : 'border-[#DEDEDE] shadow-[0_5px_12px_rgba(15,23,42,0.025)]'
+                        }`}
+                      >
+                        <span
+                          className={`flex h-[clamp(2.45rem,10.5vw,3.25rem)] w-[clamp(2.45rem,10.5vw,3.25rem)] items-center justify-center rounded-2xl ${
+                            isSelected ? 'bg-[#F2EEFF] text-[#4D20D8]' : 'bg-white text-[#222222]'
+                          }`}
+                        >
+                          <BusinessCategoryIcon id={category.id} className="h-[clamp(1.7rem,7vw,2.25rem)] w-[clamp(1.7rem,7vw,2.25rem)]" />
+                        </span>
+                        <span className="text-[clamp(0.98rem,4.4vw,1.28rem)] font-extrabold leading-[1.05] tracking-[-0.042em] text-[#262626]">
+                          {category.label}
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            ) : (
+              <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="flex min-h-0 items-end justify-center"
+                >
+                  <Lottie
+                    animationData={publishStep2Animation}
+                    loop
+                    autoplay
+                    className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
+                  />
+                </motion.div>
 
-            <div className="space-y-[clamp(1rem,2.8dvh,1.45rem)]">
+                <div className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]">
+                  <p className="text-[clamp(1.05rem,4.4vw,1.38rem)] font-extrabold leading-none tracking-[-0.035em] text-[#242424]">
+                    Step 1
+                  </p>
+                  <h1 className="mt-[clamp(0.55rem,1.6dvh,0.9rem)] max-w-[11.5ch] text-[clamp(2.25rem,10vw,4.05rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-[#1F1F1F]">
+                    Tell us about your entrepreneur business
+                  </h1>
+                  <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] text-[clamp(0.98rem,4.2vw,1.42rem)] font-medium leading-[1.32] tracking-[-0.026em] text-[#333333]">
+                    We&apos;ll ask what type of business you run, what investors will fund, and the first details
+                    that help your opportunity feel clear and investable.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="shrink-0 space-y-[clamp(1rem,2.8dvh,1.45rem)] bg-white pt-[clamp(0.35rem,1.2dvh,0.8rem)]">
               <div className="grid grid-cols-3 gap-1.5">
                 {[1, 2, 3].map((milestone) => (
                   <span
@@ -3543,7 +3588,7 @@ export default function PublishPage() {
                   type="button"
                   onClick={handleContinue}
                   disabled={!canContinueCurrentStep || isContinuing}
-                  className="flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(9rem,34vw,12rem)] items-center justify-center rounded-[16px] bg-[#6B39F4] px-6 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(9rem,34vw,12rem)] items-center justify-center rounded-[16px] bg-[#6B39F4] px-6 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[#DCDCDC] disabled:shadow-none"
                 >
                   {isContinuing ? (
                     <>
