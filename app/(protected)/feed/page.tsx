@@ -528,9 +528,9 @@ function DesktopProjectCard({
           onOpenProject(project.id);
         }
       }}
-      className="group flex h-[328px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
+      className="group flex h-[368px] cursor-pointer overflow-hidden rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.07)] ring-1 ring-[#E9ECF4] transition duration-200 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(21,28,44,0.12)]"
     >
-      <div className="relative h-3/4 min-h-0">
+      <div className="relative h-[70%] min-h-0">
         <AspectRatio ratio="video" className="h-full w-full">
           {coverImage ? (
             <img src={coverImage} alt={project.title} className="h-full w-full object-cover" />
@@ -553,8 +553,8 @@ function DesktopProjectCard({
           <IconHeart filled={isWishlisted} />
         </button>
       </div>
-      <CardContent className="flex h-1/4 min-h-0 flex-col justify-between border-t border-white/60 bg-white/72 p-3 backdrop-blur-md">
-        <h3 className="line-clamp-2 text-[0.96rem] font-bold leading-snug tracking-[-0.035em] text-[#111827]">
+      <CardContent className="flex h-[30%] min-h-0 flex-col justify-between border-t border-white/60 bg-white/72 p-3.5 backdrop-blur-md">
+        <h3 className="line-clamp-2 text-[1rem] font-bold leading-snug text-[#111827]">
           {project.title}
         </h3>
         <p className="line-clamp-1 text-[0.78rem] font-medium text-[#6C7890]">{category}</p>
@@ -695,7 +695,7 @@ function DesktopMarketplaceLayout({
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
                     key={`desktop-project-loading-${index}`}
-                    className="h-[328px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
+                    className="h-[368px] animate-pulse rounded-[18px] bg-white shadow-[0_18px_38px_rgba(21,28,44,0.06)] ring-1 ring-[#E9ECF4]"
                   />
                 ))}
               </div>
@@ -1223,21 +1223,21 @@ export default function FeedPage() {
                       className="cursor-pointer text-left [perspective:1400px]"
                     >
                       <div
-                        className={`relative h-[280px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
+                        className={`relative h-[312px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
                           isFlipped ? '[transform:rotateY(180deg)]' : ''
                         }`}
                       >
                         <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
                           <div className="relative">
-                            <AspectRatio ratio="video" className="h-[208px] w-full">
+                            <AspectRatio ratio="video" className="h-[218px] w-full">
                               {coverImage ? (
                                 <img
                                   src={coverImage}
                                   alt={project.title}
-                                  className="h-[208px] w-full object-cover"
+                                  className="h-[218px] w-full object-cover"
                                 />
                               ) : (
-                                <div className="flex h-[208px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
+                                <div className="flex h-[218px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
                                   {t('publishedVenture')}
                                 </div>
                               )}
@@ -1263,8 +1263,8 @@ export default function FeedPage() {
                             </button>
                           </div>
 
-                          <div className="flex h-[72px] flex-col justify-between p-2">
-                            <p className="line-clamp-2 text-[0.72rem] font-semibold leading-[1.12] tracking-[-0.025em] text-[#162033]">
+                          <div className="flex h-[94px] flex-col justify-between p-2.5">
+                            <p className="line-clamp-2 text-[0.78rem] font-semibold leading-[1.16] text-[#162033]">
                               {project.title}
                             </p>
                             <p className="line-clamp-1 text-[0.56rem] font-medium text-[#7C859A]">{categoryLabel}</p>
