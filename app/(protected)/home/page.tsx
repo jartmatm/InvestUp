@@ -19,11 +19,11 @@ import {
 } from '@/lib/investor-overview';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
 import { useInvestApp } from '@/lib/investapp-context';
-import { HOME_REFRESH_INTERVAL_MS, isProjectPubliclyVisible } from '@/lib/project-status';
+import { HOME_REFRESH_INTERVAL_MS, canDeleteProject, isProjectPubliclyVisible } from '@/lib/project-status';
 import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
 import { fetchCurrentUserInvestments } from '@/utils/client/current-user-investments';
 import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
-import { fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
+import { deleteCurrentUserProject, fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
 import { fetchProjects } from '@/utils/client/projects';
 import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
@@ -135,6 +135,26 @@ function IconClock() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v6l4 2" />
+    </svg>
+  );
+}
+
+function IconTrash() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M6 6l1 18h10l1-18" />
+      <path d="M10 11v9" />
+      <path d="M14 11v9" />
     </svg>
   );
 }
@@ -889,19 +909,26 @@ function DesktopActiveInvestmentCard({
 }
 
 function DesktopBusinessCard({
+  deletingProjectId,
   fundingProgress,
   lastProject,
   loading,
+  onDeleteProject,
   onOpenProject,
   onOpenPortfolio,
 }: {
+  deletingProjectId: string | null;
   fundingProgress: number;
   lastProject: LastProject | null;
   loading: boolean;
+  onDeleteProject: (projectId: string) => void;
   onOpenProject: (projectId: string) => void;
   onOpenPortfolio: () => void;
 }) {
   const t = useTranslations('Home');
+  const canDeleteLastProject = lastProject ? canDeleteProject(lastProject) : false;
+  const isDeletingLastProject = Boolean(lastProject && deletingProjectId === lastProject.id);
+
   if (loading) {
     return <section className="min-h-[300px] animate-pulse rounded-[24px] bg-white" />;
   }
@@ -910,9 +937,23 @@ function DesktopBusinessCard({
     <section className="min-h-[300px] rounded-[24px] border border-[#E8EBF4] bg-white p-7 shadow-[0_22px_52px_rgba(21,28,44,0.07)]">
       <div className="flex items-center justify-between gap-5">
         <h2 className="text-xl font-bold tracking-[-0.045em]">{t('myBusiness')}</h2>
-        <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#6B39F4]">
-          {t('edit')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#6B39F4]">
+            {t('edit')}
+          </button>
+          {lastProject && canDeleteLastProject ? (
+            <button
+              type="button"
+              aria-label="Delete publication"
+              title="Delete publication"
+              disabled={isDeletingLastProject}
+              onClick={() => onDeleteProject(lastProject.id)}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-[#FECACA] bg-[#FFF1F2] text-[#DC2626] transition duration-200 hover:-translate-y-0.5 hover:border-[#FCA5A5] hover:bg-[#FFE4E6] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            >
+              <IconTrash />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {lastProject ? (
@@ -1094,6 +1135,7 @@ function DesktopHomeDashboard({
   availableBalanceLabel,
   avatarUrl,
   balanceCurrencyLabel,
+  deletingProjectId,
   displayName,
   fundingProgress,
   investorAverageRate,
@@ -1107,6 +1149,7 @@ function DesktopHomeDashboard({
   onBellClick,
   onClearSearch,
   onCloseSearch,
+  onDeleteProject,
   onOpenHistory,
   onOpenPortfolio,
   onOpenProject,
@@ -1136,6 +1179,7 @@ function DesktopHomeDashboard({
   availableBalanceLabel: string;
   avatarUrl: string;
   balanceCurrencyLabel: string;
+  deletingProjectId: string | null;
   displayName: string;
   fundingProgress: number;
   investorAverageRate: number;
@@ -1149,6 +1193,7 @@ function DesktopHomeDashboard({
   onBellClick: () => void;
   onClearSearch: () => void;
   onCloseSearch: () => void;
+  onDeleteProject: (projectId: string) => void;
   onOpenHistory: () => void;
   onOpenPortfolio: () => void;
   onOpenProject: (projectId: string) => void;
@@ -1234,9 +1279,11 @@ function DesktopHomeDashboard({
 
               {role === 'emprendedor' ? (
                 <DesktopBusinessCard
+                  deletingProjectId={deletingProjectId}
                   fundingProgress={fundingProgress}
                   lastProject={lastProject}
                   loading={loadingProject}
+                  onDeleteProject={onDeleteProject}
                   onOpenPortfolio={onOpenPortfolio}
                   onOpenProject={onOpenProject}
                 />
@@ -1290,6 +1337,7 @@ export default function HomePage() {
   const [showBalance, setShowBalance] = useState(true);
   const [lastProject, setLastProject] = useState<LastProject | null>(null);
   const [loadingProject, setLoadingProject] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [activeInvestments, setActiveInvestments] = useState<HomeActiveInvestment[]>([]);
   const [loadingActiveInvestments, setLoadingActiveInvestments] = useState(false);
   const [internalBalance, setInternalBalance] = useState<InternalAccountBalance | null>(null);
@@ -1884,6 +1932,39 @@ export default function HomePage() {
     router.push(`/feed/${projectId}`);
   };
 
+  const deleteProject = async (projectId: string) => {
+    if (deletingProjectId) return;
+
+    const project = lastProject?.id === projectId ? lastProject : null;
+    if (!project) return;
+
+    if (!canDeleteProject(project)) {
+      window.alert('This publication already has funding and cannot be deleted.');
+      return;
+    }
+
+    const confirmed = window.confirm('Delete this publication? This action cannot be undone.');
+    if (!confirmed) return;
+
+    setDeletingProjectId(projectId);
+
+    try {
+      const { error } = await deleteCurrentUserProject(getAccessToken, projectId);
+
+      if (error) {
+        window.alert(`Could not delete publication: ${error}`);
+        return;
+      }
+
+      setLastProject(null);
+      setSearchProjects((currentProjects) =>
+        currentProjects.filter((searchProject) => searchProject.id !== projectId)
+      );
+    } finally {
+      setDeletingProjectId(null);
+    }
+  };
+
   const openPortfolio = () => {
     router.push('/portfolio');
   };
@@ -1900,6 +1981,7 @@ export default function HomePage() {
         availableBalanceLabel={availableBalanceLabel}
         avatarUrl={avatarUrl}
         balanceCurrencyLabel={balanceCurrencyLabel}
+        deletingProjectId={deletingProjectId}
         displayName={displayName}
         fundingProgress={fundingProgress}
         investorAverageRate={investorAverageRate}
@@ -1913,6 +1995,7 @@ export default function HomePage() {
         onBellClick={() => router.push('/notifications')}
         onClearSearch={clearSearch}
         onCloseSearch={closeSearch}
+        onDeleteProject={(projectId) => void deleteProject(projectId)}
         onOpenHistory={openHistory}
         onOpenPortfolio={openPortfolio}
         onOpenProject={openProject}
