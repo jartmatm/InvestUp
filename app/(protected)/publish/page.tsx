@@ -338,6 +338,8 @@ const operatingTimeDescriptions: Record<(typeof operatingTimeOptions)[number], s
   '> 5 years': 'You have a mature business with long-term operating experience.',
 };
 
+const mobileStepOneProgressSteps = [2, 3, 4, 5, 6] as const;
+
 const complianceChecklistOptions = [
   'Confirmation the company is legally registered (NIF/CUIT/RUC, registration number)',
   'Legal structure: corporation, limited company, S.R.L., etc.',
@@ -1891,10 +1893,16 @@ export default function PublishPage() {
     return 'upcoming';
   };
 
-  const mobileProgressMilestone =
-    currentStep <= 5 ? 1
-    : currentStep <= 13 ? 2
-    : 3;
+  const mobileProgressSegmentFills = (() => {
+    if (currentStep <= 6) {
+      const currentIndex = mobileStepOneProgressSteps.findIndex((step) => step === currentStep);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      return [((safeIndex + 1) / mobileStepOneProgressSteps.length) * 100, 0, 0];
+    }
+
+    if (currentStep <= 13) return [100, 100, 0];
+    return [100, 100, 100];
+  })();
 
   const canContinueCurrentStep =
     currentStep === 1
@@ -3629,6 +3637,40 @@ export default function PublishPage() {
                   })}
                 </div>
               </motion.div>
+            ) : currentStep === 6 ? (
+              <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="flex min-h-0 items-end justify-center"
+                >
+                  <Lottie
+                    animationData={publishStep6Animation}
+                    loop
+                    autoplay
+                    className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
+                  className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]"
+                >
+                  <p className="text-[clamp(1.05rem,4.4vw,1.38rem)] font-extrabold leading-none tracking-[-0.035em] text-[#242424]">
+                    Step 2
+                  </p>
+                  <h1 className="mt-[clamp(0.55rem,1.6dvh,0.9rem)] max-w-[11.5ch] text-[clamp(2.25rem,10vw,4.05rem)] font-extrabold leading-[0.94] tracking-[-0.07em] text-[#1F1F1F]">
+                    Make your business stand out
+                  </h1>
+                  <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] text-[clamp(0.98rem,4.2vw,1.42rem)] font-medium leading-[1.32] tracking-[-0.026em] text-[#333333]">
+                    In this section, we&apos;ll collect key financial information from your business, then
+                    help you craft a strong title and description for investors.
+                  </p>
+                </motion.div>
+              </div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
@@ -3662,13 +3704,16 @@ export default function PublishPage() {
 
             <div className="shrink-0 space-y-[clamp(1rem,2.8dvh,1.45rem)] bg-white pt-[clamp(0.35rem,1.2dvh,0.8rem)]">
               <div className="grid grid-cols-3 gap-1.5">
-                {[1, 2, 3].map((milestone) => (
+                {mobileProgressSegmentFills.map((fill, index) => (
                   <span
-                    key={milestone}
-                    className={`h-[clamp(0.42rem,1.6vw,0.56rem)] rounded-full ${
-                      milestone <= mobileProgressMilestone ? 'bg-[#6B39F4]' : 'bg-[#E9E9E9]'
-                    }`}
-                  />
+                    key={`mobile-progress-${index}`}
+                    className="h-[clamp(0.42rem,1.6vw,0.56rem)] overflow-hidden rounded-full bg-[#E9E9E9]"
+                  >
+                    <span
+                      className="block h-full rounded-full bg-[#6B39F4] transition-[width] duration-300 ease-out"
+                      style={{ width: `${fill}%` }}
+                    />
+                  </span>
                 ))}
               </div>
 
