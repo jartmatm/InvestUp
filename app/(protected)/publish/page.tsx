@@ -331,6 +331,13 @@ const operatingTimeOptions = [
   '> 5 years',
 ] as const;
 
+const operatingTimeDescriptions: Record<(typeof operatingTimeOptions)[number], string> = {
+  '< 5 months': 'You are validating the first signals and building early traction.',
+  '5 months - 1 year': 'You have recent operating history and early customer evidence.',
+  '1 - 3 years': 'You have an established rhythm, sales history, and repeatable operations.',
+  '> 5 years': 'You have a mature business with long-term operating experience.',
+};
+
 const complianceChecklistOptions = [
   'Confirmation the company is legally registered (NIF/CUIT/RUC, registration number)',
   'Legal structure: corporation, limited company, S.R.L., etc.',
@@ -3570,6 +3577,58 @@ export default function PublishPage() {
                   </label>
                 </motion.div>
               </div>
+            ) : currentStep === 5 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.6rem,6dvh,4.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  How long has your business been operating?
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[28rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Pick the option that best matches your current stage.
+                </p>
+
+                <div className="mt-[clamp(1.35rem,3.8dvh,2.25rem)] space-y-[clamp(0.75rem,2.5dvh,1.1rem)] pb-6">
+                  {operatingTimeOptions.map((option) => {
+                    const isSelected = selectedOperatingTime === option;
+                    return (
+                      <motion.button
+                        key={option}
+                        type="button"
+                        onClick={() => setSelectedOperatingTime(option)}
+                        whileTap={{ scale: 0.99 }}
+                        className={`flex w-full items-center gap-4 rounded-[24px] border bg-white p-[clamp(1rem,4.5vw,1.45rem)] text-left transition ${
+                          isSelected
+                            ? 'border-[#242424] shadow-[0_14px_28px_rgba(15,23,42,0.08)]'
+                            : 'border-[#DEDEDE] shadow-[0_5px_12px_rgba(15,23,42,0.025)]'
+                        }`}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[clamp(1.05rem,4.5vw,1.38rem)] font-extrabold leading-[1.05] tracking-[-0.043em] text-[#262626]">
+                            {option}
+                          </span>
+                          <span className="mt-2 block text-[clamp(0.86rem,3.7vw,1.08rem)] font-medium leading-[1.28] tracking-[-0.02em] text-[#747474]">
+                            {operatingTimeDescriptions[option]}
+                          </span>
+                        </span>
+                        <span
+                          className={`flex h-[clamp(2.65rem,10.5vw,3.35rem)] w-[clamp(2.65rem,10.5vw,3.35rem)] shrink-0 items-center justify-center rounded-2xl ${
+                            isSelected ? 'bg-[#F2EEFF] text-[#4D20D8]' : 'bg-white text-[#242424]'
+                          }`}
+                        >
+                          <svg viewBox="0 0 24 24" className="h-[68%] w-[68%]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8" />
+                            <path d="M12 7v5l3.2 2" />
+                          </svg>
+                        </span>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
