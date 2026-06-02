@@ -1407,6 +1407,12 @@ export default function PublishPage() {
         video_url: uploadedVideo,
         metadata: {
           source: 'publish_wizard',
+          publication_form_fields: fields,
+          optimized_publication: generatedPublication,
+          generated_publication: {
+            tittle: generatedTittle,
+            description: generatedDescription,
+          },
           operating_time: selectedOperatingTime,
           funds_usage: fundUsage,
           compliance_selections: complianceSelections,
@@ -1468,6 +1474,7 @@ export default function PublishPage() {
     roundCloseDate,
     registeredWhatsappNumber,
     generatedTittle,
+    generatedPublication,
     businessName,
     selectedBusinessCategory,
     aboutFounder,

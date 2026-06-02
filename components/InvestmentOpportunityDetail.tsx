@@ -1,14 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentProps } from 'react';
 import { useTranslations } from 'next-intl';
-import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
+import { Carousel } from '@/components/application/carousel/carousel-base';
 import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
+
+type CarouselApi = Parameters<NonNullable<ComponentProps<typeof Carousel.Root>['setApi']>>[0];
 
 export type OpportunityMetric = {
   label: string;
   value: string;
-  icon: 'goal' | 'rate' | 'sales' | 'clients';
+  icon: 'goal' | 'rate' | 'sales' | 'clients' | 'time' | 'ticket';
+};
+
+export type OpportunityBadge = {
+  label: string;
+  value: string;
+  icon: 'location' | 'category' | 'investment' | 'rate' | 'calendar';
+};
+
+export type OpportunityGalleryItem = {
+  type: 'image' | 'video';
+  src: string;
+  alt?: string;
 };
 
 export type OpportunitySection = {
@@ -43,6 +57,8 @@ export type InvestmentOpportunityDetailProps = {
   videoUrl?: string | null;
   metrics: OpportunityMetric[];
   sections: OpportunitySection[];
+  badges?: OpportunityBadge[];
+  galleryItems?: OpportunityGalleryItem[];
   primaryActionLabel: string;
   secondaryActionLabel: string;
   onPrimaryAction: () => void;
@@ -66,6 +82,9 @@ const iconPaths = {
     'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6',
   clients:
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  time: 'M12 6v6l4 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  ticket: 'M4 7h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4V7ZM9 9v10',
+  calendar: 'M7 3v4M17 3v4M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z',
   overview: 'M4 5h16M4 12h16M4 19h10',
   problem: 'M12 9v4M12 17h.01M10.3 3.9 2.2 18a2 2 0 0 0 1.7 3h16.2a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
   solution:
@@ -129,6 +148,117 @@ const sectionTone = {
   extras: 'bg-[#EAFBF5] text-[#10A76F]',
 } as const;
 
+const buildDefaultGalleryItems = (
+  images: string[],
+  videoUrl: string | null | undefined,
+  title: string
+): OpportunityGalleryItem[] => [
+  ...images.map((src, index) => ({ type: 'image' as const, src, alt: `${title} ${index + 1}` })),
+  ...(videoUrl ? [{ type: 'video' as const, src: videoUrl, alt: `${title} video` }] : []),
+];
+
+function MediaCarousel({ items, title }: { items: OpportunityGalleryItem[]; title: string }) {
+  const t = useTranslations('Components');
+  const [api, setApi] = useState<CarouselApi | null>(null);
+  const hasMultipleItems = items.length > 1;
+
+  useEffect(() => {
+    if (!api || !hasMultipleItems) return;
+
+    const timer = window.setInterval(() => {
+      if (api.canScrollNext()) {
+        api.scrollNext();
+        return;
+      }
+      api.scrollTo(0);
+    }, 4200);
+
+    return () => window.clearInterval(timer);
+  }, [api, hasMultipleItems]);
+
+  if (items.length === 0) {
+    return (
+      <div className="flex aspect-[1.03/1] h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]">
+        {t('noImage')}
+      </div>
+    );
+  }
+
+  return (
+    <Carousel.Root
+      setApi={setApi}
+      opts={{ align: 'start', loop: hasMultipleItems, duration: 34 }}
+      className="aspect-[1.03/1] overflow-hidden rounded-[24px] bg-[#EEF1F7] shadow-[0_18px_45px_rgba(27,35,58,0.12)]"
+    >
+      <Carousel.Content className="h-full">
+        {items.map((item, index) => (
+          <Carousel.Item key={`${item.type}-${item.src}-${index}`} className="h-full">
+            {item.type === 'video' ? (
+              <video
+                src={item.src}
+                muted
+                playsInline
+                controls
+                className="h-full w-full bg-black object-cover"
+                aria-label={item.alt ?? `${title} video`}
+              />
+            ) : (
+              <img
+                src={item.src}
+                alt={item.alt ?? `${title} ${index + 1}`}
+                className="h-full w-full object-cover"
+              />
+            )}
+          </Carousel.Item>
+        ))}
+      </Carousel.Content>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/32 to-transparent" />
+
+      {hasMultipleItems ? (
+        <>
+          <Carousel.PrevTrigger className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
+            <span className="text-lg leading-none">&lt;</span>
+          </Carousel.PrevTrigger>
+          <Carousel.NextTrigger className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
+            <span className="text-lg leading-none">&gt;</span>
+          </Carousel.NextTrigger>
+          <Carousel.IndicatorGroup className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 backdrop-blur-md">
+            {({ index }) => (
+              <Carousel.Indicator
+                index={index}
+                className={({ isSelected }) =>
+                  `h-2.5 rounded-full transition-all ${isSelected ? 'w-6 bg-white' : 'w-2.5 bg-white/45'}`
+                }
+              />
+            )}
+          </Carousel.IndicatorGroup>
+        </>
+      ) : null}
+    </Carousel.Root>
+  );
+}
+
+function GalleryGrid({ items }: { items: OpportunityGalleryItem[] }) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      {items.map((item, index) => (
+        <div key={`gallery-${item.type}-${item.src}-${index}`} className="overflow-hidden rounded-[18px] border border-[#E4E9F2] bg-[#F5F7FB] shadow-[0_14px_32px_rgba(21,28,44,0.06)]">
+          <AspectRatio ratio="video" className="bg-[#EEF1F7]">
+            {item.type === 'video' ? (
+              <video src={item.src} controls className="h-full w-full object-cover" />
+            ) : (
+              <img src={item.src} alt={item.alt ?? `Gallery media ${index + 1}`} className="h-full w-full object-cover" />
+            )}
+          </AspectRatio>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function InvestmentOpportunityDetail({
   title,
   subtitle,
@@ -139,6 +269,8 @@ export default function InvestmentOpportunityDetail({
   videoUrl,
   metrics,
   sections,
+  badges,
+  galleryItems,
   primaryActionLabel,
   secondaryActionLabel,
   onPrimaryAction,
@@ -150,10 +282,26 @@ export default function InvestmentOpportunityDetail({
 }: InvestmentOpportunityDetailProps) {
   const t = useTranslations('Components');
   const normalizedImages = (images ?? []).filter(Boolean);
+  const normalizedGalleryItems = useMemo(
+    () =>
+      galleryItems?.length
+        ? galleryItems
+        : buildDefaultGalleryItems(normalizedImages, videoUrl, title),
+    [galleryItems, normalizedImages, title, videoUrl]
+  );
+  const carouselItems = normalizedGalleryItems.length
+    ? normalizedGalleryItems
+    : buildDefaultGalleryItems(normalizedImages, videoUrl, title);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const activeSectionIndexSafe =
     sections.length > 0 ? Math.min(activeSectionIndex, sections.length - 1) : 0;
   const activeSection = sections.length > 0 ? sections[activeSectionIndexSafe] ?? sections[0] : null;
+  const fallbackBadges: OpportunityBadge[] = [
+    location ? { label: 'Location', value: location, icon: 'location' } : null,
+    category ? { label: 'Category', value: category, icon: 'category' } : null,
+    rate ? { label: 'Interest rate', value: rate, icon: 'rate' } : null,
+  ].filter((item): item is OpportunityBadge => Boolean(item));
+  const visibleBadges = badges?.length ? badges : fallbackBadges;
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_18%_0%,rgba(124,92,255,0.12),transparent_30%),linear-gradient(180deg,#FBFCFF_0%,#F6F8FC_45%,#FFFFFF_100%)] text-[#10172F] lg:min-h-0 lg:bg-transparent">
@@ -169,57 +317,37 @@ export default function InvestmentOpportunityDetail({
           </button>
         </div>
 
-        <section className="rounded-[24px] bg-white/92 p-4 shadow-[0_24px_70px_rgba(27,35,58,0.08)] ring-1 ring-white/80 backdrop-blur-2xl">
-          <div className="grid gap-5 md:grid-cols-[1fr_0.88fr] md:items-center">
-            <div className="order-2 md:order-1">
-              <h1 className="text-[1.95rem] font-semibold leading-[1.08] tracking-normal text-[#10172F] md:text-[2.25rem]">
+        <section className="rounded-[28px] bg-white/94 p-4 shadow-[0_24px_70px_rgba(27,35,58,0.08)] ring-1 ring-white/80 backdrop-blur-2xl lg:p-6">
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,0.96fr)_minmax(440px,0.84fr)] lg:items-start">
+            <div className="order-2 lg:order-1">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#6B39F4]">tittle</p>
+              <h1 className="mt-3 text-[2.1rem] font-semibold leading-[1.04] tracking-[-0.055em] text-[#10172F] md:text-[2.65rem] lg:text-[3.05rem]">
                 {title}
               </h1>
               {subtitle ? (
-                <p className="mt-3 text-base font-medium leading-6 text-[#65708A]">{subtitle}</p>
+                <p className="mt-5 max-w-3xl text-base font-medium leading-7 text-[#65708A] lg:text-[1.02rem]">
+                  {subtitle}
+                </p>
               ) : null}
-              {location ? (
-                <div className="mt-5 flex items-center gap-2 text-sm font-medium text-[#65708A]">
-                  <DetailIcon name="location" className="h-5 w-5 text-[#6B39F4]" />
-                  <span>{location}</span>
-                </div>
-              ) : null}
-              <div className="mt-6 flex flex-wrap gap-3">
-                {category ? (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-[#F4EFFF] px-4 py-2 text-sm font-semibold text-[#6B39F4]">
-                    <DetailIcon name="category" className="h-4 w-4" />
-                    {category}
+
+              <div className="my-6 h-px w-full bg-[linear-gradient(90deg,#E2E7F0_0%,rgba(226,231,240,0)_100%)]" />
+
+              <div className="flex flex-wrap gap-2.5">
+                {visibleBadges.map((badge) => (
+                  <span
+                    key={`${badge.label}-${badge.value}`}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#E6EAF2] bg-white/82 px-3.5 py-2 text-xs font-bold text-[#344054] shadow-[0_10px_24px_rgba(21,28,44,0.055)]"
+                  >
+                    <DetailIcon name={badge.icon} className="h-4 w-4 text-[#6B39F4]" />
+                    <span className="text-[#8A94A8]">{badge.label}</span>
+                    <span>{badge.value}</span>
                   </span>
-                ) : null}
-                {rate ? (
-                  <span className="inline-flex items-center gap-2 rounded-full bg-[#EAFBF5] px-4 py-2 text-sm font-semibold text-[#0A9F69]">
-                    <DetailIcon name="trend" className="h-4 w-4" />
-                    {rate}
-                  </span>
-                ) : null}
+                ))}
               </div>
             </div>
 
-            <div className="order-1 md:order-2">
-              <div className="space-y-3">
-                <div className="relative">
-                <ProjectPhotoCarousel
-                  images={normalizedImages}
-                  alt={title}
-                  className="aspect-[1.03/1] rounded-[24px] bg-[#EEF1F7] shadow-[0_18px_45px_rgba(27,35,58,0.12)]"
-                  imageClassName="h-full w-full object-cover"
-                  emptyClassName="flex h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]"
-                />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/24 to-transparent" />
-              </div>
-                {videoUrl ? (
-                  <div className="overflow-hidden rounded-[20px] border border-[#E4E9F2] bg-white/80 p-2 shadow-[0_12px_30px_rgba(27,35,58,0.08)]">
-                    <AspectRatio ratio="video" className="overflow-hidden rounded-[14px]">
-                      <video src={videoUrl} controls className="h-full w-full object-cover" />
-                    </AspectRatio>
-                  </div>
-                ) : null}
-              </div>
+            <div className="order-1 lg:order-2">
+              <MediaCarousel items={carouselItems} title={title} />
             </div>
           </div>
         </section>
@@ -241,7 +369,7 @@ export default function InvestmentOpportunityDetail({
           </div>
         </section>
 
-        <nav className="sticky top-0 z-20 -mx-4 overflow-x-auto bg-[#F8FAFE]/86 px-4 py-2 backdrop-blur-xl lg:top-[68px] lg:rounded-2xl lg:border lg:border-[#E9ECF4] lg:bg-white/88 lg:shadow-[0_18px_42px_rgba(21,28,44,0.045)]">
+        <nav className="sticky top-0 z-20 -mx-4 overflow-x-auto bg-[#F8FAFE]/86 px-4 py-2 backdrop-blur-xl lg:top-[68px] lg:mx-0 lg:rounded-2xl lg:border lg:border-[#E9ECF4] lg:bg-white/88 lg:shadow-[0_18px_42px_rgba(21,28,44,0.045)]">
           <div className="flex min-w-max items-center gap-8 text-sm font-semibold text-[#65708A]">
             {sections.map((section, index) => (
               <button
@@ -281,6 +409,17 @@ export default function InvestmentOpportunityDetail({
                       ))}
                     </div>
                   ) : null}
+                  {activeSection.bullets?.length ? (
+                    <ul className="mt-4 grid gap-2 text-[0.92rem] leading-6 text-[#59657F]">
+                      {activeSection.bullets.map((bullet) => (
+                        <li key={bullet} className="flex gap-2">
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6B39F4]" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {activeSection.icon === 'gallery' ? <GalleryGrid items={normalizedGalleryItems} /> : null}
                 </div>
               </div>
             </article>

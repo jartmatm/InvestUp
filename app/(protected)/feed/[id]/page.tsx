@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
 import { DesktopAppShell } from '@/components/DesktopAppShell';
 import InvestmentOpportunityDetail, {
+  type OpportunityBadge,
+  type OpportunityGalleryItem,
   type OpportunityMetric,
   type OpportunitySection,
 } from '@/components/InvestmentOpportunityDetail';
@@ -28,6 +30,7 @@ type ProjectDetail = {
   term_months: number | null;
   installment_count: number | null;
   interest_rate: number | null;
+  address: string | null;
   city: string | null;
   country: string | null;
   publication_end_date: string | null;
@@ -35,6 +38,7 @@ type ProjectDetail = {
   photo_urls: string[] | null;
   video_url: string | null;
   owner_user_id: string | null;
+  owner_id: string | null;
   owner_wallet: string | null;
   metadata?: Record<string, unknown> | null;
 };
@@ -74,7 +78,36 @@ const coerceNumber = (value: unknown) => {
   return null;
 };
 
+const coerceTextList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.map((item) => coerceText(item)).filter(Boolean);
+  }
+
+  const text = coerceText(value);
+  if (!text) return [];
+
+  return text
+    .split(/\n+|;\s*|,\s(?=[A-Z0-9])/)
+    .map((item) => item.replace(/^[-*\u2022]\s*/, '').trim())
+    .filter(Boolean);
+};
+
 const getOptimizedSection = (optimized: Record<string, unknown>, keys: string[]) => {
+  const sections = optimized.sections;
+
+  if (isPlainObject(sections)) {
+    for (const key of keys) {
+      const value = sections[key];
+      const textValue = coerceText(value);
+      if (textValue) return textValue;
+
+      if (isPlainObject(value)) {
+        const paragraph = coerceText(value.paragraph) || coerceText(value.body) || coerceText(value.description);
+        if (paragraph) return paragraph;
+      }
+    }
+  }
+
   for (const key of keys) {
     const value = optimized[key];
     const textValue = coerceText(value);
@@ -99,87 +132,99 @@ const buildDetailMetrics = (
   t: Translate
 ): OpportunityMetric[] => [
   {
-    label: t('Detail.fundingGoal'),
-    value: formatAmount(project.amount_requested, project.currency, t('noAmount')),
-    icon: 'goal',
+    label: 'Operating time',
+    value: coerceText(formFields.operating_time) || coerceText(project.metadata?.operating_time) || t('ratePending'),
+    icon: 'time',
   },
   {
-    label: t('Detail.annualRate'),
-    value: project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending'),
-    icon: 'rate',
+    label: 'Monthly clients',
+    value: coerceText(formFields.monthly_clients) || coerceText(formFields.monthly_customers) || t('ratePending'),
+    icon: 'clients',
   },
   {
-    label: t('Detail.monthlySales'),
-    value: formatAmount(coerceNumber(formFields.monthly_revenue), project.currency, t('noAmount')),
+    label: 'Monthly sales',
+    value:
+      coerceText(formFields.monthly_sales) ||
+      coerceText(formFields.monthly_revenue) ||
+      formatAmount(coerceNumber(formFields.monthly_sales), project.currency, t('noAmount')),
     icon: 'sales',
   },
   {
-    label: t('Detail.activeClients'),
-    value: coerceText(formFields.monthly_customers) || t('ratePending'),
-    icon: 'clients',
+    label: 'Average ticket',
+    value: coerceText(formFields.average_ticket) || coerceText(formFields.avg_ticket) || t('ratePending'),
+    icon: 'ticket',
   },
 ];
 
-const buildOptimizedDetailSections = (optimized: Record<string, unknown>, t: Translate): OpportunitySection[] => {
+const buildOptimizedDetailSections = (
+  optimized: Record<string, unknown>,
+  businessName: string
+): OpportunitySection[] => {
   const definitions: Array<{
     title: string;
     icon: OpportunitySection['icon'];
     keys: string[];
+    bullets?: string[];
   }> = [
     {
-      title: t('Detail.overview'),
+      title: `About ${businessName}`,
       icon: 'overview',
-      keys: ['overview'],
+      keys: ['overview', 'about', 'what_we_do', 'whatWeDo'],
     },
     {
-      title: t('Detail.whatWeDo'),
+      title: 'Description',
       icon: 'what',
-      keys: ['whatWeDo', 'what_we_do'],
+      keys: ['description', 'summary', 'overview'],
     },
     {
-      title: t('Detail.howWeDoIt'),
-      icon: 'how',
-      keys: ['howWeDoIt', 'how_we_do_it'],
+      title: 'Highlights',
+      icon: 'traction',
+      keys: ['highlights'],
+      bullets: coerceTextList(optimized.highlights),
     },
     {
-      title: t('Detail.financialInformation'),
-      icon: 'financial',
-      keys: ['financialInformation', 'financial_information'],
+      title: 'Value',
+      icon: 'traction',
+      keys: ['traction', 'value', 'financialInformation', 'financial_information'],
     },
     {
-      title: t('Detail.investment'),
+      title: 'Market Opportunity',
+      icon: 'market',
+      keys: ['market_opportunity', 'marketOpportunity', 'target'],
+    },
+    {
+      title: 'Use of Funds',
+      icon: 'funds',
+      keys: ['use_of_funds', 'useOfFunds', 'investment'],
+    },
+    {
+      title: 'Investor Notes',
       icon: 'investment',
-      keys: ['investment'],
+      keys: ['investor_notes', 'investorNotes'],
     },
     {
-      title: t('Detail.target'),
-      icon: 'target',
-      keys: ['target'],
-    },
-    {
-      title: t('Detail.team'),
+      title: 'Owner Profile',
       icon: 'team',
-      keys: ['team'],
+      keys: ['extras', 'team', 'owner_profile', 'founder_profile'],
     },
     {
-      title: t('Detail.gallery'),
+      title: 'Gallery',
       icon: 'gallery',
-      keys: ['gallery'],
-    },
-    {
-      title: t('Detail.extras'),
-      icon: 'extras',
-      keys: ['extras'],
+      keys: ['gallery', 'media', 'multimedia'],
     },
   ];
 
   return definitions
-    .map((definition) => ({
-      title: definition.title,
-      body: getOptimizedSection(optimized, definition.keys),
-      icon: definition.icon,
-    }))
-    .filter((section) => section.body);
+    .map((definition) => {
+      const body = getOptimizedSection(optimized, definition.keys);
+      return {
+        title: definition.title,
+        body,
+        bullets: definition.bullets,
+        icon: definition.icon,
+      };
+    })
+    .filter((section) => section.body || section.bullets?.length || section.icon === 'gallery');
 };
 
 const buildFallbackDetailSections = (
@@ -284,16 +329,62 @@ const buildDetailSections = (
   optimized: Record<string, unknown>,
   t: Translate
 ): OpportunitySection[] => {
-  const optimizedSections = buildOptimizedDetailSections(optimized, t);
+  const businessName = coerceText(formFields.business_name) || project.business_name || project.title || 'Business';
+  const optimizedSections = buildOptimizedDetailSections(optimized, businessName);
   return optimizedSections.length ? optimizedSections : buildFallbackDetailSections(project, formFields, t);
 };
+
+const buildDetailBadges = (
+  project: ProjectDetail,
+  formFields: Record<string, unknown>,
+  category: string,
+  t: Translate
+): OpportunityBadge[] => {
+  const address =
+    coerceText(formFields.business_address) ||
+    coerceText(project.address) ||
+    [project.city, project.country].map(coerceText).filter(Boolean).join(', ') ||
+    t('locationPending');
+  const minimumInvestment =
+    coerceText(formFields.minimum_investment) ||
+    (project.minimum_investment
+      ? formatAmount(project.minimum_investment, project.currency, t('noAmount'))
+      : 'Not connected yet');
+  const interestRate = coerceText(formFields.interest_rate_ea) || (project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending'));
+  const roundCloseDate = coerceText(formFields.round_close_date) || project.publication_end_date || t('ratePending');
+
+  return [
+    { label: 'business_address', value: address, icon: 'location' },
+    { label: 'business_category', value: coerceText(formFields.business_category) || category, icon: 'category' },
+    { label: 'Minimum investment', value: minimumInvestment, icon: 'investment' },
+    { label: 'interest_rate_ea', value: interestRate, icon: 'rate' },
+    { label: 'round_close_date', value: roundCloseDate, icon: 'calendar' },
+  ].filter((badge) => badge.value) as OpportunityBadge[];
+};
+
+const buildGalleryItems = (project: ProjectDetail): OpportunityGalleryItem[] => [
+  ...(project.photo_urls ?? []).map((src, index) => ({
+    type: 'image' as const,
+    src,
+    alt: `${project.title} ${index + 1}`,
+  })),
+  ...(project.video_url
+    ? [
+        {
+          type: 'video' as const,
+          src: project.video_url,
+          alt: `${project.title} video`,
+        },
+      ]
+    : []),
+];
 
 export default function FeedDetailPage() {
   const t = useTranslations('Feed');
   const router = useRouter();
   const params = useParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
-  const { user, getAccessToken } = usePrivy();
+  const { getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -349,7 +440,6 @@ export default function FeedDetailPage() {
   }, [getAccessToken, projectId, rolSeleccionado, t]);
 
   const isEntrepreneurView = rolSeleccionado === 'emprendedor';
-  const canEditProject = Boolean(isEntrepreneurView && user?.id && project?.owner_user_id === user.id);
 
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
@@ -383,7 +473,7 @@ export default function FeedDetailPage() {
   const formFields = getMetadataObject(project, 'publication_form_fields');
   const optimizedPublication = getMetadataObject(project, 'optimized_publication');
   const detailTitle = project
-    ? coerceText(optimizedPublication.title) || coerceText(optimizedPublication.tittle) || project.title
+    ? coerceText(optimizedPublication.tittle) || coerceText(optimizedPublication.title) || project.title
     : '';
   const detailSubtitle = project
     ? coerceText(optimizedPublication.summary) ||
@@ -397,18 +487,15 @@ export default function FeedDetailPage() {
         .join(', ') ||
       t('locationPending')
     : '';
-  const primaryActionLabel = canEditProject ? t('edit') : isEntrepreneurView ? t('Detail.share') : t('invest');
+  const categoryLabel = project?.sector ? toEnglishSector(project.sector) : t('Detail.business');
+  const primaryActionLabel = isEntrepreneurView ? t('edit') : t('invest');
   const secondaryActionLabel = isEntrepreneurView ? t('Detail.share') : t('Detail.contactFounder');
   const detailT: Translate = (key, values) => t(key as never, values as never);
 
   const handlePrimaryAction = () => {
     if (!project) return;
-    if (canEditProject) {
-      router.push(`/portfolio?edit=${project.id}`);
-      return;
-    }
     if (isEntrepreneurView) {
-      openSharePopup();
+      router.push(`/portfolio?edit=${project.id}`);
       return;
     }
     router.push(`/feed/${project.id}/invest`);
@@ -440,10 +527,12 @@ export default function FeedDetailPage() {
         title={detailTitle}
         subtitle={detailSubtitle}
         location={locationLabel}
-        category={project.sector ? toEnglishSector(project.sector) : t('Detail.business')}
+        category={categoryLabel}
         rate={project.interest_rate ? `${project.interest_rate}% EA` : undefined}
         images={project.photo_urls ?? []}
         videoUrl={project.video_url}
+        badges={buildDetailBadges(project, formFields, categoryLabel, detailT)}
+        galleryItems={buildGalleryItems(project)}
         metrics={buildDetailMetrics(project, formFields, detailT)}
         sections={buildDetailSections(project, formFields, optimizedPublication, detailT)}
         primaryActionLabel={primaryActionLabel}
