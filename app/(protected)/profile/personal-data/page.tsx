@@ -13,6 +13,7 @@ import {
 } from '@/components/DesktopAppShell';
 import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { Button } from '@/components/tailgrids/core/button';
+import { Spinner } from '@/core/spinner';
 import { useInvestApp } from '@/lib/investapp-context';
 import { writeProfileAvatarCache, writeProfileSummaryCache } from '@/lib/profile-summary-cache';
 import {
@@ -906,7 +907,14 @@ export default function PersonalDataPage() {
               variant="primary"
               className="mt-5 h-12 rounded-2xl bg-[linear-gradient(135deg,#7C5CFF_0%,#5B2FF4_100%)] px-5 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:opacity-60"
             >
-              {saving ? t('saving') : t('saveProfile')}
+              {saving ? (
+                <>
+                  <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                  {t('saving')}
+                </>
+              ) : (
+                t('saveProfile')
+              )}
             </Button>
           </DesktopSectionCard>
         </section>
@@ -1110,7 +1118,14 @@ export default function PersonalDataPage() {
                         className="inline-flex min-h-[44px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#D9CCFF] bg-[#F6F1FF] px-4 text-sm font-semibold text-[#6B39F4] transition hover:-translate-y-0.5 hover:bg-[#F1E8FF]"
                       >
                         <IconUpload />
-                        {isUploading ? t('uploading') : t('upload')}
+                        {isUploading ? (
+                          <>
+                            <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                            {t('uploading')}
+                          </>
+                        ) : (
+                          t('upload')
+                        )}
                       </label>
                       <input
                         id={`kyc-upload-${item.type}`}
@@ -1267,7 +1282,14 @@ export default function PersonalDataPage() {
                   disabled={saving || loadingProfile}
                   className="flex min-h-[56px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-base font-semibold tracking-[-0.02em] text-white shadow-[0_22px_38px_rgba(107,57,244,0.28)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {saving ? t('saving') : t('saveChanges')}
+                  {saving ? (
+                    <>
+                      <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                      {t('saving')}
+                    </>
+                  ) : (
+                    t('saveChanges')
+                  )}
                 </Button>
               </div>
             </div>

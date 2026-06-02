@@ -22,6 +22,7 @@ import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
 import { FileUpload } from '@/components/application/file-upload/file-upload-base';
 import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
+import { Spinner } from '@/core/spinner';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   createCurrentUserPublicationPrompt,
@@ -2049,7 +2050,14 @@ export default function PublishPage() {
                   }
                   className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  {isContinuing ? 'Saving...' : 'Continue'}
+                  {isContinuing ? (
+                    <>
+                      <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Continue'
+                  )}
                 </button>
               </div>
             ) : null}
@@ -2246,7 +2254,14 @@ export default function PublishPage() {
                     disabled={!canContinueStep7 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isContinuing ? 'Saving...' : 'Continue'}
+                    {isContinuing ? (
+                      <>
+                        <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Continue'
+                    )}
                   </button>
                 </div>
               </motion.div>
@@ -2366,7 +2381,14 @@ export default function PublishPage() {
                     disabled={!canContinueStep8 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isContinuing ? 'Saving...' : 'Continue'}
+                    {isContinuing ? (
+                      <>
+                        <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Continue'
+                    )}
                   </button>
                 </div>
               </motion.div>
@@ -2442,7 +2464,14 @@ export default function PublishPage() {
                     disabled={!canContinueStep9 || isContinuing}
                     className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {isContinuing ? 'Saving...' : 'Continue'}
+                    {isContinuing ? (
+                      <>
+                        <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Continue'
+                    )}
                   </button>
                 </div>
               </motion.div>
@@ -2575,7 +2604,14 @@ export default function PublishPage() {
                         disabled={!canContinueStep11 || isContinuing}
                         className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        {isContinuing ? 'Saving...' : 'Continue'}
+                        {isContinuing ? (
+                          <>
+                            <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                            Saving...
+                          </>
+                        ) : (
+                          'Continue'
+                        )}
                       </button>
                     </div>
                   </>
@@ -2794,7 +2830,14 @@ export default function PublishPage() {
                         disabled={isPublishing}
                         className="h-12 rounded-full bg-[#6B39F4] px-7 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
                       >
-                        {isPublishing ? 'Publishing...' : 'Publish'}
+                        {isPublishing ? (
+                          <>
+                            <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                            Publishing...
+                          </>
+                        ) : (
+                          'Publish'
+                        )}
                       </button>
                     </div>
                   </div>
@@ -2814,6 +2857,7 @@ export default function PublishPage() {
                   className="h-[92%] w-[92%] max-h-full max-w-full"
                 />
                 <p className="mt-2 text-center text-base font-medium text-[#334155]">
+                  <Spinner size="md" type="dotted-round" className="mx-auto mb-3" />
                   {status || 'Publishing your project...'}
                 </p>
               </motion.div>

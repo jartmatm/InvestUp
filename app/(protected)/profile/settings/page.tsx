@@ -8,6 +8,7 @@ import {
   ProfilePageShell,
   ProfileSurface,
 } from '@/components/profile/ProfilePageShell';
+import { Toggle } from '@/components/tailgrids/core/toggle';
 import { useAppTheme } from '@/lib/app-theme';
 import { useInvestApp } from '@/lib/investapp-context';
 
@@ -86,25 +87,13 @@ function PreferenceSwitchCard({
               <p className="text-sm font-semibold text-[#1C2336]">{title}</p>
               <p className="mt-1 text-xs leading-5 text-[#7B879C]">{description}</p>
             </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={checked}
-              onClick={onToggle}
-              className={`relative h-8 w-14 rounded-full transition ${
-                checked
-                  ? activeTone === 'green'
-                    ? 'bg-[#14845A]'
-                    : 'bg-[#6B39F4]'
-                  : 'bg-[#D8DDEB]'
-              }`}
-            >
-              <span
-                className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow-[0_8px_18px_rgba(15,23,42,0.18)] transition ${
-                  checked ? 'left-7' : 'left-1'
-                }`}
-              />
-            </button>
+            <Toggle
+              size="md"
+              checked={checked}
+              onChange={onToggle}
+              aria-label={title}
+              className="accent-[#6B39F4]"
+            />
           </div>
 
           <div className="mt-4 rounded-[20px] border border-white/75 bg-white/78 px-3 py-2.5 text-xs font-medium text-[#5F6B82]">

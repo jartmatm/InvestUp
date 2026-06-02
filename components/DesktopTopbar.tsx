@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import DesktopUserMenu from '@/components/DesktopUserMenu';
 import { Button } from '@/components/tailgrids/core/button';
+import { Toast } from '@/components/tailgrids/core/toast';
+import { Spinner } from '@/core/spinner';
 import { isLocale, type AppLocale } from '@/i18n/locales';
 import { localizePath } from '@/i18n/pathnames';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -94,17 +96,21 @@ export default function DesktopTopbar({
   searchOverlay,
   searchPlaceholder,
   searchValue,
-  unreadNotificationsCount = 0,
+  unreadNotificationsCount,
 }: DesktopTopbarProps) {
   const t = useTranslations('Topbar');
   const locale = useLocale();
   const { getAccessToken, user } = usePrivy();
-  const { rolSeleccionado } = useInvestApp();
+  const { rolSeleccionado, unreadNotificationsCount: contextUnreadNotificationsCount } = useInvestApp();
+  const effectiveUnreadNotificationsCount =
+    unreadNotificationsCount ?? contextUnreadNotificationsCount;
   const activeLocale: AppLocale = isLocale(locale) ? locale : 'en';
   const isEntrepreneur = rolSeleccionado === 'emprendedor';
   const shouldResolvePublishState = isEntrepreneur && publishDisabled === undefined;
   const [hasCurrentProject, setHasCurrentProject] = useState(false);
   const [loadingProjectState, setLoadingProjectState] = useState(false);
+  const previousUnreadCountRef = useRef(effectiveUnreadNotificationsCount);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     if (!shouldResolvePublishState) return;
@@ -132,6 +138,28 @@ export default function DesktopTopbar({
     };
   }, [getAccessToken, shouldResolvePublishState, user?.id]);
 
+  useEffect(() => {
+    const previousCount = previousUnreadCountRef.current;
+    previousUnreadCountRef.current = effectiveUnreadNotificationsCount;
+
+    if (!notificationsEnabled || effectiveUnreadNotificationsCount <= previousCount) return;
+
+    const nextCount = effectiveUnreadNotificationsCount - previousCount;
+    const showTimer = window.setTimeout(() => {
+      setToastMessage(
+        nextCount === 1
+          ? 'You have 1 new notification.'
+          : `You have ${nextCount} new notifications.`
+      );
+    }, 0);
+    const hideTimer = window.setTimeout(() => setToastMessage(''), 4200);
+
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, [effectiveUnreadNotificationsCount, notificationsEnabled]);
+
   const effectivePublishDisabled = isEntrepreneur
     ? publishDisabled ?? (loadingProjectState || hasCurrentProject || !user?.id)
     : false;
@@ -152,7 +180,7 @@ export default function DesktopTopbar({
   const notificationContent = (
     <>
       <BellIcon />
-      <NotificationBadge count={unreadNotificationsCount} />
+      <NotificationBadge count={effectiveUnreadNotificationsCount} />
     </>
   );
 
@@ -199,12 +227,23 @@ export default function DesktopTopbar({
             if (effectivePublishDisabled) event.preventDefault();
           }}
         >
-          {isEntrepreneur ? <PlusIcon /> : <InvestIcon />}
+          {loadingProjectState ? (
+            <Spinner size="sm" type="dotted" className="inline-block align-[-4px]" />
+          ) : isEntrepreneur ? (
+            <PlusIcon />
+          ) : (
+            <InvestIcon />
+          )}
           {primaryCtaLabel}
         </Link>
 
         <DesktopUserMenu avatarUrl={avatarUrl} displayName={displayName} loading={loading} roleLabel={roleLabel} />
       </div>
+      {toastMessage ? (
+        <div className="fixed right-6 top-20 z-50 hidden lg:block">
+          <Toast variant="info" message={toastMessage} />
+        </div>
+      ) : null}
     </header>
   );
 }
