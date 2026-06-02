@@ -96,7 +96,6 @@ const requiredAddressKeys: Array<keyof PublishAddressStepFields> = [
   'street_address',
   'locality',
   'state',
-  'postcode',
   'formatted_address',
 ];
 
@@ -338,7 +337,40 @@ const operatingTimeDescriptions: Record<(typeof operatingTimeOptions)[number], s
   '> 5 years': 'You have a mature business with long-term operating experience.',
 };
 
-const mobileStepOneProgressSteps = [2, 3, 4, 5, 6] as const;
+const mobileStepOneProgressSteps = [1, 2, 3, 4, 5, 6] as const;
+
+const countryOptions = [
+  'Australia',
+  'United States',
+  'Canada',
+  'United Kingdom',
+  'Colombia',
+  'Argentina',
+  'Brazil',
+  'Chile',
+  'Mexico',
+  'Peru',
+  'Spain',
+  'France',
+  'Germany',
+  'Italy',
+  'Portugal',
+  'Netherlands',
+  'Switzerland',
+  'Sweden',
+  'Norway',
+  'Denmark',
+  'Finland',
+  'Ireland',
+  'New Zealand',
+  'Japan',
+  'Singapore',
+  'South Korea',
+  'India',
+  'China',
+  'United Arab Emirates',
+  'South Africa',
+] as const;
 
 const complianceChecklistOptions = [
   'Confirmation the company is legally registered (NIF/CUIT/RUC, registration number)',
@@ -715,6 +747,45 @@ function MobileWizardStepSkeletonOverlay() {
   );
 }
 
+function MobileMapPreview({
+  address,
+  compact = false,
+}: {
+  address: PublishAddressStepFields;
+  compact?: boolean;
+}) {
+  const primaryLabel = address.locality || address.state || address.country || 'Your business';
+  const secondaryLabel = address.country || 'Location';
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[28px] border border-[#DDE7D9] bg-[#CFE8F1] ${
+        compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
+      }`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,#E8F5CF_0_14%,transparent_15%),radial-gradient(circle_at_78%_22%,#DDF1C6_0_18%,transparent_19%),radial-gradient(circle_at_28%_78%,#EFF2D4_0_20%,transparent_21%),linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)]" />
+      <div className="absolute -left-8 top-8 h-40 w-48 rotate-[-16deg] rounded-[48%] bg-[#EAF3CF]/90" />
+      <div className="absolute right-[-3rem] top-10 h-56 w-48 rotate-[18deg] rounded-[44%] bg-[#DFF0C2]/90" />
+      <div className="absolute bottom-[-3rem] left-10 h-52 w-64 rotate-[12deg] rounded-[46%] bg-[#F4EBD0]/90" />
+      <div className="absolute inset-0 opacity-55">
+        <span className="absolute left-[-10%] top-[36%] h-1 w-[120%] rotate-[17deg] rounded-full bg-white/70" />
+        <span className="absolute left-[-12%] top-[58%] h-1 w-[120%] rotate-[-11deg] rounded-full bg-white/70" />
+        <span className="absolute left-[24%] top-[-8%] h-[120%] w-1 rotate-[8deg] rounded-full bg-white/70" />
+        <span className="absolute left-[68%] top-[-8%] h-[120%] w-1 rotate-[-15deg] rounded-full bg-white/70" />
+      </div>
+      <div className="absolute left-[8%] top-[18%] text-[clamp(0.8rem,3.5vw,1.08rem)] font-extrabold tracking-[-0.04em] text-[#6D7E68]/65">
+        {secondaryLabel}
+      </div>
+      <div className="absolute bottom-[16%] right-[8%] text-[clamp(0.8rem,3.5vw,1.08rem)] font-extrabold tracking-[-0.04em] text-[#6D7E68]/65">
+        {primaryLabel}
+      </div>
+      <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
+        <span className="h-[62%] w-[62%] rounded-full bg-black" />
+      </div>
+    </div>
+  );
+}
+
 function MobileIntroIcon({ type }: { type: 'describe' | 'standout' | 'publish' }) {
   const commonPathProps = {
     stroke: 'currentColor',
@@ -908,6 +979,7 @@ export default function PublishPage() {
   const [showMobileIntro, setShowMobileIntro] = useState(true);
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
+  const mobileLocationRequestedRef = useRef(false);
 
   const canContinueStep1 = useMemo(
     () => isAddressValid(address) && !checkingProject && !hasExistingProject,
@@ -1303,14 +1375,14 @@ export default function PublishPage() {
     return () => window.clearTimeout(timer);
   }, [currentStep]);
 
-  const applyAddressRecord = (record: BusinessAddressRecord, source: Exclude<AddressSource, ''>) => {
+  const applyAddressRecord = useCallback((record: BusinessAddressRecord, source: Exclude<AddressSource, ''>) => {
     setAddress(toAddressFromGeocode(record, source));
     setSearchQuery(record.formatted_address);
     setStatus('');
     setHasInteracted(true);
-  };
+  }, []);
 
-  const handleUseMyLocation = () => {
+  const handleUseMyLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setStatus('Geolocation is not available in this browser.');
       return;
@@ -1345,7 +1417,7 @@ export default function PublishPage() {
         timeout: 12000,
       }
     );
-  };
+  }, [applyAddressRecord]);
 
   const updateField = (key: keyof PublishAddressStepFields, value: string) => {
     setAddress((previous) => {
@@ -1364,15 +1436,15 @@ export default function PublishPage() {
   };
 
   const handleSaveManualAddress = () => {
+    const formattedManualAddress = buildFormattedAddressFromManualFields(address);
     const manualAddressWithFormatted: PublishAddressStepFields = {
       ...address,
-      formatted_address:
-        address.formatted_address.trim() || buildFormattedAddressFromManualFields(address),
+      formatted_address: formattedManualAddress || address.formatted_address.trim(),
       source: address.source || 'manual_edit',
     };
 
     if (!isAddressValid(manualAddressWithFormatted)) {
-      setStatus('Complete country, street, locality, state, postcode, and formatted address.');
+      setStatus('Complete country, street, locality, state, and formatted address.');
       return;
     }
 
@@ -1381,6 +1453,13 @@ export default function PublishPage() {
     setStatus('');
     setIsAddressModalOpen(false);
   };
+
+  useEffect(() => {
+    if (showMobileIntro || currentStep !== 1 || mobileLocationRequestedRef.current || address.formatted_address) return;
+
+    mobileLocationRequestedRef.current = true;
+    handleUseMyLocation();
+  }, [address.formatted_address, currentStep, handleUseMyLocation, showMobileIntro]);
 
   const handleMediaSelection = async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -3345,7 +3424,7 @@ export default function PublishPage() {
 
               <div className="mt-6 flex items-center justify-between gap-3">
                 <p className="text-xs text-[#64748B]">
-                  Required: country, street, locality, state, postcode. Formatted address is generated automatically.
+                  Required: country, street, locality, and state. Postcode is optional.
                 </p>
                 <button
                   type="button"
@@ -3353,6 +3432,161 @@ export default function PublishPage() {
                   className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Save address
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAddressModalOpen ? (
+          <motion.div
+            className="fixed inset-0 z-[95] flex items-end bg-black/35 backdrop-blur-[2px] lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="max-h-[92dvh] w-full overflow-hidden rounded-t-[34px] bg-white shadow-[0_-22px_60px_rgba(15,23,42,0.28)]"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              <div className="flex items-center border-b border-[#ECECEC] px-[clamp(1.25rem,5.6vw,2rem)] pb-4 pt-[max(env(safe-area-inset-top),1rem)]">
+                <button
+                  type="button"
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-[#242424] transition active:scale-95"
+                  aria-label="Close address editor"
+                >
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2">
+                    <path d="M6 6l12 12" />
+                    <path d="M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="max-h-[calc(92dvh-5rem)] overflow-y-auto px-[clamp(1.25rem,5.6vw,2rem)] pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 [-webkit-overflow-scrolling:touch]">
+                <h2 className="text-[clamp(2rem,8.5vw,3.25rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Enter your business address
+                </h2>
+
+                <div className="mt-5 space-y-3">
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      setSearchQuery(nextValue);
+                      if (nextValue.trim().length < 3) setSearchResults([]);
+                      setIsSearching(nextValue.trim().length >= 3);
+                      setStatus('');
+                    }}
+                    placeholder="Search your address"
+                    className="h-14 w-full rounded-2xl border border-[#D7D7D7] bg-white px-4 text-base font-semibold text-[#1F1F1F] outline-none transition placeholder:text-[#8E8E8E] focus:border-[#242424]"
+                  />
+
+                  <div className="max-h-36 overflow-y-auto rounded-2xl border border-[#E2E2E2] bg-[#FAFAFA]">
+                    {isSearching ? <p className="px-4 py-3 text-sm font-semibold text-[#6F6F6F]">Searching addresses...</p> : null}
+                    {!isSearching && searchResults.length > 0
+                      ? searchResults.map((result) => (
+                          <button
+                            key={`mobile-${result.provider_place_id}-${result.formatted_address}`}
+                            type="button"
+                            onClick={() => applyAddressRecord(result, 'manual_search')}
+                            className="w-full border-b border-[#EAEAEA] px-4 py-3 text-left text-sm font-semibold text-[#242424] last:border-b-0"
+                          >
+                            {result.formatted_address}
+                          </button>
+                        ))
+                      : null}
+                    {!isSearching && searchResults.length === 0 ? (
+                      <p className="px-4 py-3 text-sm font-medium text-[#8A8A8A]">Type 3+ characters or edit the fields manually.</p>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-5 overflow-hidden rounded-[24px] border border-[#9D9D9D]">
+                  <label className="block border-b border-[#9D9D9D] px-4 py-3">
+                    <span className="block text-sm font-semibold text-[#777777]">Country / region</span>
+                    <select
+                      value={address.country}
+                      onChange={(event) => updateField('country', event.target.value)}
+                      className="mt-1 h-9 w-full bg-transparent text-[1.35rem] font-medium tracking-[-0.04em] text-[#242424] outline-none"
+                    >
+                      <option value="">Select a country</option>
+                      {countryOptions.map((country) => (
+                        <option key={country} value={country}>
+                          {country}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block border-b border-[#9D9D9D] px-4 py-4">
+                    <span className="block text-sm font-semibold text-[#777777]">Flat number</span>
+                    <input
+                      value={address.unit}
+                      onChange={(event) => updateField('unit', event.target.value)}
+                      placeholder="Optional"
+                      className="mt-1 w-full bg-transparent text-[1.25rem] font-medium tracking-[-0.035em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                    />
+                  </label>
+
+                  <label className="block border-b border-[#9D9D9D] px-4 py-4">
+                    <span className="block text-sm font-semibold text-[#777777]">Street number / name</span>
+                    <input
+                      value={address.street_address}
+                      onChange={(event) => updateField('street_address', event.target.value)}
+                      placeholder="55 Haines Street"
+                      className="mt-1 w-full bg-transparent text-[1.25rem] font-medium tracking-[-0.035em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                    />
+                  </label>
+
+                  <label className="block border-b border-[#9D9D9D] px-4 py-4">
+                    <span className="block text-sm font-semibold text-[#777777]">Location / suburb</span>
+                    <input
+                      value={address.locality}
+                      onChange={(event) => updateField('locality', event.target.value)}
+                      placeholder="North Melbourne"
+                      className="mt-1 w-full bg-transparent text-[1.25rem] font-medium tracking-[-0.035em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                    />
+                  </label>
+
+                  <label className="block border-b border-[#9D9D9D] px-4 py-4">
+                    <span className="block text-sm font-semibold text-[#777777]">State / province</span>
+                    <input
+                      value={address.state}
+                      onChange={(event) => updateField('state', event.target.value)}
+                      placeholder="Victoria"
+                      className="mt-1 w-full bg-transparent text-[1.25rem] font-medium tracking-[-0.035em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                    />
+                  </label>
+
+                  <label className="block px-4 py-4">
+                    <span className="block text-sm font-semibold text-[#777777]">Postal code</span>
+                    <input
+                      value={address.postcode}
+                      onChange={(event) => updateField('postcode', event.target.value)}
+                      placeholder="Optional"
+                      className="mt-1 w-full bg-transparent text-[1.25rem] font-medium tracking-[-0.035em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5">
+                  <MobileMapPreview address={address} compact />
+                </div>
+
+                {status ? <p className="mt-3 text-sm font-semibold text-[#6B39F4]">{status}</p> : null}
+
+                <button
+                  type="button"
+                  onClick={handleSaveManualAddress}
+                  className="mt-5 flex h-14 w-full items-center justify-center rounded-[16px] bg-[#242424] text-lg font-extrabold tracking-[-0.04em] text-white transition active:scale-[0.99]"
+                >
+                  Looks good
                 </button>
               </div>
             </motion.div>
@@ -3471,7 +3705,7 @@ export default function PublishPage() {
         <MobilePublishIntroSplash
           onClose={() => router.push('/feed')}
           onStart={() => {
-            goToStep(2, false);
+            goToStep(1, false);
             setShowMobileIntro(false);
           }}
         />
@@ -3501,7 +3735,49 @@ export default function PublishPage() {
           </header>
 
           <section className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
-            {currentStep === 3 ? (
+            {currentStep === 1 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="flex min-h-0 flex-1 flex-col pt-[clamp(1.45rem,5.5dvh,3.4rem)]"
+              >
+                <h1 className="max-w-[11.5ch] text-[clamp(2.05rem,9vw,3.65rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Set your business address
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.95rem,3.95vw,1.24rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
+                  Start by selecting the exact address of your venture. We will prefill the structured fields
+                  for country, unit, street, locality, state, and postcode.
+                </p>
+
+                <div className="relative mt-[clamp(1.2rem,3.4dvh,2rem)] min-h-0 flex-1">
+                  <MobileMapPreview address={address} />
+                  <button
+                    type="button"
+                    onClick={() => setIsAddressModalOpen(true)}
+                    className="absolute left-4 right-4 top-4 flex min-h-[clamp(3.5rem,8.2dvh,4.65rem)] items-center gap-4 rounded-full bg-white px-[clamp(1rem,4.5vw,1.45rem)] text-left shadow-[0_16px_34px_rgba(15,23,42,0.16)] transition active:scale-[0.99]"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F3F3F3] text-[#1F1F1F]">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                        <path d="M12 2.25A7.25 7.25 0 0 0 4.75 9.5c0 5.2 6.35 11.6 6.62 11.87a.9.9 0 0 0 1.26 0c.27-.27 6.62-6.67 6.62-11.87A7.25 7.25 0 0 0 12 2.25Zm0 10.1a2.85 2.85 0 1 1 0-5.7 2.85 2.85 0 0 1 0 5.7Z" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[clamp(1rem,4.2vw,1.26rem)] font-extrabold tracking-[-0.04em] text-[#252525]">
+                        {address.formatted_address || 'Search your address'}
+                      </span>
+                      {geolocationLoading ? (
+                        <span className="mt-1 block text-sm font-semibold text-[#6B39F4]">Resolving your location...</span>
+                      ) : null}
+                    </span>
+                  </button>
+                </div>
+
+                {status && currentStep === 1 ? (
+                  <p className="mt-2 text-sm font-semibold text-[#6B39F4]">{status}</p>
+                ) : null}
+              </motion.div>
+            ) : currentStep === 3 ? (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
