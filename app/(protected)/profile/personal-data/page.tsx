@@ -11,7 +11,6 @@ import {
   DesktopMetricCard,
   DesktopSectionCard,
 } from '@/components/DesktopAppShell';
-import { Avatar } from '@/components/tailgrids/core/avatar';
 import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { Button } from '@/components/tailgrids/core/button';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -817,13 +816,17 @@ export default function PersonalDataPage() {
         <section className="grid grid-cols-[360px_minmax(0,1fr)] gap-6">
           <DesktopSectionCard title={t('identityProfile')} subtitle={t('identityProfileSubtitle')}>
             <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                <Avatar
-                  src={form.avatar_url ? form.avatar_url : undefined}
-                  alt={displayName}
-                  fallback={avatarInitial}
-                  className="h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] text-[2.2rem] font-semibold text-[#5D35E8] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]"
-                />
+              <div className="relative h-32 w-32 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
+                {form.avatar_url ? (
+                  <span
+                    className="block h-full w-full rounded-full bg-cover bg-center"
+                    style={{ backgroundImage: `url("${form.avatar_url}")` }}
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center rounded-full text-[2.2rem] font-semibold text-[#5D35E8]">
+                    {avatarInitial}
+                  </span>
+                )}
                 <span className="absolute bottom-2 right-2 flex h-9 w-9 items-center justify-center rounded-full border border-white/80 bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_24px_rgba(107,57,244,0.28)]">
                   <IconCamera />
                 </span>
@@ -941,13 +944,17 @@ export default function PersonalDataPage() {
 
           <Surface className="bg-[linear-gradient(160deg,rgba(107,57,244,0.14)_0%,rgba(255,255,255,0.94)_46%,rgba(76,110,245,0.08)_100%)]">
             <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                <Avatar
-                  src={form.avatar_url ? form.avatar_url : undefined}
-                  alt={displayName}
-                  fallback={avatarInitial}
-                  className="h-28 w-28 rounded-full border-[4px] border-white bg-[#F4F0FF] text-[2rem] font-semibold text-[#5D35E8] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]"
-                />
+              <div className="relative h-28 w-28 rounded-full border-[4px] border-white bg-[#F4F0FF] shadow-[0_18px_38px_rgba(31,38,64,0.14)] ring-1 ring-[#E0D8FF]">
+                {form.avatar_url ? (
+                  <span
+                    className="block h-full w-full rounded-full bg-cover bg-center"
+                    style={{ backgroundImage: `url("${form.avatar_url}")` }}
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center rounded-full text-[2rem] font-semibold text-[#5D35E8]">
+                    {avatarInitial}
+                  </span>
+                )}
                 <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full border border-white/80 bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] text-white shadow-[0_12px_24px_rgba(107,57,244,0.28)]">
                   <IconCamera />
                 </span>
