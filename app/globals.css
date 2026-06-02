@@ -218,6 +218,39 @@ h6 {
   letter-spacing: -0.022em;
 }
 
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  background: #cfe8f1;
+  font: inherit;
+}
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.leaflet-container img {
+  max-width: none !important;
+}
+
 p,
 li,
 label,

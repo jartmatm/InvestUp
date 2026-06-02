@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
-import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -77,6 +76,11 @@ type ProgressStep = {
   description: string;
 };
 
+type LeafletModules = {
+  leaflet: typeof import('leaflet');
+  reactLeaflet: typeof import('react-leaflet');
+};
+
 const desktopFontFamily = '"Sora", "Manrope", "Avenir Next", "Segoe UI", sans-serif';
 
 const emptyAddress: PublishAddressStepFields = {
@@ -127,7 +131,6 @@ const mobileSurfaceClassName =
   'rounded-[26px] border border-white/80 bg-white/90 p-5 shadow-[0_22px_52px_rgba(17,24,39,0.08)] backdrop-blur-sm';
 
 const wizardStepSkeletonDurationMs = 320;
-const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
 const defaultMobileMapCenter = { lat: -37.8136, lng: 144.9631 };
 
 const inputClassName =
@@ -757,10 +760,48 @@ function MobileMapPreview({
   address: PublishAddressStepFields;
   compact?: boolean;
 }) {
+  const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
   const mapCenter =
     typeof address.latitude === 'number' && typeof address.longitude === 'number'
       ? { lat: address.latitude, lng: address.longitude }
       : defaultMobileMapCenter;
+  const markerPosition: [number, number] = [mapCenter.lat, mapCenter.lng];
+  const zoom = typeof address.latitude === 'number' && typeof address.longitude === 'number' ? 15 : 4;
+
+  useEffect(() => {
+    let active = true;
+
+    Promise.all([import('leaflet'), import('react-leaflet')]).then(([leaflet, reactLeaflet]) => {
+      if (active) setLeafletModules({ leaflet, reactLeaflet });
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!leafletModules) {
+    return (
+      <div
+        className={`relative overflow-hidden rounded-[28px] border border-[#DDE7D9] bg-[linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)] ${
+          compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
+        }`}
+      >
+        <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
+          <span className="h-[62%] w-[62%] rounded-full bg-black" />
+        </div>
+      </div>
+    );
+  }
+
+  const { leaflet, reactLeaflet } = leafletModules;
+  const { MapContainer, Marker, TileLayer } = reactLeaflet;
+  const markerIcon = leaflet.divIcon({
+    className: '',
+    html: '<span style="display:flex;height:42px;width:42px;align-items:center;justify-content:center;border-radius:999px;background:white;box-shadow:0 10px 28px rgba(15,23,42,.22)"><span style="height:26px;width:26px;border-radius:999px;background:#000"></span></span>',
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+  });
 
   return (
     <div
@@ -768,31 +809,21 @@ function MobileMapPreview({
         compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
       }`}
     >
-      {googleMapsApiKey ? (
-        <APIProvider apiKey={googleMapsApiKey}>
-          <Map
-            center={mapCenter}
-            defaultZoom={typeof address.latitude === 'number' && typeof address.longitude === 'number' ? 15 : 4}
-            disableDefaultUI
-            gestureHandling="greedy"
-            mapTypeControl={false}
-            streetViewControl={false}
-            fullscreenControl={false}
-            className="h-full w-full"
-          >
-            <Marker position={mapCenter} />
-          </Map>
-        </APIProvider>
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_18%,#E8F5CF_0_14%,transparent_15%),radial-gradient(circle_at_78%_22%,#DDF1C6_0_18%,transparent_19%),radial-gradient(circle_at_28%_78%,#EFF2D4_0_20%,transparent_21%),linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)]">
-          <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
-            <span className="h-[62%] w-[62%] rounded-full bg-black" />
-          </div>
-          <p className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/85 px-4 py-3 text-xs font-semibold text-[#334155] shadow-[0_10px_24px_rgba(15,23,42,0.12)]">
-            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable Google Maps.
-          </p>
-        </div>
-      )}
+      <MapContainer
+        key={`${mapCenter.lat}-${mapCenter.lng}-${zoom}`}
+        center={markerPosition}
+        zoom={zoom}
+        zoomControl={false}
+        attributionControl={false}
+        className="h-full w-full"
+        style={{ height: '100%', width: '100%' }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={markerPosition} icon={markerIcon} />
+      </MapContainer>
     </div>
   );
 }
