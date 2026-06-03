@@ -83,6 +83,8 @@ type ProgressStepStatus = 'completed' | 'current' | 'upcoming';
 
 type MobileInvestmentRoundSubstep = 'capital' | 'minimum' | 'details';
 
+type MobileMediaSource = 'gallery' | 'camera';
+
 type PublishCollapsibleKey =
   | 'desktop-step7-metrics'
   | 'desktop-step8-funds'
@@ -1056,6 +1058,10 @@ export default function PublishPage() {
   const [pendingMediaItems, setPendingMediaItems] = useState<UploadMediaItem[]>([]);
   const [uploadedMediaItems, setUploadedMediaItems] = useState<UploadMediaItem[]>([]);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isMobileMediaUploadOpen, setIsMobileMediaUploadOpen] = useState(false);
+  const [isPreparingMobileMedia, setIsPreparingMobileMedia] = useState(false);
+  const [mobileMediaSource, setMobileMediaSource] = useState<MobileMediaSource>('gallery');
+  const [mobileMediaSelectionTotal, setMobileMediaSelectionTotal] = useState(0);
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
   const [isGeneratingPublication, setIsGeneratingPublication] = useState(false);
   const [generatedPublication, setGeneratedPublication] = useState<OptimizedPublication | null>(null);
@@ -1072,6 +1078,8 @@ export default function PublishPage() {
   const stepSkeletonTimeoutRef = useRef<number | null>(null);
   const mediaItemsRef = useRef<UploadMediaItem[]>([]);
   const mobileLocationRequestedRef = useRef(false);
+  const mobileGalleryInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const canContinueStep1 = useMemo(
     () => isAddressValid(address) && !checkingProject && !hasExistingProject,
@@ -1631,6 +1639,44 @@ export default function PublishPage() {
     setPendingMediaItems((previous) => [...previous, ...mapped]);
   };
 
+  const openMobileMediaPicker = (source: MobileMediaSource) => {
+    setMobileMediaSource(source);
+    if (source === 'camera') {
+      mobileCameraInputRef.current?.click();
+      return;
+    }
+    mobileGalleryInputRef.current?.click();
+  };
+
+  const handleMobileMediaInputChange = async (
+    fileList: FileList | null,
+    source: MobileMediaSource,
+  ) => {
+    const selectedCount = fileList?.length ?? 0;
+    if (selectedCount === 0) return;
+
+    setMobileMediaSource(source);
+    setMobileMediaSelectionTotal((previous) => previous + selectedCount);
+    setIsMobileMediaUploadOpen(true);
+    setIsPreparingMobileMedia(true);
+
+    try {
+      await handleMediaSelection(fileList);
+    } finally {
+      setIsPreparingMobileMedia(false);
+    }
+  };
+
+  const handleCancelMobileMediaUpload = () => {
+    setPendingMediaItems((previous) => {
+      previous.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
+    setMobileMediaSelectionTotal(0);
+    setIsPreparingMobileMedia(false);
+    setIsMobileMediaUploadOpen(false);
+  };
+
   const handleRemovePendingMedia = (mediaId: string) => {
     setPendingMediaItems((previous) => {
       const target = previous.find((item) => item.id === mediaId);
@@ -1661,7 +1707,9 @@ export default function PublishPage() {
       })
     );
     setPendingMediaItems([]);
+    setMobileMediaSelectionTotal(0);
     setIsUploadingMedia(false);
+    setIsMobileMediaUploadOpen(false);
   };
 
   const handleDragStartMedia = (mediaId: string) => {
@@ -2295,6 +2343,30 @@ export default function PublishPage() {
 
   return (
     <>
+      <input
+        ref={mobileGalleryInputRef}
+        type="file"
+        accept="image/*,video/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          const files = event.currentTarget.files;
+          void handleMobileMediaInputChange(files, 'gallery');
+          event.currentTarget.value = '';
+        }}
+      />
+      <input
+        ref={mobileCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(event) => {
+          const files = event.currentTarget.files;
+          void handleMobileMediaInputChange(files, 'camera');
+          event.currentTarget.value = '';
+        }}
+      />
       <DesktopAppShell
         title=""
         subtitle=""
@@ -4654,6 +4726,168 @@ export default function PublishPage() {
                   </p>
                 </motion.div>
               </div>
+            ) : currentStep === 11 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.6rem,6dvh,4.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Upload photos and videos of your business
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Add at least 5 photos from your gallery, include a video if you want, or take new photos now.
+                </p>
+
+                <div className="mt-[clamp(1.35rem,3.8dvh,2.25rem)] space-y-[clamp(0.75rem,2.5dvh,1.1rem)] pb-6">
+                  <button
+                    type="button"
+                    onClick={() => openMobileMediaPicker('gallery')}
+                    className="flex min-h-[clamp(5rem,12dvh,6.25rem)] w-full items-center gap-5 rounded-[24px] border border-[#DEDEDE] bg-white px-[clamp(1rem,4.4vw,1.45rem)] text-left shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.99]"
+                  >
+                    <span className="text-[clamp(2rem,8vw,2.7rem)] font-light leading-none text-[#242424]">
+                      +
+                    </span>
+                    <span className="text-[clamp(1.05rem,4.5vw,1.35rem)] font-extrabold tracking-[-0.045em] text-[#262626]">
+                      Add Photos
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openMobileMediaPicker('camera')}
+                    className="flex min-h-[clamp(5rem,12dvh,6.25rem)] w-full items-center gap-5 rounded-[24px] border border-[#DEDEDE] bg-white px-[clamp(1rem,4.4vw,1.45rem)] text-left shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.99]"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-[clamp(1.65rem,6vw,2.1rem)] w-[clamp(1.65rem,6vw,2.1rem)] text-[#242424]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.9" aria-hidden="true">
+                      <path d="M8 7h.1" />
+                      <path d="M5 7h2l1.4-2h7.2L17 7h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" />
+                      <circle cx="12" cy="14" r="4" />
+                    </svg>
+                    <span className="text-[clamp(1.05rem,4.5vw,1.35rem)] font-extrabold tracking-[-0.045em] text-[#262626]">
+                      Take new photos
+                    </span>
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {isMobileMediaUploadOpen ? (
+                    <motion.div
+                      className="fixed inset-0 z-[110] flex flex-col bg-white"
+                      initial={{ opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 18 }}
+                      transition={{ duration: 0.24, ease: 'easeOut' }}
+                    >
+                      <header className="shrink-0 border-b border-[#E9E9E9] bg-white px-[clamp(1.25rem,5.6vw,2.1rem)] pb-4 pt-[max(env(safe-area-inset-top),1rem)]">
+                        <div className="grid min-h-[4rem] grid-cols-[3rem_1fr_3rem] items-center">
+                          <button
+                            type="button"
+                            onClick={() => setIsMobileMediaUploadOpen(false)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full text-[#242424] transition active:scale-[0.96]"
+                            aria-label="Close upload screen"
+                          >
+                            <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="1.9">
+                              <path d="M6 6l12 12" />
+                              <path d="M18 6L6 18" />
+                            </svg>
+                          </button>
+                          <div className="text-center">
+                            <p className="text-[clamp(1.1rem,4.7vw,1.45rem)] font-extrabold leading-tight tracking-[-0.045em] text-[#242424]">
+                              Upload
+                            </p>
+                            <p className="mt-0.5 text-[clamp(0.82rem,3.5vw,1rem)] font-semibold tracking-[-0.02em] text-[#777777]">
+                              {isPreparingMobileMedia
+                                ? `${pendingMediaItems.length} of ${Math.max(mobileMediaSelectionTotal, pendingMediaItems.length)} files loaded`
+                                : `${pendingMediaItems.length} of ${pendingMediaItems.length} files loaded`}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openMobileMediaPicker(mobileMediaSource)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full text-[#242424] transition active:scale-[0.96]"
+                            aria-label="Add more media"
+                          >
+                            <span className="text-[2.1rem] font-light leading-none">+</span>
+                          </button>
+                        </div>
+                      </header>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto px-[clamp(1.25rem,5.6vw,2.1rem)] py-5 [-webkit-overflow-scrolling:touch]">
+                        {pendingMediaItems.length === 0 ? (
+                          <div className="flex min-h-[46dvh] flex-col items-center justify-center rounded-[28px] border border-dashed border-[#DCDCDC] bg-[#FAFAFA] text-center">
+                            <Spinner size="lg" type="dotted" className="text-[#6B39F4]" />
+                            <p className="mt-4 text-sm font-semibold text-[#777777]">
+                              Preparing selected media...
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-[clamp(0.8rem,3.5vw,1.1rem)] pb-8">
+                            {pendingMediaItems.map((item) => (
+                              <div
+                                key={item.id}
+                                className="relative overflow-hidden rounded-[18px] bg-[#F2F2F2] shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePendingMedia(item.id)}
+                                  className="absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm transition active:scale-[0.95]"
+                                  aria-label="Remove media"
+                                >
+                                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2">
+                                    <path d="M6 6l12 12" />
+                                    <path d="M18 6L6 18" />
+                                  </svg>
+                                </button>
+                                <AspectRatio customRatio={1}>
+                                  {item.type === 'video' ? (
+                                    <video src={item.previewUrl} className="h-full w-full object-cover" muted playsInline />
+                                  ) : (
+                                    <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+                                  )}
+                                  {isUploadingMedia ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                                      <Spinner size="lg" type="dotted" className="text-white" />
+                                    </div>
+                                  ) : null}
+                                </AspectRatio>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <footer className="shrink-0 bg-white px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[max(env(safe-area-inset-bottom),1rem)] pt-4 shadow-[0_-16px_36px_rgba(15,23,42,0.05)]">
+                        <div className="flex items-center justify-between gap-5">
+                          <button
+                            type="button"
+                            onClick={handleCancelMobileMediaUpload}
+                            disabled={isUploadingMedia}
+                            className="text-[clamp(1rem,4.2vw,1.25rem)] font-extrabold tracking-[-0.035em] text-[#242424] transition active:scale-[0.98] disabled:opacity-40"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleUploadPendingMedia()}
+                            disabled={pendingMediaItems.length === 0 || isPreparingMobileMedia || isUploadingMedia}
+                            className="flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(8rem,31vw,11rem)] items-center justify-center rounded-[16px] bg-[#242424] px-6 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(15,23,42,0.18)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[#DCDCDC] disabled:shadow-none"
+                          >
+                            {isUploadingMedia ? (
+                              <>
+                                <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
+                                Saving...
+                              </>
+                            ) : (
+                              'Save'
+                            )}
+                          </button>
+                        </div>
+                      </footer>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
