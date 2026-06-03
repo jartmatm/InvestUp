@@ -26,6 +26,21 @@ const iconWrapperStyle = cva(
   }
 );
 
+const toastContainerStyle = cva(
+  "flex max-w-112.5 min-w-96.25 items-center gap-3 rounded-lg border-2 bg-white p-3 shadow-[0_18px_42px_rgba(15,23,42,0.14)]",
+  {
+    variants: {
+      variant: {
+        success: "border-emerald-500",
+        error: "border-red-500",
+        info: "border-blue-500",
+        warning: "border-amber-500",
+        default: "border-primary-500"
+      }
+    }
+  }
+);
+
 type MessageType =
   | string
   | {
@@ -52,7 +67,7 @@ export function Toast({
   return (
     <div
       className={cn(
-        "flex max-w-112.5 min-w-96.25 items-center gap-3 rounded-lg border border-base-200 p-3 shadow-sm bg-background-100",
+        toastContainerStyle({ variant }),
         typeof message === "object" && "relative items-start",
         hideIcon && "py-2"
       )}

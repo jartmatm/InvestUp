@@ -44,6 +44,16 @@ import {
   TableRow,
 } from '@/components/tailgrids/core/table';
 import { TabContent, TabList, TabRoot, TabTrigger } from '@/components/tailgrids/core/tabs';
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogOverlay,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/tailgrids/core/dialog';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   createCurrentUserPublicationPrompt,
@@ -172,6 +182,37 @@ const defaultMobileMapCenter = { lat: -37.8136, lng: 144.9631 };
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
 const publishCollapsibleDataAttribute = { 'data-publish-collapsible': 'true' } as const;
+
+const numericFormatter = new Intl.NumberFormat('en-US', {
+  maximumFractionDigits: 2,
+});
+
+const sanitizeNumericInput = (value: string) => {
+  const normalized = value.replace(/,/g, '').replace(/[^\d.]/g, '');
+  const [integer = '', ...decimalParts] = normalized.split('.');
+  const decimal = decimalParts.join('');
+  return decimalParts.length > 0 ? `${integer}.${decimal}` : integer;
+};
+
+const isNonNegativeNumericInput = (value: string) => {
+  const normalized = sanitizeNumericInput(value).trim();
+  if (normalized.length === 0) return false;
+  const numeric = Number(normalized);
+  return Number.isFinite(numeric) && numeric >= 0;
+};
+
+const formatAmountValue = (value: string) => {
+  const normalized = sanitizeNumericInput(value).trim();
+  if (normalized.length === 0) return '';
+  const numeric = Number(normalized);
+  if (!Number.isFinite(numeric)) return normalized;
+  return numericFormatter.format(numeric);
+};
+
+const formatCurrencyAmount = (value: string, fallback = '0') => {
+  const formatted = formatAmountValue(value);
+  return formatted || fallback;
+};
 
 const mediaImageMaxDimension = 1600;
 const mediaImageWebpQuality = 0.82;
@@ -1072,6 +1113,7 @@ export default function PublishPage() {
   const [isMobileMediaUploadOpen, setIsMobileMediaUploadOpen] = useState(false);
   const [isPreparingMobileMedia, setIsPreparingMobileMedia] = useState(false);
   const [showMobileMediaSavedSplash, setShowMobileMediaSavedSplash] = useState(false);
+  const [shouldContinueAfterMobileMediaSave, setShouldContinueAfterMobileMediaSave] = useState(false);
   const [mobileMediaSource, setMobileMediaSource] = useState<MobileMediaSource>('gallery');
   const [mobileMediaSelectionTotal, setMobileMediaSelectionTotal] = useState(0);
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
@@ -1137,9 +1179,9 @@ export default function PublishPage() {
     () =>
       businessOffer.trim().length > 0 &&
       businessDifferentiator.trim().length > 0 &&
-      Number(monthlySales) > 0 &&
-      Number(averageTicket) > 0 &&
-      Number(monthlyClients) > 0 &&
+      isNonNegativeNumericInput(monthlySales) &&
+      isNonNegativeNumericInput(averageTicket) &&
+      isNonNegativeNumericInput(monthlyClients) &&
       !checkingProject &&
       !hasExistingProject,
     [
@@ -1326,8 +1368,8 @@ export default function PublishPage() {
 
   const previewKpis = useMemo(
     () => [
-      { label: 'capital_required_usd', value: capitalRequiredUsd.trim() ? `$${capitalRequiredUsd.trim()}` : '$0' },
-      { label: 'minimum_invest', value: minimumInvestmentUsd.trim() ? `$${minimumInvestmentUsd.trim()}` : '$0' },
+      { label: 'capital_required_usd', value: `$${formatCurrencyAmount(capitalRequiredUsd)}` },
+      { label: 'minimum_invest', value: `$${formatCurrencyAmount(minimumInvestmentUsd)}` },
       { label: 'interest_rate_ea', value: interestRateEA.trim() ? `${interestRateEA.trim()}%` : '0%' },
       { label: 'round_close_date', value: roundCloseDate.trim() || 'Not selected' },
     ],
@@ -1453,18 +1495,18 @@ export default function PublishPage() {
           setBusinessDifferentiator(
             typeof fields.competitive_edge === 'string' ? fields.competitive_edge : ''
           );
-          setMonthlySales(typeof fields.monthly_sales === 'string' ? fields.monthly_sales : '');
-          setAverageTicket(typeof fields.average_ticket === 'string' ? fields.average_ticket : '');
-          setMonthlyClients(typeof fields.monthly_clients === 'string' ? fields.monthly_clients : '');
+          setMonthlySales(typeof fields.monthly_sales === 'string' ? sanitizeNumericInput(fields.monthly_sales) : '');
+          setAverageTicket(typeof fields.average_ticket === 'string' ? sanitizeNumericInput(fields.average_ticket) : '');
+          setMonthlyClients(typeof fields.monthly_clients === 'string' ? sanitizeNumericInput(fields.monthly_clients) : '');
           setCapitalRequiredUsd(
-            typeof fields.capital_required_usd === 'string' ? fields.capital_required_usd : ''
+            typeof fields.capital_required_usd === 'string' ? sanitizeNumericInput(fields.capital_required_usd) : ''
           );
           setFundUsage(typeof fields.funds_usage === 'string' ? fields.funds_usage : '');
           setMinimumInvestmentUsd(
             typeof fields.minimum_investment_usd === 'string'
-              ? fields.minimum_investment_usd
+              ? sanitizeNumericInput(fields.minimum_investment_usd)
               : typeof fields.minimum_investment === 'string'
-                ? fields.minimum_investment
+                ? sanitizeNumericInput(fields.minimum_investment)
                 : ''
           );
           setInterestRateEA(typeof fields.interest_rate_ea === 'string' ? fields.interest_rate_ea : '');
@@ -1569,6 +1611,25 @@ export default function PublishPage() {
     },
     []
   );
+
+  useEffect(() => {
+    const originalBodyOverflowX = document.body.style.overflowX;
+    const originalBodyOverscrollX = document.body.style.overscrollBehaviorX;
+    const originalHtmlOverflowX = document.documentElement.style.overflowX;
+    const originalHtmlOverscrollX = document.documentElement.style.overscrollBehaviorX;
+
+    document.body.style.overflowX = 'hidden';
+    document.body.style.overscrollBehaviorX = 'none';
+    document.documentElement.style.overflowX = 'hidden';
+    document.documentElement.style.overscrollBehaviorX = 'none';
+
+    return () => {
+      document.body.style.overflowX = originalBodyOverflowX;
+      document.body.style.overscrollBehaviorX = originalBodyOverscrollX;
+      document.documentElement.style.overflowX = originalHtmlOverflowX;
+      document.documentElement.style.overscrollBehaviorX = originalHtmlOverscrollX;
+    };
+  }, []);
 
   useEffect(() => {
     if (currentStep !== 16 || previewCarouselItems.length <= 1) return;
@@ -1748,6 +1809,24 @@ export default function PublishPage() {
     });
   };
 
+  const handleDropPendingMedia = (targetId: string) => {
+    if (!draggedMediaId || draggedMediaId === targetId) return;
+
+    setPendingMediaItems((previous) => {
+      const fromIndex = previous.findIndex((item) => item.id === draggedMediaId);
+      const toIndex = previous.findIndex((item) => item.id === targetId);
+
+      if (fromIndex === -1 || toIndex === -1) return previous;
+
+      const next = [...previous];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+
+    setDraggedMediaId(null);
+  };
+
   const handleUploadPendingMedia = async () => {
     if (pendingMediaItems.length === 0) return;
 
@@ -1756,10 +1835,7 @@ export default function PublishPage() {
     setIsUploadingMedia(true);
     setStatus('Saving media to draft...');
 
-    const sorted = [...pendingMediaItems].sort((a, b) => {
-      if (a.type === b.type) return 0;
-      return a.type === 'video' ? -1 : 1;
-    });
+    const sorted = [...pendingMediaItems];
 
     try {
       await new Promise((resolve) => {
@@ -1767,10 +1843,7 @@ export default function PublishPage() {
       });
 
       setUploadedMediaItems((previous) =>
-        [...previous, ...sorted].sort((a, b) => {
-          if (a.type === b.type) return 0;
-          return a.type === 'video' ? -1 : 1;
-        })
+        [...previous, ...sorted]
       );
       setPendingMediaItems([]);
       setMobileMediaSelectionTotal(0);
@@ -1784,10 +1857,7 @@ export default function PublishPage() {
         }
         mobileMediaSplashTimeoutRef.current = window.setTimeout(() => {
           mobileMediaSplashTimeoutRef.current = null;
-          void (async () => {
-            await handleContinue();
-            setShowMobileMediaSavedSplash(false);
-          })();
+          setShouldContinueAfterMobileMediaSave(true);
         }, 4000);
       }
     } finally {
@@ -1874,7 +1944,8 @@ export default function PublishPage() {
 
       if (localMediaItems.length > 0) {
         const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, localMediaItems.map((item) => item.file), {
-          timeoutMs: 120_000,
+          timeoutMs: 180_000,
+          maxRetries: 2,
           onProgress: ({ index, total, fileName }) => {
             setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
           },
@@ -2190,6 +2261,31 @@ export default function PublishPage() {
     }
   };
 
+  useEffect(() => {
+    if (!shouldContinueAfterMobileMediaSave) return;
+    if (currentStep !== 11) {
+      setShouldContinueAfterMobileMediaSave(false);
+      setShowMobileMediaSavedSplash(false);
+      return;
+    }
+    if (!canContinueStep11 || isContinuing) return;
+
+    setShouldContinueAfterMobileMediaSave(false);
+    void (async () => {
+      try {
+        await handleContinue();
+      } finally {
+        setShowMobileMediaSavedSplash(false);
+      }
+    })();
+  }, [
+    canContinueStep11,
+    currentStep,
+    handleContinue,
+    isContinuing,
+    shouldContinueAfterMobileMediaSave,
+  ]);
+
   const handleSaveAndExit = async () => {
     if (!user?.id || rolSeleccionado !== 'emprendedor' || hasExistingProject) {
       router.push('/feed');
@@ -2446,8 +2542,11 @@ export default function PublishPage() {
     normalizedStatus.includes('failed') ||
     normalizedStatus.includes('error') ||
     normalizedStatus.includes('denied') ||
+    normalizedStatus.includes('network') ||
     normalizedStatus.includes('invalid')
       ? 'error'
+      : normalizedStatus.includes('timeout') || normalizedStatus.includes('timed out')
+        ? 'warning'
       : normalizedStatus.includes('uploading') ||
           normalizedStatus.includes('saving') ||
           normalizedStatus.includes('generating') ||
@@ -2990,7 +3089,7 @@ export default function PublishPage() {
                             type="number"
                             min="0"
                             value={metric.value}
-                            onChange={(event) => metric.onChange(event.target.value)}
+                            onChange={(event) => metric.onChange(sanitizeNumericInput(event.target.value))}
                             placeholder="0"
                             className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
                           />
@@ -3053,11 +3152,12 @@ export default function PublishPage() {
                                 </svg>
                               </span>
                               <input
-                                type="number"
+                                type="text"
                                 min="0"
-                                value={capitalRequiredUsd}
-                                onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                                value={formatAmountValue(capitalRequiredUsd)}
+                                onChange={(event) => setCapitalRequiredUsd(sanitizeNumericInput(event.target.value))}
                                 placeholder="0"
+                                inputMode="decimal"
                                 className="w-full border-0 bg-transparent p-0 text-base font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
                               />
                             </div>
@@ -3136,11 +3236,12 @@ export default function PublishPage() {
                         <label className="mt-3 flex items-center gap-3 rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
                           <span className="text-sm font-semibold text-[#6B7280]">USD</span>
                           <input
-                            type="number"
+                            type="text"
                             min="1"
-                            value={minimumInvestmentUsd}
-                            onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
+                            value={formatAmountValue(minimumInvestmentUsd)}
+                            onChange={(event) => setMinimumInvestmentUsd(sanitizeNumericInput(event.target.value))}
                             placeholder="50"
+                            inputMode="decimal"
                             className="w-full border-0 bg-transparent p-0 text-base font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
                           />
                         </label>
@@ -3514,7 +3615,7 @@ export default function PublishPage() {
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[#DCE6F1] bg-white pb-8 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
-                  <AspectRatio ratio="21/9" className="bg-[#EEF3FB]">
+                  <AspectRatio ratio="21/9" className="bg-white/85 backdrop-blur-xl">
                     <div className="relative h-full w-full overflow-hidden">
                       {previewPhotos.length > 0 ? (
                         <motion.div
@@ -3523,12 +3624,13 @@ export default function PublishPage() {
                           className="flex h-full w-full"
                         >
                           {previewPhotos.map((photo) => (
-                            <img
-                              key={photo.id}
-                              src={photo.previewUrl}
-                              alt={photo.name}
-                              className="h-full min-w-full object-cover"
-                            />
+                            <div key={photo.id} className="flex h-full min-w-full items-center justify-center bg-white/80 backdrop-blur-xl">
+                              <img
+                                src={photo.previewUrl}
+                                alt={photo.name}
+                                className="h-full w-full object-contain"
+                              />
+                            </div>
                           ))}
                         </motion.div>
                       ) : (
@@ -3557,7 +3659,7 @@ export default function PublishPage() {
                     </h3>
 
                     <p className="text-center text-sm font-semibold text-[#6B39F4]">
-                      Capital to raise: ${capitalRequiredUsd || '0'} USD
+                      Capital to raise: ${formatCurrencyAmount(capitalRequiredUsd)} USD
                     </p>
 
                     <div className="mx-auto max-w-3xl rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] p-4">
@@ -4153,6 +4255,10 @@ export default function PublishPage() {
                     {pendingMediaItems.map((item) => (
                       <div
                         key={item.id}
+                        draggable
+                        onDragStart={() => handleDragStartMedia(item.id)}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => handleDropPendingMedia(item.id)}
                         className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
                       >
                         <button
@@ -4212,7 +4318,7 @@ export default function PublishPage() {
           }}
         />
       ) : (
-        <main className="relative flex h-[100dvh] flex-col overflow-hidden bg-white text-[#1F1F1F] lg:hidden">
+        <main className="relative flex h-[100dvh] touch-pan-y flex-col overflow-hidden overscroll-x-none bg-white text-[#1F1F1F] [overscroll-behavior-x:none] lg:hidden">
           {showWizardSkeleton ? <MobileWizardStepSkeletonOverlay /> : null}
 
           <AnimatePresence>
@@ -4248,12 +4354,33 @@ export default function PublishPage() {
               </svg>
             </button>
 
-            <button
-              type="button"
-              className="h-[clamp(2.8rem,10.5vw,3.45rem)] rounded-full border border-[#DEDEDE] bg-white px-[clamp(1rem,5vw,1.6rem)] text-[clamp(0.92rem,4vw,1.18rem)] font-extrabold tracking-[-0.035em] text-[#252525] shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.98]"
-            >
-              Need help?
-            </button>
+            <Dialog>
+              <DialogTrigger className="h-[clamp(2.8rem,10.5vw,3.45rem)] rounded-full border border-[#DEDEDE] bg-white px-[clamp(1rem,5vw,1.6rem)] text-[clamp(0.92rem,4vw,1.18rem)] font-extrabold tracking-[-0.035em] text-[#252525] shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.98]">
+                Need help?
+              </DialogTrigger>
+              <DialogOverlay>
+                <DialogContent className="max-w-[calc(100%-2rem)] rounded-[28px] border-[#E3E3E3] bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+                  <DialogHeader>
+                    <DialogTitle className="text-[1.45rem] font-extrabold tracking-[-0.045em] text-[#242424]">
+                      Need assistance?
+                    </DialogTitle>
+                    <DialogDescription className="text-sm font-medium leading-6 text-[#6F6F6F]">
+                      If you need help with any step, contact customer service{' '}
+                      <a
+                        href="https://wa.me/61451911036?text=I%20need%20assistance"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-extrabold text-[#6B39F4] underline decoration-2 underline-offset-4"
+                      >
+                        here
+                      </a>
+                      .
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogBody className="hidden" />
+                </DialogContent>
+              </DialogOverlay>
+            </Dialog>
           </header>
           ) : null}
 
@@ -4546,7 +4673,7 @@ export default function PublishPage() {
                           type="number"
                           min="0"
                           value={monthlySales}
-                          onChange={(event) => setMonthlySales(event.target.value)}
+                          onChange={(event) => setMonthlySales(sanitizeNumericInput(event.target.value))}
                           placeholder="0"
                           className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
                         />
@@ -4560,7 +4687,7 @@ export default function PublishPage() {
                           type="number"
                           min="0"
                           value={averageTicket}
-                          onChange={(event) => setAverageTicket(event.target.value)}
+                          onChange={(event) => setAverageTicket(sanitizeNumericInput(event.target.value))}
                           placeholder="0"
                           className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
                         />
@@ -4574,7 +4701,7 @@ export default function PublishPage() {
                           type="number"
                           min="0"
                           value={monthlyClients}
-                          onChange={(event) => setMonthlyClients(event.target.value)}
+                          onChange={(event) => setMonthlyClients(sanitizeNumericInput(event.target.value))}
                           placeholder="0"
                           className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
                         />
@@ -4604,13 +4731,16 @@ export default function PublishPage() {
                         <span className="sr-only">Capital required in USD</span>
                         <div className="flex items-end justify-center gap-[clamp(0.35rem,1.4vw,0.75rem)]">
                           <input
-                            type="number"
+                            type="text"
                             min="0"
-                            value={capitalRequiredUsd}
-                            onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                            value={formatAmountValue(capitalRequiredUsd)}
+                            onChange={(event) => setCapitalRequiredUsd(sanitizeNumericInput(event.target.value))}
                             placeholder="0"
                             inputMode="decimal"
-                            className="w-[clamp(8.5rem,50vw,17rem)] bg-transparent text-right text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
+                            style={{
+                              width: `${Math.min(Math.max(formatAmountValue(capitalRequiredUsd).length || 1, 1), 12)}ch`,
+                            }}
+                            className="max-w-[68vw] bg-transparent text-center text-[clamp(4.1rem,18vw,7.7rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
                           />
                           <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
                             $
@@ -4679,13 +4809,16 @@ export default function PublishPage() {
                         <span className="sr-only">Minimum investment amount in USD</span>
                         <div className="flex items-end justify-center gap-[clamp(0.35rem,1.4vw,0.75rem)]">
                           <input
-                            type="number"
+                            type="text"
                             min="1"
-                            value={minimumInvestmentUsd}
-                            onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
+                            value={formatAmountValue(minimumInvestmentUsd)}
+                            onChange={(event) => setMinimumInvestmentUsd(sanitizeNumericInput(event.target.value))}
                             placeholder="50"
                             inputMode="decimal"
-                            className="w-[clamp(8.5rem,50vw,17rem)] bg-transparent text-right text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
+                            style={{
+                              width: `${Math.min(Math.max(formatAmountValue(minimumInvestmentUsd).length || 2, 2), 12)}ch`,
+                            }}
+                            className="max-w-[68vw] bg-transparent text-center text-[clamp(4.1rem,18vw,7.7rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
                           />
                           <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
                             $
@@ -4972,6 +5105,10 @@ export default function PublishPage() {
                             {pendingMediaItems.map((item) => (
                               <div
                                 key={item.id}
+                                draggable
+                                onDragStart={() => handleDragStartMedia(item.id)}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={() => handleDropPendingMedia(item.id)}
                                 className="relative overflow-hidden rounded-[18px] bg-[#F2F2F2] shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
                               >
                                 <button
@@ -5193,7 +5330,7 @@ export default function PublishPage() {
                 ) : null}
 
                 <div className="mt-[clamp(1.25rem,3.4dvh,2rem)] space-y-4 pb-5">
-                  <AspectRatio customRatio={4 / 3} className="overflow-hidden rounded-[28px] bg-[#EEF3FB] shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
+                  <AspectRatio customRatio={4 / 3} className="overflow-hidden rounded-[28px] bg-white/85 shadow-[0_18px_42px_rgba(15,23,42,0.12)] backdrop-blur-xl">
                     <div className="relative h-full w-full overflow-hidden">
                       {previewCarouselItems.length > 0 ? (
                         <motion.div
@@ -5202,11 +5339,11 @@ export default function PublishPage() {
                           className="flex h-full w-full"
                         >
                           {previewCarouselItems.map((item) => (
-                            <div key={item.id} className="h-full min-w-full">
+                            <div key={item.id} className="flex h-full min-w-full items-center justify-center bg-white/80 backdrop-blur-xl">
                               {item.type === 'video' ? (
                                 <video
                                   src={item.previewUrl}
-                                  className="h-full w-full bg-black object-cover"
+                                  className="h-full w-full object-contain"
                                   muted
                                   playsInline
                                   controls
@@ -5215,7 +5352,7 @@ export default function PublishPage() {
                                 <img
                                   src={item.previewUrl}
                                   alt={item.name}
-                                  className="h-full w-full object-cover"
+                                  className="h-full w-full object-contain"
                                 />
                               )}
                             </div>
@@ -5301,10 +5438,10 @@ export default function PublishPage() {
                     </TabList>
 
                     {publicationPreviewTabs.map((tab) => (
-                      <TabContent key={tab.id} value={tab.id} className="px-4 py-4 text-sm font-medium leading-6 text-[#333333]">
+                      <TabContent key={tab.id} value={tab.id} className="px-4 py-4 text-sm font-medium leading-6 text-[#333333] [text-align:justify]">
                         {tab.id === 'gallery' ? (
                           <div className="space-y-3">
-                            {tab.content ? <p className="whitespace-pre-line">{tab.content}</p> : null}
+                            {tab.content ? <p className="whitespace-pre-line [text-align:justify]">{tab.content}</p> : null}
                             {uploadedMediaItems.length > 0 ? (
                               <div className="grid grid-cols-2 gap-2">
                                 {uploadedMediaItems.map((item) => (
@@ -5322,7 +5459,7 @@ export default function PublishPage() {
                             )}
                           </div>
                         ) : tab.content ? (
-                          <p className="whitespace-pre-line">{tab.content}</p>
+                          <p className="whitespace-pre-line [text-align:justify]">{tab.content}</p>
                         ) : (
                           <p className="text-[#777777]">This section will appear when the AI response includes it.</p>
                         )}

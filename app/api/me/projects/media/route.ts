@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     }
     if (file.size > MAX_FILE_SIZE_BYTES) {
       return jsonNoStore(
-        { error: `File "${file.name}" exceeds the 60 MB limit.` },
+        { error: `File "${file.name}" exceeds the 50 MB limit.` },
         { status: 400 }
       );
     }

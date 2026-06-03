@@ -9,6 +9,7 @@ type UploadResult =
 type UploadOptions = {
   onProgress?: (info: { index: number; total: number; fileName: string }) => void;
   timeoutMs?: number;
+  maxRetries?: number;
 };
 
 export async function uploadCurrentUserProjectMedia(
@@ -23,41 +24,58 @@ export async function uploadCurrentUserProjectMedia(
 
   const uploaded: Array<{ type: 'photo' | 'video'; publicUrl: string }> = [];
   const timeoutMs = options?.timeoutMs ?? 90_000;
+  const maxRetries = options?.maxRetries ?? 2;
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index];
     options?.onProgress?.({ index: index + 1, total: files.length, fileName: file.name });
-    const formData = new FormData();
-    formData.append('files', file);
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
-    let response: Response;
-    try {
-      response = await fetch('/api/me/projects/media', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: formData,
-        cache: 'no-store',
-        signal: controller.signal,
-      });
-    } catch (error) {
-      window.clearTimeout(timeout);
-      if (error instanceof DOMException && error.name === 'AbortError') {
+    let response: Response | null = null;
+    let lastNetworkError = '';
+
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      const formData = new FormData();
+      formData.append('files', file);
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        response = await fetch('/api/me/projects/media', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: formData,
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeout);
+        break;
+      } catch (error) {
+        window.clearTimeout(timeout);
+        const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+        lastNetworkError = isTimeout
+          ? `Upload timed out for "${file.name}" after ${Math.round(timeoutMs / 1000)}s.`
+          : `Network error while uploading "${file.name}".`;
+
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => window.setTimeout(resolve, 650 * (attempt + 1)));
+          continue;
+        }
+
         return {
           data: null,
-          error: `Upload timed out for "${file.name}" after ${Math.round(timeoutMs / 1000)}s.`,
+          error: lastNetworkError,
         };
       }
+    }
 
+    if (!response) {
       return {
         data: null,
-        error: `Network error while uploading "${file.name}".`,
+        error: lastNetworkError || `Network error while uploading "${file.name}".`,
       };
     }
-    window.clearTimeout(timeout);
 
     const json = (await response.json().catch(() => null)) as
       | {
