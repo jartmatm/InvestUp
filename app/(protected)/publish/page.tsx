@@ -35,6 +35,15 @@ import { TextArea } from '@/components/tailgrids/core/text-area';
 import { DatePicker } from '@/core/date-picker/single-date';
 import { Spinner } from '@/core/spinner';
 import { Toast } from '@/components/tailgrids/core/toast';
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRoot,
+  TableRow,
+} from '@/components/tailgrids/core/table';
+import { TabContent, TabList, TabRoot, TabTrigger } from '@/components/tailgrids/core/tabs';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   createCurrentUserPublicationPrompt,
@@ -417,25 +426,25 @@ const complianceChecklistOptions = [
   'Financial projections (3-5 years)',
 ] as const;
 
-const buildLongDescriptionFromOptimized = (optimized: OptimizedPublication) => {
-  const sectionToText = (value: string | { paragraph?: string | null } | undefined) => {
-    if (!value) return '';
-    if (typeof value === 'string') return value.trim();
-    return (value.paragraph ?? '').trim();
-  };
+const optimizedSectionToText = (value: string | { paragraph?: string | null } | undefined) => {
+  if (!value) return '';
+  if (typeof value === 'string') return value.trim();
+  return (value.paragraph ?? '').trim();
+};
 
+const buildLongDescriptionFromOptimized = (optimized: OptimizedPublication) => {
   const chunks = [
     optimized.description,
     optimized.summary,
-    sectionToText(optimized.overview),
-    sectionToText(optimized.whatWeDo),
-    sectionToText(optimized.howWeDoIt),
-    sectionToText(optimized.financialInformation),
-    sectionToText(optimized.investment),
-    sectionToText(optimized.target),
-    sectionToText(optimized.team),
-    sectionToText(optimized.gallery),
-    sectionToText(optimized.extras),
+    optimizedSectionToText(optimized.overview),
+    optimizedSectionToText(optimized.whatWeDo),
+    optimizedSectionToText(optimized.howWeDoIt),
+    optimizedSectionToText(optimized.financialInformation),
+    optimizedSectionToText(optimized.investment),
+    optimizedSectionToText(optimized.target),
+    optimizedSectionToText(optimized.team),
+    optimizedSectionToText(optimized.gallery),
+    optimizedSectionToText(optimized.extras),
   ]
     .map((value) => (value ?? '').trim())
     .filter(Boolean);
@@ -1300,6 +1309,53 @@ export default function PublishPage() {
     [uploadedMediaItems]
   );
 
+  const previewCarouselItems = useMemo(
+    () => uploadedMediaItems.length > 0 ? uploadedMediaItems : previewPhotos,
+    [uploadedMediaItems, previewPhotos]
+  );
+
+  const previewTableColumns = useMemo(
+    () => [
+      { label: 'business_name', value: businessName.trim() || 'Not provided' },
+      { label: 'business_address', value: address.formatted_address.trim() || 'Not provided' },
+      { label: 'business_category', value: selectedBusinessCategory.trim() || 'Not provided' },
+      { label: 'operating_time', value: selectedOperatingTime.trim() || 'Not provided' },
+    ],
+    [businessName, address.formatted_address, selectedBusinessCategory, selectedOperatingTime]
+  );
+
+  const previewKpis = useMemo(
+    () => [
+      { label: 'capital_required_usd', value: capitalRequiredUsd.trim() ? `$${capitalRequiredUsd.trim()}` : '$0' },
+      { label: 'minimum_invest', value: minimumInvestmentUsd.trim() ? `$${minimumInvestmentUsd.trim()}` : '$0' },
+      { label: 'interest_rate_ea', value: interestRateEA.trim() ? `${interestRateEA.trim()}%` : '0%' },
+      { label: 'round_close_date', value: roundCloseDate.trim() || 'Not selected' },
+    ],
+    [capitalRequiredUsd, minimumInvestmentUsd, interestRateEA, roundCloseDate]
+  );
+
+  const publicationPreviewTabs = useMemo(() => {
+    const formatHighlights = (items: string[] | undefined) =>
+      items?.length ? items.map((item) => `- ${item}`).join('\n') : '';
+
+    return [
+      { id: 'overview', label: 'overview', content: optimizedSectionToText(generatedPublication?.overview) },
+      { id: 'description', label: 'description', content: generatedDescription.trim() || generatedPublication?.description || '' },
+      { id: 'what_we_do', label: 'what_we_do', content: optimizedSectionToText(generatedPublication?.whatWeDo) },
+      { id: 'how_we_do_it', label: 'how_we_do_it', content: optimizedSectionToText(generatedPublication?.howWeDoIt) },
+      { id: 'target', label: 'target', content: optimizedSectionToText(generatedPublication?.target) },
+      { id: 'market_opportunity', label: 'market_opportunity', content: generatedPublication?.marketOpportunity || '' },
+      { id: 'traction', label: 'traction', content: generatedPublication?.traction || '' },
+      { id: 'highlights', label: 'highlights', content: formatHighlights(generatedPublication?.highlights) },
+      { id: 'investment', label: 'investment', content: optimizedSectionToText(generatedPublication?.investment) || generatedPublication?.useOfFunds || fundUsage.trim() },
+      { id: 'financial_information', label: 'financial_information', content: optimizedSectionToText(generatedPublication?.financialInformation) },
+      { id: 'investor_notes', label: 'investor_notes', content: generatedPublication?.investorNotes || '' },
+      { id: 'team', label: 'team', content: optimizedSectionToText(generatedPublication?.team) || aboutTeam.trim() },
+      { id: 'extras', label: 'extras', content: optimizedSectionToText(generatedPublication?.extras) || businessAchievements.trim() },
+      { id: 'gallery', label: 'gallery', content: optimizedSectionToText(generatedPublication?.gallery) },
+    ];
+  }, [aboutTeam, businessAchievements, fundUsage, generatedDescription, generatedPublication]);
+
   const registeredWhatsappNumber = useMemo(() => {
     const fromUser =
       (user as { phone?: { number?: string } } | null)?.phone?.number ||
@@ -1515,14 +1571,14 @@ export default function PublishPage() {
   );
 
   useEffect(() => {
-    if (currentStep !== 16 || previewPhotos.length <= 1) return;
+    if (currentStep !== 16 || previewCarouselItems.length <= 1) return;
 
     const timer = window.setInterval(() => {
-      setActivePhotoIndex((previous) => (previous + 1) % previewPhotos.length);
+      setActivePhotoIndex((previous) => (previous + 1) % previewCarouselItems.length);
     }, 3000);
 
     return () => window.clearInterval(timer);
-  }, [currentStep, previewPhotos.length]);
+  }, [currentStep, previewCarouselItems.length]);
 
   useEffect(() => {
     if (currentStep !== 18) return;
@@ -2321,6 +2377,14 @@ export default function PublishPage() {
       }
 
       if (!canContinueMobileInvestmentDetails) return;
+    }
+
+    if (currentStep === 16) {
+      if (!canContinueStep16 || isPublishing) return;
+      setPublishRequested(true);
+      setStatus('');
+      goToStep(17, false);
+      return;
     }
 
     await handleContinue();
@@ -4170,7 +4234,7 @@ export default function PublishPage() {
             ) : null}
           </AnimatePresence>
 
-          {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash ? (
+          {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash && currentStep !== 17 && currentStep !== 18 ? (
           <header className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-[clamp(1rem,5vw,1.75rem)] pt-[max(env(safe-area-inset-top),0.65rem)]">
             <button
               type="button"
@@ -4193,7 +4257,13 @@ export default function PublishPage() {
           </header>
           ) : null}
 
-          <section className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
+          <section
+            className={`mx-auto flex min-h-0 w-full flex-1 flex-col ${
+              currentStep === 17 || currentStep === 18
+                ? 'max-w-none px-0 pb-0'
+                : 'max-w-[560px] px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]'
+            }`}
+          >
             {currentStep === 1 ? (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
@@ -5103,6 +5173,216 @@ export default function PublishPage() {
                   })}
                 </div>
               </motion.div>
+            ) : currentStep === 16 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.2rem,3.6dvh,2.4rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[13ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Review your listing before publishing
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Check images, description, and compliance details, then publish when ready or go back to edit.
+                </p>
+                {status ? (
+                  <p className="mt-3 rounded-[18px] border border-[#F4D4D4] bg-[#FFF6F6] px-4 py-3 text-sm font-semibold leading-5 text-[#B42318]">
+                    {status}
+                  </p>
+                ) : null}
+
+                <div className="mt-[clamp(1.25rem,3.4dvh,2rem)] space-y-4 pb-5">
+                  <AspectRatio customRatio={4 / 3} className="overflow-hidden rounded-[28px] bg-[#EEF3FB] shadow-[0_18px_42px_rgba(15,23,42,0.12)]">
+                    <div className="relative h-full w-full overflow-hidden">
+                      {previewCarouselItems.length > 0 ? (
+                        <motion.div
+                          animate={{ x: `-${Math.min(activePhotoIndex, previewCarouselItems.length - 1) * 100}%` }}
+                          transition={{ duration: 0.7, ease: 'easeInOut' }}
+                          className="flex h-full w-full"
+                        >
+                          {previewCarouselItems.map((item) => (
+                            <div key={item.id} className="h-full min-w-full">
+                              {item.type === 'video' ? (
+                                <video
+                                  src={item.previewUrl}
+                                  className="h-full w-full bg-black object-cover"
+                                  muted
+                                  playsInline
+                                  controls
+                                />
+                              ) : (
+                                <img
+                                  src={item.previewUrl}
+                                  alt={item.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </motion.div>
+                      ) : (
+                        <div className="flex h-full items-center justify-center px-8 text-center text-sm font-semibold text-[#6A778D]">
+                          Add photos to preview your listing.
+                        </div>
+                      )}
+
+                      {previewCarouselItems.length > 1 ? (
+                        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-md">
+                          {previewCarouselItems.map((item, index) => (
+                            <span
+                              key={`mobile-preview-dot-${item.id}`}
+                              className={`h-2 rounded-full transition-all ${
+                                Math.min(activePhotoIndex, previewCarouselItems.length - 1) === index
+                                  ? 'w-5 bg-white'
+                                  : 'w-2 bg-white/45'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </AspectRatio>
+
+                  <div className="overflow-hidden rounded-[24px] border border-[#E0E0E0] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.045)]">
+                    <TableRoot className="min-w-[760px] border-0 text-left" fullBleed>
+                      <TableHeader className="bg-[#F6F1FF] [&_th]:border-[#E6DAFF] [&_th]:text-[#5D2FE4]">
+                        <TableRow>
+                          {previewTableColumns.map((column) => (
+                            <TableHead key={column.label} className="px-4 py-3 text-[0.7rem] font-extrabold uppercase tracking-[0.12em]">
+                              {column.label}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          {previewTableColumns.map((column) => (
+                            <TableCell key={column.label} className="max-w-[15rem] px-4 py-4 text-sm font-bold leading-5 text-[#242424]">
+                              {column.value}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      </TableBody>
+                    </TableRoot>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {previewKpis.map((kpi) => (
+                      <div
+                        key={kpi.label}
+                        className="rounded-[22px] border border-[#E1E1E1] bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.035)]"
+                      >
+                        <p className="text-[0.64rem] font-extrabold uppercase tracking-[0.14em] text-[#777777]">
+                          {kpi.label}
+                        </p>
+                        <p className="mt-2 text-[clamp(1.1rem,5vw,1.45rem)] font-extrabold leading-none tracking-[-0.05em] text-[#242424]">
+                          {kpi.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <TabRoot
+                    defaultValue="overview"
+                    variant="minimal"
+                    className="overflow-hidden rounded-[24px] border border-[#E0E0E0] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
+                  >
+                    <TabList className="gap-1 border-b border-[#ECECEC] px-2">
+                      {publicationPreviewTabs.map((tab) => (
+                        <TabTrigger
+                          key={tab.id}
+                          value={tab.id}
+                          className="py-3 text-[0.74rem] font-extrabold tracking-[-0.02em] text-[#777777] data-[active=true]:border-[#6B39F4] data-[active=true]:text-[#6B39F4]"
+                        >
+                          {tab.label}
+                        </TabTrigger>
+                      ))}
+                    </TabList>
+
+                    {publicationPreviewTabs.map((tab) => (
+                      <TabContent key={tab.id} value={tab.id} className="px-4 py-4 text-sm font-medium leading-6 text-[#333333]">
+                        {tab.id === 'gallery' ? (
+                          <div className="space-y-3">
+                            {tab.content ? <p className="whitespace-pre-line">{tab.content}</p> : null}
+                            {uploadedMediaItems.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                {uploadedMediaItems.map((item) => (
+                                  <AspectRatio key={`gallery-${item.id}`} customRatio={1} className="overflow-hidden rounded-[16px] bg-[#F2F2F2]">
+                                    {item.type === 'video' ? (
+                                      <video src={item.previewUrl} className="h-full w-full object-cover" muted playsInline controls />
+                                    ) : (
+                                      <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+                                    )}
+                                  </AspectRatio>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[#777777]">Gallery media will appear here.</p>
+                            )}
+                          </div>
+                        ) : tab.content ? (
+                          <p className="whitespace-pre-line">{tab.content}</p>
+                        ) : (
+                          <p className="text-[#777777]">This section will appear when the AI response includes it.</p>
+                        )}
+                      </TabContent>
+                    ))}
+                  </TabRoot>
+                </div>
+              </motion.div>
+            ) : currentStep === 17 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="flex min-h-0 flex-1 flex-col items-center justify-center bg-white px-5"
+              >
+                <Lottie
+                  animationData={publishStep17PublishingAnimation}
+                  loop
+                  autoplay
+                  className="h-[min(82dvh,34rem)] w-full"
+                />
+                <p className="mt-[-1rem] text-center text-[clamp(1rem,4vw,1.28rem)] font-extrabold tracking-[-0.035em] text-[#333333]">
+                  <Spinner size="md" type="dotted-round" className="mx-auto mb-3 text-[#6B39F4]" />
+                  {status || 'Publishing your project...'}
+                </p>
+              </motion.div>
+            ) : currentStep === 18 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="flex min-h-0 flex-1 flex-col items-center justify-center bg-white px-5 text-center"
+              >
+                <Lottie
+                  animationData={publishStep18SuccessAnimation}
+                  loop
+                  autoplay
+                  className="h-[min(68dvh,30rem)] w-full"
+                />
+                <motion.h1
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55, ease: 'easeOut', delay: 0.1 }}
+                  className="mt-[-0.5rem] max-w-[13ch] text-[clamp(2rem,8.6vw,3.4rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]"
+                >
+                  Your publication is now online
+                </motion.h1>
+                {showSuccessHomeButton ? (
+                  <motion.button
+                    type="button"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.45, ease: 'easeOut' }}
+                    onClick={() => router.push('/home')}
+                    className="mt-7 flex min-h-[clamp(3.35rem,7.8dvh,4.25rem)] min-w-[clamp(12rem,48vw,15rem)] items-center justify-center rounded-[16px] bg-[#6B39F4] px-7 text-[clamp(1rem,4.1vw,1.25rem)] font-extrabold tracking-[-0.035em] text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition active:scale-[0.985]"
+                  >
+                    Go back to home
+                  </motion.button>
+                ) : null}
+              </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
@@ -5134,7 +5414,7 @@ export default function PublishPage() {
               </div>
             )}
 
-            {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash ? (
+            {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash && currentStep !== 17 && currentStep !== 18 ? (
             <div className="shrink-0 space-y-[clamp(1rem,2.8dvh,1.45rem)] bg-white pt-[clamp(0.35rem,1.2dvh,0.8rem)]">
               <div className="grid grid-cols-3 gap-1.5">
                 {mobileProgressSegmentFills.map((fill, index) => (
@@ -5169,6 +5449,8 @@ export default function PublishPage() {
                       <Spinner size="sm" type="dotted" className="mr-2 inline-block align-[-4px]" />
                       Saving...
                     </>
+                  ) : currentStep === 16 ? (
+                    'Publish'
                   ) : (
                     'Continue'
                   )}
