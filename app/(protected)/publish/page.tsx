@@ -34,6 +34,7 @@ import {
 import { TextArea } from '@/components/tailgrids/core/text-area';
 import { DatePicker } from '@/core/date-picker/single-date';
 import { Spinner } from '@/core/spinner';
+import { Toast } from '@/components/tailgrids/core/toast';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
   createCurrentUserPublicationPrompt,
@@ -1697,7 +1698,7 @@ export default function PublishPage() {
     const shouldShowMobileSplash = isMobileMediaUploadOpen && currentStep === 11;
     setIsMediaModalOpen(false);
     setIsUploadingMedia(true);
-    setStatus('Uploading media...');
+    setStatus('Saving media to draft...');
 
     const sorted = [...pendingMediaItems].sort((a, b) => {
       if (a.type === b.type) return 0;
@@ -1705,43 +1706,19 @@ export default function PublishPage() {
     });
 
     try {
-      const mediaUploadResult = await uploadCurrentUserProjectMedia(
-        getAccessToken,
-        sorted.map((item) => item.file),
-        {
-          timeoutMs: 120_000,
-          onProgress: ({ index, total, fileName }) => {
-            setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
-          },
-        },
-      );
-
-      if (mediaUploadResult.error || !mediaUploadResult.data) {
-        setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
-        return;
-      }
-
-      const uploadedRemoteItems = sorted.map((item, index) => {
-        const uploaded = mediaUploadResult.data?.[index];
-        if (item.previewUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(item.previewUrl);
-        }
-
-        return {
-          ...item,
-          previewUrl: uploaded?.publicUrl ?? item.previewUrl,
-        };
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, 700);
       });
 
       setUploadedMediaItems((previous) =>
-        [...previous, ...uploadedRemoteItems].sort((a, b) => {
+        [...previous, ...sorted].sort((a, b) => {
           if (a.type === b.type) return 0;
           return a.type === 'video' ? -1 : 1;
         })
       );
       setPendingMediaItems([]);
       setMobileMediaSelectionTotal(0);
-      setStatus('');
+      setStatus('Media saved to draft. It will upload when you publish.');
       setIsMobileMediaUploadOpen(false);
 
       if (shouldShowMobileSplash) {
@@ -1758,7 +1735,7 @@ export default function PublishPage() {
         }, 4000);
       }
     } finally {
-    setIsUploadingMedia(false);
+      setIsUploadingMedia(false);
     }
   };
 
@@ -2399,6 +2376,20 @@ export default function PublishPage() {
   });
 
   const showWizardSkeleton = checkingProject || isStepTransitionLoading;
+  const normalizedStatus = status.toLowerCase();
+  const statusToastVariant =
+    normalizedStatus.includes('could not') ||
+    normalizedStatus.includes('failed') ||
+    normalizedStatus.includes('error') ||
+    normalizedStatus.includes('denied') ||
+    normalizedStatus.includes('invalid')
+      ? 'error'
+      : normalizedStatus.includes('uploading') ||
+          normalizedStatus.includes('saving') ||
+          normalizedStatus.includes('generating') ||
+          normalizedStatus.includes('loading')
+        ? 'info'
+        : 'success';
 
   return (
     <>
@@ -2426,6 +2417,11 @@ export default function PublishPage() {
           event.currentTarget.value = '';
         }}
       />
+      {status ? (
+        <div className="fixed left-4 right-4 top-[max(env(safe-area-inset-top),1rem)] z-[180] mx-auto max-w-[34rem] [&>div]:min-w-0 [&>div]:w-full [&>div]:max-w-none">
+          <Toast variant={statusToastVariant} message={status} />
+        </div>
+      ) : null}
       <DesktopAppShell
         title=""
         subtitle=""
