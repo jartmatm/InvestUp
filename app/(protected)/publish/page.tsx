@@ -11,6 +11,7 @@ import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShel
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
 import publishStep4NameAnimation from '@/components/animations/publish-step4-name.json';
 import publishStep10MediaAnimation from '@/components/animations/publish-step10-media.json';
+import publishMobileMediaSavedAnimation from '@/components/animations/publish-mobile-media-saved.json';
 import publishStep17PublishingAnimation from '@/components/animations/publish-step17-publishing.json';
 import publishStep18SuccessAnimation from '@/components/animations/publish-step18-success.json';
 import publishStep14FinishAnimation from '@/components/animations/publish-step14-finish.json';
@@ -1060,6 +1061,7 @@ export default function PublishPage() {
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [isMobileMediaUploadOpen, setIsMobileMediaUploadOpen] = useState(false);
   const [isPreparingMobileMedia, setIsPreparingMobileMedia] = useState(false);
+  const [showMobileMediaSavedSplash, setShowMobileMediaSavedSplash] = useState(false);
   const [mobileMediaSource, setMobileMediaSource] = useState<MobileMediaSource>('gallery');
   const [mobileMediaSelectionTotal, setMobileMediaSelectionTotal] = useState(0);
   const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
@@ -1080,6 +1082,7 @@ export default function PublishPage() {
   const mobileLocationRequestedRef = useRef(false);
   const mobileGalleryInputRef = useRef<HTMLInputElement | null>(null);
   const mobileCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const mobileMediaSplashTimeoutRef = useRef<number | null>(null);
 
   const canContinueStep1 = useMemo(
     () => isAddressValid(address) && !checkingProject && !hasExistingProject,
@@ -1332,6 +1335,9 @@ export default function PublishPage() {
     () => () => {
       if (stepSkeletonTimeoutRef.current !== null) {
         window.clearTimeout(stepSkeletonTimeoutRef.current);
+      }
+      if (mobileMediaSplashTimeoutRef.current !== null) {
+        window.clearTimeout(mobileMediaSplashTimeoutRef.current);
       }
     },
     []
@@ -1688,28 +1694,72 @@ export default function PublishPage() {
   const handleUploadPendingMedia = async () => {
     if (pendingMediaItems.length === 0) return;
 
+    const shouldShowMobileSplash = isMobileMediaUploadOpen && currentStep === 11;
     setIsMediaModalOpen(false);
     setIsUploadingMedia(true);
-
-    await new Promise((resolve) => {
-      window.setTimeout(resolve, 1800);
-    });
+    setStatus('Uploading media...');
 
     const sorted = [...pendingMediaItems].sort((a, b) => {
       if (a.type === b.type) return 0;
       return a.type === 'video' ? -1 : 1;
     });
 
-    setUploadedMediaItems((previous) =>
-      [...previous, ...sorted].sort((a, b) => {
-        if (a.type === b.type) return 0;
-        return a.type === 'video' ? -1 : 1;
-      })
-    );
-    setPendingMediaItems([]);
-    setMobileMediaSelectionTotal(0);
+    try {
+      const mediaUploadResult = await uploadCurrentUserProjectMedia(
+        getAccessToken,
+        sorted.map((item) => item.file),
+        {
+          timeoutMs: 120_000,
+          onProgress: ({ index, total, fileName }) => {
+            setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
+          },
+        },
+      );
+
+      if (mediaUploadResult.error || !mediaUploadResult.data) {
+        setStatus(`Could not upload media: ${mediaUploadResult.error ?? 'Unknown error.'}`);
+        return;
+      }
+
+      const uploadedRemoteItems = sorted.map((item, index) => {
+        const uploaded = mediaUploadResult.data?.[index];
+        if (item.previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+
+        return {
+          ...item,
+          previewUrl: uploaded?.publicUrl ?? item.previewUrl,
+        };
+      });
+
+      setUploadedMediaItems((previous) =>
+        [...previous, ...uploadedRemoteItems].sort((a, b) => {
+          if (a.type === b.type) return 0;
+          return a.type === 'video' ? -1 : 1;
+        })
+      );
+      setPendingMediaItems([]);
+      setMobileMediaSelectionTotal(0);
+      setStatus('');
+      setIsMobileMediaUploadOpen(false);
+
+      if (shouldShowMobileSplash) {
+        setShowMobileMediaSavedSplash(true);
+        if (mobileMediaSplashTimeoutRef.current !== null) {
+          window.clearTimeout(mobileMediaSplashTimeoutRef.current);
+        }
+        mobileMediaSplashTimeoutRef.current = window.setTimeout(() => {
+          mobileMediaSplashTimeoutRef.current = null;
+          void (async () => {
+            await handleContinue();
+            setShowMobileMediaSavedSplash(false);
+          })();
+        }, 4000);
+      }
+    } finally {
     setIsUploadingMedia(false);
-    setIsMobileMediaUploadOpen(false);
+    }
   };
 
   const handleDragStartMedia = (mediaId: string) => {
@@ -1777,14 +1827,20 @@ export default function PublishPage() {
     setStatus('Uploading media...');
     const fields = buildPublicationFields();
     try {
-      const mediaFiles = uploadedMediaItems.map((item) => item.file);
       const isRemoteUrl = (value: string) => /^https?:\/\//i.test(value.trim());
+      const remotePhotoUrls = uploadedMediaItems
+        .filter((item) => item.type === 'photo' && isRemoteUrl(item.previewUrl))
+        .map((item) => item.previewUrl);
+      const remoteVideoUrl =
+        uploadedMediaItems.find((item) => item.type === 'video' && isRemoteUrl(item.previewUrl))
+          ?.previewUrl ?? null;
+      const localMediaItems = uploadedMediaItems.filter((item) => !isRemoteUrl(item.previewUrl));
 
-      let uploadedPhotos: string[] = [];
-      let uploadedVideo: string | null = null;
+      let uploadedPhotos: string[] = [...remotePhotoUrls];
+      let uploadedVideo: string | null = remoteVideoUrl;
 
-      if (mediaFiles.length > 0) {
-        const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, mediaFiles, {
+      if (localMediaItems.length > 0) {
+        const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, localMediaItems.map((item) => item.file), {
           timeoutMs: 120_000,
           onProgress: ({ index, total, fileName }) => {
             setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
@@ -1795,12 +1851,15 @@ export default function PublishPage() {
           goToStep(16, false);
           return;
         }
-        uploadedPhotos = mediaUploadResult.data
+        uploadedPhotos = [
+          ...uploadedPhotos,
+          ...mediaUploadResult.data
           .filter((item) => item.type === 'photo')
-          .map((item) => item.publicUrl);
+            .map((item) => item.publicUrl),
+        ];
         uploadedVideo =
-          mediaUploadResult.data.find((item) => item.type === 'video')?.publicUrl ?? null;
-      } else {
+          uploadedVideo ?? mediaUploadResult.data.find((item) => item.type === 'video')?.publicUrl ?? null;
+      } else if (uploadedMediaItems.length === 0) {
         uploadedPhotos = previewPhotos
           .map((item) => item.previewUrl)
           .filter((url) => isRemoteUrl(url));
@@ -4096,6 +4155,26 @@ export default function PublishPage() {
         <main className="relative flex h-[100dvh] flex-col overflow-hidden bg-white text-[#1F1F1F] lg:hidden">
           {showWizardSkeleton ? <MobileWizardStepSkeletonOverlay /> : null}
 
+          <AnimatePresence>
+            {showMobileMediaSavedSplash ? (
+              <motion.div
+                className="fixed inset-0 z-[130] flex items-center justify-center bg-white"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.24, ease: 'easeOut' }}
+              >
+                <Lottie
+                  animationData={publishMobileMediaSavedAnimation}
+                  loop
+                  autoplay
+                  className="h-[min(72vw,22rem)] w-[min(72vw,22rem)]"
+                />
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash ? (
           <header className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-[clamp(1rem,5vw,1.75rem)] pt-[max(env(safe-area-inset-top),0.65rem)]">
             <button
               type="button"
@@ -4116,6 +4195,7 @@ export default function PublishPage() {
               Need help?
             </button>
           </header>
+          ) : null}
 
           <section className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col px-[clamp(1.25rem,5.6vw,2.1rem)] pb-[clamp(0.75rem,2.8dvh,1.45rem)]">
             {currentStep === 1 ? (
@@ -4919,6 +4999,7 @@ export default function PublishPage() {
               </div>
             )}
 
+            {!isMobileMediaUploadOpen && !showMobileMediaSavedSplash ? (
             <div className="shrink-0 space-y-[clamp(1rem,2.8dvh,1.45rem)] bg-white pt-[clamp(0.35rem,1.2dvh,0.8rem)]">
               <div className="grid grid-cols-3 gap-1.5">
                 {mobileProgressSegmentFills.map((fill, index) => (
@@ -4959,6 +5040,7 @@ export default function PublishPage() {
                 </button>
               </div>
             </div>
+            ) : null}
           </section>
         </main>
       )}
