@@ -178,64 +178,72 @@ function MediaCarousel({ items, title }: { items: OpportunityGalleryItem[]; titl
 
   if (items.length === 0) {
     return (
-      <div className="flex aspect-[1.03/1] h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]">
+      <AspectRatio
+        customRatio={1.03}
+        className="flex h-full w-full items-center justify-center rounded-[24px] bg-[#EEF1F7] text-xs font-semibold text-[#6B7280]"
+      >
         {t('noImage')}
-      </div>
+      </AspectRatio>
     );
   }
 
   return (
-    <Carousel.Root
-      setApi={setApi}
-      opts={{ align: 'start', loop: hasMultipleItems, duration: 34 }}
-      className="aspect-[1.03/1] overflow-hidden rounded-[24px] bg-[#EEF1F7] shadow-[0_18px_45px_rgba(27,35,58,0.12)]"
+    <AspectRatio
+      customRatio={1.03}
+      className="rounded-[24px] bg-[#EEF1F7] shadow-[0_18px_45px_rgba(27,35,58,0.12)]"
     >
-      <Carousel.Content className="h-full">
-        {items.map((item, index) => (
-          <Carousel.Item key={`${item.type}-${item.src}-${index}`} className="h-full">
-            {item.type === 'video' ? (
-              <video
-                src={item.src}
-                muted
-                playsInline
-                controls
-                className="h-full w-full bg-black object-cover"
-                aria-label={item.alt ?? `${title} video`}
-              />
-            ) : (
-              <img
-                src={item.src}
-                alt={item.alt ?? `${title} ${index + 1}`}
-                className="h-full w-full object-cover"
-              />
-            )}
-          </Carousel.Item>
-        ))}
-      </Carousel.Content>
+      <Carousel.Root
+        setApi={setApi}
+        opts={{ align: 'start', loop: hasMultipleItems, duration: 34 }}
+        className="h-full w-full"
+      >
+        <Carousel.Content className="h-full">
+          {items.map((item, index) => (
+            <Carousel.Item key={`${item.type}-${item.src}-${index}`} className="h-full">
+              {item.type === 'video' ? (
+                <video
+                  src={item.src}
+                  muted
+                  playsInline
+                  controls
+                  className="h-full w-full bg-black object-cover"
+                  aria-label={item.alt ?? `${title} video`}
+                />
+              ) : (
+                <img
+                  src={item.src}
+                  alt={item.alt ?? `${title} ${index + 1}`}
+                  className="h-full w-full object-cover"
+                />
+              )}
+            </Carousel.Item>
+          ))}
+        </Carousel.Content>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/32 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 rounded-b-[24px] bg-gradient-to-t from-black/32 to-transparent" />
 
-      {hasMultipleItems ? (
-        <>
-          <Carousel.PrevTrigger className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
-            <span className="text-lg leading-none">&lt;</span>
-          </Carousel.PrevTrigger>
-          <Carousel.NextTrigger className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
-            <span className="text-lg leading-none">&gt;</span>
-          </Carousel.NextTrigger>
-          <Carousel.IndicatorGroup className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 backdrop-blur-md">
-            {({ index }) => (
-              <Carousel.Indicator
-                index={index}
-                className={({ isSelected }) =>
-                  `h-2.5 rounded-full transition-all ${isSelected ? 'w-6 bg-white' : 'w-2.5 bg-white/45'}`
-                }
-              />
-            )}
-          </Carousel.IndicatorGroup>
-        </>
-      ) : null}
-    </Carousel.Root>
+        {hasMultipleItems ? (
+          <>
+            <Carousel.PrevTrigger className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
+              <span className="text-lg leading-none">&lt;</span>
+            </Carousel.PrevTrigger>
+            <Carousel.NextTrigger className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/30 bg-black/30 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-md transition hover:bg-black/45 disabled:opacity-40">
+              <span className="text-lg leading-none">&gt;</span>
+            </Carousel.NextTrigger>
+            <Carousel.IndicatorGroup className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 backdrop-blur-md">
+              {({ index }) => (
+                <Carousel.Indicator
+                  index={index}
+                  className={({ isSelected }) =>
+                    `h-2.5 rounded-full transition-all ${isSelected ? 'w-6 bg-white' : 'w-2.5 bg-white/45'}`
+                  }
+                />
+              )}
+            </Carousel.IndicatorGroup>
+          </>
+        ) : null}
+      </Carousel.Root>
+    </AspectRatio>
   );
 }
 

@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
-import dayjs, { type Dayjs } from 'dayjs';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateCalendar } from '@mui/x-date-pickers/DateCalendar';
+import dayjs from 'dayjs';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import publishAddressStepAnimation from '@/components/animations/publish-address-step1.json';
@@ -34,6 +31,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/tailgrids/core/collapsible';
 import { TextArea } from '@/components/tailgrids/core/text-area';
+import { DatePicker } from '@/core/date-picker/single-date';
 import { Spinner } from '@/core/spinner';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -1010,10 +1008,11 @@ export default function PublishPage() {
   const [aboutFounder, setAboutFounder] = useState<string>('');
   const [aboutTeam, setAboutTeam] = useState<string>('');
   const [businessAchievements, setBusinessAchievements] = useState<string>('');
-  const roundCloseDateValue = useMemo<Dayjs | null>(
-    () => (roundCloseDate ? dayjs(roundCloseDate) : null),
+  const roundCloseDateValue = useMemo<Date | null>(
+    () => (roundCloseDate ? dayjs(roundCloseDate).toDate() : null),
     [roundCloseDate],
   );
+  const roundCloseDateMinValue = useMemo(() => dayjs().startOf('day').toDate(), []);
   const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
   const [pendingMediaItems, setPendingMediaItems] = useState<UploadMediaItem[]>([]);
   const [uploadedMediaItems, setUploadedMediaItems] = useState<UploadMediaItem[]>([]);
@@ -2672,97 +2671,102 @@ export default function PublishPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-4">
-                    <label className="block">
-                      <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
-                      <div className="mt-2 flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-2.5">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
-                          <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="9" />
-                            <path d="M14.8 8.5c-.7-.7-1.7-1-2.8-1-1.7 0-3 .9-3 2.2 0 1.2 1 1.8 2.7 2.2 1.9.4 3.3.9 3.3 2.5 0 1.5-1.4 2.4-3.3 2.4-1.3 0-2.5-.4-3.4-1.3" />
-                            <path d="M12 6.5v11" />
-                          </svg>
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          value={capitalRequiredUsd}
-                          onChange={(event) => setCapitalRequiredUsd(event.target.value)}
-                          placeholder="0"
-                          className="w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
-                        />
-                      </div>
-                    </label>
+                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(330px,0.72fr)]">
+                  <div className="space-y-4">
+                    <AccordionRoot variant="style_two" className="gap-3">
+                      <AccordionItem className="overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                        <AccordionTrigger className="px-5 py-4 text-base font-semibold tracking-[-0.03em] text-[#0B1325] data-[state=open]:pb-3">
+                          Capital required and interest rate
+                        </AccordionTrigger>
+                        <AccordionContent className="space-y-4 px-5 pb-5 pt-0">
+                          <label className="block">
+                            <p className="text-sm font-semibold text-[#0B1325]">Capital required (USD)</p>
+                            <div className="mt-2 flex items-center gap-3 rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FB] text-black">
+                                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="9" />
+                                  <path d="M14.8 8.5c-.7-.7-1.7-1-2.8-1-1.7 0-3 .9-3 2.2 0 1.2 1 1.8 2.7 2.2 1.9.4 3.3.9 3.3 2.5 0 1.5-1.4 2.4-3.3 2.4-1.3 0-2.5-.4-3.4-1.3" />
+                                  <path d="M12 6.5v11" />
+                                </svg>
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={capitalRequiredUsd}
+                                onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                                placeholder="0"
+                                className="w-full border-0 bg-transparent p-0 text-base font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                              />
+                            </div>
+                          </label>
 
-                    <label className="mt-4 block">
+                          <div>
+                            <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
+                            <div className="mt-2 rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="60"
+                                  step="0.5"
+                                  value={interestRateEA || '1'}
+                                  onChange={(event) => setInterestRateEA(event.target.value)}
+                                  className="h-2 w-full cursor-pointer accent-[#6B39F4]"
+                                />
+                                <div className="w-[120px]">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    max="60"
+                                    step="0.5"
+                                    value={interestRateEA}
+                                    onChange={(event) => setInterestRateEA(event.target.value)}
+                                    placeholder="0"
+                                    className="w-full rounded-xl border border-[#DCE6F1] bg-white px-3 py-2 text-sm font-semibold text-[#0B1325] outline-none focus:border-[#6B39F4]"
+                                  />
+                                </div>
+                              </div>
+                              <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </AccordionRoot>
+
+                    <label className="block rounded-3xl border border-[#DCE6F1] bg-white p-5 shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
                       <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
-                      <textarea
+                      <p className="mt-1 text-xs leading-5 text-[#5D6A7F]">
+                        Be specific about how the capital turns into growth.
+                      </p>
+                      <TextArea
                         value={fundUsage}
                         onChange={(event) => setFundUsage(event.target.value)}
                         placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
-                        className={`${inputClassName} mt-2 min-h-[88px] resize-none text-sm`}
+                        className="mt-3 min-h-[126px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm"
                       />
                     </label>
-
-                    <div className="mt-4">
-                      <p className="text-sm font-semibold text-[#0B1325]">Annual interest rate (EA)</p>
-                      <div className="mt-2 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min="1"
-                          max="60"
-                          step="0.5"
-                          value={interestRateEA || '1'}
-                          onChange={(event) => setInterestRateEA(event.target.value)}
-                          className="h-2 w-full cursor-pointer accent-[#6B39F4]"
-                        />
-                        <div className="w-[120px]">
-                          <input
-                            type="number"
-                            min="1"
-                            max="60"
-                            step="0.5"
-                            value={interestRateEA}
-                            onChange={(event) => setInterestRateEA(event.target.value)}
-                            placeholder="0"
-                            className="w-full rounded-lg border border-[#DCE6F1] bg-white px-2 py-1.5 text-sm font-semibold text-[#0B1325] outline-none focus:border-[#6B39F4]"
-                          />
-                        </div>
-                      </div>
-                      <p className="mt-2 text-xs text-[#5D6A7F]">Set your offered effective annual rate (%)</p>
-                    </div>
-                    </div>
                   </div>
 
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-4">
-                    <label className="block">
-                      <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
-                      <div className="mt-2 overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white p-2">
-                        <LocalizationProvider dateAdapter={AdapterDayjs}>
-                          <DateCalendar
-                            value={roundCloseDateValue}
-                            onChange={(newValue) =>
-                              setRoundCloseDate(newValue ? newValue.format('YYYY-MM-DD') : '')
-                            }
-                            disablePast
-                            sx={{
-                              width: '100%',
-                              maxHeight: 295,
-                              transform: 'scale(0.98)',
-                              transformOrigin: 'top center',
-                              '& .MuiPickersDay-root.Mui-selected': {
-                                backgroundColor: '#6B39F4',
-                              },
-                              '& .MuiPickersDay-root.Mui-selected:hover': {
-                                backgroundColor: '#5A2FCE',
-                              },
-                            }}
-                          />
-                        </LocalizationProvider>
-                      </div>
-                    </label>
+                  <div className="rounded-3xl border border-[#DCE6F1] bg-white p-5 shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                    <p className="text-sm font-semibold text-[#0B1325]">Investment round closing date</p>
+                    <p className="mt-1 text-xs leading-5 text-[#5D6A7F]">
+                      Choose the last day investors can participate in this round.
+                    </p>
+                    <DatePicker
+                      value={roundCloseDateValue}
+                      minDate={roundCloseDateMinValue}
+                      onChange={(date) => setRoundCloseDate(dayjs(date).format('YYYY-MM-DD'))}
+                      placeholder="Select closing date"
+                      className="mt-4"
+                    />
+                    <div className="mt-4 rounded-2xl bg-[#F7F9FC] px-4 py-3">
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7A8798]">
+                        Selected close date
+                      </p>
+                      <p className="mt-1 text-lg font-semibold tracking-[-0.035em] text-[#0B1325]">
+                        {roundCloseDate ? dayjs(roundCloseDate).format('MMMM D, YYYY') : 'Not selected yet'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-center pt-2">
@@ -2880,10 +2884,13 @@ export default function PublishPage() {
                     </h2>
                     <div className="grid w-full grid-cols-5 gap-3">
                       {Array.from({ length: 10 }).map((_, index) => (
-                        <div
+                        <AspectRatio
                           key={`media-skeleton-${index}`}
-                          className="aspect-[16/10] animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
-                        />
+                          customRatio={1.6}
+                          className="animate-pulse rounded-2xl border border-[#E4ECF6] bg-[#EEF3FB]"
+                        >
+                          <span className="sr-only">Loading media</span>
+                        </AspectRatio>
                       ))}
                     </div>
                   </div>
@@ -2966,11 +2973,13 @@ export default function PublishPage() {
                                 />
                               </AspectRatio>
                             ) : (
-                              <img
-                                src={item.previewUrl}
-                                alt={item.name}
-                                className="aspect-[16/10] w-full object-cover"
-                              />
+                              <AspectRatio customRatio={1.6}>
+                                <img
+                                  src={item.previewUrl}
+                                  alt={item.name}
+                                  className="h-full w-full object-cover"
+                                />
+                              </AspectRatio>
                             )}
                             <div className="absolute left-2 top-2 rounded-full bg-black/65 px-2 py-0.5 text-[11px] font-semibold text-white">
                               {item.type === 'video' ? 'Video' : 'Photo'}
@@ -3104,40 +3113,42 @@ export default function PublishPage() {
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto rounded-3xl border border-[#DCE6F1] bg-white pb-8 shadow-[0_18px_36px_rgba(15,23,42,0.06)]">
-                  <div className="relative h-[300px] w-full overflow-hidden bg-[#EEF3FB]">
-                    {previewPhotos.length > 0 ? (
-                      <motion.div
-                        animate={{ x: `-${activePhotoIndex * 100}%` }}
-                        transition={{ duration: 0.6, ease: 'easeInOut' }}
-                        className="flex h-full w-full"
-                      >
-                        {previewPhotos.map((photo) => (
-                          <img
-                            key={photo.id}
-                            src={photo.previewUrl}
-                            alt={photo.name}
-                            className="h-full min-w-full object-cover"
-                          />
-                        ))}
-                      </motion.div>
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#6A778D]">
-                        Add photos to preview your listing.
-                      </div>
-                    )}
-                    {previewPhotos.length > 0 ? (
-                      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/45 px-3 py-1.5">
-                        {previewPhotos.map((photo, index) => (
-                          <span
-                            key={`photo-dot-${photo.id}`}
-                            className={`h-2 w-2 rounded-full ${
-                              activePhotoIndex === index ? 'bg-white' : 'bg-white/45'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
+                  <AspectRatio ratio="21/9" className="bg-[#EEF3FB]">
+                    <div className="relative h-full w-full overflow-hidden">
+                      {previewPhotos.length > 0 ? (
+                        <motion.div
+                          animate={{ x: `-${activePhotoIndex * 100}%` }}
+                          transition={{ duration: 0.6, ease: 'easeInOut' }}
+                          className="flex h-full w-full"
+                        >
+                          {previewPhotos.map((photo) => (
+                            <img
+                              key={photo.id}
+                              src={photo.previewUrl}
+                              alt={photo.name}
+                              className="h-full min-w-full object-cover"
+                            />
+                          ))}
+                        </motion.div>
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-sm text-[#6A778D]">
+                          Add photos to preview your listing.
+                        </div>
+                      )}
+                      {previewPhotos.length > 0 ? (
+                        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2 rounded-full bg-black/45 px-3 py-1.5">
+                          {previewPhotos.map((photo, index) => (
+                            <span
+                              key={`photo-dot-${photo.id}`}
+                              className={`h-2 w-2 rounded-full ${
+                                activePhotoIndex === index ? 'bg-white' : 'bg-white/45'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  </AspectRatio>
 
                   <div className="space-y-4 p-6">
                     <h3 className="text-center text-2xl font-semibold tracking-[-0.03em] text-[#0B1325]">
@@ -3759,7 +3770,9 @@ export default function PublishPage() {
                             <video src={item.previewUrl} className="h-full w-full object-cover" controls muted />
                           </AspectRatio>
                         ) : (
-                          <img src={item.previewUrl} alt={item.name} className="h-64 w-full object-cover" />
+                          <AspectRatio ratio="video">
+                            <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+                          </AspectRatio>
                         )}
                       </div>
                     ))}
@@ -4137,6 +4150,119 @@ export default function PublishPage() {
                       </label>
                     </CollapsibleContent>
                   </Collapsible>
+                </div>
+              </motion.div>
+            ) : currentStep === 8 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.8dvh,3.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2rem,8.6vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Define your investment round details
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.94rem,3.9vw,1.22rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
+                  Share the target amount, investor return, use of funds, and closing date for this round.
+                </p>
+
+                <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
+                  <AccordionRoot variant="style_two" className="gap-3">
+                    <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                        Capital required and interest rate
+                      </AccordionTrigger>
+                      <AccordionContent className="space-y-4 px-5 pb-5 pt-0">
+                        <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                          <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                            Capital required (USD)
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={capitalRequiredUsd}
+                            onChange={(event) => setCapitalRequiredUsd(event.target.value)}
+                            placeholder="0"
+                            className="mt-1 h-11 w-full bg-transparent text-[1.35rem] font-extrabold tracking-[-0.045em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                          />
+                        </label>
+
+                        <div className="rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                              Annual interest rate (EA)
+                            </span>
+                            <input
+                              type="number"
+                              min="1"
+                              max="60"
+                              step="0.5"
+                              value={interestRateEA}
+                              onChange={(event) => setInterestRateEA(event.target.value)}
+                              placeholder="0"
+                              className="h-10 w-20 rounded-2xl border border-[#E2E2E2] bg-white px-3 text-right text-base font-extrabold tracking-[-0.035em] text-[#242424] outline-none focus:border-[#6B39F4]"
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="60"
+                            step="0.5"
+                            value={interestRateEA || '1'}
+                            onChange={(event) => setInterestRateEA(event.target.value)}
+                            className="mt-4 h-2 w-full cursor-pointer accent-[#6B39F4]"
+                          />
+                          <p className="mt-2 text-sm font-medium leading-5 text-[#777777]">
+                            Set the effective annual rate offered to investors.
+                          </p>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </AccordionRoot>
+
+                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>What will you use the funds for?</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5">
+                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                        Be specific about how the capital turns into growth.
+                      </p>
+                      <TextArea
+                        value={fundUsage}
+                        onChange={(event) => setFundUsage(event.target.value)}
+                        placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
+                        className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <div className="rounded-[24px] border border-[#DEDEDE] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                    <p className="text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      Investment round closing date
+                    </p>
+                    <p className="mt-2 text-sm font-medium leading-5 text-[#777777]">
+                      Choose the last day investors can participate in this round.
+                    </p>
+                    <DatePicker
+                      value={roundCloseDateValue}
+                      minDate={roundCloseDateMinValue}
+                      onChange={(date) => setRoundCloseDate(dayjs(date).format('YYYY-MM-DD'))}
+                      placeholder="Select closing date"
+                      className="mt-4"
+                    />
+                    <div className="mt-3 rounded-[20px] bg-[#F7F7F7] px-4 py-3">
+                      <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                        Selected close date
+                      </span>
+                      <span className="mt-1 block text-[1.1rem] font-extrabold tracking-[-0.04em] text-[#242424]">
+                        {roundCloseDate ? dayjs(roundCloseDate).format('MMMM D, YYYY') : 'Not selected yet'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ) : (
