@@ -4624,6 +4624,36 @@ export default function PublishPage() {
                   </Collapsible>
                 </div>
               </motion.div>
+            ) : currentStep === 10 ? (
+              <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="flex min-h-0 items-end justify-center"
+                >
+                  <Lottie
+                    animationData={publishStep10MediaAnimation}
+                    loop
+                    autoplay
+                    className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
+                  className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]"
+                >
+                  <h1 className="max-w-[11.5ch] text-[clamp(2.18rem,9.4vw,3.85rem)] font-extrabold leading-[0.96] tracking-[-0.07em] text-[#1F1F1F]">
+                    Add some photos and videos of your Business
+                  </h1>
+                  <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.96rem,4.05vw,1.32rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#343434]">
+                    You&apos;ll need at least 5 photos to get started. You can add a video optionally and make changes later.
+                  </p>
+                </motion.div>
+              </div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
