@@ -81,6 +81,14 @@ type PublishStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 
 
 type ProgressStepStatus = 'completed' | 'current' | 'upcoming';
 
+type PublishCollapsibleKey =
+  | 'desktop-step7-metrics'
+  | 'desktop-step8-funds'
+  | 'desktop-step8-minimum'
+  | 'mobile-step7-metrics'
+  | 'mobile-step8-funds'
+  | 'mobile-step8-minimum';
+
 type ProgressStep = {
   title: string;
   description: string;
@@ -145,6 +153,7 @@ const defaultMobileMapCenter = { lat: -37.8136, lng: 144.9631 };
 
 const inputClassName =
   'w-full rounded-2xl border border-[#D8E2EC] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none transition placeholder:text-[#94A3B8] focus:border-[#2E7CF6] focus:ring-4 focus:ring-[#2E7CF6]/10';
+const publishCollapsibleDataAttribute = { 'data-publish-collapsible': 'true' } as const;
 
 const mediaImageMaxDimension = 1600;
 const mediaImageWebpQuality = 0.82;
@@ -1007,6 +1016,8 @@ export default function PublishPage() {
 
   const [address, setAddress] = useState<PublishAddressStepFields>(emptyAddress);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [activePublishCollapsible, setActivePublishCollapsible] =
+    useState<PublishCollapsibleKey | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
@@ -1240,6 +1251,7 @@ export default function PublishPage() {
   }, [user]);
 
   const goToStep = (nextStep: PublishStep, withSkeleton = true) => {
+    setActivePublishCollapsible(null);
     setCurrentStep(nextStep);
 
     if (!withSkeleton) {
@@ -2040,6 +2052,24 @@ export default function PublishPage() {
     router.push('/feed');
   };
 
+  useEffect(() => {
+    if (!activePublishCollapsible) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('[data-publish-collapsible="true"]')) return;
+
+      setActivePublishCollapsible(null);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [activePublishCollapsible]);
+
   if (rolSeleccionado !== 'emprendedor') {
     return <RoleRestrictedState />;
   }
@@ -2153,6 +2183,13 @@ export default function PublishPage() {
       goToStep((currentStep - 1) as PublishStep);
     }
   };
+
+  const getPublishCollapsibleControlProps = (key: PublishCollapsibleKey) => ({
+    ...publishCollapsibleDataAttribute,
+    isExpanded: activePublishCollapsible === key,
+    onExpandedChange: (isExpanded: boolean) =>
+      setActivePublishCollapsible(isExpanded ? key : null),
+  });
 
   const showWizardSkeleton = checkingProject || isStepTransitionLoading;
 
@@ -2625,7 +2662,10 @@ export default function PublishPage() {
                     </AccordionItem>
                   </AccordionRoot>
 
-                  <Collapsible className="max-w-none overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.05)]">
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('desktop-step7-metrics')}
+                    className="max-w-none overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.05)]"
+                  >
                     <CollapsibleTrigger className="px-5 py-4 text-base font-semibold tracking-[-0.03em] text-[#0B1325]">
                       <span>Monthly business metrics</span>
                       <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
@@ -2765,7 +2805,10 @@ export default function PublishPage() {
                       </AccordionItem>
                     </AccordionRoot>
 
-                    <Collapsible className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                    <Collapsible
+                      {...getPublishCollapsibleControlProps('desktop-step8-funds')}
+                      className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]"
+                    >
                       <CollapsibleTrigger className="px-5 py-4 text-sm font-semibold text-[#0B1325]">
                         <span>What will you use the funds for?</span>
                         <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
@@ -2785,7 +2828,10 @@ export default function PublishPage() {
                       </CollapsibleContent>
                     </Collapsible>
 
-                    <Collapsible className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                    <Collapsible
+                      {...getPublishCollapsibleControlProps('desktop-step8-minimum')}
+                      className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]"
+                    >
                       <CollapsibleTrigger className="px-5 py-4 text-sm font-semibold text-[#0B1325]">
                         <span>Minimum investment amount</span>
                         <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
@@ -4163,7 +4209,10 @@ export default function PublishPage() {
                     </AccordionItem>
                   </AccordionRoot>
 
-                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step7-metrics')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
                     <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
                       <span>Monthly business metrics</span>
                       <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
@@ -4284,7 +4333,10 @@ export default function PublishPage() {
                     </AccordionItem>
                   </AccordionRoot>
 
-                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step8-funds')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
                     <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
                       <span>What will you use the funds for?</span>
                       <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
@@ -4304,7 +4356,10 @@ export default function PublishPage() {
                     </CollapsibleContent>
                   </Collapsible>
 
-                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step8-minimum')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
                     <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
                       <span>Minimum investment amount</span>
                       <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
