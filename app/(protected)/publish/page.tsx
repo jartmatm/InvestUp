@@ -4381,7 +4381,7 @@ export default function PublishPage() {
                     <div className="flex min-h-[clamp(27rem,58dvh,41rem)] flex-1 flex-col justify-center pb-[clamp(1rem,3dvh,2rem)] pt-[clamp(1rem,4dvh,3.2rem)]">
                       <label className="block text-center">
                         <span className="sr-only">Capital required in USD</span>
-                        <div className="flex items-end justify-center gap-2">
+                        <div className="flex items-end justify-center gap-[clamp(0.35rem,1.4vw,0.75rem)]">
                           <input
                             type="number"
                             min="0"
@@ -4389,7 +4389,7 @@ export default function PublishPage() {
                             onChange={(event) => setCapitalRequiredUsd(event.target.value)}
                             placeholder="0"
                             inputMode="decimal"
-                            className="w-[min(72vw,23rem)] bg-transparent text-center text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
+                            className="w-[clamp(8.5rem,50vw,17rem)] bg-transparent text-right text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
                           />
                           <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
                             $
@@ -4410,7 +4410,7 @@ export default function PublishPage() {
                               Effective annual return offered to investors.
                             </p>
                           </div>
-                          <label className="flex h-[clamp(3.25rem,8dvh,4.6rem)] w-[clamp(5.1rem,24vw,7rem)] shrink-0 items-center justify-center gap-1 rounded-[22px] border border-[#E0E0E0] bg-white px-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                          <label className="flex h-[clamp(3.25rem,8dvh,4.6rem)] w-[clamp(6.3rem,30vw,8.6rem)] shrink-0 items-center justify-center gap-1 rounded-[22px] border border-[#E0E0E0] bg-white px-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
                             <span className="sr-only">Annual interest rate percentage</span>
                             <input
                               type="number"
@@ -4456,7 +4456,7 @@ export default function PublishPage() {
                     <div className="flex min-h-[clamp(27rem,58dvh,41rem)] flex-1 flex-col items-center justify-center pb-[clamp(1rem,3dvh,2rem)] pt-[clamp(1.5rem,5dvh,4rem)] text-center">
                       <label className="block">
                         <span className="sr-only">Minimum investment amount in USD</span>
-                        <div className="flex items-end justify-center gap-2">
+                        <div className="flex items-end justify-center gap-[clamp(0.35rem,1.4vw,0.75rem)]">
                           <input
                             type="number"
                             min="1"
@@ -4464,20 +4464,16 @@ export default function PublishPage() {
                             onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
                             placeholder="50"
                             inputMode="decimal"
-                            className="w-[min(68vw,21rem)] bg-transparent text-center text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
+                            className="w-[clamp(8.5rem,50vw,17rem)] bg-transparent text-right text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
                           />
                           <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
                             $
                           </span>
                         </div>
-                        <span className="mt-3 block text-[clamp(0.98rem,4.1vw,1.28rem)] font-semibold tracking-[-0.03em] text-[#3A3A3A]">
-                          Minimum contribution per investor
+                        <span className="mx-auto mt-3 block max-w-[28rem] text-[clamp(0.98rem,4.1vw,1.28rem)] font-semibold leading-[1.28] tracking-[-0.03em] text-[#3A3A3A]">
+                          You will not be able to change this amount once your project receives its first investment.
                         </span>
                       </label>
-
-                      <p className="mt-[clamp(3.2rem,9dvh,6rem)] max-w-[28rem] rounded-[28px] border border-[#ECE7FF] bg-[#F7F3FF] px-5 py-4 text-[clamp(0.92rem,3.7vw,1.08rem)] font-semibold leading-[1.35] tracking-[-0.02em] text-[#5C36C8] shadow-[0_18px_42px_rgba(107,57,244,0.08)]">
-                        You will not be able to change this amount once your project receives its first investment.
-                      </p>
                     </div>
                   </>
                 ) : (
