@@ -4052,7 +4052,7 @@ export default function PublishPage() {
                 <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
                   <AccordionRoot variant="style_two" className="gap-3">
                     <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
                         What do you sell exactly?
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5 pt-0">
@@ -4069,7 +4069,7 @@ export default function PublishPage() {
                     </AccordionItem>
 
                     <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
                         What makes you different from competitors?
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5 pt-0">
