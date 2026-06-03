@@ -89,7 +89,10 @@ type PublishCollapsibleKey =
   | 'desktop-step8-minimum'
   | 'mobile-step7-metrics'
   | 'mobile-step8-funds'
-  | 'mobile-step8-minimum';
+  | 'mobile-step8-minimum'
+  | 'mobile-step9-founder'
+  | 'mobile-step9-team'
+  | 'mobile-step9-achievements';
 
 type ProgressStep = {
   title: string;
@@ -4535,6 +4538,91 @@ export default function PublishPage() {
                     </div>
                   </>
                 )}
+              </motion.div>
+            ) : currentStep === 9 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.8dvh,3.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2rem,8.6vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Tell us about you and your team
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.94rem,3.9vw,1.22rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
+                  Help investors trust the people, experience, and milestones behind your business.
+                </p>
+
+                <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step9-founder')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>Tell us about yourself</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5">
+                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                        Who you are, brief summary, studies, and relevant experience.
+                      </p>
+                      <TextArea
+                        value={aboutFounder}
+                        onChange={(event) => setAboutFounder(event.target.value)}
+                        placeholder="Example: I am a mechanical engineer with 8 years of experience in food operations and scaling SMEs."
+                        className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step9-team')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>Tell us about your team</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5">
+                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                        Number of employees, roles, and key capabilities.
+                      </p>
+                      <TextArea
+                        value={aboutTeam}
+                        onChange={(event) => setAboutTeam(event.target.value)}
+                        placeholder="Example: 12 team members across operations, sales, and finance, with strengths in logistics and customer retention."
+                        className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible
+                    {...getPublishCollapsibleControlProps('mobile-step9-achievements')}
+                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                  >
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>Achievements</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5">
+                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                        Awards, recognitions, certifications, or key business milestones. You can leave this blank if it does not apply yet.
+                      </p>
+                      <TextArea
+                        value={businessAchievements}
+                        onChange={(event) => setBusinessAchievements(event.target.value)}
+                        placeholder="Example: Winner of local startup challenge 2025 and ISO 9001 certified operations."
+                        className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
               </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
