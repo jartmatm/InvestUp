@@ -771,11 +771,15 @@ function MobileMapPreview({
   compact?: boolean;
 }) {
   const [leafletModules, setLeafletModules] = useState<LeafletModules | null>(null);
+  const mapRef = useRef<import('leaflet').Map | null>(null);
   const mapCenter =
     typeof address.latitude === 'number' && typeof address.longitude === 'number'
       ? { lat: address.latitude, lng: address.longitude }
       : defaultMobileMapCenter;
-  const markerPosition: [number, number] = [mapCenter.lat, mapCenter.lng];
+  const markerPosition = useMemo<[number, number]>(
+    () => [mapCenter.lat, mapCenter.lng],
+    [mapCenter.lat, mapCenter.lng],
+  );
   const zoom = typeof address.latitude === 'number' && typeof address.longitude === 'number' ? 15 : 4;
 
   useEffect(() => {
@@ -790,11 +794,26 @@ function MobileMapPreview({
     };
   }, []);
 
+  useEffect(() => {
+    if (!leafletModules || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const refreshMap = () => {
+      map.invalidateSize(false);
+      map.setView(markerPosition, zoom, { animate: false });
+    };
+    const timers = [0, 140, 420].map((delay) => window.setTimeout(refreshMap, delay));
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [compact, leafletModules, mapCenter.lat, mapCenter.lng, markerPosition, zoom]);
+
   if (!leafletModules) {
     return (
       <div
         className={`relative overflow-hidden rounded-[28px] border border-[#DDE7D9] bg-[linear-gradient(135deg,#BBDDE8_0%,#D4ECF3_46%,#BBDDE8_100%)] ${
-          compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
+          compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'h-[clamp(18rem,48dvh,30rem)]'
         }`}
       >
         <div className="absolute left-1/2 top-1/2 flex h-[clamp(2.9rem,12vw,4rem)] w-[clamp(2.9rem,12vw,4rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-[0_10px_28px_rgba(15,23,42,0.2)]">
@@ -816,10 +835,11 @@ function MobileMapPreview({
   return (
     <div
       className={`relative overflow-hidden rounded-[28px] border border-[#DDE7D9] bg-[#CFE8F1] ${
-        compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'min-h-[clamp(18rem,48dvh,30rem)] flex-1'
+        compact ? 'h-[clamp(9rem,24dvh,13rem)]' : 'h-[clamp(18rem,48dvh,30rem)]'
       }`}
     >
       <MapContainer
+        ref={mapRef}
         key={`${mapCenter.lat}-${mapCenter.lng}-${zoom}`}
         center={markerPosition}
         zoom={zoom}
@@ -2733,18 +2753,25 @@ export default function PublishPage() {
                       </AccordionItem>
                     </AccordionRoot>
 
-                    <label className="block rounded-3xl border border-[#DCE6F1] bg-white p-5 shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
-                      <p className="text-sm font-semibold text-[#0B1325]">What will you use the funds for?</p>
-                      <p className="mt-1 text-xs leading-5 text-[#5D6A7F]">
-                        Be specific about how the capital turns into growth.
-                      </p>
-                      <TextArea
-                        value={fundUsage}
-                        onChange={(event) => setFundUsage(event.target.value)}
-                        placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
-                        className="mt-3 min-h-[126px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm"
-                      />
-                    </label>
+                    <Collapsible className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                      <CollapsibleTrigger className="px-5 py-4 text-sm font-semibold text-[#0B1325]">
+                        <span>What will you use the funds for?</span>
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="px-5 pb-5 pt-0">
+                        <p className="text-xs leading-5 text-[#5D6A7F]">
+                          Be specific about how the capital turns into growth.
+                        </p>
+                        <TextArea
+                          value={fundUsage}
+                          onChange={(event) => setFundUsage(event.target.value)}
+                          placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
+                          className="mt-3 min-h-[126px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm"
+                        />
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
 
                   <div className="rounded-3xl border border-[#DCE6F1] bg-white p-5 shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
@@ -4065,7 +4092,7 @@ export default function PublishPage() {
                 <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
                   <AccordionRoot variant="style_two" className="gap-3">
                     <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 max-sm:pl-[clamp(2rem,7vw,2.6rem)] max-sm:pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
                         What do you sell exactly?
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5 pt-0">
@@ -4082,7 +4109,7 @@ export default function PublishPage() {
                     </AccordionItem>
 
                     <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 max-sm:pl-[clamp(2rem,7vw,2.6rem)] max-sm:pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
                         What makes you different from competitors?
                       </AccordionTrigger>
                       <AccordionContent className="px-5 pb-5 pt-0">
@@ -4169,7 +4196,7 @@ export default function PublishPage() {
                 <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
                   <AccordionRoot variant="style_two" className="gap-3">
                     <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 max-sm:pl-[clamp(2rem,7vw,2.6rem)] max-sm:pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
                         Capital required and interest rate
                       </AccordionTrigger>
                       <AccordionContent className="space-y-4 px-5 pb-5 pt-0">
