@@ -81,6 +81,8 @@ type PublishStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 
 
 type ProgressStepStatus = 'completed' | 'current' | 'upcoming';
 
+type MobileInvestmentRoundSubstep = 'capital' | 'minimum' | 'details';
+
 type PublishCollapsibleKey =
   | 'desktop-step7-metrics'
   | 'desktop-step8-funds'
@@ -1023,6 +1025,8 @@ export default function PublishPage() {
   const [searchResults, setSearchResults] = useState<BusinessAddressRecord[]>([]);
   const [geolocationLoading, setGeolocationLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<PublishStep>(1);
+  const [mobileInvestmentRoundSubstep, setMobileInvestmentRoundSubstep] =
+    useState<MobileInvestmentRoundSubstep>('capital');
   const [isStepTransitionLoading, setIsStepTransitionLoading] = useState(false);
   const [selectedBusinessCategory, setSelectedBusinessCategory] = useState<string>('');
   const [businessName, setBusinessName] = useState<string>('');
@@ -1130,7 +1134,8 @@ export default function PublishPage() {
       Number(capitalRequiredUsd) > 0 &&
       fundUsage.trim().length > 0 &&
       Number(minimumInvestmentUsd) > 0 &&
-      Number(interestRateEA) > 0 &&
+      interestRateEA.trim().length > 0 &&
+      Number(interestRateEA) >= 0 &&
       roundCloseDate.trim().length > 0 &&
       !checkingProject &&
       !hasExistingProject,
@@ -1144,6 +1149,44 @@ export default function PublishPage() {
       hasExistingProject,
     ]
   );
+
+  const canContinueMobileInvestmentCapital = useMemo(
+    () =>
+      Number(capitalRequiredUsd) > 0 &&
+      interestRateEA.trim().length > 0 &&
+      Number(interestRateEA) >= 0 &&
+      !checkingProject &&
+      !hasExistingProject,
+    [capitalRequiredUsd, interestRateEA, checkingProject, hasExistingProject]
+  );
+
+  const canContinueMobileInvestmentMinimum = useMemo(
+    () =>
+      Number(minimumInvestmentUsd) > 0 &&
+      !checkingProject &&
+      !hasExistingProject,
+    [minimumInvestmentUsd, checkingProject, hasExistingProject]
+  );
+
+  const canContinueMobileInvestmentDetails = useMemo(
+    () =>
+      fundUsage.trim().length > 0 &&
+      roundCloseDate.trim().length > 0 &&
+      !checkingProject &&
+      !hasExistingProject,
+    [fundUsage, roundCloseDate, checkingProject, hasExistingProject]
+  );
+
+  const canContinueMobileInvestmentCurrent = useMemo(() => {
+    if (mobileInvestmentRoundSubstep === 'capital') return canContinueMobileInvestmentCapital;
+    if (mobileInvestmentRoundSubstep === 'minimum') return canContinueMobileInvestmentMinimum;
+    return canContinueMobileInvestmentDetails;
+  }, [
+    mobileInvestmentRoundSubstep,
+    canContinueMobileInvestmentCapital,
+    canContinueMobileInvestmentMinimum,
+    canContinueMobileInvestmentDetails,
+  ]);
 
   const canContinueStep9 = useMemo(
     () =>
@@ -1252,6 +1295,9 @@ export default function PublishPage() {
 
   const goToStep = (nextStep: PublishStep, withSkeleton = true) => {
     setActivePublishCollapsible(null);
+    if (nextStep !== 8) {
+      setMobileInvestmentRoundSubstep('capital');
+    }
     setCurrentStep(nextStep);
 
     if (!withSkeleton) {
@@ -2114,7 +2160,7 @@ export default function PublishPage() {
                 : currentStep === 7
                   ? canContinueStep7
                   : currentStep === 8
-                    ? canContinueStep8
+                    ? canContinueMobileInvestmentCurrent
                     : currentStep === 9
                       ? canContinueStep9
                       : currentStep === 10
@@ -2160,6 +2206,36 @@ export default function PublishPage() {
       return;
     }
 
+    if (currentStep === 8) {
+      if (mobileInvestmentRoundSubstep === 'capital') {
+        if (!canContinueMobileInvestmentCapital) return;
+        setIsContinuing(true);
+        try {
+          setActivePublishCollapsible(null);
+          setMobileInvestmentRoundSubstep('minimum');
+          setStatus('');
+        } finally {
+          setIsContinuing(false);
+        }
+        return;
+      }
+
+      if (mobileInvestmentRoundSubstep === 'minimum') {
+        if (!canContinueMobileInvestmentMinimum) return;
+        setIsContinuing(true);
+        try {
+          setActivePublishCollapsible(null);
+          setMobileInvestmentRoundSubstep('details');
+          setStatus('');
+        } finally {
+          setIsContinuing(false);
+        }
+        return;
+      }
+
+      if (!canContinueMobileInvestmentDetails) return;
+    }
+
     await handleContinue();
   };
 
@@ -2176,6 +2252,27 @@ export default function PublishPage() {
 
     if (currentStep === 6) {
       goToStep(1);
+      return;
+    }
+
+    if (currentStep === 8) {
+      if (mobileInvestmentRoundSubstep === 'details') {
+        setActivePublishCollapsible(null);
+        setMobileInvestmentRoundSubstep('minimum');
+        return;
+      }
+
+      if (mobileInvestmentRoundSubstep === 'minimum') {
+        setActivePublishCollapsible(null);
+        setMobileInvestmentRoundSubstep('capital');
+        return;
+      }
+    }
+
+    if (currentStep === 9) {
+      goToStep(8);
+      setActivePublishCollapsible(null);
+      setMobileInvestmentRoundSubstep('details');
       return;
     }
 
@@ -4270,146 +4367,178 @@ export default function PublishPage() {
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.8dvh,3.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+                className="flex min-h-0 flex-1 flex-col overflow-y-auto pt-[clamp(1.15rem,4.2dvh,2.6rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
               >
-                <h1 className="max-w-[12ch] text-[clamp(2rem,8.6vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
-                  Define your investment round details
-                </h1>
-                <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.94rem,3.9vw,1.22rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
-                  Share the target amount, investor return, use of funds, and closing date for this round.
-                </p>
+                {mobileInvestmentRoundSubstep === 'capital' ? (
+                  <>
+                    <h1 className="max-w-[12.5ch] text-[clamp(2rem,8.8vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                      Capital Required and Interest Rate
+                    </h1>
+                    <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[32rem] text-[clamp(0.94rem,3.9vw,1.2rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                      Choose the capital you want to raise in this investment round and the annual return investors will receive.
+                    </p>
 
-                <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
-                  <AccordionRoot variant="style_two" className="gap-3">
-                    <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                      <AccordionTrigger className="py-5 pl-[calc(1.25rem+5px)] pr-5 max-sm:pl-[clamp(2rem,7vw,2.6rem)] max-sm:pr-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
-                        Capital required and interest rate
-                      </AccordionTrigger>
-                      <AccordionContent className="space-y-4 px-5 pb-5 pt-0">
-                        <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
-                          <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
-                            Capital required (USD)
-                          </span>
+                    <div className="flex min-h-[clamp(27rem,58dvh,41rem)] flex-1 flex-col justify-center pb-[clamp(1rem,3dvh,2rem)] pt-[clamp(1rem,4dvh,3.2rem)]">
+                      <label className="block text-center">
+                        <span className="sr-only">Capital required in USD</span>
+                        <div className="flex items-end justify-center gap-2">
                           <input
                             type="number"
                             min="0"
                             value={capitalRequiredUsd}
                             onChange={(event) => setCapitalRequiredUsd(event.target.value)}
                             placeholder="0"
-                            className="mt-1 h-11 w-full bg-transparent text-[1.35rem] font-extrabold tracking-[-0.045em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                            inputMode="decimal"
+                            className="w-[min(72vw,23rem)] bg-transparent text-center text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
                           />
-                        </label>
+                          <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
+                            $
+                          </span>
+                        </div>
+                        <span className="mt-3 block text-[clamp(0.98rem,4.1vw,1.28rem)] font-semibold tracking-[-0.03em] text-[#3A3A3A]">
+                          Total amount to raise
+                        </span>
+                      </label>
 
-                        <div className="rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
-                              Annual interest rate (EA)
-                            </span>
+                      <div className="mt-[clamp(3.1rem,9dvh,6rem)]">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.08] tracking-[-0.04em] text-[#242424]">
+                              Annual interest rate EA
+                            </p>
+                            <p className="mt-1 text-[clamp(0.86rem,3.5vw,1rem)] font-medium tracking-[-0.018em] text-[#777777]">
+                              Effective annual return offered to investors.
+                            </p>
+                          </div>
+                          <label className="flex h-[clamp(3.25rem,8dvh,4.6rem)] w-[clamp(5.1rem,24vw,7rem)] shrink-0 items-center justify-center gap-1 rounded-[22px] border border-[#E0E0E0] bg-white px-3 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                            <span className="sr-only">Annual interest rate percentage</span>
                             <input
                               type="number"
-                              min="1"
-                              max="60"
+                              min="0"
+                              max="100"
                               step="0.5"
                               value={interestRateEA}
                               onChange={(event) => setInterestRateEA(event.target.value)}
                               placeholder="0"
-                              className="h-10 w-20 rounded-2xl border border-[#E2E2E2] bg-white px-3 text-right text-base font-extrabold tracking-[-0.035em] text-[#242424] outline-none focus:border-[#6B39F4]"
+                              inputMode="decimal"
+                              className="w-full bg-transparent text-right text-[clamp(1.55rem,7vw,2.35rem)] font-extrabold tracking-[-0.055em] text-[#242424] outline-none placeholder:text-[#BDBDBD]"
                             />
-                          </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="60"
-                            step="0.5"
-                            value={interestRateEA || '1'}
-                            onChange={(event) => setInterestRateEA(event.target.value)}
-                            className="mt-4 h-2 w-full cursor-pointer accent-[#6B39F4]"
-                          />
-                          <p className="mt-2 text-sm font-medium leading-5 text-[#777777]">
-                            Set the effective annual rate offered to investors.
-                          </p>
+                            <span className="text-[clamp(1.25rem,5vw,1.8rem)] font-extrabold text-[#242424]">
+                              %
+                            </span>
+                          </label>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </AccordionRoot>
-
-                  <Collapsible
-                    {...getPublishCollapsibleControlProps('mobile-step8-funds')}
-                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
-                  >
-                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
-                      <span>What will you use the funds for?</span>
-                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-5 pb-5">
-                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
-                        Be specific about how the capital turns into growth.
-                      </p>
-                      <TextArea
-                        value={fundUsage}
-                        onChange={(event) => setFundUsage(event.target.value)}
-                        placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
-                        className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
-                      />
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <Collapsible
-                    {...getPublishCollapsibleControlProps('mobile-step8-minimum')}
-                    className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
-                  >
-                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
-                      <span>Minimum investment amount</span>
-                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="px-5 pb-5">
-                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
-                        Set the smallest amount an investor can contribute to this round.
-                      </p>
-                      <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
-                        <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
-                          Minimum investment (USD)
-                        </span>
                         <input
-                          type="number"
-                          min="1"
-                          value={minimumInvestmentUsd}
-                          onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
-                          placeholder="50"
-                          className="mt-1 h-11 w-full bg-transparent text-[1.35rem] font-extrabold tracking-[-0.045em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          value={interestRateEA || '0'}
+                          onChange={(event) => setInterestRateEA(event.target.value)}
+                          className="mt-7 h-2 w-full cursor-pointer accent-[#6B39F4]"
                         />
-                      </label>
-                    </CollapsibleContent>
-                  </Collapsible>
-
-                  <div className="rounded-[24px] border border-[#DEDEDE] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
-                    <p className="text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
-                      Investment round closing date
-                    </p>
-                    <p className="mt-2 text-sm font-medium leading-5 text-[#777777]">
-                      Choose the last day investors can participate in this round.
-                    </p>
-                    <DatePicker
-                      value={roundCloseDateValue}
-                      minDate={roundCloseDateMinValue}
-                      onChange={(date) => setRoundCloseDate(dayjs(date).format('YYYY-MM-DD'))}
-                      placeholder="Select closing date"
-                      className="mt-4"
-                    />
-                    <div className="mt-3 rounded-[20px] bg-[#F7F7F7] px-4 py-3">
-                      <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
-                        Selected close date
-                      </span>
-                      <span className="mt-1 block text-[1.1rem] font-extrabold tracking-[-0.04em] text-[#242424]">
-                        {roundCloseDate ? dayjs(roundCloseDate).format('MMMM D, YYYY') : 'Not selected yet'}
-                      </span>
+                        <div className="mt-3 flex items-center justify-between text-[clamp(0.86rem,3.4vw,1rem)] font-semibold tracking-[-0.02em] text-[#777777]">
+                          <span>0%</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                ) : mobileInvestmentRoundSubstep === 'minimum' ? (
+                  <>
+                    <h1 className="max-w-[10.5ch] text-[clamp(2rem,8.8vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                      Minimum Invest Amount
+                    </h1>
+                    <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.94rem,3.9vw,1.2rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                      Set the smallest amount an investor can contribute to this round.
+                    </p>
+
+                    <div className="flex min-h-[clamp(27rem,58dvh,41rem)] flex-1 flex-col items-center justify-center pb-[clamp(1rem,3dvh,2rem)] pt-[clamp(1.5rem,5dvh,4rem)] text-center">
+                      <label className="block">
+                        <span className="sr-only">Minimum investment amount in USD</span>
+                        <div className="flex items-end justify-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            value={minimumInvestmentUsd}
+                            onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
+                            placeholder="50"
+                            inputMode="decimal"
+                            className="w-[min(68vw,21rem)] bg-transparent text-center text-[clamp(4.5rem,22vw,8.1rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020] outline-none placeholder:text-[#D3D3D3]"
+                          />
+                          <span className="mb-[clamp(0.45rem,2vw,0.9rem)] text-[clamp(3rem,14vw,5.4rem)] font-extrabold leading-none tracking-[-0.08em] text-[#202020]">
+                            $
+                          </span>
+                        </div>
+                        <span className="mt-3 block text-[clamp(0.98rem,4.1vw,1.28rem)] font-semibold tracking-[-0.03em] text-[#3A3A3A]">
+                          Minimum contribution per investor
+                        </span>
+                      </label>
+
+                      <p className="mt-[clamp(3.2rem,9dvh,6rem)] max-w-[28rem] rounded-[28px] border border-[#ECE7FF] bg-[#F7F3FF] px-5 py-4 text-[clamp(0.92rem,3.7vw,1.08rem)] font-semibold leading-[1.35] tracking-[-0.02em] text-[#5C36C8] shadow-[0_18px_42px_rgba(107,57,244,0.08)]">
+                        You will not be able to change this amount once your project receives its first investment.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="max-w-[12ch] text-[clamp(2rem,8.6vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                      Define your investment round details
+                    </h1>
+                    <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[31rem] text-[clamp(0.94rem,3.9vw,1.22rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
+                      Share how you will use the funds and when this round should close.
+                    </p>
+
+                    <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
+                      <Collapsible
+                        {...getPublishCollapsibleControlProps('mobile-step8-funds')}
+                        className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]"
+                      >
+                        <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                          <span>What will you use the funds for?</span>
+                          <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="px-5 pb-5">
+                          <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                            Be specific about how the capital turns into growth.
+                          </p>
+                          <TextArea
+                            value={fundUsage}
+                            onChange={(event) => setFundUsage(event.target.value)}
+                            placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
+                            className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                          />
+                        </CollapsibleContent>
+                      </Collapsible>
+
+                      <div className="rounded-[24px] border border-[#DEDEDE] bg-white p-5 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                        <p className="text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                          Investment round closing date
+                        </p>
+                        <p className="mt-2 text-sm font-medium leading-5 text-[#777777]">
+                          Choose the last day investors can participate in this round.
+                        </p>
+                        <DatePicker
+                          value={roundCloseDateValue}
+                          minDate={roundCloseDateMinValue}
+                          onChange={(date) => setRoundCloseDate(dayjs(date).format('YYYY-MM-DD'))}
+                          placeholder="Select closing date"
+                          className="mt-4"
+                        />
+                        <div className="mt-3 rounded-[20px] bg-[#F7F7F7] px-4 py-3">
+                          <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                            Selected close date
+                          </span>
+                          <span className="mt-1 block text-[1.1rem] font-extrabold tracking-[-0.04em] text-[#242424]">
+                            {roundCloseDate ? dayjs(roundCloseDate).format('MMMM D, YYYY') : 'Not selected yet'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
