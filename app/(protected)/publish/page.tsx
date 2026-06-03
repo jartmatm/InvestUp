@@ -21,7 +21,19 @@ import publishStep2Animation from '@/components/animations/publish-step2.json';
 import publishStep6Animation from '@/components/animations/publish-step6.json';
 import PageBackButton from '@/components/PageBackButton';
 import { FileUpload } from '@/components/application/file-upload/file-upload-base';
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionRoot,
+  AccordionTrigger,
+} from '@/components/tailgrids/core/accordion';
 import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/tailgrids/core/collapsible';
+import { TextArea } from '@/components/tailgrids/core/text-area';
 import { Spinner } from '@/core/spinner';
 import { useInvestApp } from '@/lib/investapp-context';
 import {
@@ -4040,6 +4052,110 @@ export default function PublishPage() {
                   </p>
                 </motion.div>
               </div>
+            ) : currentStep === 7 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.8dvh,3.1rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2rem,8.6vw,3.45rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Let&apos;s capture what your business does and your monthly performance
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.1rem)] max-w-[30rem] text-[clamp(0.94rem,3.9vw,1.22rem)] font-medium leading-[1.3] tracking-[-0.024em] text-[#6F6F6F]">
+                  These answers help us build a stronger AI-generated publication for investors.
+                </p>
+
+                <div className="mt-[clamp(1.15rem,3.2dvh,1.9rem)] space-y-3 pb-6">
+                  <AccordionRoot variant="style_two" className="gap-3">
+                    <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                      <AccordionTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                        What do you sell exactly?
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5 pt-0">
+                        <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                          Describe the products or services your business offers.
+                        </p>
+                        <TextArea
+                          value={businessOffer}
+                          onChange={(event) => setBusinessOffer(event.target.value)}
+                          placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
+                          className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem className="overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                      <AccordionTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424] data-[state=open]:pb-3">
+                        What makes you different from competitors?
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5 pt-0">
+                        <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                          Tell us why customers choose you and what is hard to copy.
+                        </p>
+                        <TextArea
+                          value={businessDifferentiator}
+                          onChange={(event) => setBusinessDifferentiator(event.target.value)}
+                          placeholder="Example: We deliver in under 30 minutes with plans customized by dietitians."
+                          className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </AccordionRoot>
+
+                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>Monthly business metrics</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 px-5 pb-5">
+                      <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                        <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                          Total monthly sales
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlySales}
+                          onChange={(event) => setMonthlySales(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                        />
+                      </label>
+
+                      <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                        <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                          Average ticket
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={averageTicket}
+                          onChange={(event) => setAverageTicket(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                        />
+                      </label>
+
+                      <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                        <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                          Monthly clients
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={monthlyClients}
+                          onChange={(event) => setMonthlyClients(event.target.value)}
+                          placeholder="0"
+                          className="mt-1 h-10 w-full bg-transparent text-[1.2rem] font-extrabold tracking-[-0.04em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                        />
+                      </label>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
