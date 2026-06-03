@@ -1023,6 +1023,7 @@ export default function PublishPage() {
   const [monthlyClients, setMonthlyClients] = useState<string>('');
   const [capitalRequiredUsd, setCapitalRequiredUsd] = useState<string>('');
   const [fundUsage, setFundUsage] = useState<string>('');
+  const [minimumInvestmentUsd, setMinimumInvestmentUsd] = useState<string>('');
   const [interestRateEA, setInterestRateEA] = useState<string>('');
   const [roundCloseDate, setRoundCloseDate] = useState<string>('');
   const [aboutFounder, setAboutFounder] = useState<string>('');
@@ -1117,6 +1118,7 @@ export default function PublishPage() {
     () =>
       Number(capitalRequiredUsd) > 0 &&
       fundUsage.trim().length > 0 &&
+      Number(minimumInvestmentUsd) > 0 &&
       Number(interestRateEA) > 0 &&
       roundCloseDate.trim().length > 0 &&
       !checkingProject &&
@@ -1124,6 +1126,7 @@ export default function PublishPage() {
     [
       capitalRequiredUsd,
       fundUsage,
+      minimumInvestmentUsd,
       interestRateEA,
       roundCloseDate,
       checkingProject,
@@ -1325,6 +1328,13 @@ export default function PublishPage() {
             typeof fields.capital_required_usd === 'string' ? fields.capital_required_usd : ''
           );
           setFundUsage(typeof fields.funds_usage === 'string' ? fields.funds_usage : '');
+          setMinimumInvestmentUsd(
+            typeof fields.minimum_investment_usd === 'string'
+              ? fields.minimum_investment_usd
+              : typeof fields.minimum_investment === 'string'
+                ? fields.minimum_investment
+                : ''
+          );
           setInterestRateEA(typeof fields.interest_rate_ea === 'string' ? fields.interest_rate_ea : '');
           setRoundCloseDate(typeof fields.round_close_date === 'string' ? fields.round_close_date : '');
           setAboutFounder(typeof fields.founder_profile === 'string' ? fields.founder_profile : '');
@@ -1637,6 +1647,7 @@ export default function PublishPage() {
     monthly_clients: monthlyClients.trim(),
     capital_required_usd: capitalRequiredUsd.trim(),
     funds_usage: fundUsage.trim(),
+    minimum_investment_usd: minimumInvestmentUsd.trim(),
     interest_rate_ea: interestRateEA.trim(),
     round_close_date: roundCloseDate.trim(),
     founder_profile: aboutFounder.trim(),
@@ -1697,10 +1708,10 @@ export default function PublishPage() {
       setStatus('Creating publication...');
       const normalizedAmountRequested =
         Number(capitalRequiredUsd) > 0 ? Number(capitalRequiredUsd) : 1000;
-      const normalizedMinimumInvestment = Math.max(
-        50,
-        Math.floor(normalizedAmountRequested * 0.05)
-      );
+      const normalizedMinimumInvestment =
+        Number(minimumInvestmentUsd) > 0
+          ? Number(minimumInvestmentUsd)
+          : Math.max(50, Math.floor(normalizedAmountRequested * 0.05));
       const normalizedInterestRate = Number(interestRateEA) >= 0 ? Number(interestRateEA) : 0;
       const publicationEndDate =
         roundCloseDate && dayjs(roundCloseDate).isAfter(dayjs())
@@ -1793,6 +1804,7 @@ export default function PublishPage() {
     previewPhotos,
     previewVideo,
     capitalRequiredUsd,
+    minimumInvestmentUsd,
     interestRateEA,
     roundCloseDate,
     registeredWhatsappNumber,
@@ -2770,6 +2782,31 @@ export default function PublishPage() {
                           placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
                           className="mt-3 min-h-[126px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm"
                         />
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    <Collapsible className="max-w-none overflow-hidden rounded-3xl border border-[#DCE6F1] bg-white shadow-[0_18px_38px_rgba(15,23,42,0.06)]">
+                      <CollapsibleTrigger className="px-5 py-4 text-sm font-semibold text-[#0B1325]">
+                        <span>Minimum investment amount</span>
+                        <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="px-5 pb-5 pt-0">
+                        <p className="text-xs leading-5 text-[#5D6A7F]">
+                          Set the smallest amount an investor can contribute to this round.
+                        </p>
+                        <label className="mt-3 flex items-center gap-3 rounded-2xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
+                          <span className="text-sm font-semibold text-[#6B7280]">USD</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={minimumInvestmentUsd}
+                            onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
+                            placeholder="50"
+                            className="w-full border-0 bg-transparent p-0 text-base font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                          />
+                        </label>
                       </CollapsibleContent>
                     </Collapsible>
                   </div>
@@ -4264,6 +4301,33 @@ export default function PublishPage() {
                         placeholder="Example: inventory expansion, marketing campaigns, hiring, and operations."
                         className="min-h-[9rem] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
                       />
+                    </CollapsibleContent>
+                  </Collapsible>
+
+                  <Collapsible className="max-w-none overflow-hidden rounded-[24px] border border-[#DEDEDE] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+                    <CollapsibleTrigger className="px-5 py-5 text-[clamp(1rem,4.25vw,1.25rem)] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#242424]">
+                      <span>Minimum investment amount</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="px-5 pb-5">
+                      <p className="mb-3 text-sm font-medium leading-5 text-[#777777]">
+                        Set the smallest amount an investor can contribute to this round.
+                      </p>
+                      <label className="block rounded-[20px] border border-[#E2E2E2] bg-[#FAFAFA] px-4 py-3">
+                        <span className="block text-xs font-extrabold uppercase tracking-[0.12em] text-[#777777]">
+                          Minimum investment (USD)
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={minimumInvestmentUsd}
+                          onChange={(event) => setMinimumInvestmentUsd(event.target.value)}
+                          placeholder="50"
+                          className="mt-1 h-11 w-full bg-transparent text-[1.35rem] font-extrabold tracking-[-0.045em] text-[#242424] outline-none placeholder:text-[#9A9A9A]"
+                        />
+                      </label>
                     </CollapsibleContent>
                   </Collapsible>
 

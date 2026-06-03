@@ -60,6 +60,7 @@ const PUBLICATION_PROMPT_VARIABLE_KEYS = [
   'monthly_clients',
   'capital_required_usd',
   'funds_usage',
+  'minimum_investment_usd',
   'interest_rate_ea',
   'round_close_date',
   'founder_profile',
