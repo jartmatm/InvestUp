@@ -4964,6 +4964,145 @@ export default function PublishPage() {
                   ) : null}
                 </AnimatePresence>
               </motion.div>
+            ) : currentStep === 12 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.5dvh,3.2rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12.5ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Let&apos;s craft a strong title for your business
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Keep it short and memorable. You can fine-tune it anytime later.
+                </p>
+
+                <label className="mt-[clamp(1.5rem,4.2dvh,2.45rem)] block rounded-[26px] border border-[#DEDEDE] bg-white p-[clamp(1rem,4.5vw,1.45rem)] shadow-[0_10px_24px_rgba(15,23,42,0.045)]">
+                  <span className="block text-xs font-extrabold uppercase tracking-[0.16em] text-[#6B39F4]">
+                    tittle
+                  </span>
+                  <TextArea
+                    value={generatedTittle}
+                    onChange={(event) => setGeneratedTittle(event.target.value.slice(0, 50))}
+                    maxLength={50}
+                    placeholder="Example: The neighborhood bakery scaling fresh daily sales"
+                    className="mt-3 min-h-[clamp(9rem,24dvh,12rem)] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                  />
+                  <p className="mt-3 text-sm font-semibold leading-5 text-[#777777]">
+                    {generatedPublication ? 'AI publication response loaded.' : 'Waiting for the AI response.'}
+                  </p>
+                </label>
+              </motion.div>
+            ) : currentStep === 13 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-y-auto pt-[clamp(1.35rem,4.5dvh,3.2rem)] [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+              >
+                <h1 className="max-w-[12ch] text-[clamp(2.05rem,9vw,3.65rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Create your description
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Explain what makes your business unique and attractive for investors.
+                </p>
+
+                <label className="mt-[clamp(1.5rem,4.2dvh,2.45rem)] block rounded-[26px] border border-[#DEDEDE] bg-white p-[clamp(1rem,4.5vw,1.45rem)] shadow-[0_10px_24px_rgba(15,23,42,0.045)]">
+                  <span className="block text-xs font-extrabold uppercase tracking-[0.16em] text-[#6B39F4]">
+                    description
+                  </span>
+                  <TextArea
+                    value={generatedDescription}
+                    onChange={(event) => setGeneratedDescription(event.target.value.slice(0, 5000))}
+                    maxLength={5000}
+                    placeholder="Describe the opportunity, what the business does, traction, and why this round matters."
+                    className="mt-3 min-h-[clamp(18rem,47dvh,28rem)] resize-none rounded-[20px] border-[#E2E2E2] bg-[#FAFAFA] text-[1rem] font-semibold leading-6 tracking-[-0.025em] text-[#242424] placeholder:text-[#9A9A9A] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
+                  />
+                  <p className="mt-3 text-sm font-semibold leading-5 text-[#777777]">
+                    You can edit the AI draft before publishing.
+                  </p>
+                </label>
+              </motion.div>
+            ) : currentStep === 14 ? (
+              <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="flex min-h-0 items-end justify-center"
+                >
+                  <Lottie
+                    animationData={publishStep14FinishAnimation}
+                    loop
+                    autoplay
+                    className="h-full max-h-[clamp(17rem,47dvh,28rem)] w-full"
+                  />
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: 'easeOut', delay: 0.05 }}
+                  className="pb-[clamp(0.9rem,2.6dvh,1.6rem)]"
+                >
+                  <p className="text-[clamp(1.05rem,4.4vw,1.38rem)] font-extrabold leading-none tracking-[-0.035em] text-[#242424]">
+                    Step 3
+                  </p>
+                  <h1 className="mt-[clamp(0.55rem,1.6dvh,0.9rem)] max-w-[11.5ch] text-[clamp(2.22rem,9.6vw,3.95rem)] font-extrabold leading-[0.95] tracking-[-0.07em] text-[#1F1F1F]">
+                    Finish details and go live
+                  </h1>
+                  <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] text-[clamp(0.98rem,4.2vw,1.42rem)] font-medium leading-[1.32] tracking-[-0.026em] text-[#333333]">
+                    Next, define your pricing, answer a few final questions, and publish whenever you are ready.
+                  </p>
+                </motion.div>
+              </div>
+            ) : currentStep === 15 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="min-h-0 flex-1 overflow-hidden pt-[clamp(1.35rem,4.5dvh,3.2rem)]"
+              >
+                <h1 className="max-w-[12.5ch] text-[clamp(2rem,8.8vw,3.55rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]">
+                  Add key compliance and legal details
+                </h1>
+                <p className="mt-[clamp(0.75rem,2dvh,1.15rem)] max-w-[31rem] text-[clamp(0.98rem,4.05vw,1.3rem)] font-medium leading-[1.32] tracking-[-0.024em] text-[#6F6F6F]">
+                  Select the items your business can provide. We will use these details later in your publication profile.
+                </p>
+
+                <div className="mt-[clamp(1.35rem,3.6dvh,2.2rem)] max-h-[clamp(20rem,48dvh,34rem)] space-y-3 overflow-y-auto pr-1 pb-5 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]">
+                  {complianceChecklistOptions.map((option) => {
+                    const selected = complianceSelections.includes(option);
+                    return (
+                      <label
+                        key={option}
+                        className={`flex cursor-pointer items-start gap-3 rounded-[20px] border px-4 py-4 shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition active:scale-[0.995] ${
+                          selected
+                            ? 'border-[#6B39F4] bg-[#F6F1FF]'
+                            : 'border-[#DEDEDE] bg-white'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() =>
+                            setComplianceSelections((previous) =>
+                              selected
+                                ? previous.filter((item) => item !== option)
+                                : [...previous, option]
+                            )
+                          }
+                          className="mt-1 h-5 w-5 shrink-0 rounded border-[#CFCFCF] accent-[#6B39F4]"
+                        />
+                        <span className="text-[clamp(0.92rem,3.8vw,1.08rem)] font-semibold leading-6 tracking-[-0.025em] text-[#242424]">
+                          {option}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </motion.div>
             ) : (
               <div className="grid min-h-0 flex-1 grid-rows-[minmax(0,1.08fr)_auto]">
                 <motion.div
