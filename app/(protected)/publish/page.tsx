@@ -2546,115 +2546,98 @@ export default function PublishPage() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="w-full max-w-[1220px] space-y-5"
+                className="w-full max-w-[1120px] space-y-4"
               >
                 <div className="text-center">
-                  <h2 className="text-[3.1rem] font-semibold leading-[1.05] tracking-[-0.05em] text-[#0B1325]">
+                  <h2 className="mx-auto max-w-4xl text-[2.65rem] font-semibold leading-[1.03] tracking-[-0.052em] text-[#0B1325]">
                     Let&apos;s capture what your business does and your monthly performance
                   </h2>
-                  <p className="mx-auto mt-4 max-w-2xl text-[1.12rem] leading-7 text-[#4B5B72]">
+                  <p className="mx-auto mt-3 max-w-2xl text-[1rem] leading-6 text-[#4B5B72]">
                     These answers help us build a stronger AI-generated publication for investors.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                    <p className="text-sm font-semibold text-[#0B1325]">What do you sell exactly?</p>
-                    <p className="mt-1 text-xs text-[#5D6A7F]">
-                      Describe the products or services your business offers.
-                    </p>
-                    <textarea
-                      value={businessOffer}
-                      onChange={(event) => setBusinessOffer(event.target.value)}
-                      placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
-                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                    />
-
-                    <p className="mt-5 text-sm font-semibold text-[#0B1325]">
-                      What makes you different from competitors?
-                    </p>
-                    <p className="mt-1 text-xs text-[#5D6A7F]">
-                      Tell us what you do differently and why customers choose you.
-                    </p>
-                    <textarea
-                      value={businessDifferentiator}
-                      onChange={(event) => setBusinessDifferentiator(event.target.value)}
-                      placeholder="Example: We deliver in under 30 minutes with nutrition plans customized by dietitians."
-                      className={`${inputClassName} mt-3 min-h-[110px] resize-none text-sm`}
-                    />
-                  </div>
-
-                  <div className="rounded-2xl border border-[#DCE6F1] bg-white p-5">
-                    <p className="text-sm font-semibold text-[#0B1325]">Monthly business metrics</p>
-                    <div className="mt-4 grid grid-cols-1 gap-3">
-                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
-                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 18V8" />
-                          <path d="M10 18V6" />
-                          <path d="M16 18V10" />
-                          <path d="M22 18V4" />
-                          <path d="M2 20h20" />
-                        </svg>
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5D6A7F]">Total monthly sales (Units)</p>
-                        <input
-                          type="number"
-                          min="0"
-                          value={monthlySales}
-                          onChange={(event) => setMonthlySales(event.target.value)}
-                          placeholder="0"
-                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                <div className="grid grid-cols-[minmax(0,1.08fr)_minmax(320px,0.78fr)] gap-4">
+                  <AccordionRoot variant="style_two" className="gap-3">
+                    <AccordionItem className="overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.05)]">
+                      <AccordionTrigger className="px-5 py-4 text-base font-semibold tracking-[-0.03em] text-[#0B1325] data-[state=open]:pb-3">
+                        What do you sell exactly?
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5 pt-0">
+                        <p className="mb-3 text-xs leading-5 text-[#5D6A7F]">
+                          Describe the products or services your business offers.
+                        </p>
+                        <TextArea
+                          value={businessOffer}
+                          onChange={(event) => setBusinessOffer(event.target.value)}
+                          placeholder="Example: We sell healthy ready-to-eat meals and weekly subscriptions for offices."
+                          className="min-h-[132px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm text-[#0B1325] placeholder:text-[#9AA8BA] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
                         />
-                      </div>
-                    </label>
+                      </AccordionContent>
+                    </AccordionItem>
 
-                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
-                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="5" width="18" height="14" rx="2" />
-                          <path d="M3 10h18" />
-                          <path d="M9 15h2" />
-                        </svg>
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5D6A7F]">Average ticket (USD)</p>
-                        <input
-                          type="number"
-                          min="0"
-                          value={averageTicket}
-                          onChange={(event) => setAverageTicket(event.target.value)}
-                          placeholder="0"
-                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                    <AccordionItem className="overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.05)]">
+                      <AccordionTrigger className="px-5 py-4 text-base font-semibold tracking-[-0.03em] text-[#0B1325] data-[state=open]:pb-3">
+                        What makes you different from competitors?
+                      </AccordionTrigger>
+                      <AccordionContent className="px-5 pb-5 pt-0">
+                        <p className="mb-3 text-xs leading-5 text-[#5D6A7F]">
+                          Tell us what you do differently and why customers choose you.
+                        </p>
+                        <TextArea
+                          value={businessDifferentiator}
+                          onChange={(event) => setBusinessDifferentiator(event.target.value)}
+                          placeholder="Example: We deliver in under 30 minutes with nutrition plans customized by dietitians."
+                          className="min-h-[132px] resize-none rounded-2xl border-[#DCE6F1] bg-[#FBFDFF] text-sm text-[#0B1325] placeholder:text-[#9AA8BA] focus:border-[#6B39F4] focus:ring-[#6B39F4]/10"
                         />
-                      </div>
-                    </label>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </AccordionRoot>
 
-                    <label className="flex items-center gap-3 rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FB] text-black">
-                        <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="8" cy="9" r="3" />
-                          <path d="M3 20c0-3 2.2-5 5-5s5 2 5 5" />
-                          <circle cx="17" cy="10" r="2" />
-                          <path d="M14.8 20c.2-2 1.8-3.6 4.2-3.9" />
-                        </svg>
-                      </span>
-                      <div className="flex-1">
-                        <p className="text-xs font-medium text-[#5D6A7F]">Monthly clients</p>
-                        <input
-                          type="number"
-                          min="0"
-                          value={monthlyClients}
-                          onChange={(event) => setMonthlyClients(event.target.value)}
-                          placeholder="0"
-                          className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
-                        />
-                      </div>
-                    </label>
-                  </div>
+                  <Collapsible className="max-w-none overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.05)]">
+                    <CollapsibleTrigger className="px-5 py-4 text-base font-semibold tracking-[-0.03em] text-[#0B1325]">
+                      <span>Monthly business metrics</span>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 transition group-data-expanded:rotate-180" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 px-5 pb-5">
+                      {[
+                        {
+                          label: 'Total monthly sales (Units)',
+                          value: monthlySales,
+                          onChange: setMonthlySales,
+                        },
+                        {
+                          label: 'Average ticket (USD)',
+                          value: averageTicket,
+                          onChange: setAverageTicket,
+                        },
+                        {
+                          label: 'Monthly clients',
+                          value: monthlyClients,
+                          onChange: setMonthlyClients,
+                        },
+                      ].map((metric) => (
+                        <label
+                          key={metric.label}
+                          className="block rounded-xl border border-[#DCE6F1] bg-[#FBFDFF] px-4 py-3"
+                        >
+                          <span className="block text-xs font-medium text-[#5D6A7F]">{metric.label}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={metric.value}
+                            onChange={(event) => metric.onChange(event.target.value)}
+                            placeholder="0"
+                            className="mt-1 w-full border-0 bg-transparent p-0 text-sm font-semibold text-[#0B1325] outline-none placeholder:text-[#9AA8BA]"
+                          />
+                        </label>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
-                </div>
+
                 <div className="flex justify-center pt-2">
                   <button
                     type="button"
