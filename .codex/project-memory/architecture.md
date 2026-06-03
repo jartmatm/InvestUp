@@ -115,3 +115,17 @@ Supabase migrations define and evolve:
 ## Landing App
 
 `investapp-landing/` is separate from the main app. Do not mix dependencies or app assumptions unless the task explicitly touches the landing.
+
+## 2026-06-04 - Publication editing uses publish wizard preview
+
+Type: architecture
+Tags: publish-wizard, portfolio, editing, mobile
+Files: app/(protected)/portfolio/page.tsx, app/(protected)/publish/page.tsx, app/(protected)/feed/page.tsx, app/(protected)/feed/[id]/page.tsx, app/(protected)/home/page.tsx
+
+Summary:
+- Existing publication editing now routes through `/publish?edit=<projectId>` instead of the legacy Portfolio inline form.
+
+Details:
+- Portfolio mobile keeps the project card/actions and entrepreneur dashboard; it no longer mounts the old venture details form.
+- The publish wizard hydrates editable projects from `metadata.publication_form_fields` with column fallbacks, jumps to the review step, and saves via PATCH while amount received is zero.
+- Edit entry points in Feed, detail, Home, and Portfolio point to the publish wizard edit mode.

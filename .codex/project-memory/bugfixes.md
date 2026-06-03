@@ -67,3 +67,17 @@ Details:
 - Android release signing key/passwords appear committed.
 - Public OpenAI improve-description endpoint may allow API spend abuse.
 - Treat this entry as open risk memory, not as a completed fix.
+
+## 2026-06-04 - Mobile publish wizard swipe and media upload feedback
+
+Type: bugfix
+Tags: mobile, publish-wizard, media-upload, toast, navigation
+Files: app/(protected)/publish/page.tsx, utils/client/current-user-project-media.ts
+
+Summary:
+- Mobile publish wizard now guards browser back/edge-swipe while mounted, exposes touch-friendly media reorder controls, and reports media upload progress per file with heartbeat toasts.
+
+Details:
+- Added mobile history guard to keep accidental left swipe/browser back from exiting the wizard to the feed.
+- Added icon-only previous/next reorder controls for pending media because HTML drag/drop is unreliable immediately after selecting files on mobile.
+- Extended project media upload progress callbacks with starting/uploading/retrying/completed phases and elapsed-time heartbeat updates so long uploads do not look frozen.

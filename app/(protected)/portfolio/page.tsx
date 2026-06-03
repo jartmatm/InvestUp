@@ -1,17 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { useTranslations } from 'next-intl';
-import { getCountries } from 'libphonenumber-js';
 import BottomNav from '@/components/BottomNav';
 import { DesktopAppShell, DesktopSectionCard } from '@/components/DesktopAppShell';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
-import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
-import Input from '@/components/Input';
 import EntrepreneurFeedDashboard from '@/components/EntrepreneurFeedDashboard';
 import InvestorPortfolioDashboard from '@/components/InvestorPortfolioDashboard';
 import { useInvestApp } from '@/lib/investapp-context';
@@ -22,17 +19,14 @@ import {
   getProjectStatusTone,
   type ProjectStatus,
 } from '@/lib/project-status';
-import { SECTOR_OPTIONS_ENGLISH, toEnglishSector } from '@/lib/sector-labels';
 import { getMinimumInvestmentValue } from '@/lib/supabase-minimum-investment';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import {
-  createCurrentUserProject,
   deleteCurrentUserProject,
   fetchCurrentUserProject,
   fetchCurrentUserProjects,
   updateCurrentUserProject,
 } from '@/utils/client/current-user-projects';
-import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 
 type ProjectRow = {
   id: string;
@@ -63,112 +57,6 @@ type ProjectRow = {
   created_at: string;
 };
 
-type PublishForm = {
-  title: string;
-  businessName: string;
-  sector: string;
-  legalRepresentative: string;
-  nit: string;
-  openingDate: string;
-  address: string;
-  phone: string;
-  country: string;
-  city: string;
-  description: string;
-  amountRequested: string;
-  minimumInvestment: string;
-  currency: string;
-  publicationEndDate: string;
-  installmentCount: string;
-  interestRateEa: string;
-};
-
-const REGION_NAMES = new Intl.DisplayNames(['en'], { type: 'region' });
-const COUNTRY_OPTIONS = getCountries()
-  .map((code) => ({ code, name: REGION_NAMES.of(code) ?? code }))
-  .sort((a, b) => a.name.localeCompare(b.name, 'en'));
-
-const SECTOR_OPTIONS = [...SECTOR_OPTIONS_ENGLISH];
-
-const CITY_OPTIONS_BY_COUNTRY: Record<string, string[]> = {
-  AR: ['Buenos Aires', 'Cordoba', 'Rosario', 'Mendoza', 'La Plata'],
-  BO: ['La Paz', 'Santa Cruz', 'Cochabamba', 'Sucre', 'Tarija'],
-  BR: ['Sao Paulo', 'Rio de Janeiro', 'Brasilia', 'Belo Horizonte', 'Salvador'],
-  CL: ['Santiago', 'Valparaiso', 'Concepcion', 'La Serena', 'Antofagasta'],
-  CO: ['Bogota', 'Medellin', 'Cali', 'Barranquilla', 'Cartagena'],
-  CR: ['San Jose', 'Alajuela', 'Cartago', 'Heredia', 'Puntarenas'],
-  DO: ['Santo Domingo', 'Santiago', 'La Romana', 'San Pedro', 'Puerto Plata'],
-  EC: ['Quito', 'Guayaquil', 'Cuenca', 'Manta', 'Ambato'],
-  ES: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Bilbao'],
-  GT: ['Ciudad de Guatemala', 'Quetzaltenango', 'Escuintla', 'Antigua', 'Coban'],
-  HN: ['Tegucigalpa', 'San Pedro Sula', 'La Ceiba', 'Choloma', 'Comayagua'],
-  MX: ['Ciudad de Mexico', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana'],
-  PA: ['Ciudad de Panama', 'Colon', 'David', 'Santiago', 'Chitre'],
-  PE: ['Lima', 'Arequipa', 'Trujillo', 'Cusco', 'Piura'],
-  PY: ['Asuncion', 'Ciudad del Este', 'Encarnacion', 'Luque', 'San Lorenzo'],
-  SV: ['San Salvador', 'Santa Ana', 'San Miguel', 'Soyapango', 'Mejicanos'],
-  UY: ['Montevideo', 'Punta del Este', 'Salto', 'Paysandu', 'Maldonado'],
-  US: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Miami'],
-  VE: ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay'],
-};
-
-const emptyForm: PublishForm = {
-  title: '',
-  businessName: '',
-  sector: '',
-  legalRepresentative: '',
-  nit: '',
-  openingDate: '',
-  address: '',
-  phone: '',
-  country: '',
-  city: '',
-  description: '',
-  amountRequested: '',
-  minimumInvestment: '',
-  currency: 'USD',
-  publicationEndDate: '',
-  installmentCount: '3',
-  interestRateEa: '',
-};
-
-const fileToDataUrl = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
-    reader.onerror = () => reject(new Error('Could not read the file.'));
-    reader.readAsDataURL(file);
-  });
-
-const normalizeCountryCode = (rawCountry: string) => {
-  const raw = rawCountry.trim();
-  if (!raw) return '';
-  const byCode = COUNTRY_OPTIONS.find((option) => option.code === raw.toUpperCase());
-  if (byCode) return byCode.code;
-  const byName = COUNTRY_OPTIONS.find((option) => option.name.toLowerCase() === raw.toLowerCase());
-  return byName?.code ?? '';
-};
-
-const parsePublicationEndDate = (value: string) => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (match) {
-    const [, year, month, day] = match;
-    return new Date(Number(year), Number(month) - 1, Number(day), 23, 59, 59, 999);
-  }
-
-  const fallback = new Date(value);
-  if (Number.isNaN(fallback.getTime())) return null;
-  return new Date(
-    fallback.getFullYear(),
-    fallback.getMonth(),
-    fallback.getDate(),
-    23,
-    59,
-    59,
-    999
-  );
-};
-
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
   if (typeof error === 'object' && error && 'message' in error) {
@@ -179,9 +67,6 @@ const getErrorMessage = (error: unknown) => {
 
 const surfaceClassName =
   'rounded-[30px] border border-white/85 bg-white/88 p-4 shadow-[0_24px_70px_rgba(31,38,64,0.10)] ring-1 ring-[#EDEFFA]/75 backdrop-blur-2xl';
-
-const inputClassName =
-  '!rounded-[22px] !border-[#E7ECF4] !bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] !px-4 !py-3.5 !text-[0.95rem] !font-medium !tracking-[-0.025em] !text-[#162033] !shadow-[0_16px_32px_rgba(31,38,64,0.05)] placeholder:!text-[#9BA5B9] focus:!border-[#D7C8FF] focus:!ring-4 focus:!ring-[#6B39F4]/10';
 
 function SectionSurface({
   children,
@@ -326,43 +211,18 @@ export default function PortfolioPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
-  const { faseApp, rolSeleccionado, smartWalletAddress } = useInvestApp();
+  const { faseApp, rolSeleccionado } = useInvestApp();
   const { avatarUrl, displayName: profileName, loading: loadingProfileSummary } = useUserProfileSummary();
-  const [showPublisher, setShowPublisher] = useState(false);
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [form, setForm] = useState<PublishForm>(emptyForm);
-  const [projectPhotos, setProjectPhotos] = useState<string[]>([]);
-  const [projectVideo, setProjectVideo] = useState<string>('');
   const [myProjects, setMyProjects] = useState<ProjectRow[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
-  const [savingProject, setSavingProject] = useState(false);
-  const [improvingAI, setImprovingAI] = useState(false);
   const [status, setStatus] = useState('');
-  const autoOpenedEditId = useRef<string | null>(null);
   const editProjectIdFromUrl = searchParams.get('edit');
   const newProjectFromUrl = searchParams.get('new') === '1';
-
-  const cityOptions = useMemo(() => {
-    if (!form.country) return [];
-    return CITY_OPTIONS_BY_COUNTRY[form.country] ?? ['Other city'];
-  }, [form.country]);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
     if (faseApp === 'onboarding') router.replace('/onboarding');
   }, [faseApp, router]);
-
-  useEffect(() => {
-    const preloadCountry = async () => {
-      if (!user?.id || rolSeleccionado !== 'emprendedor') return;
-      const { data } = await fetchCurrentUserProfile<{ country?: string | null } | null>(
-        getAccessToken
-      );
-      const normalized = normalizeCountryCode((data?.country as string | null) ?? '');
-      if (normalized) setForm((prev) => ({ ...prev, country: normalized }));
-    };
-    preloadCountry();
-  }, [getAccessToken, rolSeleccionado, user?.id]);
 
   const loadMyProjects = useCallback(async () => {
     if (!user?.id) return;
@@ -385,7 +245,9 @@ export default function PortfolioPage() {
 
   useEffect(() => {
     if (rolSeleccionado === 'emprendedor') {
-      void loadMyProjects();
+      queueMicrotask(() => {
+        void loadMyProjects();
+      });
     }
   }, [loadMyProjects, rolSeleccionado]);
 
@@ -403,114 +265,38 @@ export default function PortfolioPage() {
     [getAccessToken, user?.id]
   );
 
-  const onChangeForm = (key: keyof PublishForm, value: string) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  const openEditWizard = useCallback(
+    async (project: ProjectRow) => {
+      if (!user?.id) return;
 
-  const onPickPhotos = async (files: FileList | null) => {
-    if (!files) return;
-    const selected = Array.from(files);
-    if (selected.length > 12) {
-      setStatus('Maximum 12 photos.');
-      return;
-    }
-    const urls = await Promise.all(selected.slice(0, 12).map(fileToDataUrl));
-    setProjectPhotos(urls);
-  };
+      try {
+        const latestProject = await loadOwnedProjectState(project.id);
+        const effectiveProject = latestProject ?? project;
 
-  const onPickVideo = async (files: FileList | null) => {
-    const file = files?.[0];
-    if (!file) return;
-    const url = await fileToDataUrl(file);
-    setProjectVideo(url);
-  };
+        if (!canDeleteProject(effectiveProject)) {
+          setStatus('This listing already has financing activity and cannot be edited from the wizard.');
+          await loadMyProjects();
+          return;
+        }
 
-  const improveWithAI = async () => {
-    if (!form.description.trim()) {
-      setStatus('Write a description first.');
-      return;
-    }
-    setImprovingAI(true);
-    setStatus('');
-    try {
-      const response = await fetch('/api/improve-description', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: form.description }),
-      });
-      const payload = (await response.json()) as { improvedText?: string; error?: string };
-      if (!response.ok || !payload.improvedText) {
-        throw new Error(payload.error ?? 'Could not improve the description.');
+        router.push(`/publish?edit=${project.id}`);
+      } catch (error) {
+        setStatus(`Could not verify the latest project state: ${getErrorMessage(error)}`);
       }
-      onChangeForm('description', payload.improvedText.slice(0, 2500));
-    } catch (error: unknown) {
-      setStatus(`AI unavailable: ${getErrorMessage(error)}`);
-    } finally {
-      setImprovingAI(false);
-    }
-  };
+    },
+    [loadMyProjects, loadOwnedProjectState, router, user?.id]
+  );
 
-  const startNewPublication = useCallback(() => {
-    if (myProjects.length >= 1) {
-      setStatus('You can only keep one business published at a time. Edit your current one to update it.');
+  useEffect(() => {
+    if (editProjectIdFromUrl) {
+      router.replace(`/publish?edit=${editProjectIdFromUrl}`);
       return;
     }
-    setEditingProjectId(null);
-    setForm((prev) => ({ ...emptyForm, country: prev.country }));
-    setProjectPhotos([]);
-    setProjectVideo('');
-    setShowPublisher(true);
-    setStatus('');
-  }, [myProjects.length]);
 
-  const startEditPublication = useCallback((project: ProjectRow) => {
-    setEditingProjectId(project.id);
-    const countryCode = normalizeCountryCode(project.country ?? '');
-    setForm({
-      title: project.title ?? '',
-      businessName: project.business_name ?? '',
-      sector: toEnglishSector(project.sector),
-      legalRepresentative: project.legal_representative ?? '',
-      nit: project.nit ?? '',
-      openingDate: project.opening_date ?? '',
-      address: project.address ?? '',
-      phone: project.phone ?? '',
-      country: countryCode,
-      city: project.city ?? '',
-      description: project.description ?? '',
-      amountRequested: String(project.amount_requested ?? ''),
-      minimumInvestment: String(project.minimum_investment ?? ''),
-      currency: project.currency ?? 'USD',
-      publicationEndDate: project.publication_end_date ?? '',
-      installmentCount: String(project.installment_count ?? project.term_months ?? 1),
-      interestRateEa: String(project.interest_rate ?? ''),
-    });
-    setProjectPhotos(project.photo_urls ?? []);
-    setProjectVideo(project.video_url ?? '');
-    setShowPublisher(true);
-    setStatus('');
-  }, []);
-
-  useEffect(() => {
-    if (!editProjectIdFromUrl || myProjects.length === 0) return;
-    const projectToEdit = myProjects.find((project) => project.id === editProjectIdFromUrl);
-    if (!projectToEdit) return;
-    if (autoOpenedEditId.current === editProjectIdFromUrl) return;
-
-    startEditPublication(projectToEdit);
-    autoOpenedEditId.current = editProjectIdFromUrl;
-
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (newProjectFromUrl) {
+      router.replace('/publish');
     }
-  }, [editProjectIdFromUrl, myProjects, startEditPublication]);
-
-  useEffect(() => {
-    if (!newProjectFromUrl || loadingProjects) return;
-    if (autoOpenedEditId.current === 'new') return;
-    startNewPublication();
-    autoOpenedEditId.current = 'new';
-  }, [loadingProjects, newProjectFromUrl, startNewPublication]);
+  }, [editProjectIdFromUrl, newProjectFromUrl, router]);
 
   const deletePublication = async (project: ProjectRow) => {
     if (!user?.id) return;
@@ -567,109 +353,6 @@ export default function PortfolioPage() {
     }
   };
 
-  const publishProject = async () => {
-    if (!user?.id) return;
-    if (!editingProjectId && myProjects.length >= 1) {
-      setStatus('You can only keep one business published at a time. Edit your current one to update it.');
-      return;
-    }
-    const required: Array<[string, string]> = [
-      ['title', form.title],
-      ['businessName', form.businessName],
-      ['sector', form.sector],
-      ['legalRepresentative', form.legalRepresentative],
-      ['openingDate', form.openingDate],
-      ['address', form.address],
-      ['phone', form.phone],
-      ['country', form.country],
-      ['city', form.city],
-      ['description', form.description],
-      ['amountRequested', form.amountRequested],
-      ['minimumInvestment', form.minimumInvestment],
-      ['currency', form.currency],
-      ['publicationEndDate', form.publicationEndDate],
-      ['installmentCount', form.installmentCount],
-      ['interestRateEa', form.interestRateEa],
-    ];
-    const missing = required.find((entry) => !entry[1].trim());
-    if (missing) {
-      setStatus('Complete all required fields.');
-      return;
-    }
-    if (form.description.length > 2500) {
-      setStatus('Maximum description length: 2500 characters.');
-      return;
-    }
-    if (projectPhotos.length > 12) {
-      setStatus('You can upload up to 12 photos only.');
-      return;
-    }
-
-    const selectedCountry = COUNTRY_OPTIONS.find((option) => option.code === form.country);
-    const publicationEndDate = parsePublicationEndDate(form.publicationEndDate);
-    const installmentCount = Math.max(1, Number(form.installmentCount));
-    if (!publicationEndDate) {
-      setStatus('Choose a valid publication end date.');
-      return;
-    }
-    if (publicationEndDate.getTime() < Date.now()) {
-      setStatus('The publication end date cannot be in the past.');
-      return;
-    }
-    if (!Number.isFinite(installmentCount) || installmentCount <= 0) {
-      setStatus('Installments must be greater than 0.');
-      return;
-    }
-
-    setSavingProject(true);
-    setStatus('');
-
-    const payload = {
-      owner_wallet: smartWalletAddress ?? null,
-      title: form.title,
-      business_name: form.businessName,
-      sector: form.sector,
-      legal_representative: form.legalRepresentative,
-      nit: form.nit || null,
-      opening_date: form.openingDate,
-      address: form.address,
-      phone: form.phone,
-      city: form.city,
-      country: selectedCountry?.name ?? form.country,
-      description: form.description,
-      amount_requested: Number(form.amountRequested),
-      minimum_investment: Number(form.minimumInvestment),
-      currency: form.currency,
-      installment_count: installmentCount,
-      publication_end_date: form.publicationEndDate,
-      interest_rate: Number(form.interestRateEa),
-      photo_urls: projectPhotos,
-      video_url: projectVideo || null,
-      metadata: {
-        submitted_from: 'portfolio_page',
-        publication_end_date: form.publicationEndDate,
-      },
-    };
-    const { error } = editingProjectId
-      ? await updateCurrentUserProject(getAccessToken, editingProjectId, payload)
-      : await createCurrentUserProject(getAccessToken, payload);
-
-    if (error) {
-      setStatus(t('statusPublishError', { error }));
-      setSavingProject(false);
-      return;
-    }
-
-    setStatus(editingProjectId ? t('statusUpdated') : t('statusPublished'));
-    setSavingProject(false);
-    setShowPublisher(false);
-    setEditingProjectId(null);
-    setForm((prev) => ({ ...emptyForm, country: prev.country }));
-    setProjectPhotos([]);
-    setProjectVideo('');
-    await loadMyProjects();
-  };
-
   if (faseApp === 'loading' || !rolSeleccionado) {
     return (
       <>
@@ -715,215 +398,6 @@ export default function PortfolioPage() {
         <div className="pointer-events-none absolute -left-24 top-[32rem] h-64 w-64 rounded-full bg-[#7DE0B8]/8 blur-3xl" />
 
         <div className="relative mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 pt-8">
-          {showPublisher ? (
-            <SectionSurface>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    {editingProjectId ? t('currentPublication') : t('newPublication')}
-                  </p>
-                  <h2 className="mt-1 text-lg font-semibold tracking-[-0.03em] text-[#1C2336]">
-                    {editingProjectId ? t('editVentureDetails') : t('publishNewVenture')}
-                  </h2>
-                </div>
-
-                <Input
-                  value={form.title}
-                  onChange={(value) => onChangeForm('title', value)}
-                  placeholder={t('listingTitle')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.businessName}
-                  onChange={(value) => onChangeForm('businessName', value)}
-                  placeholder={t('businessName')}
-                  className={inputClassName}
-                />
-                <AppCombobox
-                  value={form.sector}
-                  onChange={(next) => onChangeForm('sector', next)}
-                  options={[
-                    { value: '', label: t('economicSector') },
-                    ...SECTOR_OPTIONS.map((option) => ({ value: option, label: option })),
-                  ]}
-                />
-                <Input
-                  value={form.legalRepresentative}
-                  onChange={(value) => onChangeForm('legalRepresentative', value)}
-                  placeholder={t('legalRepresentative')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.nit}
-                  onChange={(value) => onChangeForm('nit', value)}
-                  placeholder={t('taxIdOptional')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.openingDate}
-                  onChange={(value) => onChangeForm('openingDate', value)}
-                  type="date"
-                  placeholder={t('openingDate')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.address}
-                  onChange={(value) => onChangeForm('address', value)}
-                  placeholder={t('address')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.phone}
-                  onChange={(value) => onChangeForm('phone', value)}
-                  placeholder={t('phone')}
-                  className={inputClassName}
-                />
-
-                <AppCombobox
-                  value={form.country}
-                  onChange={(code) => {
-                    setForm((prev) => ({ ...prev, country: code, city: '' }));
-                  }}
-                  options={[
-                    { value: '', label: t('country') },
-                    ...COUNTRY_OPTIONS.map((option) => ({ value: option.code, label: option.name })),
-                  ]}
-                />
-                <AppCombobox
-                  value={form.city}
-                  onChange={(next) => onChangeForm('city', next)}
-                  disabled={!form.country}
-                  options={[
-                    { value: '', label: form.country ? t('city') : t('selectCountryFirst') },
-                    ...cityOptions.map((city) => ({ value: city, label: city })),
-                  ]}
-                />
-
-                <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    {t('businessPhotos')}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('uploadImages')}</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={(event) => onPickPhotos(event.target.files)}
-                    className="mt-3 w-full text-xs text-[#7B879C]"
-                  />
-                  {projectPhotos.length ? (
-                    <p className="mt-2 text-xs text-[#7B879C]">{t('photosUploaded', { count: projectPhotos.length })}</p>
-                  ) : null}
-                </div>
-
-                <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                    {t('businessVideo')}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('uploadVideo')}</p>
-                  <input
-                    type="file"
-                    accept="video/*"
-                    onChange={(event) => onPickVideo(event.target.files)}
-                    className="mt-3 w-full text-xs text-[#7B879C]"
-                  />
-                  {projectVideo ? <p className="mt-2 text-xs text-[#7B879C]">{t('videoUploaded')}</p> : null}
-                </div>
-
-                <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#98A2B3]">
-                        {t('description')}
-                      </p>
-                      <p className="mt-1 text-sm font-semibold text-[#1C2336]">{t('maxCharacters')}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={improveWithAI}
-                      disabled={improvingAI}
-                      className="rounded-full border border-[#D7C8FF] bg-[#F6F1FF] px-3 py-1.5 text-xs font-semibold text-[#6B39F4] transition hover:bg-[#F1E8FF] disabled:opacity-60"
-                    >
-                      {improvingAI ? t('improving') : t('improveWithAi')}
-                    </button>
-                  </div>
-                  <textarea
-                    value={form.description}
-                    onChange={(event) => onChangeForm('description', event.target.value.slice(0, 2500))}
-                    className="mt-3 h-36 w-full rounded-[22px] border border-[#E7ECF4] bg-white px-4 py-3 text-sm text-[#162033] outline-none shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition placeholder:text-[#9BA5B9] focus:border-[#D7C8FF] focus:ring-4 focus:ring-[#6B39F4]/10"
-                  />
-                  <p className="mt-2 text-right text-xs text-[#7B879C]">{form.description.length}/2500</p>
-                </div>
-
-                <div className="rounded-[24px] border border-[#EBEEF7] bg-[linear-gradient(180deg,#FFFFFF_0%,#FCFCFF_100%)] px-4 py-4 text-xs leading-6 text-[#7B879C] shadow-[0_14px_28px_rgba(31,38,64,0.05)]">
-                  {t('publicationTiming')}
-                </div>
-
-                <Input
-                  value={form.publicationEndDate}
-                  onChange={(value) => onChangeForm('publicationEndDate', value)}
-                  type="date"
-                  placeholder={t('publicationEndDate')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.amountRequested}
-                  onChange={(value) => onChangeForm('amountRequested', value)}
-                  type="number"
-                  placeholder={t('requestedAmount')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.minimumInvestment}
-                  onChange={(value) => onChangeForm('minimumInvestment', value)}
-                  type="number"
-                  placeholder={t('minimumInvestment')}
-                  className={inputClassName}
-                />
-                <Input
-                  value={form.installmentCount}
-                  onChange={(value) => onChangeForm('installmentCount', value)}
-                  type="number"
-                  placeholder={t('installmentsTerm')}
-                  className={inputClassName}
-                />
-                <AppCombobox
-                  value={form.currency}
-                  onChange={(next) => onChangeForm('currency', next)}
-                  options={[
-                    { value: 'USD', label: 'USD' },
-                    { value: 'EUR', label: 'EUR' },
-                    { value: 'COP', label: 'COP' },
-                    { value: 'ARS', label: 'ARS' },
-                    { value: 'MXN', label: 'MXN' },
-                  ]}
-                />
-                <Input
-                  value={form.interestRateEa}
-                  onChange={(value) => onChangeForm('interestRateEa', value)}
-                  type="number"
-                  placeholder={t('interestRatePlaceholder')}
-                  className={inputClassName}
-                />
-
-                <button
-                  type="button"
-                  onClick={publishProject}
-                  disabled={savingProject}
-                  className="mt-1 flex min-h-[52px] w-full items-center justify-center rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-5 text-sm font-semibold text-white shadow-[0_20px_38px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {savingProject
-                    ? editingProjectId
-                      ? t('saving')
-                      : t('publishing')
-                    : editingProjectId
-                      ? t('saveChanges')
-                      : t('publish')}
-                </button>
-              </div>
-            </SectionSurface>
-          ) : null}
-
           <section className="flex flex-col gap-3">
             {loadingProjects ? (
               <SectionLoadingSkeleton rows={2} />
@@ -974,7 +448,7 @@ export default function PortfolioPage() {
                   <div className="mt-4 grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      onClick={() => startEditPublication(project)}
+                      onClick={() => void openEditWizard(project)}
                       className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#7C5CFF_0%,#5B48FF_100%)] px-3 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(107,57,244,0.24)] transition hover:-translate-y-0.5"
                     >
                       <IconEdit />

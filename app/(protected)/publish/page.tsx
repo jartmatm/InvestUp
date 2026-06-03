@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { AnimatePresence, motion } from 'framer-motion';
 import Lottie from 'lottie-react';
@@ -62,7 +62,12 @@ import {
   saveCurrentUserPublicationDraft,
 } from '@/utils/client/current-user-publication-prompts';
 import { uploadCurrentUserProjectMedia } from '@/utils/client/current-user-project-media';
-import { createCurrentUserProject, fetchCurrentUserProjects } from '@/utils/client/current-user-projects';
+import {
+  createCurrentUserProject,
+  fetchCurrentUserProject,
+  fetchCurrentUserProjects,
+  updateCurrentUserProject,
+} from '@/utils/client/current-user-projects';
 import {
   reverseBusinessAddress,
   searchBusinessAddress,
@@ -140,6 +145,36 @@ const emptyAddress: PublishAddressStepFields = {
   latitude: null,
   longitude: null,
   source: '',
+};
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+
+const asString = (value: unknown) => (typeof value === 'string' ? value : '');
+
+const asNumberString = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string') return sanitizeNumericInput(value);
+  return '';
+};
+
+const createRemoteMediaItem = (
+  url: string,
+  type: 'photo' | 'video',
+  index: number
+): UploadMediaItem => {
+  const extension = type === 'video' ? 'webm' : 'webp';
+  return {
+    id: `remote-${type}-${index}-${url}`,
+    file: new File([], `remote-${type}-${index + 1}.${extension}`, {
+      type: type === 'video' ? 'video/webm' : 'image/webp',
+    }),
+    name: `Existing ${type} ${index + 1}`,
+    previewUrl: url,
+    type,
+  };
 };
 
 const requiredAddressKeys: Array<keyof PublishAddressStepFields> = [
@@ -1062,11 +1097,15 @@ function MobilePublishIntroSplash({
 
 export default function PublishPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
+  const editProjectIdFromUrl = searchParams.get('edit');
 
   const [checkingProject, setCheckingProject] = useState(true);
   const [hasExistingProject, setHasExistingProject] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectMetadata, setEditingProjectMetadata] = useState<Record<string, unknown> | null>(null);
 
   const [status, setStatus] = useState('');
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -1430,6 +1469,83 @@ export default function PublishPage() {
     }, wizardStepSkeletonDurationMs);
   };
 
+  const hydrateProjectForEditing = (project: ProjectRecord) => {
+    const metadata = asRecord(project.metadata);
+    const fields = asRecord(metadata.publication_form_fields);
+    const generated = asRecord(metadata.generated_publication);
+    const optimizedPublication = asRecord(metadata.optimized_publication);
+    const businessAddress = asString(fields.business_address) || asString(project.address);
+    const photoUrls = Array.isArray(project.photo_urls)
+      ? project.photo_urls.filter((url): url is string => typeof url === 'string' && url.trim().length > 0)
+      : [];
+    const videoUrl = asString(project.video_url);
+    const complianceItems = Array.isArray(metadata.compliance_selections)
+      ? metadata.compliance_selections
+      : Array.isArray(fields.compliance_items)
+        ? fields.compliance_items
+        : [];
+
+    setEditingProjectId(project.id);
+    setEditingProjectMetadata(metadata);
+    setHasExistingProject(false);
+    setShowMobileIntro(false);
+    setAddress({
+      ...emptyAddress,
+      country: asString(project.country) || asString(fields.country),
+      street_address: asString(project.address) || businessAddress,
+      locality: asString(project.city),
+      formatted_address: businessAddress,
+      source: 'manual_edit',
+    });
+    setSelectedBusinessCategory(asString(fields.business_category) || asString(project.sector));
+    setBusinessName(asString(fields.business_name) || asString(project.business_name));
+    setSelectedOperatingTime(asString(fields.operating_time));
+    setBusinessOffer(asString(fields.offer_summary));
+    setBusinessDifferentiator(asString(fields.competitive_edge));
+    setMonthlySales(asNumberString(fields.monthly_sales));
+    setAverageTicket(asNumberString(fields.average_ticket));
+    setMonthlyClients(asNumberString(fields.monthly_clients));
+    setCapitalRequiredUsd(asNumberString(fields.capital_required_usd) || asNumberString(project.amount_requested));
+    setFundUsage(asString(fields.funds_usage) || asString(metadata.funds_usage));
+    setMinimumInvestmentUsd(
+      asNumberString(fields.minimum_investment_usd) ||
+        asNumberString(fields.minimum_investment) ||
+        asNumberString(project.minimum_investment)
+    );
+    setInterestRateEA(asNumberString(fields.interest_rate_ea) || asNumberString(project.interest_rate));
+    setRoundCloseDate(asString(fields.round_close_date) || asString(project.publication_end_date));
+    setAboutFounder(asString(fields.founder_profile) || asString(project.legal_representative));
+    setAboutTeam(asString(fields.team_profile));
+    setBusinessAchievements(asString(fields.business_achievements));
+    setGeneratedPublication(
+      Object.keys(optimizedPublication).length > 0
+        ? (optimizedPublication as OptimizedPublication)
+        : null
+    );
+    setGeneratedTittle(
+      asString(generated.tittle) ||
+        asString(generated.title) ||
+        asString(fields.generated_tittle) ||
+        asString(project.title)
+    );
+    setGeneratedDescription(
+      asString(generated.description) ||
+        asString(fields.generated_description) ||
+        asString(project.description)
+    );
+    setComplianceSelections(
+      complianceItems.filter((item): item is string => typeof item === 'string')
+    );
+    setPendingMediaItems([]);
+    setUploadedMediaItems([
+      ...photoUrls.map((url, index) => createRemoteMediaItem(url, 'photo', index)),
+      ...(videoUrl ? [createRemoteMediaItem(videoUrl, 'video', photoUrls.length)] : []),
+    ]);
+    setActivePhotoIndex(0);
+    setStatus('');
+    goToStep(16, false);
+  };
+
   useEffect(
     () => () => {
       if (stepSkeletonTimeoutRef.current !== null) {
@@ -1455,6 +1571,8 @@ export default function PublishPage() {
         if (active) {
           setCheckingProject(false);
           setHasExistingProject(false);
+          setEditingProjectId(null);
+          setEditingProjectMetadata(null);
           setStatus('');
         }
         return;
@@ -1465,6 +1583,32 @@ export default function PublishPage() {
         setStatus('');
       }
 
+      if (editProjectIdFromUrl) {
+        const { data, error } = await fetchCurrentUserProject(getAccessToken, editProjectIdFromUrl);
+        if (!active) return;
+
+        if (error || !data) {
+          setStatus(`Could not load this listing for editing: ${error ?? 'Project not found.'}`);
+          setHasExistingProject(true);
+          setCheckingProject(false);
+          return;
+        }
+
+        const amountReceived = Number(data.amount_received ?? 0);
+        if (Number.isFinite(amountReceived) && amountReceived > 0) {
+          setStatus('This listing already has financing activity and can no longer be edited from the wizard.');
+          setHasExistingProject(true);
+          setCheckingProject(false);
+          return;
+        }
+
+        hydrateProjectForEditing(data);
+        setCheckingProject(false);
+        return;
+      }
+
+      setEditingProjectId(null);
+      setEditingProjectMetadata(null);
       const [projectsResponse, draftResponse] = await Promise.all([
         fetchCurrentUserProjects(getAccessToken),
         fetchCurrentUserPublicationDraft(getAccessToken),
@@ -1541,7 +1685,7 @@ export default function PublishPage() {
     return () => {
       active = false;
     };
-  }, [getAccessToken, rolSeleccionado, user?.id]);
+  }, [editProjectIdFromUrl, getAccessToken, rolSeleccionado, user?.id]);
 
   useEffect(() => {
     if (!isAddressModalOpen) return;
@@ -1575,7 +1719,13 @@ export default function PublishPage() {
   }, [isAddressModalOpen, searchQuery]);
 
   useEffect(() => {
-    if (!hasInteracted || !user?.id || rolSeleccionado !== 'emprendedor' || hasExistingProject) return;
+    if (
+      !hasInteracted ||
+      !user?.id ||
+      rolSeleccionado !== 'emprendedor' ||
+      hasExistingProject ||
+      editingProjectId
+    ) return;
 
     const timer = window.setTimeout(async () => {
       setSavingDraft(true);
@@ -1597,7 +1747,7 @@ export default function PublishPage() {
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [address, draftId, getAccessToken, hasExistingProject, hasInteracted, rolSeleccionado, user?.id]);
+  }, [address, draftId, editingProjectId, getAccessToken, hasExistingProject, hasInteracted, rolSeleccionado, user?.id]);
 
   useEffect(() => {
     mediaItemsRef.current = [...pendingMediaItems, ...uploadedMediaItems];
@@ -1628,6 +1778,31 @@ export default function PublishPage() {
       document.body.style.overscrollBehaviorX = originalBodyOverscrollX;
       document.documentElement.style.overflowX = originalHtmlOverflowX;
       document.documentElement.style.overscrollBehaviorX = originalHtmlOverscrollX;
+    };
+  }, []);
+
+  useEffect(() => {
+    const isMobileViewport = window.matchMedia('(max-width: 1023px)').matches;
+    if (!isMobileViewport) return;
+
+    const publishUrl = window.location.href;
+    const guardState = {
+      ...(typeof window.history.state === 'object' && window.history.state !== null
+        ? window.history.state
+        : {}),
+      __investupPublishGuard: true,
+    };
+
+    window.history.pushState(guardState, '', publishUrl);
+
+    const handlePopState = () => {
+      window.history.pushState(guardState, '', publishUrl);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
     };
   }, []);
 
@@ -1827,6 +2002,21 @@ export default function PublishPage() {
     setDraggedMediaId(null);
   };
 
+  const handleMovePendingMedia = (mediaId: string, direction: 'previous' | 'next') => {
+    setPendingMediaItems((previous) => {
+      const fromIndex = previous.findIndex((item) => item.id === mediaId);
+      if (fromIndex === -1) return previous;
+
+      const toIndex = direction === 'previous' ? fromIndex - 1 : fromIndex + 1;
+      if (toIndex < 0 || toIndex >= previous.length) return previous;
+
+      const next = [...previous];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  };
+
   const handleUploadPendingMedia = async () => {
     if (pendingMediaItems.length === 0) return;
 
@@ -1946,8 +2136,20 @@ export default function PublishPage() {
         const mediaUploadResult = await uploadCurrentUserProjectMedia(getAccessToken, localMediaItems.map((item) => item.file), {
           timeoutMs: 180_000,
           maxRetries: 2,
-          onProgress: ({ index, total, fileName }) => {
-            setStatus(`Uploading media... (${index}/${total}) ${fileName}`);
+          onProgress: ({ index, total, fileName, phase, attempt, elapsedSeconds }) => {
+            if (phase === 'completed') {
+              setStatus(`Uploaded media (${index}/${total}) ${fileName}`);
+              return;
+            }
+            if (phase === 'retrying') {
+              setStatus(`Retrying media upload (${index}/${total}) attempt ${attempt}: ${fileName}`);
+              return;
+            }
+            if (phase === 'uploading') {
+              setStatus(`Still uploading media (${index}/${total}) ${fileName}${elapsedSeconds ? ` - ${elapsedSeconds}s` : ''}`);
+              return;
+            }
+            setStatus(`Uploading media (${index}/${total}) ${fileName}`);
           },
         });
         if (mediaUploadResult.error || !mediaUploadResult.data) {
@@ -1977,7 +2179,7 @@ export default function PublishPage() {
         return;
       }
 
-      setStatus('Creating publication...');
+      setStatus(editingProjectId ? 'Updating publication...' : 'Creating publication...');
       const normalizedAmountRequested =
         Number(capitalRequiredUsd) > 0 ? Number(capitalRequiredUsd) : 1000;
       const normalizedMinimumInvestment =
@@ -1992,7 +2194,7 @@ export default function PublishPage() {
       const openingDate = dayjs().format('YYYY-MM-DD');
       const phoneNumber = registeredWhatsappNumber || '0000000000';
 
-      const publishProjectResult = await createCurrentUserProject(getAccessToken, {
+      const projectPayload = {
         title: generatedTittle.trim() || businessName.trim() || 'Business opportunity',
         business_name: businessName.trim() || 'Business',
         sector: selectedBusinessCategory.trim() || 'General',
@@ -2012,7 +2214,8 @@ export default function PublishPage() {
         photo_urls: uploadedPhotos,
         video_url: uploadedVideo,
         metadata: {
-          source: 'publish_wizard',
+          ...(editingProjectMetadata ?? {}),
+          source: editingProjectId ? 'publish_wizard_edit' : 'publish_wizard',
           publication_form_fields: fields,
           optimized_publication: generatedPublication,
           generated_publication: {
@@ -2023,10 +2226,17 @@ export default function PublishPage() {
           funds_usage: fundUsage,
           compliance_selections: complianceSelections,
         },
-      });
+      };
+      const publishProjectResult = editingProjectId
+        ? await updateCurrentUserProject(getAccessToken, editingProjectId, projectPayload)
+        : await createCurrentUserProject(getAccessToken, projectPayload);
 
       if (publishProjectResult.error || !publishProjectResult.data) {
-        setStatus(`Could not publish project: ${publishProjectResult.error ?? 'Unknown error.'}`);
+        setStatus(
+          `Could not ${editingProjectId ? 'update' : 'publish'} project: ${
+            publishProjectResult.error ?? 'Unknown error.'
+          }`
+        );
         goToStep(16, false);
         return;
       }
@@ -2049,7 +2259,7 @@ export default function PublishPage() {
         promptText: buildPublicationPromptText(fields),
         metadata: {
           step: 'publication_final_v1',
-          status: 'published',
+          status: editingProjectId ? 'updated' : 'published',
           labels: Object.keys(fields),
         },
       });
@@ -2094,6 +2304,8 @@ export default function PublishPage() {
     fundUsage,
     complianceSelections,
     draftId,
+    editingProjectId,
+    editingProjectMetadata,
     goToStep,
     buildPublicationPromptText,
   ]);
@@ -2287,6 +2499,11 @@ export default function PublishPage() {
   ]);
 
   const handleSaveAndExit = async () => {
+    if (editingProjectId) {
+      router.push('/portfolio');
+      return;
+    }
+
     if (!user?.id || rolSeleccionado !== 'emprendedor' || hasExistingProject) {
       router.push('/feed');
       return;
@@ -2545,7 +2762,9 @@ export default function PublishPage() {
     normalizedStatus.includes('network') ||
     normalizedStatus.includes('invalid')
       ? 'error'
-      : normalizedStatus.includes('timeout') || normalizedStatus.includes('timed out')
+      : normalizedStatus.includes('timeout') ||
+          normalizedStatus.includes('timed out') ||
+          normalizedStatus.includes('retrying')
         ? 'warning'
       : normalizedStatus.includes('uploading') ||
           normalizedStatus.includes('saving') ||
@@ -4252,7 +4471,7 @@ export default function PublishPage() {
                   </p>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    {pendingMediaItems.map((item) => (
+                    {pendingMediaItems.map((item, index) => (
                       <div
                         key={item.id}
                         draggable
@@ -4261,6 +4480,38 @@ export default function PublishPage() {
                         onDrop={() => handleDropPendingMedia(item.id)}
                         className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
                       >
+                        {pendingMediaItems.length > 1 ? (
+                          <div className="absolute left-2 top-2 z-10 flex gap-1">
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleMovePendingMedia(item.id, 'previous');
+                              }}
+                              disabled={index === 0}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
+                              aria-label="Move media earlier"
+                            >
+                              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                <path d="m18 15-6-6-6 6" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleMovePendingMedia(item.id, 'next');
+                              }}
+                              disabled={index === pendingMediaItems.length - 1}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
+                              aria-label="Move media later"
+                            >
+                              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                <path d="m6 9 6 6 6-6" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => handleRemovePendingMedia(item.id)}
@@ -5102,7 +5353,7 @@ export default function PublishPage() {
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-[clamp(0.8rem,3.5vw,1.1rem)] pb-8">
-                            {pendingMediaItems.map((item) => (
+                            {pendingMediaItems.map((item, index) => (
                               <div
                                 key={item.id}
                                 draggable
@@ -5111,6 +5362,38 @@ export default function PublishPage() {
                                 onDrop={() => handleDropPendingMedia(item.id)}
                                 className="relative overflow-hidden rounded-[18px] bg-[#F2F2F2] shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
                               >
+                                {pendingMediaItems.length > 1 ? (
+                                  <div className="absolute left-2 top-2 z-20 flex gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleMovePendingMedia(item.id, 'previous');
+                                      }}
+                                      disabled={index === 0}
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition active:scale-[0.95] disabled:opacity-35"
+                                      aria-label="Move media earlier"
+                                    >
+                                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                        <path d="m18 15-6-6-6 6" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleMovePendingMedia(item.id, 'next');
+                                      }}
+                                      disabled={index === pendingMediaItems.length - 1}
+                                      className="flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition active:scale-[0.95] disabled:opacity-35"
+                                      aria-label="Move media later"
+                                    >
+                                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                        <path d="m6 9 6 6 6-6" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                ) : null}
                                 <button
                                   type="button"
                                   onClick={() => handleRemovePendingMedia(item.id)}
@@ -5505,7 +5788,7 @@ export default function PublishPage() {
                   transition={{ duration: 0.55, ease: 'easeOut', delay: 0.1 }}
                   className="mt-[-0.5rem] max-w-[13ch] text-[clamp(2rem,8.6vw,3.4rem)] font-extrabold leading-[0.98] tracking-[-0.068em] text-[#1F1F1F]"
                 >
-                  Your publication is now online
+                  {editingProjectId ? 'Your publication has been updated' : 'Your publication is now online'}
                 </motion.h1>
                 {showSuccessHomeButton ? (
                   <motion.button

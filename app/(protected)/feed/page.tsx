@@ -1206,7 +1206,7 @@ export default function FeedPage() {
                     event.stopPropagation();
 
                     if (isOwnProject) {
-                      router.push(`/portfolio?edit=${project.id}`);
+                      router.push(`/publish?edit=${project.id}`);
                       return;
                     }
 

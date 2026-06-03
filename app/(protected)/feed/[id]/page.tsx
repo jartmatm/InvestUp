@@ -467,7 +467,7 @@ export default function FeedDetailPage() {
   const handlePrimaryAction = () => {
     if (!project) return;
     if (isEntrepreneurView) {
-      router.push(`/portfolio?edit=${project.id}`);
+      router.push(`/publish?edit=${project.id}`);
       return;
     }
     router.push(`/feed/${project.id}/invest`);

@@ -7,7 +7,14 @@ type UploadResult =
   | { data: null; error: string };
 
 type UploadOptions = {
-  onProgress?: (info: { index: number; total: number; fileName: string }) => void;
+  onProgress?: (info: {
+    index: number;
+    total: number;
+    fileName: string;
+    phase: 'starting' | 'uploading' | 'retrying' | 'completed';
+    attempt: number;
+    elapsedSeconds?: number;
+  }) => void;
   timeoutMs?: number;
   maxRetries?: number;
 };
@@ -28,7 +35,13 @@ export async function uploadCurrentUserProjectMedia(
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index];
-    options?.onProgress?.({ index: index + 1, total: files.length, fileName: file.name });
+    options?.onProgress?.({
+      index: index + 1,
+      total: files.length,
+      fileName: file.name,
+      phase: 'starting',
+      attempt: 1,
+    });
 
     let response: Response | null = null;
     let lastNetworkError = '';
@@ -37,7 +50,18 @@ export async function uploadCurrentUserProjectMedia(
       const formData = new FormData();
       formData.append('files', file);
       const controller = new AbortController();
+      const startedAt = Date.now();
       const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+      const heartbeat = window.setInterval(() => {
+        options?.onProgress?.({
+          index: index + 1,
+          total: files.length,
+          fileName: file.name,
+          phase: 'uploading',
+          attempt: attempt + 1,
+          elapsedSeconds: Math.max(1, Math.round((Date.now() - startedAt) / 1000)),
+        });
+      }, 5000);
 
       try {
         response = await fetch('/api/me/projects/media', {
@@ -50,15 +74,24 @@ export async function uploadCurrentUserProjectMedia(
           signal: controller.signal,
         });
         window.clearTimeout(timeout);
+        window.clearInterval(heartbeat);
         break;
       } catch (error) {
         window.clearTimeout(timeout);
+        window.clearInterval(heartbeat);
         const isTimeout = error instanceof DOMException && error.name === 'AbortError';
         lastNetworkError = isTimeout
           ? `Upload timed out for "${file.name}" after ${Math.round(timeoutMs / 1000)}s.`
           : `Network error while uploading "${file.name}".`;
 
         if (attempt < maxRetries) {
+          options?.onProgress?.({
+            index: index + 1,
+            total: files.length,
+            fileName: file.name,
+            phase: 'retrying',
+            attempt: attempt + 2,
+          });
           await new Promise((resolve) => window.setTimeout(resolve, 650 * (attempt + 1)));
           continue;
         }
@@ -96,6 +129,14 @@ export async function uploadCurrentUserProjectMedia(
     if (Array.isArray(json?.data)) {
       uploaded.push(...json.data);
     }
+
+    options?.onProgress?.({
+      index: index + 1,
+      total: files.length,
+      fileName: file.name,
+      phase: 'completed',
+      attempt: 1,
+    });
   }
 
   return { data: uploaded, error: null };

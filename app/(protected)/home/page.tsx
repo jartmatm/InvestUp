@@ -1859,7 +1859,7 @@ export default function HomePage() {
   const sectionTitle = rolSeleccionado === 'emprendedor' ? t('myBusiness') : t('activeInvestments');
   const sectionActionLabel = rolSeleccionado === 'emprendedor' ? t('edit') : t('viewAll');
   const sectionActionHref =
-    rolSeleccionado === 'emprendedor' && lastProject ? `/portfolio?edit=${lastProject.id}` : '/portfolio';
+    rolSeleccionado === 'emprendedor' && lastProject ? `/publish?edit=${lastProject.id}` : '/portfolio';
   const investorEarnings = activeInvestments.reduce(
     (sum, investment) => sum + Number(investment.projected_return_usdc ?? 0),
     0
