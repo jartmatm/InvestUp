@@ -2415,6 +2415,14 @@ export default function PublishPage() {
 
     if (currentStep === 11) {
       if (!canContinueStep11) return;
+
+      if (editingProjectId) {
+        setIsGeneratingPublication(false);
+        setStatus('');
+        goToStep(12);
+        return;
+      }
+
       setIsGeneratingPublication(true);
       setStatus('Generating publication copy...');
 

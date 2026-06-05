@@ -97,3 +97,17 @@ Tags: project-memory
 
 Summary:
 - Root cause: the previous edit media preload fix only updated the desktop media modal, while the Portfolio edit back-to-upload flow uses the mobile upload overlay, which rendered only pendingMediaItems after selecting new photos. The remote projects table also appears to be missing owner_user_id, causing project update filters and payloads that reference owner_user_id to fail. Fix: app/(protected)/publish/page.tsx now renders existing uploadedMediaItems from Supabase together with pendingMediaItems inside the mobile upload overlay and allows removing existing media. app/api/me/projects/route.ts now falls back to owner_id-only selects/filters and removes unsupported owner_user_id/minimum_investment mutation columns when the schema is older. Added supabase/migrations/20260605_projects_owner_user_id_guard.sql to add/backfill owner_user_id from owner_id. Verification: static regression checks for mobile overlay, migration, and API fallback pass; focused eslint exits 0 with warnings only; git diff --check passes. Applying the migration with Supabase CLI was attempted but this environment is not authenticated with Supabase.
+
+## 2026-06-05 - Publish edit skips AI regeneration on media continue
+
+Type: bugfix
+Tags: publish-wizard, editing, ai-generation, media-upload
+Files: app/(protected)/publish/page.tsx
+
+Summary:
+- Root cause: step 11 always called the AI publication generation path after media upload, even when the wizard was editing an existing publication.
+- Fix: in edit mode, continuing from the media step now skips AI regeneration and goes directly to the existing generated title/description review.
+
+Details:
+- This preserves the original AI-generated title, description, and optimized publication copy hydrated from Supabase metadata/project fields.
+- Create mode still calls the AI generation path from the same step.
