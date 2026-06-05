@@ -106,7 +106,7 @@ Files: app/(protected)/publish/page.tsx
 
 Summary:
 - Root cause: step 11 always called the AI publication generation path after media upload, even when the wizard was editing an existing publication.
-- Fix: in edit mode, continuing from the media step now skips AI regeneration and goes directly to the existing generated title/description review.
+- Fix: in edit mode, continuing from the media step now disables only the AI regeneration trigger, then continues through the normal title and description review screens with the loaded existing copy.
 
 Details:
 - This preserves the original AI-generated title, description, and optimized publication copy hydrated from Supabase metadata/project fields.

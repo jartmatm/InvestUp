@@ -2416,30 +2416,28 @@ export default function PublishPage() {
     if (currentStep === 11) {
       if (!canContinueStep11) return;
 
-      if (editingProjectId) {
-        setIsGeneratingPublication(false);
-        setStatus('');
-        goToStep(12);
-        return;
+      const shouldGeneratePublicationWithAi = !editingProjectId;
+
+      if (shouldGeneratePublicationWithAi) {
+        setIsGeneratingPublication(true);
+        setStatus('Generating publication copy...');
+
+        const response = await generatePublicationFromCollectedData();
+
+        if (response.error || !response.data) {
+          setIsGeneratingPublication(false);
+          setStatus(`Could not generate publication: ${response.error ?? 'Unknown error.'}`);
+          return;
+        }
+
+        const optimized = response.data.optimizedPublication;
+        const tittleValue = (optimized.tittle || optimized.title || '').slice(0, 50);
+        const descriptionValue = buildLongDescriptionFromOptimized(optimized);
+        setGeneratedPublication(optimized);
+        setGeneratedTittle(tittleValue);
+        setGeneratedDescription(descriptionValue);
       }
 
-      setIsGeneratingPublication(true);
-      setStatus('Generating publication copy...');
-
-      const response = await generatePublicationFromCollectedData();
-
-      if (response.error || !response.data) {
-        setIsGeneratingPublication(false);
-        setStatus(`Could not generate publication: ${response.error ?? 'Unknown error.'}`);
-        return;
-      }
-
-      const optimized = response.data.optimizedPublication;
-      const tittleValue = (optimized.tittle || optimized.title || '').slice(0, 50);
-      const descriptionValue = buildLongDescriptionFromOptimized(optimized);
-      setGeneratedPublication(optimized);
-      setGeneratedTittle(tittleValue);
-      setGeneratedDescription(descriptionValue);
       setIsGeneratingPublication(false);
       setStatus('');
       goToStep(12);
