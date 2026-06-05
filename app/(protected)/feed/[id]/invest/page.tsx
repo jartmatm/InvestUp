@@ -7,8 +7,18 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
 import PageFrame from '@/components/PageFrame';
 import { SectionLoadingSkeleton } from '@/components/AppLoadingSkeleton';
+import { AspectRatio } from '@/components/tailgrids/core/aspect-ratio';
 import { Avatar } from '@/components/tailgrids/core/avatar';
+import {
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRoot,
+  TableRow,
+} from '@/components/tailgrids/core/table';
 import { TextArea } from '@/components/tailgrids/core/text-area';
+import { TabContent, TabList, TabRoot, TabTrigger } from '@/components/tailgrids/core/tabs';
 import ProjectPhotoCarousel from '@/components/ProjectPhotoCarousel';
 import { useInvestApp } from '@/lib/investapp-context';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
@@ -48,10 +58,10 @@ type OwnerProfile = {
   avatar_url: string | null;
 };
 
-type PublicationSection = {
-  title: string;
-  body?: string;
-  bullets?: string[];
+type PublicationPreviewTab = {
+  id: string;
+  label: string;
+  content: string;
 };
 
 const normalizePhotos = (value: unknown): string[] => {
@@ -69,35 +79,29 @@ const asStringArray = (value: unknown) =>
     ? value.map((item) => asString(item)).filter(Boolean)
     : [];
 
-const splitParagraphs = (value?: string) =>
-  (value ?? '')
-    .split(/\n{2,}|\r\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
 const buildBasicInfoRows = (
   project: ProjectInvestmentDetail,
   publicationFields: Record<string, unknown>
 ) => [
   {
-    label: 'Business name',
+    label: 'business_name',
     value: asString(publicationFields.business_name) || project.business_name || project.title,
   },
   {
-    label: 'Location',
+    label: 'business_address',
     value:
       asString(publicationFields.business_address) ||
       [project.city, project.country].map(asString).filter(Boolean).join(', ') ||
       'Location pending',
   },
   {
-    label: 'Category',
+    label: 'business_category',
     value:
       asString(publicationFields.business_category) ||
       (project.sector ? toEnglishSector(project.sector) : 'Business'),
   },
   {
-    label: 'Operating time',
+    label: 'operating_time',
     value: asString(publicationFields.operating_time) || 'Pending',
   },
 ];
@@ -126,77 +130,109 @@ const getPublicationBody = (publication: Record<string, unknown>, keys: string[]
   return '';
 };
 
-const buildPublicationSections = (
+const buildPublicationPreviewTabs = (
   project: ProjectInvestmentDetail,
   publicationFields: Record<string, unknown>,
   publicationSource: Record<string, unknown>
-): PublicationSection[] => {
-  const overviewFallback = project.description || '';
-  const highlights = asStringArray(publicationSource.highlights);
+): PublicationPreviewTab[] => {
+  const formatHighlights = (items: string[]) =>
+    items.length ? items.map((item) => `- ${item}`).join('\n') : '';
 
-  const sections: PublicationSection[] = [
+  const overviewFallback = project.description || '';
+
+  return [
     {
-      title: 'Overview',
-      body: getPublicationBody(publicationSource, ['overview', 'about', 'what_we_do', 'whatWeDo']) || overviewFallback,
+      id: 'overview',
+      label: 'overview',
+      content:
+        getPublicationBody(publicationSource, ['overview', 'about', 'what_we_do', 'whatWeDo']) ||
+        overviewFallback,
     },
     {
-      title: 'Description',
-      body: getPublicationBody(publicationSource, ['description', 'summary', 'overview']) || overviewFallback,
+      id: 'description',
+      label: 'description',
+      content:
+        getPublicationBody(publicationSource, ['description', 'summary', 'overview']) ||
+        overviewFallback,
     },
     {
-      title: 'What we do',
-      body: getPublicationBody(publicationSource, ['what_we_do', 'whatWeDo', 'product_or_service', 'productOrService']),
+      id: 'what_we_do',
+      label: 'what_we_do',
+      content: getPublicationBody(publicationSource, [
+        'what_we_do',
+        'whatWeDo',
+        'product_or_service',
+        'productOrService',
+      ]),
     },
     {
-      title: 'How we do it',
-      body: getPublicationBody(publicationSource, ['how_we_do_it', 'howWeDoIt']),
+      id: 'how_we_do_it',
+      label: 'how_we_do_it',
+      content: getPublicationBody(publicationSource, ['how_we_do_it', 'howWeDoIt']),
     },
     {
-      title: 'Target',
-      body: getPublicationBody(publicationSource, ['target', 'market_opportunity', 'marketOpportunity']),
+      id: 'target',
+      label: 'target',
+      content: getPublicationBody(publicationSource, ['target', 'market_opportunity', 'marketOpportunity']),
     },
     {
-      title: 'Market opportunity',
-      body: getPublicationBody(publicationSource, ['market_opportunity', 'marketOpportunity']),
+      id: 'market_opportunity',
+      label: 'market_opportunity',
+      content: getPublicationBody(publicationSource, ['market_opportunity', 'marketOpportunity']),
     },
     {
-      title: 'Traction',
-      body: getPublicationBody(publicationSource, ['traction', 'value', 'financial_information', 'financialInformation']),
+      id: 'traction',
+      label: 'traction',
+      content: getPublicationBody(publicationSource, [
+        'traction',
+        'value',
+        'financial_information',
+        'financialInformation',
+      ]),
     },
     {
-      title: 'Highlights',
-      bullets: highlights,
+      id: 'highlights',
+      label: 'highlights',
+      content: formatHighlights(asStringArray(publicationSource.highlights)),
     },
     {
-      title: 'Investment',
-      body:
+      id: 'investment',
+      label: 'investment',
+      content:
         getPublicationBody(publicationSource, ['investment', 'use_of_funds', 'useOfFunds']) ||
         asString(publicationFields.funds_usage),
     },
     {
-      title: 'Financial information',
-      body: getPublicationBody(publicationSource, ['financial_information', 'financialInformation']),
+      id: 'financial_information',
+      label: 'financial_information',
+      content: getPublicationBody(publicationSource, ['financial_information', 'financialInformation']),
     },
     {
-      title: 'Investor notes',
-      body: getPublicationBody(publicationSource, ['investor_notes', 'investorNotes']),
+      id: 'investor_notes',
+      label: 'investor_notes',
+      content: getPublicationBody(publicationSource, ['investor_notes', 'investorNotes']),
     },
     {
-      title: 'Team',
-      body:
+      id: 'team',
+      label: 'team',
+      content:
         getPublicationBody(publicationSource, ['team', 'owner_profile', 'founder_profile']) ||
         asString(publicationFields.team_profile) ||
         asString(publicationFields.founder_profile),
     },
     {
-      title: 'Extras',
-      body:
+      id: 'extras',
+      label: 'extras',
+      content:
         getPublicationBody(publicationSource, ['extras', 'gallery']) ||
         asString(publicationFields.business_achievements),
     },
+    {
+      id: 'gallery',
+      label: 'gallery',
+      content: getPublicationBody(publicationSource, ['gallery', 'extras']),
+    },
   ];
-
-  return sections.filter((section) => section.body || section.bullets?.length);
 };
 
 function InvestAppWordmark() {
@@ -235,6 +271,12 @@ const formatCurrency = (value: number, currency: string, locale: string) => {
   } catch {
     return `${value.toFixed(2)} ${currency}`;
   }
+};
+
+const formatPreviewMoney = (value: number | null) => {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric)) return '$0';
+  return `$${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(numeric)}`;
 };
 
 export default function ProjectInvestPage() {
@@ -364,8 +406,8 @@ export default function ProjectInvestPage() {
   const publicationSource =
     Object.keys(optimizedPublication).length > 0 ? optimizedPublication : generatedPublication;
   const mobileBasicInfoRows = project ? buildBasicInfoRows(project, publicationFields) : [];
-  const mobilePublicationSections = project
-    ? buildPublicationSections(project, publicationFields, publicationSource)
+  const mobilePublicationTabs = project
+    ? buildPublicationPreviewTabs(project, publicationFields, publicationSource)
     : [];
   const entrepreneurAvatarFallback = (
     `${owner?.name ?? ''} ${owner?.surname ?? ''}`.trim() || owner?.email?.trim() || 'U'
@@ -435,19 +477,19 @@ export default function ProjectInvestPage() {
   const roundCloseDateLabel = asString(publicationFields.round_close_date) || project?.publication_end_date || 'Not selected';
   const mobileKpis = [
     {
-      label: 'Capital to raise',
-      value: formatCurrency(Number(project?.amount_requested ?? 0), currencyCode, locale),
+      label: 'capital_required_usd',
+      value: formatPreviewMoney(project?.amount_requested ?? 0),
     },
     {
-      label: 'Minimum investment',
-      value: formatCurrency(minimumInvestment || 0, currencyCode, locale),
+      label: 'minimum_invest',
+      value: formatPreviewMoney(minimumInvestment || 0),
     },
     {
-      label: 'EA rate',
+      label: 'interest_rate_ea',
       value: `${safeInterestRate}%`,
     },
     {
-      label: 'Round close date',
+      label: 'round_close_date',
       value: roundCloseDateLabel,
     },
   ];
@@ -470,49 +512,51 @@ export default function ProjectInvestPage() {
 
           {!loading && project ? (
             <>
-              <section className="overflow-hidden rounded-[28px] border border-white/85 bg-white shadow-[0_24px_68px_rgba(21,28,44,0.08)]">
-                <ProjectPhotoCarousel
-                  images={project.photo_urls}
-                  alt={project.title}
-                  autoPlay
-                  showControls={false}
-                  className="h-[300px] w-full"
-                  imageClassName="h-[300px] w-full object-cover"
-                />
-              </section>
-
-              <section className="rounded-[26px] border border-white/85 bg-white p-4 shadow-[0_18px_46px_rgba(21,28,44,0.06)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[0.64rem] font-bold uppercase tracking-[0.22em] text-[#6B39F4]">
-                      Business info
-                    </p>
-                    <h2 className="mt-1 text-xl font-semibold tracking-[-0.04em] text-[#10172F]">
-                      {project.business_name || project.title}
-                    </h2>
-                  </div>
-                  <span className="rounded-full border border-[#E6ECF5] bg-[#F8FAFF] px-3 py-1 text-[11px] font-semibold text-[#65708A]">
-                    {project.city || project.country ? [project.city, project.country].filter(Boolean).join(', ') : t('locationPending')}
-                  </span>
+              <AspectRatio
+                customRatio={4 / 3}
+                className="overflow-hidden rounded-[28px] bg-white/85 shadow-[0_18px_42px_rgba(15,23,42,0.12)] backdrop-blur-xl"
+              >
+                <div className="relative h-full w-full overflow-hidden">
+                  <ProjectPhotoCarousel
+                    images={project.photo_urls}
+                    alt={project.title}
+                    autoPlay
+                    showControls={false}
+                    showCounter={false}
+                    className="h-full w-full bg-white/80"
+                    imageClassName="object-contain"
+                  />
                 </div>
+              </AspectRatio>
 
-                <div className="mt-4 overflow-hidden rounded-[18px] border border-[#E6ECF5]">
-                  <table className="w-full divide-y divide-[#E6ECF5]">
-                    <tbody>
-                      {mobileBasicInfoRows.map((row) => (
-                        <tr key={row.label} className="bg-white">
-                          <th className="w-[42%] px-4 py-3 text-left text-[0.7rem] font-bold uppercase tracking-[0.16em] text-[#8A94A8]">
-                            {row.label}
-                          </th>
-                          <td className="px-4 py-3 text-sm font-semibold leading-5 text-[#10172F]">
-                            {row.value}
-                          </td>
-                        </tr>
+              <div className="overflow-hidden rounded-[24px] border border-[#E0E0E0] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.045)]">
+                <TableRoot className="min-w-[760px] border-0 text-left" fullBleed>
+                  <TableHeader className="bg-[#F6F1FF] [&_th]:border-[#E6DAFF] [&_th]:text-[#5D2FE4]">
+                    <TableRow>
+                      {mobileBasicInfoRows.map((column) => (
+                        <TableHead
+                          key={column.label}
+                          className="px-4 py-3 text-[0.7rem] font-extrabold uppercase tracking-[0.12em]"
+                        >
+                          {column.label}
+                        </TableHead>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      {mobileBasicInfoRows.map((column) => (
+                        <TableCell
+                          key={column.label}
+                          className="max-w-[15rem] px-4 py-4 text-sm font-bold leading-5 text-[#242424]"
+                        >
+                          {column.value}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  </TableBody>
+                </TableRoot>
+              </div>
 
               <section className="rounded-[26px] border border-white/85 bg-white p-4 shadow-[0_18px_46px_rgba(21,28,44,0.06)]">
                 <div className="flex items-start gap-3">
@@ -543,25 +587,23 @@ export default function ProjectInvestPage() {
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-white/85 bg-white p-4 shadow-[0_18px_46px_rgba(21,28,44,0.06)]">
-                <p className="text-sm font-semibold text-[#10172F]">Send a message to the entrepreneur</p>
-                <p className="mt-1 text-xs leading-5 text-[#65708A]">
-                  Send inquiry... ask for extra context before moving to the investment step.
-                </p>
-                <div className="mt-4 space-y-3">
+              <section className="rounded-[24px] border border-[#E0E0E0] bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.045)]">
+                <div className="space-y-3">
                   <TextArea
                     value={inquiryMessage}
                     onChange={(event) => setInquiryMessage(event.target.value)}
                     placeholder="Send inquiry..."
-                    className="h-28 rounded-[18px] border border-[#E3E8F2] bg-[#FBFCFE] px-4 py-3 text-sm text-[#10172F] placeholder:text-[#9AA3B2] focus:border-[#6B39F4] focus:ring-[#6B39F4]/15"
+                    className="min-h-24 rounded-[18px] border-0 bg-transparent px-0 py-0 text-sm font-medium text-[#333333] placeholder:text-[#777777] focus:border-0 focus:ring-0"
                   />
-                  <button
-                    type="button"
-                    onClick={handleSendInquiry}
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[#10172F] px-4 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(16,23,47,0.16)] transition hover:-translate-y-0.5"
-                  >
-                    Send
-                  </button>
+                  <div className="flex items-center justify-end border-t border-[#ECECEC] pt-3">
+                    <button
+                      type="button"
+                      onClick={handleSendInquiry}
+                      className="inline-flex min-h-10 items-center justify-center rounded-full border border-[#E0E0E0] bg-white px-4 text-sm font-semibold text-[#242424] shadow-[0_6px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5"
+                    >
+                      Send
+                    </button>
+                  </div>
                 </div>
                 {inquiryStatus ? <p className="mt-3 text-xs font-medium text-[#6B39F4]">{inquiryStatus}</p> : null}
               </section>
@@ -570,75 +612,76 @@ export default function ProjectInvestPage() {
                 {mobileKpis.map((kpi) => (
                   <div
                     key={kpi.label}
-                    className="rounded-[22px] border border-white/85 bg-white p-4 shadow-[0_14px_34px_rgba(21,28,44,0.05)]"
+                    className="rounded-[22px] border border-[#E1E1E1] bg-white p-4 shadow-[0_8px_18px_rgba(15,23,42,0.035)]"
                   >
-                    <p className="text-[0.64rem] font-extrabold uppercase tracking-[0.14em] text-[#8A94A8]">
+                    <p className="text-[0.64rem] font-extrabold uppercase tracking-[0.14em] text-[#777777]">
                       {kpi.label}
                     </p>
-                    <p className="mt-2 text-[1.05rem] font-extrabold leading-none tracking-[-0.05em] text-[#10172F]">
+                    <p className="mt-2 text-[clamp(1.1rem,5vw,1.45rem)] font-extrabold leading-none tracking-[-0.05em] text-[#242424]">
                       {kpi.value}
                     </p>
                   </div>
                 ))}
               </section>
 
-              <section className="space-y-3">
-                {mobilePublicationSections.map((section) => (
-                  <article
-                    key={section.title}
-                    className="rounded-[26px] border border-white/85 bg-white p-4 shadow-[0_18px_46px_rgba(21,28,44,0.06)]"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="h-8 w-8 rounded-full bg-[#F4EFFF] text-[#6B39F4]" />
-                      <h4 className="text-sm font-semibold tracking-[-0.03em] text-[#10172F]">
-                        {section.title}
-                      </h4>
-                    </div>
-                    {section.body ? (
-                      <div className="mt-3 space-y-3 text-sm leading-6 text-[#59657F]">
-                        {splitParagraphs(section.body).map((paragraph) => (
-                          <p key={paragraph}>{paragraph}</p>
-                        ))}
-                      </div>
-                    ) : null}
-                    {section.bullets?.length ? (
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-[#59657F]">
-                        {section.bullets.map((bullet) => (
-                          <li key={bullet} className="flex gap-2">
-                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6B39F4]" />
-                            <span>{bullet}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </article>
-                ))}
+              <TabRoot
+                defaultValue="overview"
+                variant="minimal"
+                className="overflow-hidden rounded-[24px] border border-[#E0E0E0] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.045)]"
+              >
+                <TabList className="gap-1 border-b border-[#ECECEC] px-2">
+                  {mobilePublicationTabs.map((tab) => (
+                    <TabTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      className="py-3 text-[0.74rem] font-extrabold tracking-[-0.02em] text-[#777777] data-[active=true]:border-[#6B39F4] data-[active=true]:text-[#6B39F4]"
+                    >
+                      {tab.label}
+                    </TabTrigger>
+                  ))}
+                </TabList>
 
-                {mobileGalleryItems.length > 0 ? (
-                  <article className="rounded-[26px] border border-white/85 bg-white p-4 shadow-[0_18px_46px_rgba(21,28,44,0.06)]">
-                    <div className="flex items-center gap-2">
-                      <span className="h-8 w-8 rounded-full bg-[#EEF4FF] text-[#4C6EF5]" />
-                      <h4 className="text-sm font-semibold tracking-[-0.03em] text-[#10172F]">Gallery</h4>
-                    </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      {mobileGalleryItems.map((image, index) => (
-                        <div
-                          key={`${image}-${index}`}
-                          className="relative h-32 overflow-hidden rounded-[18px] border border-[#E7ECF5] bg-[#F5F7FB]"
-                        >
-                          <Image
-                            src={image}
-                            alt={`${project.title} ${index + 1}`}
-                            fill
-                            sizes="(max-width: 768px) 50vw, 25vw"
-                            className="object-cover"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </article>
-                ) : null}
-              </section>
+                {mobilePublicationTabs.map((tab) => (
+                  <TabContent
+                    key={tab.id}
+                    value={tab.id}
+                    className="px-4 py-4 text-sm font-medium leading-6 text-[#333333] [text-align:justify]"
+                  >
+                    {tab.id === 'gallery' ? (
+                      <div className="space-y-3">
+                        {tab.content ? (
+                          <p className="whitespace-pre-line [text-align:justify]">{tab.content}</p>
+                        ) : null}
+                        {mobileGalleryItems.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {mobileGalleryItems.map((image, index) => (
+                              <AspectRatio
+                                key={`${image}-${index}`}
+                                customRatio={1}
+                                className="overflow-hidden rounded-[16px] bg-[#F2F2F2]"
+                              >
+                                <Image
+                                  src={image}
+                                  alt={`${project.title} ${index + 1}`}
+                                  fill
+                                  sizes="(max-width: 768px) 50vw, 25vw"
+                                  className="object-cover"
+                                />
+                              </AspectRatio>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[#777777]">Gallery media will appear here.</p>
+                        )}
+                      </div>
+                    ) : tab.content ? (
+                      <p className="whitespace-pre-line [text-align:justify]">{tab.content}</p>
+                    ) : (
+                      <p className="text-[#777777]">This section will appear when the AI response includes it.</p>
+                    )}
+                  </TabContent>
+                ))}
+              </TabRoot>
 
               <div className="pt-2">
                 <button

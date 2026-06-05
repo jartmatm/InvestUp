@@ -42,3 +42,14 @@ Files: components/EntrepreneurFeedDashboard.tsx
 Summary:
 - Refined the entrepreneur dashboard speed meter to show only the half-donut goal progress and days-remaining badge.
 - Removed funds-raised and remaining side figures from the speed meter while preserving the gradient card treatment.
+
+## 2026-06-06 - Invest mobile preview aligned with publish wizard
+
+Type: session
+Tags: invest, mobile, preview, ui
+Files: app/(protected)/feed/[id]/invest/page.tsx, components/ProjectPhotoCarousel.tsx
+
+Summary:
+- Reworked the mobile investor `Invest` detail screen to mirror the publish wizard preview layout more closely.
+- Matched the carousel containment, horizontal business info table, KPI card styling, and minimal tabbed publication content pattern from the wizard preview.
+- Kept desktop behavior unchanged and preserved the existing investment handoff flow.

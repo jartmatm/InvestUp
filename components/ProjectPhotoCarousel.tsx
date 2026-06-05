@@ -11,6 +11,7 @@ type ProjectPhotoCarouselProps = {
   imageClassName?: string;
   emptyClassName?: string;
   showIndicators?: boolean;
+  showCounter?: boolean;
   showControls?: boolean;
   stopPropagation?: boolean;
   autoPlay?: boolean;
@@ -24,6 +25,7 @@ export default function ProjectPhotoCarousel({
   imageClassName,
   emptyClassName,
   showIndicators = true,
+  showCounter = true,
   showControls = true,
   stopPropagation,
   autoPlay = false,
@@ -154,9 +156,11 @@ export default function ProjectPhotoCarousel({
                   />
                 ))}
               </div>
-              <div className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/30 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
-                {currentIndex + 1}/{slides.length}
-              </div>
+              {showCounter ? (
+                <div className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/30 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur-md">
+                  {currentIndex + 1}/{slides.length}
+                </div>
+              ) : null}
             </>
           ) : null}
         </>
