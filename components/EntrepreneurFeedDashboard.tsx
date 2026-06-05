@@ -85,6 +85,12 @@ type SectionHeadingProps = {
   actionLabel?: string;
 };
 
+type FundingHalfDonutChartProps = {
+  progressRatio: number;
+  label: string;
+  variant?: 'mobile' | 'desktop';
+};
+
 const money = (value: number, currency = 'USD') =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -163,18 +169,32 @@ const getInstallmentAmount = (totalRepayment: number, termMonths: number | null 
   return Number((totalRepayment / totalMonths).toFixed(2));
 };
 
-const buildArcPath = (startAngle: number, endAngle: number, radius = 102, centerX = 140, centerY = 148) => {
-  const polarToCartesian = (angle: number) => {
+const clampRatio = (value: number) => Math.max(0, Math.min(1, value));
+
+const buildDonutSegmentPath = (startAngle: number, endAngle: number, innerRadius: number, outerRadius: number) => {
+  if (Math.abs(startAngle - endAngle) < 0.001) return '';
+
+  const polarToCartesian = (angle: number, radius: number) => {
     const radians = (angle * Math.PI) / 180;
     return {
-      x: centerX + radius * Math.cos(radians),
-      y: centerY - radius * Math.sin(radians),
+      x: radius * Math.cos(radians),
+      y: -radius * Math.sin(radians),
     };
   };
 
-  const start = polarToCartesian(startAngle);
-  const end = polarToCartesian(endAngle);
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`;
+  const outerStart = polarToCartesian(startAngle, outerRadius);
+  const outerEnd = polarToCartesian(endAngle, outerRadius);
+  const innerEnd = polarToCartesian(endAngle, innerRadius);
+  const innerStart = polarToCartesian(startAngle, innerRadius);
+  const largeArcFlag = Math.abs(startAngle - endAngle) > 180 ? 1 : 0;
+
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `A ${innerRadius} ${innerRadius} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}`,
+    'Z',
+  ].join(' ');
 };
 
 const hexToRgb = (hex: string) => {
@@ -392,6 +412,104 @@ function IconChart() {
   );
 }
 
+function FundingHalfDonutChart({
+  progressRatio,
+  label,
+  variant = 'mobile',
+}: FundingHalfDonutChartProps) {
+  const chartId = useId().replace(/:/g, '');
+  const radius = 420;
+  const innerRadius = radius / 1.625;
+  const lightStrokeEffect = 10;
+  const normalizedRatio = clampRatio(progressRatio);
+  const [animatedRatio, setAnimatedRatio] = useState(0);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setAnimatedRatio(normalizedRatio));
+    return () => window.cancelAnimationFrame(frame);
+  }, [normalizedRatio]);
+
+  const filledEndAngle = 180 - animatedRatio * 180;
+  const trackPath = buildDonutSegmentPath(180, 0, innerRadius, radius);
+  const fillPath = buildDonutSegmentPath(180, filledEndAngle, innerRadius, radius);
+  const progressColor = interpolateGaugeColor(animatedRatio);
+  const gradientStart = mixColors(progressColor, '#FFFFFF', 0.2);
+  const gradientEnd =
+    animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.2) : mixColors(progressColor, '#7C5CFF', 0.14);
+  const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+  const widthClassName = variant === 'desktop' ? 'max-w-[25rem]' : 'max-w-[17rem]';
+
+  return (
+    <div className="relative" data-chart="funding-half-donut">
+      <svg
+        viewBox={`-${radius} -${radius} ${radius * 2} ${radius}`}
+        className={`mx-auto overflow-visible ${widthClassName}`}
+        role="img"
+        aria-label={`${label}: ${percentageLabel}`}
+      >
+        <defs>
+          <linearGradient id={`funding-half-donut-gradient-${chartId}`} x1="-420" y1="0" x2="420" y2="-260" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor={gradientStart} />
+            <stop offset="58%" stopColor={progressColor} />
+            <stop offset="100%" stopColor={gradientEnd} />
+          </linearGradient>
+          <filter id={`funding-half-donut-glow-${chartId}`} x="-35%" y="-60%" width="170%" height="190%">
+            <feGaussianBlur stdDeviation={variant === 'desktop' ? '10' : '7'} result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <path
+          d={trackPath}
+          className="fill-[#E7EAF2]"
+          stroke="rgba(255,255,255,0.55)"
+          strokeWidth={lightStrokeEffect}
+        />
+        {fillPath ? (
+          <path
+            d={fillPath}
+            fill={`url(#funding-half-donut-gradient-${chartId})`}
+            stroke="rgba(255,255,255,0.34)"
+            strokeWidth={lightStrokeEffect}
+            filter={`url(#funding-half-donut-glow-${chartId})`}
+            className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+          />
+        ) : null}
+        <path
+          d={trackPath}
+          fill="none"
+          stroke="rgba(255,255,255,0.32)"
+          strokeWidth={lightStrokeEffect / 2}
+          className="mix-blend-screen"
+        />
+        <text
+          transform={`translate(0, ${-radius / 4})`}
+          textAnchor="middle"
+          fontSize={variant === 'desktop' ? 46 : 50}
+          fontWeight="700"
+          fill="currentColor"
+          className="text-[#6F7C96]"
+        >
+          {label}
+        </text>
+        <text
+          transform={`translate(0, ${-radius / 13})`}
+          textAnchor="middle"
+          fontSize={variant === 'desktop' ? 76 : 70}
+          fontWeight="800"
+          fill="currentColor"
+          className="text-[#090F22]"
+        >
+          {percentageLabel}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 function FundingGauge({
   raised,
   target,
@@ -406,25 +524,7 @@ function FundingGauge({
   daysRemainingLabel: string;
 }) {
   const t = useTranslations('Portfolio');
-  const gaugeId = useId().replace(/:/g, '');
-  const progressRatio = target > 0 ? Math.max(0, Math.min(1, raised / target)) : 0;
-  const [animatedRatio, setAnimatedRatio] = useState(0);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      setAnimatedRatio(progressRatio);
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [progressRatio]);
-
-  const progressColor = interpolateGaugeColor(animatedRatio);
-  const leadingColor = mixColors(progressColor, '#FFFFFF', 0.22);
-  const trailingColor =
-    animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
-  const glowOpacity = 0.28 + animatedRatio * 0.42;
-  const glowBlur = 6 + animatedRatio * 4;
-  const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+  const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
     ? t('remainingTemplate', { value: daysRemainingLabel })
     : daysRemainingLabel;
@@ -460,78 +560,15 @@ function FundingGauge({
           </div>
         </div>
 
-        <div className="relative mt-4">
-          <svg viewBox="0 0 280 190" className="mx-auto h-[210px] w-full max-w-[320px]">
-            <defs>
-              <linearGradient id={`gauge-gradient-${gaugeId}`} x1="30" y1="160" x2="250" y2="40" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor={leadingColor} />
-                <stop offset="55%" stopColor={progressColor} />
-                <stop offset="100%" stopColor={trailingColor} />
-              </linearGradient>
-              <filter id={`gauge-glow-${gaugeId}`} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation={glowBlur} result="blur" />
-                <feColorMatrix
-                  in="blur"
-                  type="matrix"
-                  values={`1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${glowOpacity.toFixed(2)} 0`}
-                />
-              </filter>
-            </defs>
-
-            <path
-              d={buildArcPath(180, 0)}
-              pathLength={100}
-              fill="none"
-              stroke="rgba(124,92,255,0.14)"
-              strokeWidth="18"
-              strokeLinecap="round"
-            />
-            <path
-              d={buildArcPath(180, 0)}
-              pathLength={100}
-              fill="none"
-              stroke={`url(#gauge-gradient-${gaugeId})`}
-              strokeWidth="18"
-              strokeLinecap="round"
-              strokeDasharray="100"
-              strokeDashoffset={100 - animatedRatio * 100}
-              filter={`url(#gauge-glow-${gaugeId})`}
-              className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            />
-            <path
-              d={buildArcPath(180, 0)}
-              pathLength={100}
-              fill="none"
-              stroke={`url(#gauge-gradient-${gaugeId})`}
-              strokeWidth="12"
-              strokeLinecap="round"
-              strokeDasharray="100"
-              strokeDashoffset={100 - animatedRatio * 100}
-              className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            />
-
-            <text x="27" y="168" className="fill-[#A0A8BC] text-[11px] font-semibold">
-              0%
-            </text>
-            <text x="132" y="34" className="fill-[#A0A8BC] text-[11px] font-semibold">
-              50%
-            </text>
-            <text x="230" y="168" className="fill-[#A0A8BC] text-[11px] font-semibold">
-              100%
-            </text>
-          </svg>
-
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-7 text-center">
-            <p className="text-[2rem] font-semibold tracking-[-0.05em] text-[#1C2336]">
-              {percentageLabel}
-            </p>
-            <p className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#8A93A8]">
-              {t('fundingProgress')}
-            </p>
-          </div>
+        <div className="relative mt-6">
+          <FundingHalfDonutChart
+            progressRatio={progressRatio}
+            label={t('fundingProgress')}
+            variant="mobile"
+          />
         </div>
 
-        <div className="-mt-4 flex justify-center">
+        <div className="-mt-2 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-xs font-semibold text-[#4F5B76] shadow-[0_10px_24px_rgba(31,38,64,0.08)] backdrop-blur-xl">
             <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/65" />
             {daysRemainingPillLabel}
@@ -556,26 +593,11 @@ function DesktopFundingGauge({
   daysRemainingLabel: string;
 }) {
   const t = useTranslations('Portfolio');
-  const gaugeId = useId().replace(/:/g, '');
-  const progressRatio = target > 0 ? Math.max(0, Math.min(1, raised / target)) : 0;
-  const [animatedRatio, setAnimatedRatio] = useState(0);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setAnimatedRatio(progressRatio));
-    return () => window.cancelAnimationFrame(frame);
-  }, [progressRatio]);
-
-  const progressColor = interpolateGaugeColor(animatedRatio);
-  const leadingColor = mixColors(progressColor, '#FFFFFF', 0.18);
-  const trailingColor =
-    animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.25) : mixColors(progressColor, '#7C5CFF', 0.18);
-  const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
+  const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
+  const progressColor = interpolateGaugeColor(progressRatio);
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
     ? t('remainingTemplate', { value: daysRemainingLabel })
     : daysRemainingLabel;
-  const markerAngle = ((180 - animatedRatio * 180) * Math.PI) / 180;
-  const markerX = 180 + 132 * Math.cos(markerAngle);
-  const markerY = 198 - 132 * Math.sin(markerAngle);
 
   return (
     <section className="relative min-h-[360px] overflow-hidden rounded-[28px] border border-[#DDE3F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_52%,#F7FAFF_100%)] px-10 py-10 shadow-[0_26px_70px_rgba(21,28,44,0.08)]">
@@ -601,64 +623,11 @@ function DesktopFundingGauge({
           </div>
 
           <div className="relative">
-            <svg viewBox="0 0 360 240" className="mx-auto h-[280px] w-full">
-              <defs>
-                <linearGradient id={`desktop-gauge-gradient-${gaugeId}`} x1="50" y1="198" x2="310" y2="44" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor={leadingColor} />
-                  <stop offset="55%" stopColor={progressColor} />
-                  <stop offset="100%" stopColor={trailingColor} />
-                </linearGradient>
-                <filter id={`desktop-gauge-glow-${gaugeId}`} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="9" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
-              </defs>
-              <path
-                d={buildArcPath(180, 0, 132, 180, 198)}
-                pathLength={100}
-                fill="none"
-                stroke="rgba(124,92,255,0.14)"
-                strokeWidth="24"
-                strokeLinecap="round"
-              />
-              <path
-                d={buildArcPath(180, 0, 132, 180, 198)}
-                pathLength={100}
-                fill="none"
-                stroke={`url(#desktop-gauge-gradient-${gaugeId})`}
-                strokeWidth="24"
-                strokeLinecap="round"
-                strokeDasharray="100"
-                strokeDashoffset={100 - animatedRatio * 100}
-                filter={`url(#desktop-gauge-glow-${gaugeId})`}
-                className="transition-[stroke-dashoffset] duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              />
-              <circle
-                cx={markerX}
-                cy={markerY}
-                r="7.5"
-                fill={progressColor}
-                className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              />
-              <text x="48" y="226" className="fill-[#7D879C] text-[12px] font-medium">
-                0%
-              </text>
-              <text x="169" y="36" className="fill-[#7D879C] text-[12px] font-medium">
-                50%
-              </text>
-              <text x="292" y="226" className="fill-[#7D879C] text-[12px] font-medium">
-                100%
-              </text>
-            </svg>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-16 text-center">
-              <p className="text-[4.25rem] font-semibold tracking-[-0.075em] text-[#090F22]">{percentageLabel}</p>
-              <p className="mt-3 text-[0.82rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-                {t('fundingProgress')}
-              </p>
-            </div>
+            <FundingHalfDonutChart
+              progressRatio={progressRatio}
+              label={t('fundingProgress')}
+              variant="desktop"
+            />
           </div>
 
           <div className="pt-8 text-center">
