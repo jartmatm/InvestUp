@@ -81,3 +81,11 @@ Details:
 - Added mobile history guard to keep accidental left swipe/browser back from exiting the wizard to the feed.
 - Added icon-only previous/next reorder controls for pending media because HTML drag/drop is unreliable immediately after selecting files on mobile.
 - Extended project media upload progress callbacks with starting/uploading/retrying/completed phases and elapsed-time heartbeat updates so long uploads do not look frozen.
+
+## 2026-06-05 - Publish edit media modal preloads existing photos
+
+Type: bugfix
+Tags: project-memory
+
+Summary:
+- Root cause: /publish?edit hydrated Supabase project photo_urls into uploadedMediaItems, but the desktop upload photos modal rendered only pendingMediaItems, so existing photos were invisible in the popup and could not be removed there. Fix: app/(protected)/publish/page.tsx now renders current saved media in the modal with remove/reorder support while keeping new pending media in a separate section; the modal Done button closes when there are no new files and Save media persists newly selected files. Verification: static regression repro failed before the fix and now passes; npx eslint app/(protected)/publish/page.tsx exits 0 with warnings only. Regression guard: ensure the edit media modal includes uploadedMediaItems.map, handleRemoveUploadedMedia, and handleMediaSelection.

@@ -4465,75 +4465,130 @@ export default function PublishPage() {
               </div>
 
               <div className="mt-5 max-h-[52vh] overflow-y-auto rounded-2xl border border-[#E4ECF6] bg-[#F9FBFE] p-4">
-                {pendingMediaItems.length === 0 ? (
+                {uploadedMediaItems.length === 0 && pendingMediaItems.length === 0 ? (
                   <p className="py-14 text-center text-sm text-[#8A97AA]">
-                    No files selected yet.
+                    No media in this publication yet.
                   </p>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    {pendingMediaItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        draggable
-                        onDragStart={() => handleDragStartMedia(item.id)}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={() => handleDropPendingMedia(item.id)}
-                        className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
-                      >
-                        {pendingMediaItems.length > 1 ? (
-                          <div className="absolute left-2 top-2 z-10 flex gap-1">
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleMovePendingMedia(item.id, 'previous');
-                              }}
-                              disabled={index === 0}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
-                              aria-label="Move media earlier"
+                  <div className="space-y-5">
+                    {uploadedMediaItems.length > 0 ? (
+                      <section className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
+                            Current publication media
+                          </p>
+                          <p className="text-xs font-medium text-[#94A3B8]">
+                            Saved in this draft
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          {uploadedMediaItems.map((item) => (
+                            <div
+                              key={item.id}
+                              draggable
+                              onDragStart={() => handleDragStartMedia(item.id)}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={() => handleDropMedia(item.id)}
+                              className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
                             >
-                              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-                                <path d="m18 15-6-6-6 6" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleMovePendingMedia(item.id, 'next');
-                              }}
-                              disabled={index === pendingMediaItems.length - 1}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
-                              aria-label="Move media later"
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUploadedMedia(item.id)}
+                                className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+                                aria-label="Remove existing media item"
+                              >
+                                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="m6 6 12 12" />
+                                  <path d="m18 6-12 12" />
+                                </svg>
+                              </button>
+                              {item.type === 'video' ? (
+                                <AspectRatio ratio="video">
+                                  <video src={item.previewUrl} className="h-full w-full object-cover" controls muted />
+                                </AspectRatio>
+                              ) : (
+                                <AspectRatio ratio="video">
+                                  <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+                                </AspectRatio>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
+
+                    {pendingMediaItems.length > 0 ? (
+                      <section className="space-y-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#64748B]">
+                          New media to add
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          {pendingMediaItems.map((item, index) => (
+                            <div
+                              key={item.id}
+                              draggable
+                              onDragStart={() => handleDragStartMedia(item.id)}
+                              onDragOver={(event) => event.preventDefault()}
+                              onDrop={() => handleDropPendingMedia(item.id)}
+                              className="relative overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white"
                             >
-                              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-                                <path d="m6 9 6 6 6-6" />
-                              </svg>
-                            </button>
-                          </div>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePendingMedia(item.id)}
-                          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
-                          aria-label="Remove media item"
-                        >
-                          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="m6 6 12 12" />
-                            <path d="m18 6-12 12" />
-                          </svg>
-                        </button>
-                        {item.type === 'video' ? (
-                          <AspectRatio ratio="video">
-                            <video src={item.previewUrl} className="h-full w-full object-cover" controls muted />
-                          </AspectRatio>
-                        ) : (
-                          <AspectRatio ratio="video">
-                            <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
-                          </AspectRatio>
-                        )}
-                      </div>
-                    ))}
+                              {pendingMediaItems.length > 1 ? (
+                                <div className="absolute left-2 top-2 z-10 flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleMovePendingMedia(item.id, 'previous');
+                                    }}
+                                    disabled={index === 0}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
+                                    aria-label="Move media earlier"
+                                  >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                      <path d="m18 15-6-6-6 6" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleMovePendingMedia(item.id, 'next');
+                                    }}
+                                    disabled={index === pendingMediaItems.length - 1}
+                                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#242424] shadow-[0_8px_18px_rgba(15,23,42,0.16)] backdrop-blur-sm transition hover:bg-white disabled:opacity-35"
+                                    aria-label="Move media later"
+                                  >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+                                      <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              ) : null}
+                              <button
+                                type="button"
+                                onClick={() => handleRemovePendingMedia(item.id)}
+                                className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black"
+                                aria-label="Remove media item"
+                              >
+                                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <path d="m6 6 12 12" />
+                                  <path d="m18 6-12 12" />
+                                </svg>
+                              </button>
+                              {item.type === 'video' ? (
+                                <AspectRatio ratio="video">
+                                  <video src={item.previewUrl} className="h-full w-full object-cover" controls muted />
+                                </AspectRatio>
+                              ) : (
+                                <AspectRatio ratio="video">
+                                  <img src={item.previewUrl} alt={item.name} className="h-full w-full object-cover" />
+                                </AspectRatio>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -4548,11 +4603,16 @@ export default function PublishPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void handleUploadPendingMedia()}
-                  disabled={pendingMediaItems.length === 0}
-                  className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE] disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => {
+                    if (pendingMediaItems.length > 0) {
+                      void handleUploadPendingMedia();
+                      return;
+                    }
+                    setIsMediaModalOpen(false);
+                  }}
+                  className="h-11 rounded-full bg-[#6B39F4] px-6 text-sm font-semibold text-white shadow-[0_16px_32px_rgba(107,57,244,0.24)] transition hover:bg-[#5A2FCE]"
                 >
-                  Upload
+                  {pendingMediaItems.length > 0 ? 'Save media' : 'Done'}
                 </button>
               </div>
             </motion.div>
