@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import Image from 'next/image';
+import { useEffect, useMemo, useState, type MouseEvent, type SyntheticEvent, type TouchEvent } from 'react';
 import { useTranslations } from 'next-intl';
 
 type ProjectPhotoCarouselProps = {
@@ -10,7 +11,10 @@ type ProjectPhotoCarouselProps = {
   imageClassName?: string;
   emptyClassName?: string;
   showIndicators?: boolean;
+  showControls?: boolean;
   stopPropagation?: boolean;
+  autoPlay?: boolean;
+  autoPlayIntervalMs?: number;
 };
 
 export default function ProjectPhotoCarousel({
@@ -20,7 +24,10 @@ export default function ProjectPhotoCarousel({
   imageClassName,
   emptyClassName,
   showIndicators = true,
+  showControls = true,
   stopPropagation,
+  autoPlay = false,
+  autoPlayIntervalMs = 4200,
 }: ProjectPhotoCarouselProps) {
   const t = useTranslations('Components');
   const slides = useMemo(
@@ -33,28 +40,38 @@ export default function ProjectPhotoCarousel({
   const hasSlides = slides.length > 0;
   const hasMultipleSlides = slides.length > 1;
 
+  useEffect(() => {
+    if (!autoPlay || !hasMultipleSlides) return;
+
+    const timer = window.setInterval(() => {
+      setCurrentIndex((current) => (current + 1) % slides.length);
+    }, autoPlayIntervalMs);
+
+    return () => window.clearInterval(timer);
+  }, [autoPlay, autoPlayIntervalMs, hasMultipleSlides, slides.length]);
+
   const goToIndex = (index: number) => {
     if (!hasSlides) return;
     const normalized = (index + slides.length) % slides.length;
     setCurrentIndex(normalized);
   };
 
-  const showPrevious = (event?: React.SyntheticEvent) => {
+  const showPrevious = (event?: SyntheticEvent) => {
     event?.stopPropagation();
     goToIndex(currentIndex - 1);
   };
 
-  const showNext = (event?: React.SyntheticEvent) => {
+  const showNext = (event?: SyntheticEvent) => {
     event?.stopPropagation();
     goToIndex(currentIndex + 1);
   };
 
-  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     event.stopPropagation();
     setTouchStartX(event.touches[0]?.clientX ?? null);
   };
 
-  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
     event.stopPropagation();
     if (touchStartX === null) return;
 
@@ -67,7 +84,7 @@ export default function ProjectPhotoCarousel({
     setTouchStartX(null);
   };
 
-  const handleContainerClick = (event: React.MouseEvent<HTMLDivElement>) => {
+  const handleContainerClick = (event: MouseEvent<HTMLDivElement>) => {
     if (stopPropagation) event.stopPropagation();
   };
 
@@ -79,10 +96,12 @@ export default function ProjectPhotoCarousel({
       onTouchEnd={handleTouchEnd}
     >
       {hasSlides ? (
-        <img
+        <Image
           src={slides[currentIndex]}
           alt={`${alt} ${currentIndex + 1}`}
-          className={imageClassName ?? 'h-full w-full object-cover'}
+          fill
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          className={imageClassName ?? 'object-cover'}
         />
       ) : (
         <div
@@ -97,22 +116,26 @@ export default function ProjectPhotoCarousel({
 
       {hasMultipleSlides ? (
         <>
-          <button
-            type="button"
-            onClick={showPrevious}
-            aria-label={t('previousPhoto')}
-            className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
-          >
-            <span className="text-lg leading-none">&lt;</span>
-          </button>
-          <button
-            type="button"
-            onClick={showNext}
-            aria-label={t('nextPhoto')}
-            className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
-          >
-            <span className="text-lg leading-none">&gt;</span>
-          </button>
+          {showControls ? (
+            <>
+              <button
+                type="button"
+                onClick={showPrevious}
+                aria-label={t('previousPhoto')}
+                className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
+              >
+                <span className="text-lg leading-none">&lt;</span>
+              </button>
+              <button
+                type="button"
+                onClick={showNext}
+                aria-label={t('nextPhoto')}
+                className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/25 bg-black/30 text-white backdrop-blur-md"
+              >
+                <span className="text-lg leading-none">&gt;</span>
+              </button>
+            </>
+          ) : null}
           {showIndicators ? (
             <>
               <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1 backdrop-blur-md">

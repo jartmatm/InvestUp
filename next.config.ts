@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://pplzpsokyytvkibhfzaa.supabase.co";
+const supabaseHost = new URL(supabaseUrl).hostname;
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -16,6 +19,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: supabaseHost,
+        pathname: "/storage/v1/object/**",
+      },
+    ],
+  },
   experimental: {
     proxyClientMaxBodySize: "80mb",
   },
