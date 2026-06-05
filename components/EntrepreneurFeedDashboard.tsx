@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import { useTranslations } from 'next-intl';
@@ -197,63 +197,6 @@ const buildDonutSegmentPath = (startAngle: number, endAngle: number, innerRadius
   ].join(' ');
 };
 
-const hexToRgb = (hex: string) => {
-  const normalized = hex.replace('#', '');
-  const value =
-    normalized.length === 3
-      ? normalized
-          .split('')
-          .map((char) => `${char}${char}`)
-          .join('')
-      : normalized;
-
-  return {
-    r: Number.parseInt(value.slice(0, 2), 16),
-    g: Number.parseInt(value.slice(2, 4), 16),
-    b: Number.parseInt(value.slice(4, 6), 16),
-  };
-};
-
-const rgbToHex = ({ r, g, b }: { r: number; g: number; b: number }) =>
-  `#${[r, g, b]
-    .map((channel) => Math.max(0, Math.min(255, Math.round(channel))).toString(16).padStart(2, '0'))
-    .join('')}`;
-
-const mixColors = (left: string, right: string, ratio: number) => {
-  const a = hexToRgb(left);
-  const b = hexToRgb(right);
-  const weight = Math.max(0, Math.min(1, ratio));
-
-  return rgbToHex({
-    r: a.r + (b.r - a.r) * weight,
-    g: a.g + (b.g - a.g) * weight,
-    b: a.b + (b.b - a.b) * weight,
-  });
-};
-
-const GAUGE_COLOR_STOPS = [
-  { stop: 0, color: '#FF7A6B' },
-  { stop: 0.3, color: '#FFB547' },
-  { stop: 0.7, color: '#9DDD4F' },
-  { stop: 1, color: '#35C982' },
-] as const;
-
-const interpolateGaugeColor = (progressRatio: number) => {
-  const ratio = Math.max(0, Math.min(1, progressRatio));
-
-  for (let index = 0; index < GAUGE_COLOR_STOPS.length - 1; index += 1) {
-    const current = GAUGE_COLOR_STOPS[index];
-    const next = GAUGE_COLOR_STOPS[index + 1];
-
-    if (ratio <= next.stop) {
-      const localRatio = (ratio - current.stop) / (next.stop - current.stop || 1);
-      return mixColors(current.color, next.color, localRatio);
-    }
-  }
-
-  return GAUGE_COLOR_STOPS[GAUGE_COLOR_STOPS.length - 1].color;
-};
-
 function DashboardCard({ children, className = '' }: DashboardCardProps) {
   return (
     <section
@@ -417,7 +360,6 @@ function FundingHalfDonutChart({
   label,
   variant = 'mobile',
 }: FundingHalfDonutChartProps) {
-  const chartId = useId().replace(/:/g, '');
   const radius = 420;
   const innerRadius = radius / 1.625;
   const lightStrokeEffect = 10;
@@ -432,12 +374,8 @@ function FundingHalfDonutChart({
   const filledEndAngle = 180 - animatedRatio * 180;
   const trackPath = buildDonutSegmentPath(180, 0, innerRadius, radius);
   const fillPath = buildDonutSegmentPath(180, filledEndAngle, innerRadius, radius);
-  const progressColor = interpolateGaugeColor(animatedRatio);
-  const gradientStart = mixColors(progressColor, '#FFFFFF', 0.2);
-  const gradientEnd =
-    animatedRatio >= 0.7 ? mixColors(progressColor, '#16A34A', 0.2) : mixColors(progressColor, '#7C5CFF', 0.14);
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
-  const widthClassName = variant === 'desktop' ? 'max-w-[25rem]' : 'max-w-[17rem]';
+  const widthClassName = variant === 'desktop' ? 'max-w-[19rem]' : 'max-w-[16rem]';
 
   return (
     <div className="relative" data-chart="funding-half-donut">
@@ -447,58 +385,34 @@ function FundingHalfDonutChart({
         role="img"
         aria-label={`${label}: ${percentageLabel}`}
       >
-        <defs>
-          <linearGradient id={`funding-half-donut-gradient-${chartId}`} x1="-420" y1="0" x2="420" y2="-260" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor={gradientStart} />
-            <stop offset="58%" stopColor={progressColor} />
-            <stop offset="100%" stopColor={gradientEnd} />
-          </linearGradient>
-          <filter id={`funding-half-donut-glow-${chartId}`} x="-35%" y="-60%" width="170%" height="190%">
-            <feGaussianBlur stdDeviation={variant === 'desktop' ? '10' : '7'} result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
         <path
           d={trackPath}
-          className="fill-[#E7EAF2]"
-          stroke="rgba(255,255,255,0.55)"
+          className="fill-[#E0E0E0]"
+          stroke="rgba(255,255,255,0.30)"
           strokeWidth={lightStrokeEffect}
         />
         {fillPath ? (
           <path
             d={fillPath}
-            fill={`url(#funding-half-donut-gradient-${chartId})`}
-            stroke="rgba(255,255,255,0.34)"
+            className="fill-[#6B39F4] transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            stroke="rgba(255,255,255,0.30)"
             strokeWidth={lightStrokeEffect}
-            filter={`url(#funding-half-donut-glow-${chartId})`}
-            className="transition-all duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
           />
         ) : null}
-        <path
-          d={trackPath}
-          fill="none"
-          stroke="rgba(255,255,255,0.32)"
-          strokeWidth={lightStrokeEffect / 2}
-          className="mix-blend-screen"
-        />
         <text
           transform={`translate(0, ${-radius / 4})`}
           textAnchor="middle"
-          fontSize={variant === 'desktop' ? 46 : 50}
+          fontSize={48}
           fontWeight="700"
           fill="currentColor"
-          className="text-[#6F7C96]"
+          className="text-[#3F4658]"
         >
           {label}
         </text>
         <text
-          transform={`translate(0, ${-radius / 13})`}
+          transform={`translate(0, ${-radius / 12})`}
           textAnchor="middle"
-          fontSize={variant === 'desktop' ? 76 : 70}
+          fontSize={64}
           fontWeight="800"
           fill="currentColor"
           className="text-[#090F22]"
@@ -513,14 +427,10 @@ function FundingHalfDonutChart({
 function FundingGauge({
   raised,
   target,
-  remaining,
-  currency,
   daysRemainingLabel,
 }: {
   raised: number;
   target: number;
-  remaining: number;
-  currency: string;
   daysRemainingLabel: string;
 }) {
   const t = useTranslations('Portfolio');
@@ -536,39 +446,15 @@ function FundingGauge({
       <div className="pointer-events-none absolute -right-12 bottom-3 h-28 w-28 rounded-full bg-[#35C982]/8 blur-3xl" />
 
       <div className="relative">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
-              {t('fundsRaised')}
-            </p>
-            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
-              {money(raised, currency)}
-            </p>
-            <p className="mt-1 text-xs text-[#8A93A8]">
-              {t('ofGoal', { amount: money(target, currency) })}
-            </p>
-          </div>
-
-          <div className="text-right">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#8A93A8]">
-              {t('remaining')}
-            </p>
-            <p className="mt-2 text-[1.45rem] font-semibold tracking-[-0.04em] text-[#1C2336]">
-              {money(remaining, currency)}
-            </p>
-            <p className="mt-1 text-xs text-[#8A93A8]">{t('toGo')}</p>
-          </div>
-        </div>
-
-        <div className="relative mt-6">
+        <div className="relative pt-4">
           <FundingHalfDonutChart
             progressRatio={progressRatio}
-            label={t('fundingProgress')}
+            label="Goal progress"
             variant="mobile"
           />
         </div>
 
-        <div className="-mt-2 flex justify-center">
+        <div className="-mt-3 flex justify-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-xs font-semibold text-[#4F5B76] shadow-[0_10px_24px_rgba(31,38,64,0.08)] backdrop-blur-xl">
             <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/65" />
             {daysRemainingPillLabel}
@@ -582,19 +468,14 @@ function FundingGauge({
 function DesktopFundingGauge({
   raised,
   target,
-  remaining,
-  currency,
   daysRemainingLabel,
 }: {
   raised: number;
   target: number;
-  remaining: number;
-  currency: string;
   daysRemainingLabel: string;
 }) {
   const t = useTranslations('Portfolio');
   const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
-  const progressColor = interpolateGaugeColor(progressRatio);
   const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
     ? t('remainingTemplate', { value: daysRemainingLabel })
     : daysRemainingLabel;
@@ -608,41 +489,17 @@ function DesktopFundingGauge({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(124,92,255,0.10),transparent_36%),radial-gradient(circle_at_82%_72%,rgba(72,211,154,0.08),transparent_32%)]" />
 
       <div className="relative mx-auto max-w-[1280px]">
-        <div className="grid grid-cols-[1fr_420px_1fr] items-center gap-[43px]">
-          <div className="pt-8 text-center">
-            <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-              {t('capitalRaised')}
-            </p>
-            <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
-              {money(raised, currency)}
-            </p>
-            <span className="mx-auto mt-5 block h-1 w-12 rounded-full" style={{ backgroundColor: progressColor }} />
-            <p className="mt-5 text-base font-medium text-[#6F7C96]">
-              {t('ofTarget', { amount: money(target, currency) })}
-            </p>
-          </div>
-
+        <div className="flex justify-center pt-3">
           <div className="relative">
             <FundingHalfDonutChart
               progressRatio={progressRatio}
-              label={t('fundingProgress')}
+              label="Goal progress"
               variant="desktop"
             />
           </div>
-
-          <div className="pt-8 text-center">
-            <p className="text-[0.78rem] font-medium uppercase tracking-[0.24em] text-[#6F7C96]">
-              {t('remaining')}
-            </p>
-            <p className="mt-6 text-[2.9rem] font-semibold tracking-[-0.065em] text-[#090F22]">
-              {money(remaining, currency)}
-            </p>
-            <span className="mx-auto mt-5 block h-1 w-12 rounded-full bg-[#75DDBA]" />
-            <p className="mt-5 text-base font-medium text-[#6F7C96]">{t('leftToRaise')}</p>
-          </div>
         </div>
 
-        <div className="mt-2 flex justify-center">
+        <div className="-mt-2 flex justify-center">
           <span className="inline-flex items-center gap-3 rounded-[22px] border border-[#E1E6F0] bg-white/90 px-7 py-3 text-lg font-semibold text-[#111827] shadow-[0_16px_32px_rgba(21,28,44,0.10)] backdrop-blur-xl">
             <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
               <IconCalendar />
@@ -1155,8 +1012,6 @@ export default function EntrepreneurFeedDashboard({
             <DesktopFundingGauge
               raised={raisedAmount}
               target={targetAmount}
-              remaining={remainingAmount}
-              currency={currency}
               daysRemainingLabel={daysRemainingLabel}
             />
 
@@ -1246,8 +1101,6 @@ export default function EntrepreneurFeedDashboard({
               <FundingGauge
                 raised={raisedAmount}
                 target={targetAmount}
-                remaining={remainingAmount}
-                currency={currency}
                 daysRemainingLabel={daysRemainingLabel}
               />
 

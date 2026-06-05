@@ -32,3 +32,13 @@ Summary:
 - Centered and widened desktop publication media upload/reorder states with 5-column grids.
 - Added client-side image conversion to WebP before media enters the pending upload state.
 - Moved the generated title editor to the left content column, added scrolling compliance options, and widened the final preview with internal scrolling.
+
+## 2026-06-05 - Entrepreneur goal progress speed meter refinement
+
+Type: session
+Tags: entrepreneur-dashboard, portfolio, ui
+Files: components/EntrepreneurFeedDashboard.tsx
+
+Summary:
+- Refined the entrepreneur dashboard speed meter to show only the half-donut goal progress and days-remaining badge.
+- Removed funds-raised and remaining side figures from the speed meter while preserving the gradient card treatment.
