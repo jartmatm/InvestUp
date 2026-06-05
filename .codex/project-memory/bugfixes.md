@@ -89,3 +89,11 @@ Tags: project-memory
 
 Summary:
 - Root cause: /publish?edit hydrated Supabase project photo_urls into uploadedMediaItems, but the desktop upload photos modal rendered only pendingMediaItems, so existing photos were invisible in the popup and could not be removed there. Fix: app/(protected)/publish/page.tsx now renders current saved media in the modal with remove/reorder support while keeping new pending media in a separate section; the modal Done button closes when there are no new files and Save media persists newly selected files. Verification: static regression repro failed before the fix and now passes; npx eslint app/(protected)/publish/page.tsx exits 0 with warnings only. Regression guard: ensure the edit media modal includes uploadedMediaItems.map, handleRemoveUploadedMedia, and handleMediaSelection.
+
+## 2026-06-05 - Publish edit mobile media and owner column fallback
+
+Type: bugfix
+Tags: project-memory
+
+Summary:
+- Root cause: the previous edit media preload fix only updated the desktop media modal, while the Portfolio edit back-to-upload flow uses the mobile upload overlay, which rendered only pendingMediaItems after selecting new photos. The remote projects table also appears to be missing owner_user_id, causing project update filters and payloads that reference owner_user_id to fail. Fix: app/(protected)/publish/page.tsx now renders existing uploadedMediaItems from Supabase together with pendingMediaItems inside the mobile upload overlay and allows removing existing media. app/api/me/projects/route.ts now falls back to owner_id-only selects/filters and removes unsupported owner_user_id/minimum_investment mutation columns when the schema is older. Added supabase/migrations/20260605_projects_owner_user_id_guard.sql to add/backfill owner_user_id from owner_id. Verification: static regression checks for mobile overlay, migration, and API fallback pass; focused eslint exits 0 with warnings only; git diff --check passes. Applying the migration with Supabase CLI was attempted but this environment is not authenticated with Supabase.

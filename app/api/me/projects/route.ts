@@ -57,8 +57,55 @@ const normalizePhotoUrls = (value: unknown) => {
   return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
 };
 
-const isMinimumInvestmentMissingError = (error: { message?: string } | null) =>
-  Boolean(error?.message?.toLowerCase().includes('minimum_investment'));
+const getDatabaseErrorText = (
+  error: { message?: string | null; details?: string | null; hint?: string | null } | null
+) => `${error?.message ?? ''} ${error?.details ?? ''} ${error?.hint ?? ''}`.toLowerCase();
+
+const isMinimumInvestmentMissingError = (
+  error: { message?: string | null; details?: string | null; hint?: string | null } | null
+) => getDatabaseErrorText(error).includes('minimum_investment');
+
+const isOwnerUserIdMissingError = (
+  error: { message?: string | null; details?: string | null; hint?: string | null; code?: string | null } | null
+) => {
+  const text = getDatabaseErrorText(error);
+  return (
+    Boolean(error) &&
+    text.includes('owner_user_id') &&
+    (error?.code === '42703' ||
+      error?.code === 'PGRST204' ||
+      text.includes('column') ||
+      text.includes('schema cache'))
+  );
+};
+
+const getProjectSelectColumns = (includeMinimumInvestment: boolean, includeOwnerUserId: boolean) => {
+  const baseSelect = includeMinimumInvestment
+    ? PROJECT_SELECT_WITH_MINIMUM_INVESTMENT
+    : PROJECT_SELECT_WITHOUT_MINIMUM_INVESTMENT;
+
+  return includeOwnerUserId ? baseSelect : baseSelect.replace('owner_user_id,', '');
+};
+
+const removeUnsupportedMutationColumns = (
+  payload: Record<string, unknown>,
+  error: { message?: string | null; details?: string | null; hint?: string | null; code?: string | null } | null
+) => {
+  const nextPayload = { ...payload };
+  let changed = false;
+
+  if (isMinimumInvestmentMissingError(error) && 'minimum_investment' in nextPayload) {
+    delete nextPayload.minimum_investment;
+    changed = true;
+  }
+
+  if (isOwnerUserIdMissingError(error) && 'owner_user_id' in nextPayload) {
+    delete nextPayload.owner_user_id;
+    changed = true;
+  }
+
+  return changed ? nextPayload : null;
+};
 
 async function verifyRequiredRequest(request: NextRequest) {
   const accessToken = extractBearerToken(request.headers.get('authorization'));
@@ -90,43 +137,65 @@ async function readRequestJson(request: NextRequest) {
 
 async function selectOwnedProjects(userId: string) {
   const supabase = getSupabaseAdminClient();
-  return runWithMinimumInvestmentFallback((includeMinimumInvestment) =>
-    supabase
-      .from('projects')
-      .select(
-        includeMinimumInvestment
-          ? PROJECT_SELECT_WITH_MINIMUM_INVESTMENT
-          : PROJECT_SELECT_WITHOUT_MINIMUM_INVESTMENT
-      )
-      .or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-  );
+
+  const execute = (includeOwnerUserId: boolean) =>
+    runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
+      const query = supabase
+        .from('projects')
+        .select(getProjectSelectColumns(includeMinimumInvestment, includeOwnerUserId));
+
+      const ownedQuery = includeOwnerUserId
+        ? query.or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
+        : query.eq('owner_id', userId);
+
+      return ownedQuery.order('created_at', { ascending: false });
+    });
+
+  const result = await execute(true);
+  if (result.error && isOwnerUserIdMissingError(result.error)) {
+    return execute(false);
+  }
+
+  return result;
 }
 
 async function selectOwnedProjectById(userId: string, projectId: string) {
   const supabase = getSupabaseAdminClient();
-  return runWithMinimumInvestmentFallback((includeMinimumInvestment) =>
-    supabase
-      .from('projects')
-      .select(
-        includeMinimumInvestment
-          ? PROJECT_SELECT_WITH_MINIMUM_INVESTMENT
-          : PROJECT_SELECT_WITHOUT_MINIMUM_INVESTMENT
-      )
-      .eq('id', normalizeProjectFilter(projectId))
-      .or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
-      .maybeSingle()
-  );
+
+  const execute = (includeOwnerUserId: boolean) =>
+    runWithMinimumInvestmentFallback((includeMinimumInvestment) => {
+      const query = supabase
+        .from('projects')
+        .select(getProjectSelectColumns(includeMinimumInvestment, includeOwnerUserId))
+        .eq('id', normalizeProjectFilter(projectId));
+
+      const ownedQuery = includeOwnerUserId
+        ? query.or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
+        : query.eq('owner_id', userId);
+
+      return ownedQuery.maybeSingle();
+    });
+
+  const result = await execute(true);
+  if (result.error && isOwnerUserIdMissingError(result.error)) {
+    return execute(false);
+  }
+
+  return result;
 }
 
 async function insertProject(payload: Record<string, unknown>) {
   const supabase = getSupabaseAdminClient();
 
   let result = await supabase.from('projects').insert(payload).select('id').maybeSingle();
-  if (result.error && isMinimumInvestmentMissingError(result.error)) {
-    const fallbackPayload = { ...payload };
-    delete (fallbackPayload as { minimum_investment?: number }).minimum_investment;
-    result = await supabase.from('projects').insert(fallbackPayload).select('id').maybeSingle();
+  let compatiblePayload = payload;
+
+  for (let attempt = 0; result.error && attempt < 2; attempt += 1) {
+    const fallbackPayload = removeUnsupportedMutationColumns(compatiblePayload, result.error);
+    if (!fallbackPayload) break;
+
+    compatiblePayload = fallbackPayload;
+    result = await supabase.from('projects').insert(compatiblePayload).select('id').maybeSingle();
   }
 
   return result;
@@ -134,25 +203,37 @@ async function insertProject(payload: Record<string, unknown>) {
 
 async function updateProject(projectId: string, userId: string, payload: Record<string, unknown>) {
   const supabase = getSupabaseAdminClient();
+  let includeOwnerUserId = true;
+  let compatiblePayload = payload;
 
-  let result = await supabase
-    .from('projects')
-    .update(payload)
-    .eq('id', normalizeProjectFilter(projectId))
-    .or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
-    .select('id')
-    .maybeSingle();
-
-  if (result.error && isMinimumInvestmentMissingError(result.error)) {
-    const fallbackPayload = { ...payload };
-    delete (fallbackPayload as { minimum_investment?: number }).minimum_investment;
-    result = await supabase
+  const execute = (nextPayload: Record<string, unknown>) => {
+    const query = supabase
       .from('projects')
-      .update(fallbackPayload)
-      .eq('id', normalizeProjectFilter(projectId))
-      .or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
-      .select('id')
-      .maybeSingle();
+      .update(nextPayload)
+      .eq('id', normalizeProjectFilter(projectId));
+
+    const ownedQuery = includeOwnerUserId
+      ? query.or(`owner_user_id.eq.${userId},owner_id.eq.${userId}`)
+      : query.eq('owner_id', userId);
+
+    return ownedQuery.select('id').maybeSingle();
+  };
+
+  let result = await execute(compatiblePayload);
+
+  for (let attempt = 0; result.error && attempt < 2; attempt += 1) {
+    if (isOwnerUserIdMissingError(result.error)) {
+      includeOwnerUserId = false;
+    }
+
+    const fallbackPayload = removeUnsupportedMutationColumns(compatiblePayload, result.error);
+    if (fallbackPayload) {
+      compatiblePayload = fallbackPayload;
+    } else if (!isOwnerUserIdMissingError(result.error)) {
+      break;
+    }
+
+    result = await execute(compatiblePayload);
   }
 
   return result;
@@ -528,11 +609,21 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdminClient();
-    const { error: deleteError } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', normalizeProjectFilter(projectId))
-      .or(`owner_user_id.eq.${verified.userId},owner_id.eq.${verified.userId}`);
+    const executeDelete = (includeOwnerUserId: boolean) => {
+      const query = supabase
+        .from('projects')
+        .delete()
+        .eq('id', normalizeProjectFilter(projectId));
+
+      return includeOwnerUserId
+        ? query.or(`owner_user_id.eq.${verified.userId},owner_id.eq.${verified.userId}`)
+        : query.eq('owner_id', verified.userId);
+    };
+
+    let { error: deleteError } = await executeDelete(true);
+    if (deleteError && isOwnerUserIdMissingError(deleteError)) {
+      ({ error: deleteError } = await executeDelete(false));
+    }
 
     if (deleteError) {
       return jsonNoStore(
