@@ -123,29 +123,6 @@ const formatDate = (value: Date | null, pendingLabel: string) => {
   });
 };
 
-const getDaysRemaining = (
-  value: string | null | undefined,
-  labels: {
-    noDate: string;
-    pending: string;
-    expired: string;
-    dueToday: string;
-    oneDay: string;
-    days: (count: number) => string;
-  }
-) => {
-  if (!value) return labels.noDate;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return labels.pending;
-
-  const diffMs = date.getTime() - Date.now();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return labels.expired;
-  if (diffDays === 0) return labels.dueToday;
-  if (diffDays === 1) return labels.oneDay;
-  return labels.days(diffDays);
-};
-
 const getNextInstallmentDate = (createdAt: string, termMonths: number | null | undefined) => {
   const start = new Date(createdAt);
   if (Number.isNaN(start.getTime())) return null;
@@ -278,28 +255,6 @@ function IconClock() {
   );
 }
 
-function IconCalendar() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-[18px] w-[18px]"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="4" y="5" width="16" height="15" rx="3" />
-      <path d="M8 3v4" />
-      <path d="M16 3v4" />
-      <path d="M4 10h16" />
-      <path d="M8 14h.01" />
-      <path d="M12 14h.01" />
-      <path d="M16 14h.01" />
-    </svg>
-  );
-}
-
 function IconPercent() {
   return (
     <svg
@@ -427,17 +382,11 @@ function FundingHalfDonutChart({
 function FundingGauge({
   raised,
   target,
-  daysRemainingLabel,
 }: {
   raised: number;
   target: number;
-  daysRemainingLabel: string;
 }) {
-  const t = useTranslations('Portfolio');
   const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
-  const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? t('remainingTemplate', { value: daysRemainingLabel })
-    : daysRemainingLabel;
 
   return (
     <DashboardCard className="overflow-hidden border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,243,255,0.90)_55%,rgba(241,246,255,0.96)_100%)] p-5 text-[#1C2336] shadow-[0_26px_64px_rgba(31,38,64,0.10)] ring-1 ring-[#EEF1FF]/80">
@@ -453,13 +402,6 @@ function FundingGauge({
             variant="mobile"
           />
         </div>
-
-        <div className="-mt-3 flex justify-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/72 px-3 py-1.5 text-xs font-semibold text-[#4F5B76] shadow-[0_10px_24px_rgba(31,38,64,0.08)] backdrop-blur-xl">
-            <span className="h-2 w-2 rounded-full bg-[#7C5CFF]/65" />
-            {daysRemainingPillLabel}
-          </span>
-        </div>
       </div>
     </DashboardCard>
   );
@@ -468,17 +410,11 @@ function FundingGauge({
 function DesktopFundingGauge({
   raised,
   target,
-  daysRemainingLabel,
 }: {
   raised: number;
   target: number;
-  daysRemainingLabel: string;
 }) {
-  const t = useTranslations('Portfolio');
   const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
-  const daysRemainingPillLabel = /^\d/.test(daysRemainingLabel)
-    ? t('remainingTemplate', { value: daysRemainingLabel })
-    : daysRemainingLabel;
 
   return (
     <section className="relative min-h-[360px] overflow-hidden rounded-[28px] border border-[#DDE3F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_52%,#F7FAFF_100%)] px-10 py-10 shadow-[0_26px_70px_rgba(21,28,44,0.08)]">
@@ -497,15 +433,6 @@ function DesktopFundingGauge({
               variant="desktop"
             />
           </div>
-        </div>
-
-        <div className="-mt-2 flex justify-center">
-          <span className="inline-flex items-center gap-3 rounded-[22px] border border-[#E1E6F0] bg-white/90 px-7 py-3 text-lg font-semibold text-[#111827] shadow-[0_16px_32px_rgba(21,28,44,0.10)] backdrop-blur-xl">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F1ECFF] text-[#6B39F4]">
-              <IconCalendar />
-            </span>
-            {daysRemainingPillLabel}
-          </span>
         </div>
       </div>
     </section>
@@ -921,14 +848,6 @@ export default function EntrepreneurFeedDashboard({
   const raisedAmount = Number(project?.amount_received ?? 0);
   const remainingAmount = Math.max(targetAmount - raisedAmount, 0);
   const currency = project?.currency ?? 'USD';
-  const daysRemainingLabel = getDaysRemaining(project?.publication_end_date, {
-    noDate: t('noDate'),
-    pending: t('pending'),
-    expired: t('expired'),
-    dueToday: t('dueToday'),
-    oneDay: t('oneDay'),
-    days: (count) => t('days', { count }),
-  });
   const statusLabel = project
     ? getProjectStatusLabel(project) === 'Financing in progress'
       ? t('financingInProgress')
@@ -953,12 +872,6 @@ export default function EntrepreneurFeedDashboard({
       value: project?.interest_rate ? `${project.interest_rate}% EA` : '--',
       icon: <IconPercent />,
       accent: 'amber' as const,
-    },
-    {
-      label: t('daysRemaining'),
-      value: daysRemainingLabel,
-      icon: <IconCalendar />,
-      accent: 'blue' as const,
     },
     {
       label: t('amountRemaining'),
@@ -1012,7 +925,6 @@ export default function EntrepreneurFeedDashboard({
             <DesktopFundingGauge
               raised={raisedAmount}
               target={targetAmount}
-              daysRemainingLabel={daysRemainingLabel}
             />
 
             <section className="grid grid-cols-3 gap-4">
@@ -1101,7 +1013,6 @@ export default function EntrepreneurFeedDashboard({
               <FundingGauge
                 raised={raisedAmount}
                 target={targetAmount}
-                daysRemainingLabel={daysRemainingLabel}
               />
 
               <DashboardCard>
