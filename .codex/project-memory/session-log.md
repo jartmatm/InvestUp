@@ -63,3 +63,13 @@ Files: app/(protected)/feed/page.tsx, components/TransactionLoader.tsx, componen
 Summary:
 - Removed flip behavior from investor feed cards so standard and premium publications open the detail page directly.
 - Replaced the transfer sending loader with a purple-branded Lottie animation and surfaced cancel/success/failure feedback through toasts.
+
+## 2026-06-06 - Publication detail unified with entrepreneur version
+
+Type: session
+Tags: feed, detail, ui, roles
+Files: app/(protected)/feed/[id]/page.tsx
+
+Summary:
+- Unified the publication detail actions so investor and entrepreneur views use the same shared detail presentation.
+- Kept only the primary role-specific action (`Edit` for entrepreneurs, `Invest` for investors) and standardized the secondary action to sharing.

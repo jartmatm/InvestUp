@@ -461,7 +461,7 @@ export default function FeedDetailPage() {
     : '';
   const categoryLabel = project?.sector ? toEnglishSector(project.sector) : t('Detail.business');
   const primaryActionLabel = isEntrepreneurView ? t('edit') : t('invest');
-  const secondaryActionLabel = isEntrepreneurView ? t('Detail.share') : t('Detail.contactFounder');
+  const secondaryActionLabel = t('Detail.share');
   const detailT: Translate = (key, values) => t(key as never, values as never);
 
   const handlePrimaryAction = () => {
