@@ -948,7 +948,10 @@ export default function FeedPage() {
   const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
   const profileDisplayName = displayName || email || 'InvestApp user';
   const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
-  const openProjectDetail = (projectId: string) => router.push(`/feed/${projectId}`);
+  const openProjectDetail = (projectId: string) =>
+    router.push(
+      rolSeleccionado === 'inversor' ? `/feed/${projectId}/invest` : `/feed/${projectId}`
+    );
   const openPublish = () => {
     if (!publishDisabled) router.push('/publish');
   };

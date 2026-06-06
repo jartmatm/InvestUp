@@ -73,3 +73,13 @@ Files: app/(protected)/feed/[id]/page.tsx
 Summary:
 - Unified the publication detail actions so investor and entrepreneur views use the same shared detail presentation.
 - Kept only the primary role-specific action (`Edit` for entrepreneurs, `Invest` for investors) and standardized the secondary action to sharing.
+
+## 2026-06-06 - Investor publication clicks now open invest detail
+
+Type: session
+Tags: feed, detail, investor, routing
+Files: app/(protected)/feed/page.tsx, app/(protected)/feed/[id]/page.tsx
+
+Summary:
+- Investor feed cards now open `/feed/[id]/invest` directly for both premium and standard publications.
+- Added a fallback redirect from `/feed/[id]` to `/feed/[id]/invest` when the active role is investor so legacy links land on the same detail screen.

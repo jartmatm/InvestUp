@@ -370,6 +370,14 @@ export default function FeedDetailPage() {
   }, [faseApp, router]);
 
   useEffect(() => {
+    if (rolSeleccionado !== 'inversor') return;
+    if (!projectId) return;
+    router.replace(`/feed/${projectId}/invest`);
+  }, [projectId, rolSeleccionado, router]);
+
+  useEffect(() => {
+    if (rolSeleccionado === 'inversor') return;
+
     const loadProject = async () => {
       if (!projectId) {
         setStatus(t('Detail.listingNotFound'));
