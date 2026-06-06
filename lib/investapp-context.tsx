@@ -136,6 +136,11 @@ type SendUsdcResult = {
   txHash: string | null;
 };
 
+type TransactionToastState = {
+  variant: 'success' | 'warning' | 'error';
+  message: string;
+};
+
 type InvestAppContextType = {
   ready: boolean;
   authenticated: boolean;
@@ -165,6 +170,8 @@ type InvestAppContextType = {
   abrirRetiro: () => void;
   lastReceipt: ReceiptData | null;
   clearReceipt: () => void;
+  transactionToast: TransactionToastState | null;
+  clearTransactionToast: () => void;
   notificationsEnabled: boolean;
   notifications: AppNotification[];
   unreadNotificationsCount: number;
@@ -400,6 +407,19 @@ const getErrorMessage = (error: unknown) => {
   return String(error);
 };
 
+const isTransactionCancelledError = (message: string) => {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('user rejected') ||
+    normalized.includes('user denied') ||
+    normalized.includes('rejected the request') ||
+    normalized.includes('transaction cancelled') ||
+    normalized.includes('transaction canceled') ||
+    normalized.includes('cancelled') ||
+    normalized.includes('canceled')
+  );
+};
+
 const getReceiptStatus = (status: string | null | undefined) => {
   const normalized = String(status ?? '').toLowerCase();
   if (
@@ -554,6 +574,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
   const [loadingWallets, setLoadingWallets] = useState(false);
   const [walletTargets, setWalletTargets] = useState<UserWalletTarget[]>([]);
   const [lastReceipt, setLastReceipt] = useState<ReceiptData | null>(null);
+  const [transactionToast, setTransactionToast] = useState<TransactionToastState | null>(null);
   const [notificationsEnabled, setNotificationsEnabledState] = useState(true);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
@@ -1089,6 +1110,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLoadingTx(true);
+      setTransactionToast(null);
       try {
         const [{ encodeFunctionData, formatUnits, parseUnits }, publicClient] = await Promise.all([
           import('viem'),
@@ -1236,6 +1258,18 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           actionHref: `/history?q=${encodeURIComponent(txHash)}`,
         });
 
+        setTransactionToast({
+          variant: 'success',
+          message:
+            movementType === 'investment'
+              ? 'Investment approved and sent successfully.'
+              : movementType === 'repayment'
+                ? 'Repayment approved and sent successfully.'
+                : movementType === 'withdrawal'
+                  ? 'Withdrawal approved and sent successfully.'
+                  : 'Transfer approved and sent successfully.',
+        });
+
         const transactionRow = await registrarTransaccion({
           txHash,
           toWallet: resolvedDestinationWallet,
@@ -1300,10 +1334,21 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         return { success: true, txHash };
       } catch (error: unknown) {
         const message = getErrorMessage(error);
-        if (message.includes('AA21') || message.includes("didn't pay prefund")) {
-          alert('AA21 paymaster or bundler error. Please review your Pimlico configuration.');
+        if (isTransactionCancelledError(message)) {
+          setTransactionToast({
+            variant: 'warning',
+            message: 'Transaction cancelled before completion.',
+          });
+        } else if (message.includes('AA21') || message.includes("didn't pay prefund")) {
+          setTransactionToast({
+            variant: 'error',
+            message: 'Transaction could not be sponsored. Please review your wallet setup and try again.',
+          });
         } else {
-          alert(`The transaction failed: ${message || 'unknown error'}`);
+          setTransactionToast({
+            variant: 'error',
+            message: `Transaction failed: ${message || 'unknown error'}`,
+          });
         }
         return { success: false, txHash: null };
       } finally {
@@ -1612,6 +1657,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
     abrirRetiro,
     lastReceipt,
     clearReceipt: () => setLastReceipt(null),
+    transactionToast,
+    clearTransactionToast: () => setTransactionToast(null),
     notificationsEnabled,
     notifications,
     unreadNotificationsCount,

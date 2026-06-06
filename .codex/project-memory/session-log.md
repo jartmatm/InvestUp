@@ -53,3 +53,13 @@ Summary:
 - Reworked the mobile investor `Invest` detail screen to mirror the publish wizard preview layout more closely.
 - Matched the carousel containment, horizontal business info table, KPI card styling, and minimal tabbed publication content pattern from the wizard preview.
 - Kept desktop behavior unchanged and preserved the existing investment handoff flow.
+
+## 2026-06-06 - Feed cards and transfer feedback polish
+
+Type: session
+Tags: feed, investment, mobile, animation, notifications
+Files: app/(protected)/feed/page.tsx, components/TransactionLoader.tsx, components/TransactionOverlay.tsx, lib/investapp-context.tsx
+
+Summary:
+- Removed flip behavior from investor feed cards so standard and premium publications open the detail page directly.
+- Replaced the transfer sending loader with a purple-branded Lottie animation and surfaced cancel/success/failure feedback through toasts.

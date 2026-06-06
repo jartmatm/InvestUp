@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import BottomNav from '@/components/BottomNav';
 import DesktopSidebar from '@/components/DesktopSidebar';
 import DesktopTopbar from '@/components/DesktopTopbar';
@@ -172,21 +172,6 @@ function InvestAppWordmark() {
       <span className="ml-0.5 mt-0.5 h-2.5 w-2.5 rounded-full bg-[#6B39F4]" />
     </div>
   );
-}
-
-function formatAmount(amount: number | null, currency: string | null, locale: string, fallback: string) {
-  if (amount === null || amount === undefined) return fallback;
-  const code = currency ?? 'USD';
-  try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: code,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } catch {
-    return `${amount} ${code}`;
-  }
 }
 
 const calculateProgress = (raised: number | null, requested: number | null) => {
@@ -738,7 +723,6 @@ function DesktopMarketplaceLayout({
 export default function FeedPage() {
   const t = useTranslations('Feed');
   const roleT = useTranslations('Roles');
-  const locale = useLocale();
   const router = useRouter();
   const { user, getAccessToken } = usePrivy();
   const { faseApp, rolSeleccionado } = useInvestApp();
@@ -749,7 +733,6 @@ export default function FeedPage() {
   const [hasOwnProject, setHasOwnProject] = useState(false);
   const [loadingOwnProject, setLoadingOwnProject] = useState(true);
   const [status, setStatus] = useState('');
-  const [flippedId, setFlippedId] = useState<string | null>(null);
   const [wishlistState, setWishlistState] = useState<{ userId: string | null; ids: string[] }>({
     userId: user?.id ?? null,
     ids: readWishlist(user?.id),
@@ -929,14 +912,10 @@ export default function FeedPage() {
 
   const featuredProjects = useMemo(() => projects.slice(0, 8), [projects]);
 
-  const toggleFlip = (id: string) => {
-    setFlippedId((previous) => (previous === id ? null : id));
-  };
-
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    toggleFlip(id);
+    openProjectDetail(id);
   };
 
   const toggleWishlist = (id: string) => {
@@ -1184,139 +1163,67 @@ export default function FeedPage() {
             {!loading && !status && filteredProjects.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
                 {filteredProjects.map((project) => {
-                  const isFlipped = flippedId === project.id;
                   const isWishlisted = wishlist.includes(project.id);
-                  const amountLabel = formatAmount(project.amount_requested, project.currency, locale, t('noAmount'));
-                  const raisedLabel = formatAmount(project.amount_received, project.currency, locale, t('noAmount'));
-                  const minimumInvestmentLabel = formatAmount(
-                    project.minimum_investment,
-                    project.currency,
-                    locale,
-                    t('noAmount')
-                  );
                   const rateLabel = project.interest_rate ? `${project.interest_rate}% EA` : t('ratePending');
                   const categoryLabel = toEnglishSector(project.sector) || t('uncategorized');
                   const coverImage = getProjectCoverImage(project);
-                  const isOwnProject = Boolean(
-                    user?.id && project.owner_user_id && project.owner_user_id === user.id
-                  );
-                  const backActionLabel = isOwnProject ? t('edit') : t('invest');
-
-                  const handleBackAction = (event: MouseEvent<HTMLButtonElement>) => {
-                    event.stopPropagation();
-
-                    if (isOwnProject) {
-                      router.push(`/publish?edit=${project.id}`);
-                      return;
-                    }
-
-                    router.push(`/feed/${project.id}/invest`);
-                  };
 
                   return (
                     <div
                       key={project.id}
                       role="button"
                       tabIndex={0}
-                      onClick={() => toggleFlip(project.id)}
+                      onClick={() => openProjectDetail(project.id)}
                       onKeyDown={(event) => handleCardKeyDown(event, project.id)}
-                      className="cursor-pointer text-left [perspective:1400px]"
+                      className="cursor-pointer text-left"
                     >
-                      <div
-                        className={`relative h-[312px] w-full transition-transform duration-500 [transform-style:preserve-3d] ${
-                          isFlipped ? '[transform:rotateY(180deg)]' : ''
-                        }`}
-                      >
-                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] [backface-visibility:hidden]">
-                          <div className="relative">
-                            <AspectRatio ratio="video" className="h-[218px] w-full">
-                              {coverImage ? (
-                                <img
-                                  src={coverImage}
-                                  alt={project.title}
-                                  className="h-[218px] w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-[218px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
-                                  {t('publishedVenture')}
-                                </div>
-                              )}
-                            </AspectRatio>
-
-                            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.16)_100%)]" />
-
-                            <button
-                              type="button"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                toggleWishlist(project.id);
-                              }}
-                              className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)] transition ${
-                                isWishlisted
-                                  ? 'text-[#FFD1DB]'
-                                  : 'text-white'
-                              }`}
-                              aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
-                              aria-pressed={isWishlisted}
-                            >
-                              <IconHeart filled={isWishlisted} />
-                            </button>
-                          </div>
-
-                          <div className="flex h-[94px] flex-col justify-between p-2.5">
-                            <p className="line-clamp-2 text-[0.78rem] font-semibold leading-[1.16] text-[#162033]">
-                              {project.title}
-                            </p>
-                            <p className="line-clamp-1 text-[0.56rem] font-medium text-[#7C859A]">{categoryLabel}</p>
-
-                            <div className="mt-1 flex items-center justify-between gap-1.5">
-                              <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2 py-0.5 text-[0.56rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">
-                                {rateLabel}
+                      <div className="relative h-[312px] w-full overflow-hidden rounded-[22px] border border-[#EEF1F7] bg-white shadow-[0_18px_38px_rgba(16,24,40,0.06)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_46px_rgba(16,24,40,0.10)]">
+                        <div className="relative">
+                          <AspectRatio ratio="video" className="h-[218px] w-full">
+                            {coverImage ? (
+                              <img
+                                src={coverImage}
+                                alt={project.title}
+                                className="h-[218px] w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-[218px] w-full items-center justify-center bg-[linear-gradient(135deg,#EEF2FF_0%,#F7F3FF_100%)] text-xs font-medium text-[#7B8398]">
+                                {t('publishedVenture')}
                               </div>
-                              <span className="truncate text-[0.54rem] font-medium text-[#B0B7C7]">
-                                {t('interestRate')}
-                              </span>
-                            </div>
-                          </div>
+                            )}
+                          </AspectRatio>
+
+                          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(15,23,42,0.02)_0%,rgba(15,23,42,0.16)_100%)]" />
+
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleWishlist(project.id);
+                            }}
+                            className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.55)] transition ${
+                              isWishlisted ? 'text-[#FFD1DB]' : 'text-white'
+                            }`}
+                            aria-label={isWishlisted ? t('removeFavorite') : t('addFavorite')}
+                            aria-pressed={isWishlisted}
+                          >
+                            <IconHeart filled={isWishlisted} />
+                          </button>
                         </div>
 
-                        <div className="absolute inset-0 overflow-hidden rounded-[22px] border border-[#2E3B72] bg-[linear-gradient(160deg,#1B2450_0%,#18203B_48%,#101727_100%)] p-2 text-white shadow-[0_24px_56px_rgba(18,24,42,0.24)] [backface-visibility:hidden] [transform:rotateY(180deg)]">
-                          <div className="pointer-events-none absolute inset-x-6 top-4 h-20 rounded-full bg-[#7C5CFF]/25 blur-3xl" />
-                          <div className="relative flex h-full flex-col items-center justify-center gap-1.5 text-center">
-                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
-                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
-                                {t('goal')}
-                              </p>
-                              <p className="mt-0.5 text-[0.74rem] font-semibold tracking-[-0.025em] text-white">
-                                {amountLabel}
-                              </p>
-                            </div>
+                        <div className="flex h-[94px] flex-col justify-between p-2.5">
+                          <p className="line-clamp-2 text-[0.78rem] font-semibold leading-[1.16] text-[#162033]">
+                            {project.title}
+                          </p>
+                          <p className="line-clamp-1 text-[0.56rem] font-medium text-[#7C859A]">{categoryLabel}</p>
 
-                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
-                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
-                                {t('raised')}
-                              </p>
-                              <p className="mt-0.5 text-[0.74rem] font-semibold tracking-[-0.025em] text-white">
-                                {raisedLabel}
-                              </p>
+                          <div className="mt-1 flex items-center justify-between gap-1.5">
+                            <div className="inline-flex items-center rounded-full bg-[#F0FFF6] px-2 py-0.5 text-[0.56rem] font-semibold text-[#1A8B5B] shadow-[0_8px_18px_rgba(26,139,91,0.08)]">
+                              {rateLabel}
                             </div>
-
-                            <div className="w-full rounded-[13px] border border-white/10 bg-white/8 px-2.5 py-1.5 backdrop-blur-md">
-                              <p className="text-[0.5rem] font-medium uppercase tracking-[0.16em] text-white/58">
-                                {t('minimumInvestment')}
-                              </p>
-                              <p className="mt-0.5 text-[0.7rem] font-semibold tracking-[-0.025em] text-white">
-                                {minimumInvestmentLabel}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={handleBackAction}
-                              className="mt-0.5 w-full rounded-full bg-[linear-gradient(135deg,#2BCA7B_0%,#19A864_100%)] px-3 py-2 text-[0.68rem] font-semibold text-white shadow-[0_18px_30px_rgba(25,168,100,0.28)] transition hover:scale-[1.01]"
-                            >
-                              {backActionLabel}
-                            </button>
+                            <span className="truncate text-[0.54rem] font-medium text-[#B0B7C7]">
+                              {t('interestRate')}
+                            </span>
                           </div>
                         </div>
                       </div>
