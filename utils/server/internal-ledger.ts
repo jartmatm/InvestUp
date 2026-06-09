@@ -1,15 +1,21 @@
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import {
   normalizePaymentScheduleRecord,
-  type PaymentScheduleRecord,
 } from '@/lib/payment-schedule';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import { normalizeProjectFilter } from '@/utils/projects/shared';
+import {
+  buildInvestmentLedgerEntry,
+  buildRepaymentLedgerEntry,
+  type InternalLedgerEntryInsert,
+} from '@/utils/server/internal-ledger-events';
+import { syncInternalLedgerProjection } from '@/utils/server/internal-ledger-projections';
 import type {
   InternalAccountBalance,
   InternalBalanceBuckets,
   InternalLedgerEntry,
   InternalLedgerParticipant,
+  InternalLedgerProjectionPayload,
   InternalLedgerPosting,
   InternalMovementHistoryItem,
   InternalRelatedUser,
@@ -20,7 +26,7 @@ const INTERNAL_CONTRACT_SELECT =
   'id,credit_id,project_id,investor_user_id,entrepreneur_user_id,annual_interest_rate,monthly_interest_rate,installment_count,current_installment_number,schedule_start_date,next_due_date,original_principal,total_paid_amount,current_installment_amount,outstanding_balance,status,tx_hash,payment_plan,metadata,contract_title,contract_summary,currency,total_contract_value,updated_at';
 
 const INTERNAL_LEDGER_ENTRY_SELECT =
-  'id,created_at,entry_type,reference_type,reference_id,credit_id,project_id,primary_user_id,counterparty_user_id,affected_user_ids,amount,currency,postings,participants,balance_deltas,metadata';
+  'id,created_at,event_key,source_table,source_id,lifecycle_stage,wallet_action_id,entry_type,reference_type,reference_id,credit_id,project_id,primary_user_id,counterparty_user_id,affected_user_ids,amount,currency,postings,participants,balance_deltas,projection_payload,metadata';
 
 const EMPTY_BUCKETS: InternalBalanceBuckets = {
   available_balance: 0,
@@ -84,9 +90,17 @@ const normalizeInternalContractSummary = (
 const normalizeInternalLedgerEntry = (row: Record<string, unknown>): InternalLedgerEntry => ({
   id: String(row.id ?? ''),
   created_at: asText(row.created_at) ?? new Date().toISOString(),
-  entry_type: asText(row.entry_type) ?? 'adjustment',
-  reference_type: asText(row.reference_type) ?? 'adjustment',
-  reference_id: asText(row.reference_id) ?? '',
+  event_key:
+    asText(row.event_key) ??
+    `${asText(row.source_table) ?? asText(row.reference_type) ?? 'ledger'}:${asText(row.source_id) ?? asText(row.reference_id) ?? String(row.id ?? '')}:confirmed`,
+  source_table: asText(row.source_table) ?? asText(row.reference_type) ?? 'ledger',
+  source_id: asText(row.source_id) ?? asText(row.reference_id) ?? String(row.id ?? ''),
+  lifecycle_stage:
+    (asText(row.lifecycle_stage) as InternalLedgerEntry['lifecycle_stage']) ?? 'confirmed',
+  wallet_action_id: asText(row.wallet_action_id),
+  entry_type: (asText(row.entry_type) as InternalLedgerEntry['entry_type']) ?? 'adjustment',
+  reference_type: asText(row.reference_type),
+  reference_id: asText(row.reference_id),
   credit_id: asText(row.credit_id),
   project_id: asText(row.project_id),
   primary_user_id: asText(row.primary_user_id),
@@ -130,6 +144,12 @@ const normalizeInternalLedgerEntry = (row: Record<string, unknown>): InternalLed
         .filter((item): item is InternalLedgerParticipant => Boolean(item))
     : [],
   balance_deltas: asJsonObject(row.balance_deltas) as Record<string, InternalUserBalanceDelta> ?? {},
+  projection_payload:
+    (asJsonObject(row.projection_payload) as InternalLedgerProjectionPayload) ?? {
+      table: 'transactions',
+      conflict_target: 'id',
+      row: {},
+    },
   metadata: asJsonObject(row.metadata),
 });
 
@@ -289,15 +309,92 @@ async function loadInternalContractsForUser(userId: string) {
   return ((data ?? []) as Array<Record<string, unknown>>).map(normalizeInternalContractSummary);
 }
 
-async function upsertInternalLedgerEntry(payload: Record<string, unknown>) {
-  const supabase = getSupabaseAdminClient();
-  const { error } = await supabase
-    .from('internal_ledger_entries')
-    .upsert(payload, { onConflict: 'reference_type,reference_id' });
+async function upsertInternalLedgerEntry(payload: InternalLedgerEntryInsert) {
+  await recordInternalLedgerEvent(payload);
+}
 
-  if (error && !isMissingRelationError(error)) {
-    throw new Error(error.message);
+export async function recordInternalLedgerEvent(payload: InternalLedgerEntryInsert) {
+  const supabase = getSupabaseAdminClient();
+  const { data: existing, error: existingError } = await supabase
+    .from('internal_ledger_entries')
+    .select(INTERNAL_LEDGER_ENTRY_SELECT)
+    .eq('event_key', payload.event_key)
+    .maybeSingle();
+
+  if (existingError && !isMissingRelationError(existingError)) {
+    throw new Error(existingError.message);
   }
+
+  if (existing) {
+    const normalizedExisting = normalizeInternalLedgerEntry(existing as Record<string, unknown>);
+
+    if (!normalizedExisting.credit_id && payload.credit_id) {
+      const { data: updated, error: updateError } = await supabase
+        .from('internal_ledger_entries')
+        .update({ credit_id: payload.credit_id })
+        .eq('event_key', payload.event_key)
+        .select(INTERNAL_LEDGER_ENTRY_SELECT)
+        .maybeSingle();
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+
+      const normalizedUpdated = updated
+        ? normalizeInternalLedgerEntry(updated as Record<string, unknown>)
+        : normalizedExisting;
+      await syncInternalLedgerProjection(supabase, normalizedUpdated);
+      return normalizedUpdated;
+    }
+
+    await syncInternalLedgerProjection(supabase, normalizedExisting);
+    return normalizedExisting;
+  }
+
+  const { data, error } = await supabase
+    .from('internal_ledger_entries')
+    .insert(payload)
+    .select(INTERNAL_LEDGER_ENTRY_SELECT)
+    .maybeSingle();
+
+  if (error) {
+    const duplicate =
+      error.code === '23505' ||
+      error.message?.toLowerCase().includes('duplicate key') ||
+      error.message?.toLowerCase().includes('already exists');
+
+    if (!duplicate) {
+      throw new Error(error.message);
+    }
+
+    const { data: fallbackExisting, error: fallbackError } = await supabase
+      .from('internal_ledger_entries')
+      .select(INTERNAL_LEDGER_ENTRY_SELECT)
+      .eq('event_key', payload.event_key)
+      .maybeSingle();
+
+    if (fallbackError) {
+      throw new Error(fallbackError.message);
+    }
+
+    if (!fallbackExisting) {
+      throw new Error('Could not persist internal ledger event.');
+    }
+
+    const normalizedFallback = normalizeInternalLedgerEntry(
+      fallbackExisting as Record<string, unknown>
+    );
+    await syncInternalLedgerProjection(supabase, normalizedFallback);
+    return normalizedFallback;
+  }
+
+  if (!data) {
+    throw new Error('Could not persist internal ledger event.');
+  }
+
+  const normalized = normalizeInternalLedgerEntry(data as Record<string, unknown>);
+  await syncInternalLedgerProjection(supabase, normalized);
+  return normalized;
 }
 
 function buildInvestmentEntryPayload({
@@ -308,88 +405,32 @@ function buildInvestmentEntryPayload({
   row: Record<string, unknown>;
   contractCreditId: string | null;
   project: ProjectContext | undefined;
-}) {
+}): InternalLedgerEntryInsert | null {
   const investorUserId = asText(row.investor_user_id);
   const entrepreneurUserId = asText(row.entrepreneur_user_id);
   const amount = roundAmount(Number(getAmountValue(row) ?? 0));
-  if (amount <= 0) return null;
-
-  const affectedUserIds = uniqueTextValues([investorUserId, entrepreneurUserId]);
-  const currency =
-    project?.currency || asText(asJsonObject(row.metadata)?.currency) || 'USD';
-
-  const balanceDeltas: Record<string, InternalUserBalanceDelta> = {};
-  if (investorUserId) {
-    balanceDeltas[investorUserId] = {
-      available_balance: -amount,
-      withdrawable_balance: -amount,
-      invested_balance: amount,
-    };
-  }
-  if (entrepreneurUserId) {
-    balanceDeltas[entrepreneurUserId] = {
-      pending_balance: amount,
-    };
-  }
-
-  return {
-    entry_type: 'investment',
-    reference_type: 'investment',
-    reference_id: String(row.id ?? ''),
-    credit_id: contractCreditId,
-    project_id: String(row.project_id ?? ''),
-    primary_user_id: investorUserId,
-    counterparty_user_id: entrepreneurUserId,
-    affected_user_ids: affectedUserIds,
+  if (amount <= 0 || !investorUserId) return null;
+  return buildInvestmentLedgerEntry({
     amount,
-    currency,
-    postings: [
-      investorUserId
-        ? {
-            user_id: investorUserId,
-            account: 'available_balance',
-            side: 'debit',
-            amount,
-            note: 'Investor funded the contract.',
-          }
-        : null,
-      investorUserId
-        ? {
-            user_id: investorUserId,
-            account: 'invested_balance',
-            side: 'credit',
-            amount,
-            note: 'Capital moved into active contract exposure.',
-          }
-        : null,
-      entrepreneurUserId
-        ? {
-            user_id: entrepreneurUserId,
-            account: 'pending_balance',
-            side: 'credit',
-            amount,
-            note: 'Entrepreneur obligation registered in backend ledger.',
-          }
-        : null,
-      {
-        user_id: null,
-        account: 'platform_internal',
-        side: 'debit',
-        amount,
-        note: 'Internal settlement leg.',
-      },
-    ].filter(Boolean),
-    participants: [
-      investorUserId ? { user_id: investorUserId, role: 'investor' } : null,
-      entrepreneurUserId ? { user_id: entrepreneurUserId, role: 'entrepreneur' } : null,
-    ].filter(Boolean),
-    balance_deltas: balanceDeltas,
-    metadata: {
-      ...(asJsonObject(row.metadata) ?? {}),
-      project_title: project?.business_name || project?.title || null,
-      contract_engine: 'backend_internal_ledger',
-    },
-  };
+    creditId: contractCreditId,
+    entrepreneurUserId,
+    fromWallet: asText(row.from_wallet) ?? '',
+    interestRateEa: asNumber(row.interest_rate_ea),
+    metadata: asJsonObject(row.metadata),
+    projectedReturnUsdc: asNumber(row.projected_return_usdc),
+    projectedTotalUsdc: asNumber(row.projected_total_usdc),
+    projectId: String(row.project_id ?? ''),
+    projectTitle: project?.business_name || project?.title || null,
+    sourceId: String(row.id ?? ''),
+    status:
+      (asText(row.status) as 'submitted' | 'confirmed' | 'failed' | null) ?? 'confirmed',
+    termMonths: asNumber(row.term_months),
+    toWallet: asText(row.to_wallet) ?? '',
+    transactionId: asText(row.transaction_id),
+    txHash: asText(row.tx_hash) ?? String(row.id ?? ''),
+    userId: investorUserId,
+    currency: project?.currency || asText(asJsonObject(row.metadata)?.currency) || 'USD',
+  });
 }
 
 function buildRepaymentEntryPayload({
@@ -400,87 +441,29 @@ function buildRepaymentEntryPayload({
   row: Record<string, unknown>;
   contractCreditId: string | null;
   project: ProjectContext | undefined;
-}) {
+}): InternalLedgerEntryInsert | null {
   const investorUserId = asText(row.investor_user_id);
   const entrepreneurUserId = asText(row.entrepreneur_user_id);
   const amount = roundAmount(Number(getAmountValue(row) ?? 0));
-  if (amount <= 0) return null;
-
-  const affectedUserIds = uniqueTextValues([investorUserId, entrepreneurUserId]);
-  const currency =
-    project?.currency || asText(asJsonObject(row.metadata)?.currency) || 'USD';
-
-  const balanceDeltas: Record<string, InternalUserBalanceDelta> = {};
-  if (investorUserId) {
-    balanceDeltas[investorUserId] = {
-      available_balance: amount,
-      withdrawable_balance: amount,
-    };
-  }
-  if (entrepreneurUserId) {
-    balanceDeltas[entrepreneurUserId] = {
-      pending_balance: -amount,
-    };
-  }
-
-  return {
-    entry_type: 'repayment',
-    reference_type: 'repayment',
-    reference_id: String(row.id ?? ''),
-    credit_id: contractCreditId,
-    project_id: String(row.project_id ?? ''),
-    primary_user_id: entrepreneurUserId,
-    counterparty_user_id: investorUserId,
-    affected_user_ids: affectedUserIds,
+  if (amount <= 0 || !entrepreneurUserId) return null;
+  return buildRepaymentLedgerEntry({
     amount,
-    currency,
-    postings: [
-      entrepreneurUserId
-        ? {
-            user_id: entrepreneurUserId,
-            account: 'pending_balance',
-            side: 'debit',
-            amount,
-            note: 'Repayment reduced the entrepreneur outstanding obligation.',
-          }
-        : null,
-      investorUserId
-        ? {
-            user_id: investorUserId,
-            account: 'available_balance',
-            side: 'credit',
-            amount,
-            note: 'Investor received a backend-settled repayment.',
-          }
-        : null,
-      investorUserId
-        ? {
-            user_id: investorUserId,
-            account: 'withdrawable_balance',
-            side: 'credit',
-            amount,
-            note: 'Repayment is available for withdrawal.',
-          }
-        : null,
-      {
-        user_id: null,
-        account: 'platform_internal',
-        side: 'debit',
-        amount,
-        note: 'Internal settlement leg.',
-      },
-    ].filter(Boolean),
-    participants: [
-      investorUserId ? { user_id: investorUserId, role: 'investor' } : null,
-      entrepreneurUserId ? { user_id: entrepreneurUserId, role: 'entrepreneur' } : null,
-    ].filter(Boolean),
-    balance_deltas: balanceDeltas,
-    metadata: {
-      ...(asJsonObject(row.metadata) ?? {}),
-      project_title: project?.business_name || project?.title || null,
-      contract_engine: 'backend_internal_ledger',
-    },
-  };
+    creditId: contractCreditId,
+    entrepreneurUserId: entrepreneurUserId ?? '',
+    fromWallet: asText(row.from_wallet) ?? '',
+    metadata: asJsonObject(row.metadata),
+    projectId: asText(row.project_id) ?? undefined,
+    projectTitle: project?.business_name || project?.title || null,
+    sourceId: String(row.id ?? ''),
+    status:
+      (asText(row.status) as 'submitted' | 'confirmed' | 'failed' | null) ?? 'confirmed',
+    toWallet: asText(row.to_wallet) ?? '',
+    transactionId: asText(row.transaction_id),
+    txHash: asText(row.tx_hash) ?? String(row.id ?? ''),
+    userId: entrepreneurUserId ?? '',
+    investorUserId,
+    currency: project?.currency || asText(asJsonObject(row.metadata)?.currency) || 'USD',
+  });
 }
 
 export async function syncInternalEntriesForUser(userId: string) {
@@ -584,27 +567,6 @@ async function loadInternalEntriesForUser(userId: string, limit = 50, creditId?:
   return ((data ?? []) as Array<Record<string, unknown>>).map(normalizeInternalLedgerEntry);
 }
 
-async function getLockedWithdrawalBalance(userId: string) {
-  const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from('withdraw_TEMP')
-    .select('amount_usdc,request_status')
-    .eq('user_id', userId)
-    .in('request_status', ['awaiting_transfer', 'submitted', 'processing']);
-
-  if (error) {
-    if (isMissingRelationError(error)) return 0;
-    throw new Error(error.message);
-  }
-
-  return roundAmount(
-    ((data ?? []) as Array<Record<string, unknown>>).reduce(
-      (total, row) => total + asNumber(row.amount_usdc),
-      0
-    )
-  );
-}
-
 function buildRelatedUsers(entries: InternalLedgerEntry[], userId: string): InternalRelatedUser[] {
   const related = new Map<string, InternalRelatedUser>();
 
@@ -641,11 +603,7 @@ export async function syncInternalBalanceForUser(userId: string) {
   const supabase = getSupabaseAdminClient();
   await syncInternalEntriesForUser(userId);
 
-  const [contracts, entries, lockedBalance] = await Promise.all([
-    loadInternalContractsForUser(userId),
-    loadInternalEntriesForUser(userId, 50),
-    getLockedWithdrawalBalance(userId),
-  ]);
+  const [entries] = await Promise.all([loadInternalEntriesForUser(userId, 50)]);
 
   const baseBalances = entries.reduce(
     (totals, entry) => {
@@ -653,26 +611,15 @@ export async function syncInternalBalanceForUser(userId: string) {
       totals.available_balance = roundAmount(
         totals.available_balance + asNumber(delta.available_balance)
       );
+      totals.locked_balance = roundAmount(totals.locked_balance + asNumber(delta.locked_balance));
+      totals.pending_balance = roundAmount(totals.pending_balance + asNumber(delta.pending_balance));
       totals.withdrawable_balance = roundAmount(
         totals.withdrawable_balance + asNumber(delta.withdrawable_balance)
       );
+      totals.invested_balance = roundAmount(totals.invested_balance + asNumber(delta.invested_balance));
       return totals;
     },
     { ...EMPTY_BUCKETS }
-  );
-
-  const investedBalance = roundAmount(
-    contracts.reduce((total, contract) => {
-      if (contract.investor_user_id !== userId) return total;
-      return total + Math.max(contract.outstanding_balance, 0);
-    }, 0)
-  );
-
-  const pendingBalance = roundAmount(
-    contracts.reduce((total, contract) => {
-      if (contract.entrepreneur_user_id !== userId) return total;
-      return total + Math.max(contract.outstanding_balance, 0);
-    }, 0)
   );
 
   const movementHistory = entries
@@ -684,10 +631,10 @@ export async function syncInternalBalanceForUser(userId: string) {
     user_id: userId,
     currency: 'USD',
     available_balance: baseBalances.available_balance,
-    locked_balance: lockedBalance,
-    pending_balance: pendingBalance,
+    locked_balance: baseBalances.locked_balance,
+    pending_balance: baseBalances.pending_balance,
     withdrawable_balance: baseBalances.withdrawable_balance,
-    invested_balance: investedBalance,
+    invested_balance: baseBalances.invested_balance,
     movement_history: movementHistory,
     related_users: relatedUsers,
     updated_at: new Date().toISOString(),

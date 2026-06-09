@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
 import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
+import { buildWithdrawalLedgerEntry } from '@/utils/server/internal-ledger-events';
+import {
+  recordInternalLedgerEvent,
+  syncInternalLedgerForUsers,
+} from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getCurrentUserKycSummary } from '@/utils/server/kyc-compliance';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
@@ -258,21 +263,40 @@ export async function POST(request: NextRequest) {
     metadata.kyc_required_level = kycSummary.requiredLevelForRequestedAmount;
     metadata.kyc_projected_movement_usd = kycSummary.projectedMovementUsd;
     metadata.withdraw_country = withdrawCountryConfig.code;
+    metadata.bank_name = insertPayload.bank_name ?? null;
+    metadata.bank_account_number = insertPayload.bank_account_number ?? null;
+    metadata.bank_account_type = insertPayload.bank_account_type ?? null;
+    metadata.identification_type = insertPayload.identification_type ?? null;
+    metadata.identification_number = insertPayload.identification_number ?? null;
+    metadata.phone_number = insertPayload.phone_number ?? null;
+    metadata.breve_key = insertPayload.breve_key ?? null;
 
-    const { data, error } = await supabase
-      .from('withdraw_TEMP')
-      .insert(insertPayload)
-      .select('id')
-      .maybeSingle();
+    const ledgerEntry = buildWithdrawalLedgerEntry({
+      amount: amountUsdc,
+      bankAccountType: coerceString(insertPayload.bank_account_type) || null,
+      bankName: coerceString(insertPayload.bank_name) || null,
+      currency: 'USDC',
+      destinationWallet: MANUAL_WITHDRAWAL_WALLET,
+      identificationNumber: coerceString(insertPayload.identification_number) || null,
+      identificationType: coerceString(insertPayload.identification_type) || null,
+      metadata,
+      payoutMethod,
+      phoneNumber: coerceString(insertPayload.phone_number) || null,
+      breveKey: coerceString(insertPayload.breve_key) || null,
+      requestStatus: 'awaiting_transfer',
+      role,
+      sourceWallet,
+      txHash: null,
+      userId: verified.userId,
+    });
 
-    if (error || !data?.id) {
-      return jsonNoStore(
-        { error: 'Could not create withdrawal request.', details: error?.message ?? null },
-        { status: 500 }
-      );
-    }
+    const storedLedgerEntry = await recordInternalLedgerEvent(ledgerEntry);
+    await syncInternalLedgerForUsers([verified.userId]);
 
-    return jsonNoStore({ id: data.id }, { status: 200 });
+    return jsonNoStore(
+      { id: String(storedLedgerEntry.projection_payload.row.id ?? null) },
+      { status: 200 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Withdrawal request failed.', details: message }, { status: 500 });

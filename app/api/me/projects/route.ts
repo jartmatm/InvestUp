@@ -18,6 +18,7 @@ import {
   type ProjectMutationPayload,
   type ProjectRecord,
 } from '@/utils/projects/shared';
+import { hydrateProjectsWithFundingTotals } from '@/utils/projects/funding';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -65,6 +66,27 @@ const isMinimumInvestmentMissingError = (
   error: { message?: string | null; details?: string | null; hint?: string | null } | null
 ) => getDatabaseErrorText(error).includes('minimum_investment');
 
+const isLegacyProjectFieldMissingError = (
+  error:
+    | {
+        message?: string | null;
+        details?: string | null;
+        hint?: string | null;
+        code?: string | null;
+      }
+    | null
+) => {
+  const text = getDatabaseErrorText(error);
+  return (
+    Boolean(error) &&
+    (text.includes('target_amount_usd') || text.includes('interest_rate_ea')) &&
+    (error?.code === '42703' ||
+      error?.code === 'PGRST204' ||
+      text.includes('column') ||
+      text.includes('schema cache'))
+  );
+};
+
 const isOwnerUserIdMissingError = (
   error: { message?: string | null; details?: string | null; hint?: string | null; code?: string | null } | null
 ) => {
@@ -96,6 +118,16 @@ const removeUnsupportedMutationColumns = (
 
   if (isMinimumInvestmentMissingError(error) && 'minimum_investment' in nextPayload) {
     delete nextPayload.minimum_investment;
+    changed = true;
+  }
+
+  if (isLegacyProjectFieldMissingError(error) && 'target_amount_usd' in nextPayload) {
+    delete nextPayload.target_amount_usd;
+    changed = true;
+  }
+
+  if (isLegacyProjectFieldMissingError(error) && 'interest_rate_ea' in nextPayload) {
+    delete nextPayload.interest_rate_ea;
     changed = true;
   }
 
@@ -355,6 +387,7 @@ function buildProjectPayload({
       country,
       description,
       amount_requested: Number(amountRequested.toFixed(2)),
+      target_amount_usd: Number(amountRequested.toFixed(2)),
       minimum_investment: Number(minimumInvestment.toFixed(2)),
       amount_received: Number(amountReceived.toFixed(2)),
       currency,
@@ -362,6 +395,7 @@ function buildProjectPayload({
       installment_count: installmentCount,
       publication_end_date: publicationEndDate,
       interest_rate: Number(interestRate.toFixed(2)),
+      interest_rate_ea: Number(interestRate.toFixed(2)),
       status: nextStatus,
       photo_urls: photoUrls,
       video_url: videoUrl,
@@ -394,7 +428,11 @@ export async function GET(request: NextRequest) {
       return jsonNoStore(
         {
           data: data
-            ? normalizeProjectRow(data as unknown as Record<string, unknown>)
+            ? (
+                await hydrateProjectsWithFundingTotals([
+                  normalizeProjectRow(data as unknown as Record<string, unknown>),
+                ])
+              )[0]
             : null,
         },
         { status: 200 }
@@ -411,7 +449,9 @@ export async function GET(request: NextRequest) {
 
     return jsonNoStore(
       {
-        data: ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizeProjectRow),
+        data: await hydrateProjectsWithFundingTotals(
+          ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizeProjectRow)
+        ),
       },
       { status: 200 }
     );
@@ -467,7 +507,11 @@ export async function POST(request: NextRequest) {
     return jsonNoStore(
       {
         data: createdProject.data
-          ? normalizeProjectRow(createdProject.data as unknown as Record<string, unknown>)
+          ? (
+              await hydrateProjectsWithFundingTotals([
+                normalizeProjectRow(createdProject.data as unknown as Record<string, unknown>),
+              ])
+            )[0]
           : null,
       },
       { status: 200 }
@@ -497,7 +541,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const existingProject = projectResult.data
-      ? normalizeProjectRow(projectResult.data as unknown as Record<string, unknown>)
+      ? (
+          await hydrateProjectsWithFundingTotals([
+            normalizeProjectRow(projectResult.data as unknown as Record<string, unknown>),
+          ])
+        )[0]
       : null;
 
     if (!existingProject) {
@@ -564,7 +612,11 @@ export async function PATCH(request: NextRequest) {
     return jsonNoStore(
       {
         data: refreshedProject.data
-          ? normalizeProjectRow(refreshedProject.data as unknown as Record<string, unknown>)
+          ? (
+              await hydrateProjectsWithFundingTotals([
+                normalizeProjectRow(refreshedProject.data as unknown as Record<string, unknown>),
+              ])
+            )[0]
           : null,
       },
       { status: 200 }

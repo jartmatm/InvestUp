@@ -16,6 +16,7 @@ import {
   PROJECT_SELECT_WITHOUT_MINIMUM_INVESTMENT,
   type ProjectRecord,
 } from '@/utils/projects/shared';
+import { hydrateProjectsWithFundingTotals } from '@/utils/projects/funding';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -105,7 +106,11 @@ export async function GET(request: NextRequest) {
         return jsonNoStore({ data: null }, { status: 200 });
       }
 
-      const normalizedProject = normalizeProjectRow(data as unknown as Record<string, unknown>);
+      const normalizedProject = (
+        await hydrateProjectsWithFundingTotals([
+          normalizeProjectRow(data as unknown as Record<string, unknown>),
+        ])
+      )[0];
       const isOwner = projectBelongsToUser(normalizedProject, requesterUserId);
       if (!isOwner && !isProjectPubliclyVisible(normalizedProject)) {
         return jsonNoStore({ data: null }, { status: 200 });
@@ -131,14 +136,16 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const visibleProjects = ((data ?? []) as unknown as Record<string, unknown>[])
-        .map(normalizeProjectRow)
+      const visibleProjects = await hydrateProjectsWithFundingTotals(
+        ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizeProjectRow)
+      );
+      const filteredProjects = visibleProjects
         .filter((project) => {
           if (projectBelongsToUser(project, requesterUserId)) return true;
           return isProjectPubliclyVisible(project);
         });
 
-      return jsonNoStore({ data: visibleProjects }, { status: 200 });
+      return jsonNoStore({ data: filteredProjects }, { status: 200 });
     }
 
     if (ownerIds.length > 0) {
@@ -170,11 +177,13 @@ export async function GET(request: NextRequest) {
       }
 
       const merged = new Map<string, ProjectRecord>();
-      [
+      const hydratedProjects = await hydrateProjectsWithFundingTotals(
+        [
         ...(((byOwnerUserId.data ?? []) as unknown as Record<string, unknown>[])),
         ...(((byOwnerId.data ?? []) as unknown as Record<string, unknown>[])),
-      ]
-        .map(normalizeProjectRow)
+      ].map(normalizeProjectRow)
+      );
+      hydratedProjects
         .filter((project) => {
           if (projectBelongsToUser(project, requesterUserId)) return true;
           return isProjectPubliclyVisible(project);
@@ -221,8 +230,10 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      const visibleProjects = ((data ?? []) as unknown as Record<string, unknown>[])
-        .map(normalizeProjectRow)
+      const visibleProjects = await hydrateProjectsWithFundingTotals(
+        ((data ?? []) as unknown as Record<string, unknown>[]).map(normalizeProjectRow)
+      );
+      const filteredProjects = visibleProjects
         .filter((project) => {
           if (projectBelongsToUser(project, requesterUserId) && includeOwnedHidden) {
             return true;
@@ -231,7 +242,7 @@ export async function GET(request: NextRequest) {
         })
         .slice(0, limit);
 
-      return jsonNoStore({ data: visibleProjects }, { status: 200 });
+      return jsonNoStore({ data: filteredProjects }, { status: 200 });
     }
 
     const { data, error: queryError } = await selectProjects((selectFields) =>

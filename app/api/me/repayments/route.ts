@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
-import { runWithAmountColumnFallback } from '@/lib/supabase-amount';
-import { syncInternalLedgerForUsers } from '@/utils/server/internal-ledger';
+import { buildRepaymentLedgerEntry } from '@/utils/server/internal-ledger-events';
+import {
+  recordInternalLedgerEvent,
+  syncInternalLedgerForUsers,
+} from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
-import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import type { CreateCurrentUserRepaymentPayload } from '@/utils/client/current-user-repayments';
 
 export const runtime = 'nodejs';
@@ -27,34 +29,6 @@ const parseAmount = (value: unknown) => {
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return Number(parsed.toFixed(6));
-};
-
-const asTextId = (value: string | number | null | undefined) => {
-  if (value === null || value === undefined) return null;
-  const normalized = String(value).trim();
-  return normalized.length > 0 ? normalized : null;
-};
-
-const asNumericId = (value: string | number | null | undefined) => {
-  if (value === null || value === undefined) return null;
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : null;
-};
-
-const buildUniqueIdCandidates = (
-  ...values: Array<string | number | null | undefined>
-): Array<string | number | null> => {
-  const result: Array<string | number | null> = [];
-  const seen = new Set<string>();
-
-  values.forEach((value) => {
-    const normalizedKey = value === null || value === undefined ? 'null' : `${typeof value}:${String(value)}`;
-    if (seen.has(normalizedKey)) return;
-    seen.add(normalizedKey);
-    result.push(value ?? null);
-  });
-
-  return result;
 };
 
 async function verifyRequest(request: NextRequest) {
@@ -111,73 +85,37 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const supabase = getSupabaseAdminClient();
-    const transactionIdCandidates = buildUniqueIdCandidates(
-      asTextId(payload.transactionUuid),
-      asTextId(payload.transactionId),
-      null
+    const investorUserId = coerceString(payload.investorUserId) || null;
+    const transactionId = coerceString(payload.transactionId) || coerceString(payload.transactionUuid) || null;
+    const projectId = coerceString(payload.projectId) || null;
+    const ledgerEntry = buildRepaymentLedgerEntry({
+      amount,
+      creditId: null,
+      entrepreneurUserId: verified.userId,
+      fromWallet,
+      metadata: {
+        app: 'investapp-web',
+        currency: 'USDC',
+        receiver_email: receiverEmail || null,
+        created_from: 'direct-repayment-flow',
+      },
+      projectId,
+      status: 'confirmed',
+      toWallet,
+      transactionId,
+      txHash,
+      userId: verified.userId,
+      investorUserId,
+      currency: 'USDC',
+    });
+
+    const storedLedgerEntry = await recordInternalLedgerEvent(ledgerEntry);
+    await syncInternalLedgerForUsers([verified.userId, investorUserId]);
+
+    return jsonNoStore(
+      { data: { id: String(storedLedgerEntry.projection_payload.row.id ?? null) } },
+      { status: 200 }
     );
-    const projectIdCandidates = buildUniqueIdCandidates(
-      asTextId(payload.projectId),
-      asNumericId(payload.projectId),
-      null
-    );
-    const repaymentStatusCandidates = ['paid', 'pending', null] as const;
-
-    let savedId: string | null = null;
-    let lastError: { message?: string } | null = null;
-
-    for (const repaymentStatus of repaymentStatusCandidates) {
-      for (const projectCandidate of projectIdCandidates) {
-        for (const transactionCandidate of transactionIdCandidates) {
-          const { data, error: insertError } = await runWithAmountColumnFallback((amountColumn) => {
-            const insertPayload: Record<string, unknown> = {
-              entrepreneur_user_id: verified.userId,
-              investor_user_id: asTextId(payload.investorUserId),
-              tx_hash: txHash,
-              from_wallet: fromWallet,
-              to_wallet: toWallet,
-              [amountColumn]: amount,
-              metadata: {
-                app: 'investapp-web',
-                currency: 'USDC',
-                receiver_email: receiverEmail || null,
-                created_from: 'direct-repayment-flow',
-              },
-            };
-
-            if (repaymentStatus !== null) insertPayload.status = repaymentStatus;
-            if (projectCandidate !== null) insertPayload.project_id = projectCandidate;
-            if (transactionCandidate !== null) insertPayload.transaction_id = transactionCandidate;
-
-            return supabase.from('repayments').insert(insertPayload).select('id').maybeSingle();
-          });
-
-          if (!insertError || insertError.message?.toLowerCase().includes('duplicate')) {
-            savedId = ((data as { id?: string } | null)?.id ?? null) as string | null;
-            lastError = null;
-            break;
-          }
-
-          lastError = insertError;
-        }
-
-        if (!lastError) break;
-      }
-
-      if (!lastError) break;
-    }
-
-    if (lastError) {
-      return jsonNoStore(
-        { error: 'Could not save the repayment.', details: lastError.message ?? null },
-        { status: 500 }
-      );
-    }
-
-    await syncInternalLedgerForUsers([verified.userId, asTextId(payload.investorUserId)]);
-
-    return jsonNoStore({ data: { id: savedId } }, { status: 200 });
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Repayment write failed.', details: message }, { status: 500 });

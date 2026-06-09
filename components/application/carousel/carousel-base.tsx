@@ -109,14 +109,17 @@ const CarouselRoot = ({ orientation = "horizontal", opts, setApi, plugins, class
     useEffect(() => {
         if (!api) return;
 
-        onInit(api);
-        onSelect(api);
+        const frameId = window.requestAnimationFrame(() => {
+            onInit(api);
+            onSelect(api);
+        });
 
         api.on("reInit", onInit);
         api.on("reInit", onSelect);
         api.on("select", onSelect);
 
         return () => {
+            window.cancelAnimationFrame(frameId);
             api?.off("select", onSelect);
         };
     }, [api, onInit, onSelect]);

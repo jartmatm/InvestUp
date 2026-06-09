@@ -13,8 +13,10 @@ import {
 import { AppCombobox } from '@/components/tailgrids/core/app-combobox';
 import { getWithdrawCountryConfig } from '@/lib/withdraw-country-config';
 import { useInvestApp } from '@/lib/investapp-context';
+import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
 import { fetchCurrentUserProfile } from '@/utils/client/current-user-profile';
 import { fetchCurrentUserKycSummary } from '@/utils/client/current-user-kyc';
+import type { InternalAccountBalance } from '@/utils/internal-ledger/types';
 import { getKycLevelBadgeLabel } from '@/utils/kyc/shared';
 
 type WithdrawalMethod = 'bank' | 'breve';
@@ -367,6 +369,7 @@ export default function WithdrawPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [submittedTxHash, setSubmittedTxHash] = useState('');
   const [userCountry, setUserCountry] = useState('');
+  const [internalBalance, setInternalBalance] = useState<InternalAccountBalance | null>(null);
 
   useEffect(() => {
     if (faseApp === 'login') router.replace('/login');
@@ -433,13 +436,36 @@ export default function WithdrawPage() {
     void loadProfileCountry();
   }, [getAccessToken, user?.id]);
 
-  const balanceNumber = Number(balanceUSDC);
+  useEffect(() => {
+    const loadInternalBalance = async () => {
+      if (!user?.id) {
+        setInternalBalance(null);
+        return;
+      }
+
+      const { data, error } = await fetchCurrentUserInternalLedger(getAccessToken, { limit: 8 });
+      if (error) {
+        console.error('Error loading withdraw internal balance:', error);
+        setInternalBalance(null);
+        return;
+      }
+
+      setInternalBalance(data?.balance ?? null);
+    };
+
+    void loadInternalBalance();
+  }, [getAccessToken, user?.id]);
+
+  const balanceNumber = Number(internalBalance?.available_balance ?? balanceUSDC);
   const displayBalance = Number.isFinite(balanceNumber) ? balanceNumber.toFixed(2) : '0.00';
   const withdrawCountryConfig = getWithdrawCountryConfig(userCountry);
   const effectiveMethod =
     form.method === 'breve' && !withdrawCountryConfig.breveEnabled ? 'bank' : form.method;
   const withdrawableBalance = Number.isFinite(balanceNumber)
-    ? Math.max(balanceNumber - MIN_GAS_RESERVE_USDC, 0)
+    ? Math.max(
+        Number(internalBalance?.withdrawable_balance ?? balanceNumber - MIN_GAS_RESERVE_USDC),
+        0
+      )
     : 0;
   const formattedAmount = formatAmountForSubmit(form.amount);
   const amountNumber = Number(formattedAmount);

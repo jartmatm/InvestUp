@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { isAddress } from 'viem';
 import { getAmountValue, runWithAmountColumnFallback } from '@/lib/supabase-amount';
 import {
@@ -8,6 +9,11 @@ import {
   readMetaString,
   type LedgerSchemaMode,
 } from '@/lib/supabase-ledger-compat';
+import { buildTransactionLedgerEntry } from '@/utils/server/internal-ledger-events';
+import {
+  recordInternalLedgerEvent,
+  syncInternalLedgerForUsers,
+} from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import type {
@@ -388,10 +394,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const supabase = getSupabaseAdminClient();
     const transactionSchema = await getTransactionSchema();
 
     if (transactionSchema === 'legacy') {
+      const supabase = getSupabaseAdminClient();
       const legacyIds = generateLegacyRowIds();
       const { data, error: insertError } = await runWithAmountColumnFallback((amountColumn) =>
         supabase
@@ -439,46 +445,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error: insertError } = await runWithAmountColumnFallback((amountColumn) =>
-      supabase
-        .from('transactions')
-        .insert({
-          user_id: verified.userId,
-          role,
-          movement_type: movementType,
-          status,
-          chain: 'polygon',
-          tx_hash: txHash,
-          from_wallet: fromWallet,
-          to_wallet: toWallet,
-          metadata: {
-            app: 'investapp-web',
-            currency: 'USDC',
-            ...metadata,
-          },
-          [amountColumn]: amount,
-        })
-        .select(`id,created_at,movement_type,status,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc`)
-        .maybeSingle()
+    const transactionId = randomUUID();
+    const projectedCounterpartyUserId =
+      coerceString(metadata.receiver_user_id) ||
+      coerceString(metadata.investor_user_id) ||
+      null;
+    const ledgerEntry = buildTransactionLedgerEntry({
+      amount,
+      counterpartyUserId: projectedCounterpartyUserId,
+      currency: 'USDC',
+      fromWallet,
+      metadata: {
+        app: 'investapp-web',
+        currency: 'USDC',
+        ...metadata,
+      },
+      movementType,
+      projectId: coerceString(metadata.project_id) || null,
+      role,
+      sourceId: transactionId,
+      status,
+      toWallet,
+      txHash,
+      userId: verified.userId,
+    });
+
+    const storedLedgerEntry = await recordInternalLedgerEvent(ledgerEntry);
+    await syncInternalLedgerForUsers(
+      [verified.userId, projectedCounterpartyUserId].filter(Boolean) as string[]
     );
 
-    if (insertError) {
-      const existing = insertError.message?.toLowerCase().includes('duplicate')
-        ? await fetchExistingTransactionByHash(verified.userId, txHash)
-        : null;
-
-      if (existing) {
-        return jsonNoStore({ data: existing }, { status: 200 });
-      }
-
-      return jsonNoStore(
-        { error: 'Could not save the transaction.', details: insertError.message },
-        { status: 500 }
-      );
-    }
-
+    const projectedRow = storedLedgerEntry.projection_payload.row as Record<string, unknown>;
     return jsonNoStore(
-      { data: normalizeModernTransaction(data as ModernTransactionRow) },
+      { data: normalizeModernTransaction(projectedRow as ModernTransactionRow) },
       { status: 200 }
     );
   } catch (caughtError) {

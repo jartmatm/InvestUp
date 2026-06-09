@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { buildWithdrawalLedgerEntry } from '@/utils/server/internal-ledger-events';
+import {
+  recordInternalLedgerEvent,
+  syncInternalLedgerForUsers,
+} from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 
@@ -69,7 +74,7 @@ export async function PATCH(
 
     const { data: existing, error: existingError } = await supabase
       .from('withdraw_TEMP')
-      .select('id,metadata')
+      .select('id,user_id,role,source_wallet,destination_wallet,payout_method,bank_name,bank_account_number,bank_account_type,identification_type,identification_number,phone_number,breve_key,amount_usdc,metadata')
       .eq('id', withdrawalId)
       .eq('user_id', verified.userId)
       .maybeSingle();
@@ -90,35 +95,39 @@ export async function PATCH(
         ? (existing.metadata as Record<string, unknown>)
         : {};
 
-    const nextMetadata: Record<string, unknown> = { ...baseMetadata };
-    if (status === 'failed') nextMetadata.transfer_failed = true;
-    if (status === 'submitted') nextMetadata.transfer_completed = true;
-
-    const updatePayload: Record<string, unknown> = {
-      request_status: status,
-      metadata: nextMetadata,
+    const nextMetadata: Record<string, unknown> = {
+      ...baseMetadata,
+      transfer_failed: status === 'failed' || undefined,
+      transfer_completed: status === 'submitted' || undefined,
     };
 
-    if (status === 'submitted') {
-      updatePayload.onchain_tx_hash = txHash;
-    }
+    const ledgerEntry = buildWithdrawalLedgerEntry({
+      amount: Number(existing.amount_usdc ?? 0),
+      bankAccountType: existing.bank_account_type,
+      bankName: existing.bank_name,
+      currency: 'USDC',
+      destinationWallet: existing.destination_wallet,
+      identificationNumber: existing.identification_number,
+      identificationType: existing.identification_type,
+      metadata: nextMetadata,
+      payoutMethod: existing.payout_method as 'bank' | 'breve',
+      phoneNumber: existing.phone_number,
+      breveKey: existing.breve_key,
+      requestStatus: status,
+      role: existing.role,
+      sourceId: withdrawalId,
+      sourceWallet: existing.source_wallet,
+      txHash: status === 'submitted' ? txHash : null,
+      userId: verified.userId,
+    });
 
-    const { data: updated, error: updateError } = await supabase
-      .from('withdraw_TEMP')
-      .update(updatePayload)
-      .eq('id', withdrawalId)
-      .eq('user_id', verified.userId)
-      .select('id')
-      .maybeSingle();
+    const storedLedgerEntry = await recordInternalLedgerEvent(ledgerEntry);
+    await syncInternalLedgerForUsers([verified.userId]);
 
-    if (updateError || !updated?.id) {
-      return jsonNoStore(
-        { error: 'Could not update withdrawal request.', details: updateError?.message ?? null },
-        { status: 500 }
-      );
-    }
-
-    return jsonNoStore({ id: updated.id }, { status: 200 });
+    return jsonNoStore(
+      { id: String(storedLedgerEntry.projection_payload.row.id ?? withdrawalId) },
+      { status: 200 }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Withdrawal update failed.', details: message }, { status: 500 });

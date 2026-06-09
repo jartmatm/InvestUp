@@ -1872,7 +1872,9 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
-  const availableBalanceLabel = balanceUSDC;
+  const availableBalanceLabel = Number(
+    internalBalance?.available_balance ?? balanceUSDC
+  ).toFixed(2);
   const balanceCurrencyLabel = internalBalance?.currency ?? 'USD';
 
   const actions: ActionItem[] = [

@@ -8,7 +8,11 @@ import {
   loadLegacyInvestmentsForInvestor,
   loadLegacyInvestmentsForProjects,
 } from '@/lib/supabase-ledger-compat';
-import { syncInternalLedgerForUsers } from '@/utils/server/internal-ledger';
+import { buildInvestmentLedgerEntry } from '@/utils/server/internal-ledger-events';
+import {
+  recordInternalLedgerEvent,
+  syncInternalLedgerForUsers,
+} from '@/utils/server/internal-ledger';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 import type {
@@ -193,29 +197,6 @@ async function getOwnedProjectIds(userId: string) {
   }
 
   return ((data ?? []) as Array<{ id: string | number }>).map((item) => String(item.id));
-}
-
-async function fetchExistingModernInvestment(
-  userId: string,
-  txHash: string
-): Promise<CurrentUserInvestment | null> {
-  const supabase = getSupabaseAdminClient();
-  const { data, error } = await runWithAmountColumnFallback((amountColumn) =>
-    supabase
-      .from('investments')
-      .select(
-        `id,created_at,project_id,project_title,investor_user_id,entrepreneur_user_id,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc,interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-      )
-      .eq('investor_user_id', userId)
-      .eq('tx_hash', txHash)
-      .maybeSingle()
-  );
-
-  if (error || !data) {
-    return null;
-  }
-
-  return normalizeModernInvestment(data as ModernInvestmentRow);
 }
 
 async function syncProjectFundingState(projectId: string) {
@@ -499,53 +480,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error: insertError } = await runWithAmountColumnFallback((amountColumn) =>
-      supabase
-        .from('investments')
-        .insert({
-          transaction_id: transactionId || null,
-          investor_user_id: verified.userId,
-          entrepreneur_user_id: entrepreneurUserId,
-          project_id: normalizeProjectFilter(projectId),
-          project_title: projectTitle,
-          tx_hash: txHash,
-          from_wallet: fromWallet,
-          to_wallet: toWallet,
-          interest_rate_ea: interestRateEa,
-          term_months: termMonths,
-          projected_return_usdc: projectedReturnUsdc,
-          projected_total_usdc: projectedTotalUsdc,
-          status: 'confirmed',
-          metadata: {
-            app: 'investapp-web',
-            currency,
-            entrepreneur_name: entrepreneurName,
-            created_from: 'project-investment-flow',
-          },
-          [amountColumn]: amount,
-        })
-        .select(
-          `id,created_at,project_id,project_title,investor_user_id,entrepreneur_user_id,tx_hash,from_wallet,to_wallet,${amountColumn},amount_usdc,interest_rate_ea,term_months,projected_return_usdc,projected_total_usdc,status`
-        )
-        .maybeSingle()
-    );
+    const ledgerEntry = buildInvestmentLedgerEntry({
+      amount,
+      creditId: null,
+      entrepreneurUserId,
+      fromWallet,
+      interestRateEa,
+      metadata: {
+        app: 'investapp-web',
+        currency,
+        entrepreneur_name: entrepreneurName,
+        created_from: 'project-investment-flow',
+      },
+      projectedReturnUsdc,
+      projectedTotalUsdc,
+      projectId: normalizeProjectFilter(projectId).toString(),
+      projectTitle,
+      status: 'confirmed',
+      termMonths,
+      toWallet,
+      transactionId: transactionId || null,
+      txHash,
+      userId: verified.userId,
+      currency,
+    });
 
-    if (insertError) {
-      const existing = insertError.message?.toLowerCase().includes('duplicate')
-        ? await fetchExistingModernInvestment(verified.userId, txHash)
-        : null;
-
-      if (existing) {
-        return jsonNoStore({ data: existing }, { status: 200 });
-      }
-
-      return jsonNoStore(
-        { error: 'Could not save the investment.', details: insertError.message },
-        { status: 500 }
-      );
-    }
-
-    const normalizedInvestment = normalizeModernInvestment(data as ModernInvestmentRow);
+    const storedLedgerEntry = await recordInternalLedgerEvent(ledgerEntry);
+    const projectedRow = storedLedgerEntry.projection_payload.row as Record<string, unknown>;
+    const normalizedInvestment = normalizeModernInvestment(projectedRow as ModernInvestmentRow);
     await syncProjectFundingState(projectId);
     await syncInternalLedgerForUsers([verified.userId, entrepreneurUserId]);
 

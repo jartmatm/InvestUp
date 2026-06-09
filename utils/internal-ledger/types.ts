@@ -1,9 +1,48 @@
 export type InternalBalanceBuckets = {
+  // Liquid balance visible on Home and spendable for new actions.
   available_balance: number;
+  // Capital raised or otherwise restricted until the app releases it.
   locked_balance: number;
+  // Money in flight between ledgers, wallets, or withdrawal processors.
   pending_balance: number;
+  // Liquid balance that the user can request to withdraw.
   withdrawable_balance: number;
+  // Outstanding capital the investor still has committed to a deal.
   invested_balance: number;
+};
+
+export type InternalLedgerEntryType =
+  | 'buy'
+  | 'transfer'
+  | 'investment'
+  | 'repayment'
+  | 'withdrawal_requested'
+  | 'withdrawal_submitted'
+  | 'withdrawal_settled'
+  | 'withdrawal_failed'
+  | 'funding_released'
+  | 'reversal'
+  | 'adjustment';
+
+export type InternalLedgerLifecycleStage =
+  | 'initiated'
+  | 'submitted'
+  | 'confirmed'
+  | 'failed'
+  | 'reversed';
+
+export type InternalLedgerProjectionTable =
+  | 'transactions'
+  | 'investments'
+  | 'repayments'
+  | 'withdraw_TEMP'
+  | 'projects';
+
+export type InternalLedgerProjectionPayload = {
+  table: InternalLedgerProjectionTable;
+  conflict_target: string;
+  row: Record<string, unknown>;
+  operation?: 'upsert' | 'delete';
 };
 
 export type InternalLedgerPosting = {
@@ -24,9 +63,14 @@ export type InternalUserBalanceDelta = Partial<InternalBalanceBuckets>;
 export type InternalLedgerEntry = {
   id: string;
   created_at: string;
-  entry_type: string;
-  reference_type: string;
-  reference_id: string;
+  event_key: string;
+  source_table: string;
+  source_id: string;
+  lifecycle_stage: InternalLedgerLifecycleStage;
+  wallet_action_id: string | null;
+  entry_type: InternalLedgerEntryType;
+  reference_type: string | null;
+  reference_id: string | null;
   credit_id: string | null;
   project_id: string | null;
   primary_user_id: string | null;
@@ -37,6 +81,7 @@ export type InternalLedgerEntry = {
   postings: InternalLedgerPosting[];
   participants: InternalLedgerParticipant[];
   balance_deltas: Record<string, InternalUserBalanceDelta>;
+  projection_payload: InternalLedgerProjectionPayload;
   metadata: Record<string, unknown> | null;
 };
 
