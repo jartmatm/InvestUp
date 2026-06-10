@@ -465,9 +465,17 @@ export default function WithdrawPage() {
   const withdrawCountryConfig = getWithdrawCountryConfig(userCountry);
   const effectiveMethod =
     form.method === 'breve' && !withdrawCountryConfig.breveEnabled ? 'bank' : form.method;
-  const withdrawableBalance = Number.isFinite(internalRawBalance)
-    ? Math.max(Number(internalBalance?.withdrawable_balance ?? internalRawBalance - MIN_GAS_RESERVE_USDC), 0)
-    : 0;
+  const availableBalanceForWithdrawal = Number.isFinite(Number(internalBalance?.available_balance))
+    ? Number(internalBalance?.available_balance ?? 0)
+    : Number.isFinite(internalRawBalance)
+      ? Math.max(
+          internalRawBalance -
+            Number(internalBalance?.locked_balance ?? 0) -
+            Number(internalBalance?.pending_balance ?? 0),
+          0
+        )
+      : 0;
+  const withdrawableBalance = Math.max(availableBalanceForWithdrawal - MIN_GAS_RESERVE_USDC, 0);
   const formattedAmount = formatAmountForSubmit(form.amount);
   const amountNumber = Number(formattedAmount);
   const isBankMethod = effectiveMethod === 'bank';

@@ -28,6 +28,8 @@ const INTERNAL_CONTRACT_SELECT =
 const INTERNAL_LEDGER_ENTRY_SELECT =
   'id,created_at,event_key,source_table,source_id,lifecycle_stage,wallet_action_id,entry_type,reference_type,reference_id,credit_id,project_id,primary_user_id,counterparty_user_id,affected_user_ids,amount,currency,postings,participants,balance_deltas,projection_payload,metadata';
 
+const WITHDRAW_GAS_RESERVE_USDC = 0.1;
+
 const asText = (value: unknown) =>
   typeof value === 'string' && value.trim().length > 0 ? value : null;
 
@@ -622,7 +624,7 @@ export async function syncInternalBalanceForUser(userId: string) {
 
   const { data: storedBalanceRow, error: storedBalanceError } = await supabase
     .from('internal_account_balances')
-    .select('currency,available_balance,locked_balance,pending_balance,withdrawable_balance,invested_balance')
+    .select('currency,locked_balance,pending_balance,invested_balance')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -633,24 +635,16 @@ export async function syncInternalBalanceForUser(userId: string) {
   const fallbackBalances = entries.reduce(
     (totals, entry) => {
       const delta = getUserDeltaForEntry(entry, userId);
-      totals.available_balance = roundAmount(
-        totals.available_balance + asNumber(delta.available_balance)
-      );
       totals.locked_balance = roundAmount(totals.locked_balance + asNumber(delta.locked_balance));
       totals.pending_balance = roundAmount(totals.pending_balance + asNumber(delta.pending_balance));
-      totals.withdrawable_balance = roundAmount(
-        totals.withdrawable_balance + asNumber(delta.withdrawable_balance)
-      );
       totals.invested_balance = roundAmount(
         totals.invested_balance + asNumber(delta.invested_balance)
       );
       return totals;
     },
     {
-      available_balance: 0,
       locked_balance: 0,
       pending_balance: 0,
-      withdrawable_balance: 0,
       invested_balance: 0,
     }
   );
@@ -661,14 +655,14 @@ export async function syncInternalBalanceForUser(userId: string) {
   const pendingBalance = storedBalanceRow
     ? roundAmount(asNumber(storedBalanceRow.pending_balance))
     : fallbackBalances.pending_balance;
-  const withdrawableBalance = storedBalanceRow
-    ? roundAmount(asNumber(storedBalanceRow.withdrawable_balance))
-    : fallbackBalances.withdrawable_balance;
   const investedBalance = storedBalanceRow
     ? roundAmount(asNumber(storedBalanceRow.invested_balance))
     : fallbackBalances.invested_balance;
   const availableBalance = roundAmount(
     Math.max(walletBalance - lockedBalance - pendingBalance, 0)
+  );
+  const withdrawableBalance = roundAmount(
+    Math.max(availableBalance - WITHDRAW_GAS_RESERVE_USDC, 0)
   );
 
   const movementHistory = entries

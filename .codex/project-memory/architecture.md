@@ -1,5 +1,19 @@
 # Architecture Memory
 
+## 2026-06-12 - Withdrawable balance is derived from available balance
+
+Type: architecture
+Tags: ledger, withdraw, wallet, supabase
+Files: app/(protected)/withdraw/page.tsx, utils/server/internal-ledger.ts, scripts/backfill-internal-account-balances.mjs, supabase/migrations/20260612_internal_account_balances_withdrawable_balance.sql
+
+Summary:
+- `internal_account_balances.withdrawable_balance` is a materialized value derived from `available_balance` minus the gas reserve used by the withdraw flow.
+
+Details:
+- The withdraw screen should treat `available_balance` as the base effective wallet amount and then subtract the reserved gas buffer before enabling withdrawal.
+- `locked_balance` and `pending_balance` remain ledger-derived and feed into `available_balance`.
+- Database refresh helpers and backfills should recompute `withdrawable_balance` whenever `available_balance` changes so the UI and data stay aligned.
+
 ## 2026-06-11 - Internal available balance follows raw wallet cache
 
 Type: architecture

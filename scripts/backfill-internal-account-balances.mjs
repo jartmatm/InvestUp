@@ -44,11 +44,12 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
 });
 
 const roundToSix = (value) => Number(Number(value).toFixed(6));
+const WITHDRAW_GAS_RESERVE_USDC = 0.1;
 
 async function fetchBalances(offset) {
   const { data, error } = await supabase
     .from('internal_account_balances')
-    .select('user_id,available_balance,locked_balance,pending_balance')
+    .select('user_id,available_balance,locked_balance,pending_balance,withdrawable_balance')
     .order('user_id', { ascending: true })
     .range(offset, offset + pageSize - 1);
 
@@ -71,7 +72,10 @@ async function fetchUsers(userIds) {
 async function updateAvailableBalance(userId, availableBalance) {
   const { error } = await supabase
     .from('internal_account_balances')
-    .update({ available_balance: availableBalance })
+    .update({
+      available_balance: availableBalance,
+      withdrawable_balance: Math.max(availableBalance - WITHDRAW_GAS_RESERVE_USDC, 0),
+    })
     .eq('user_id', userId);
 
   if (error) throw new Error(error.message);
@@ -87,8 +91,14 @@ async function processBalanceRow(balanceRow, userMap) {
   const lockedBalance = roundToSix(Number(balanceRow.locked_balance ?? 0));
   const pendingBalance = roundToSix(Number(balanceRow.pending_balance ?? 0));
   const targetAvailable = roundToSix(Math.max(rawWalletBalance - lockedBalance - pendingBalance, 0));
+  const targetWithdrawable = roundToSix(
+    Math.max(targetAvailable - WITHDRAW_GAS_RESERVE_USDC, 0)
+  );
   const storedAvailable = roundToSix(Number(balanceRow.available_balance ?? 0));
-  const changed = Math.abs(targetAvailable - storedAvailable) >= 0.000001;
+  const storedWithdrawable = roundToSix(Number(balanceRow.withdrawable_balance ?? 0));
+  const availableChanged = Math.abs(targetAvailable - storedAvailable) >= 0.000001;
+  const withdrawableChanged = Math.abs(targetWithdrawable - storedWithdrawable) >= 0.000001;
+  const changed = availableChanged || withdrawableChanged;
 
   if (!dryRun && changed) {
     await updateAvailableBalance(balanceRow.user_id, targetAvailable);
@@ -101,8 +111,11 @@ async function processBalanceRow(balanceRow, userMap) {
     pendingBalance,
     storedAvailable,
     targetAvailable,
+    storedWithdrawable,
+    targetWithdrawable,
     changed,
-    updated: !dryRun && changed,
+    withdrawableChanged,
+    updated: !dryRun && (changed || withdrawableChanged),
   };
 }
 

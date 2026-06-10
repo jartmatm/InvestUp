@@ -1,5 +1,19 @@
 # Bugfix Memory
 
+## 2026-06-12 - Withdrawable balance now tracks available minus gas
+
+Type: bugfix
+Tags: ledger, withdraw, wallet, supabase, backfill
+Files: app/(protected)/withdraw/page.tsx, utils/server/internal-ledger.ts, scripts/backfill-internal-account-balances.mjs, supabase/migrations/20260612_internal_account_balances_withdrawable_balance.sql
+
+Summary:
+- `internal_account_balances.withdrawable_balance` was stuck at `0.000` or otherwise stale, which made the withdraw screen ignore real spendable funds.
+
+Details:
+- Withdrawable balance now materializes as `available_balance - reserved gas`, clamped at zero.
+- `available_balance` continues to come from the raw wallet cache minus locked and pending holds.
+- Locked and pending remain ledger-driven; the backfill and helper now preserve those values while recalculating withdrawable correctly.
+
 ## 2026-06-11 - Internal available balance backfill from raw wallet
 
 Type: bugfix
