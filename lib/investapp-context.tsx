@@ -41,6 +41,7 @@ import {
   type PendingInvestment,
 } from '@/lib/pending-investment';
 import { HOME_REFRESH_INTERVAL_MS } from '@/lib/project-status';
+import { fetchCurrentUserInternalLedger } from '@/utils/client/current-user-internal-ledger';
 import { createCurrentUserInvestment } from '@/utils/client/current-user-investments';
 import { fetchRecipientDirectory } from '@/utils/client/recipient-directory';
 import {
@@ -661,6 +662,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       global: { fetch: authedFetch },
     });
   }, [getAccessToken]);
+  void supabase;
 
   const loadTransactionsForNotifications = useCallback(async () => {
     if (!user?.id) {
@@ -1098,6 +1100,14 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       const directWalletAddress =
         destinationValue.startsWith('0x') && destinationValue.length === 42 ? destinationValue : '';
       const resolvedDestinationWallet = receiverTarget?.wallet_address ?? directWalletAddress;
+      const pendingInvestment =
+        rolSeleccionado === 'inversor'
+          ? normalizePendingInvestment(getPendingInvestment(user?.id), destinationValue)
+          : null;
+      const fallbackMovementType =
+        rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
+      const movementType: MovementType =
+        pendingInvestment ? 'investment' : options?.movementType ?? fallbackMovementType;
 
       if (!resolvedDestinationWallet) {
         const isEmailDestination = destinationValue.includes('@');
@@ -1109,6 +1119,23 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, txHash: null };
       }
 
+      const { data: internalLedgerData, error: internalLedgerError } =
+        await fetchCurrentUserInternalLedger(getAccessToken, { limit: 1 });
+      if (internalLedgerError) {
+        throw new Error(internalLedgerError);
+      }
+
+      const internalBalance = internalLedgerData?.balance;
+      const hasAccountingHold =
+        Number(internalBalance?.locked_balance ?? 0) > 0 ||
+        Number(internalBalance?.pending_balance ?? 0) > 0;
+
+      if (hasAccountingHold) {
+        throw new Error(
+          'Transfers are temporarily blocked while your internal ledger has locked or pending balances.'
+        );
+      }
+
       setLoadingTx(true);
       setTransactionToast(null);
       try {
@@ -1118,6 +1145,14 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         ]);
         const montoSolicitado = parseUnits(monto, USDC_DECIMALS);
         if (montoSolicitado <= BigInt(0)) throw new Error('The amount must be greater than 0.');
+
+        const internalAvailableBalance = internalBalance
+          ? Math.max(Number(internalBalance.available_balance ?? 0), 0)
+          : Math.max(Number(balanceUSDC ?? 0), 0);
+        const ledgerAvailable = parseUnits(internalAvailableBalance.toFixed(USDC_DECIMALS), USDC_DECIMALS);
+        if (montoSolicitado > ledgerAvailable) {
+          throw new Error('Insufficient available balance according to the internal ledger.');
+        }
 
         const quote = await getCachedUsdcQuote();
         const maxFeePerGas = await getCachedMaxFeePerGas();
@@ -1172,18 +1207,7 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
           calls,
           paymasterContext: { token: USDC_ADDRESS },
         });
-
-        const pendingInvestment =
-          rolSeleccionado === 'inversor'
-            ? normalizePendingInvestment(getPendingInvestment(user?.id), destinationValue)
-            : null;
         const enviadoFmt = Number(formatUnits(montoSolicitado, USDC_DECIMALS)).toFixed(6);
-        const fallbackMovementType =
-          rolSeleccionado === 'emprendedor' ? 'repayment' : 'transfer';
-        const movementType: MovementType =
-          pendingInvestment
-            ? 'investment'
-            : options?.movementType ?? fallbackMovementType;
         const tipo =
           movementType === 'repayment'
             ? 'Repayment'
@@ -1361,13 +1385,13 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       getCachedMaxFeePerGas,
       getCachedUsdcQuote,
       getAccessToken,
+      balanceUSDC,
       registrarInversion,
       registrarRepayment,
       registrarTransaccion,
       rolSeleccionado,
       smartWalletAddress,
       pushNotification,
-      supabase,
       user?.email?.address,
       userAlias,
       walletTargets,

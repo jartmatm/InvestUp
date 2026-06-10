@@ -456,7 +456,7 @@ export default function WithdrawPage() {
     void loadInternalBalance();
   }, [getAccessToken, user?.id]);
 
-  const balanceNumber = Number(internalBalance?.available_balance ?? balanceUSDC);
+  const balanceNumber = Number(balanceUSDC ?? 0);
   const displayBalance = Number.isFinite(balanceNumber) ? balanceNumber.toFixed(2) : '0.00';
   const withdrawCountryConfig = getWithdrawCountryConfig(userCountry);
   const effectiveMethod =

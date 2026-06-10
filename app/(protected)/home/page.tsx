@@ -1533,7 +1533,7 @@ export default function HomePage() {
     loadActiveInvestments();
     const interval = window.setInterval(loadActiveInvestments, HOME_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(interval);
-  }, [getAccessToken, rolSeleccionado, supabase, user?.id, lastReceipt?.txHash]);
+  }, [getAccessToken, rolSeleccionado, supabase, t, user?.id, lastReceipt?.txHash]);
 
   useEffect(() => {
     const loadInternalBalance = async () => {
@@ -1872,9 +1872,7 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
-  const availableBalanceLabel = Number(
-    internalBalance?.available_balance ?? balanceUSDC
-  ).toFixed(2);
+  const availableBalanceLabel = Number(balanceUSDC ?? 0).toFixed(2);
   const balanceCurrencyLabel = internalBalance?.currency ?? 'USD';
 
   const actions: ActionItem[] = [
