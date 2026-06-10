@@ -143,3 +143,16 @@ Details:
 - The sync endpoint verifies the Privy access token, reads the managed wallet from `users.wallet_address`, queries Polygon USDC on-chain, and upserts the raw balance back into `users.available_wallet_usd`.
 - `syncInternalBalanceForUser` now derives the visible `available_balance` from that raw cache minus the ledger's locked and pending holds.
 - Home trusts the internal ledger snapshot for the visible available balance, while the raw wallet balance remains an internal/private cache rather than a user-editable field.
+
+## 2026-06-10 - Wallet backfill is application-side, not SQL-side
+
+Type: architecture
+Tags: ledger, wallet, migration, script
+Files: scripts/backfill-wallet-balances.mjs, supabase/migrations/20260610_users_available_wallet_usd.sql
+
+Summary:
+- Existing `users.available_wallet_usd` rows must be backfilled from an application-side script that queries Polygon directly.
+
+Details:
+- SQL migrations can add the private cache column, but they cannot compute the raw wallet balance because the source lives on-chain.
+- The repo now includes a reusable backfill script for one-time or future admin reruns.

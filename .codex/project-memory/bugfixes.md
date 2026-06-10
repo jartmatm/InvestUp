@@ -1,5 +1,19 @@
 # Bugfix Memory
 
+## 2026-06-10 - Wallet balance backfill now queries Polygon
+
+Type: bugfix
+Tags: ledger, wallet, supabase, polygon
+Files: scripts/backfill-wallet-balances.mjs, supabase/migrations/20260610_users_available_wallet_usd.sql
+
+Summary:
+- The `users.available_wallet_usd` column was backfilled from internal ledger snapshots by mistake, which left real wallets showing `0.000`.
+
+Details:
+- The correct source of truth is the Polygon USDC balance on the managed wallet, not `internal_account_balances`.
+- A one-off admin backfill script now reads on-chain balances and writes the raw amount back to `users.available_wallet_usd`.
+- A dry-run against the live DB showed 5 mismatched wallets, and the write pass updated them successfully.
+
 ## 2026-06-10 - Entrepreneur detail closes back to feed
 
 Type: bugfix
