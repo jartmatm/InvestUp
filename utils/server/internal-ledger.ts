@@ -3,6 +3,7 @@ import {
   normalizePaymentScheduleRecord,
 } from '@/lib/payment-schedule';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
+import { refreshCurrentUserWalletBalance } from '@/utils/server/wallet-balance';
 import { normalizeProjectFilter } from '@/utils/projects/shared';
 import {
   buildInvestmentLedgerEntry,
@@ -603,7 +604,30 @@ export async function syncInternalBalanceForUser(userId: string) {
   const supabase = getSupabaseAdminClient();
   await syncInternalEntriesForUser(userId);
 
-  const [entries] = await Promise.all([loadInternalEntriesForUser(userId, 50)]);
+  const [entries, walletSyncResult] = await Promise.all([
+    loadInternalEntriesForUser(userId, 50),
+    refreshCurrentUserWalletBalance(userId).catch(async (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Unknown wallet balance error.';
+      console.error('Error refreshing raw wallet balance:', message);
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('available_wallet_usd')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (userError) {
+        throw new Error(userError.message);
+      }
+
+      return {
+        available_wallet_usd: roundAmount(asNumber((userRow as { available_wallet_usd?: unknown } | null)?.available_wallet_usd)),
+        wallet_address: null,
+        synced: false,
+      };
+    }),
+  ]);
+
+  const walletBalance = roundAmount(asNumber(walletSyncResult.available_wallet_usd));
 
   const baseBalances = entries.reduce(
     (totals, entry) => {
@@ -626,11 +650,14 @@ export async function syncInternalBalanceForUser(userId: string) {
     .slice(0, 25)
     .map((entry) => toMovementHistoryItem(entry, userId));
   const relatedUsers = buildRelatedUsers(entries, userId);
+  const availableBalance = roundAmount(
+    Math.max(walletBalance - baseBalances.locked_balance - baseBalances.pending_balance, 0)
+  );
 
   const balancePayload: InternalAccountBalance = {
     user_id: userId,
     currency: 'USD',
-    available_balance: baseBalances.available_balance,
+    available_balance: availableBalance,
     locked_balance: baseBalances.locked_balance,
     pending_balance: baseBalances.pending_balance,
     withdrawable_balance: baseBalances.withdrawable_balance,

@@ -456,16 +456,17 @@ export default function WithdrawPage() {
     void loadInternalBalance();
   }, [getAccessToken, user?.id]);
 
-  const balanceNumber = Number(balanceUSDC ?? 0);
-  const displayBalance = Number.isFinite(balanceNumber) ? balanceNumber.toFixed(2) : '0.00';
+  const internalRawBalance = Number.isFinite(Number(internalBalance?.available_balance))
+    ? Number(internalBalance?.available_balance ?? 0) +
+      Number(internalBalance?.locked_balance ?? 0) +
+      Number(internalBalance?.pending_balance ?? 0)
+    : Number(balanceUSDC ?? 0);
+  const displayBalance = Number.isFinite(internalRawBalance) ? internalRawBalance.toFixed(2) : '0.00';
   const withdrawCountryConfig = getWithdrawCountryConfig(userCountry);
   const effectiveMethod =
     form.method === 'breve' && !withdrawCountryConfig.breveEnabled ? 'bank' : form.method;
-  const withdrawableBalance = Number.isFinite(balanceNumber)
-    ? Math.max(
-        Number(internalBalance?.withdrawable_balance ?? balanceNumber - MIN_GAS_RESERVE_USDC),
-        0
-      )
+  const withdrawableBalance = Number.isFinite(internalRawBalance)
+    ? Math.max(Number(internalBalance?.withdrawable_balance ?? internalRawBalance - MIN_GAS_RESERVE_USDC), 0)
     : 0;
   const formattedAmount = formatAmountForSubmit(form.amount);
   const amountNumber = Number(formattedAmount);

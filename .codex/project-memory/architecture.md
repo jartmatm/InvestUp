@@ -129,3 +129,17 @@ Details:
 - Portfolio mobile keeps the project card/actions and entrepreneur dashboard; it no longer mounts the old venture details form.
 - The publish wizard hydrates editable projects from `metadata.publication_form_fields` with column fallbacks, jumps to the review step, and saves via PATCH while amount received is zero.
 - Edit entry points in Feed, detail, Home, and Portfolio point to the publish wizard edit mode.
+
+## 2026-06-10 - Private wallet balance sync feeds internal balance snapshots
+
+Type: architecture
+Tags: ledger, wallet, supabase, sync
+Files: app/api/me/wallet-balance/route.ts, utils/server/wallet-balance.ts, utils/server/internal-ledger.ts, app/(protected)/home/page.tsx
+
+Summary:
+- `users.available_wallet_usd` is the private cache of the raw Polygon USDC wallet balance and is refreshed from a server-side sync endpoint.
+
+Details:
+- The sync endpoint verifies the Privy access token, reads the managed wallet from `users.wallet_address`, queries Polygon USDC on-chain, and upserts the raw balance back into `users.available_wallet_usd`.
+- `syncInternalBalanceForUser` now derives the visible `available_balance` from that raw cache minus the ledger's locked and pending holds.
+- Home trusts the internal ledger snapshot for the visible available balance, while the raw wallet balance remains an internal/private cache rather than a user-editable field.

@@ -107,3 +107,17 @@ Details:
 - The visible balance starts from the wallet balance refreshed from the blockchain and subtracts internal ledger holds so Home shows the effective usable amount.
 - `enviarUSDC` fails closed when the internal ledger reports locked or pending balances, and it still validates the on-chain balance before sending.
 - Withdraw continues to use `withdrawable_balance` as the primary safe limit, with the gas reserve remaining as an additional guard.
+
+## 2026-06-10 - Private wallet balance cache on users
+
+Type: decision
+Tags: ledger, wallet, supabase, balance-sync
+Files: app/api/me/wallet-balance/route.ts, utils/server/wallet-balance.ts, utils/server/internal-ledger.ts
+
+Summary:
+- The raw Polygon USDC wallet balance is cached in `users.available_wallet_usd` and is not client-writeable.
+
+Details:
+- The wallet sync endpoint verifies the Privy token, reads the current Polygon USDC balance server-side, and upserts the private cache column.
+- Internal ledger balances derive their visible `available_balance` from that raw cache minus internal locked and pending holds.
+- The Home screen should trust the internal ledger snapshot instead of recalculating the visible balance locally.

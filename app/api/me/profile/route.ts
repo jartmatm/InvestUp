@@ -46,6 +46,14 @@ const coerceString = (value: unknown) => (typeof value === 'string' ? value.trim
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const stripPrivateFields = <T extends Record<string, unknown> | null>(value: T) => {
+  if (!value) return value;
+
+  const publicFields = { ...value } as Record<string, unknown>;
+  delete publicFields.available_wallet_usd;
+  return publicFields as T;
+};
+
 async function verifyRequest(request: NextRequest) {
   const accessToken = extractBearerToken(request.headers.get('authorization'));
   if (!accessToken) {
@@ -118,7 +126,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return jsonNoStore({ data: data ?? null }, { status: 200 });
+    return jsonNoStore({ data: stripPrivateFields(data ?? null) }, { status: 200 });
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Profile request failed.', details: message }, { status: 500 });
@@ -193,7 +201,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return jsonNoStore({ data: data ?? null }, { status: 200 });
+    return jsonNoStore({ data: stripPrivateFields(data ?? null) }, { status: 200 });
   } catch (caughtError) {
     const message = caughtError instanceof Error ? caughtError.message : 'Unknown server error.';
     return jsonNoStore({ error: 'Profile update failed.', details: message }, { status: 500 });

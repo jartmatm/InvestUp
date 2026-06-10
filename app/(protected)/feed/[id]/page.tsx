@@ -468,17 +468,26 @@ export default function FeedDetailPage() {
       t('locationPending')
     : '';
   const categoryLabel = project?.sector ? toEnglishSector(project.sector) : t('Detail.business');
-  const primaryActionLabel = isEntrepreneurView ? t('edit') : t('invest');
+  const primaryActionLabel = isEntrepreneurView ? t('Detail.close') : t('invest');
   const secondaryActionLabel = t('Detail.share');
   const detailT: Translate = (key, values) => t(key as never, values as never);
 
   const handlePrimaryAction = () => {
     if (!project) return;
     if (isEntrepreneurView) {
-      router.push(`/publish?edit=${project.id}`);
+      router.replace('/feed');
       return;
     }
     router.push(`/feed/${project.id}/invest`);
+  };
+
+  const handleBack = () => {
+    if (isEntrepreneurView) {
+      router.replace('/feed');
+      return;
+    }
+
+    router.back();
   };
 
   const renderLoadingState = (desktop = false) => (
@@ -519,7 +528,7 @@ export default function FeedDetailPage() {
         secondaryActionLabel={secondaryActionLabel}
         onPrimaryAction={handlePrimaryAction}
         onSecondaryAction={openSharePopup}
-        onBack={() => router.back()}
+        onBack={handleBack}
         primaryDisabled={!isEntrepreneurView && !project.owner_wallet}
       />
     );

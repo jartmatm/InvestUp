@@ -52,6 +52,7 @@ import {
   fetchCurrentUserProfile,
   patchCurrentUserProfile,
 } from '@/utils/client/current-user-profile';
+import { syncCurrentUserWalletBalance } from '@/utils/client/current-user-wallet-balance';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
 
 type FrontRole = 'inversor' | 'emprendedor';
@@ -951,18 +952,33 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       const balPol = await publicClient.getBalance({ address: smartWalletAddress as `0x${string}` });
       setBalancePOL(Number(formatUnits(balPol, 18)).toFixed(4));
 
-      const balUsdc = await publicClient.readContract({
-        address: USDC_ADDRESS,
-        abi: USDC_ABI,
-        functionName: 'balanceOf',
-        args: [smartWalletAddress as `0x${string}`],
-      });
+      const { data: walletBalance, error: walletBalanceError } = await syncCurrentUserWalletBalance(
+        getAccessToken
+      );
 
-      setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
+      if (walletBalanceError || !walletBalance) {
+        throw new Error(walletBalanceError ?? 'Could not sync the wallet balance.');
+      }
+
+      setBalanceUSDC(Number(walletBalance.available_wallet_usd ?? 0).toFixed(2));
     } catch (error) {
       console.error('Error refreshing balances:', error);
+
+      try {
+        const [{ formatUnits }, publicClient] = await Promise.all([import('viem'), getPublicClient()]);
+        const balUsdc = await publicClient.readContract({
+          address: USDC_ADDRESS,
+          abi: USDC_ABI,
+          functionName: 'balanceOf',
+          args: [smartWalletAddress as `0x${string}`],
+        });
+
+        setBalanceUSDC(Number(formatUnits(balUsdc as bigint, 6)).toFixed(2));
+      } catch (fallbackError) {
+        console.error('Error reading fallback wallet balance:', fallbackError);
+      }
     }
-  }, [smartWalletAddress]);
+  }, [getAccessToken, smartWalletAddress]);
 
   const guardarRol = useCallback(
     async (rolFrontend: FrontRole, options?: { completeOnboarding?: boolean }) => {

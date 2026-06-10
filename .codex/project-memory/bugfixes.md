@@ -1,5 +1,18 @@
 # Bugfix Memory
 
+## 2026-06-10 - Entrepreneur detail closes back to feed
+
+Type: bugfix
+Tags: feed, detail, entrepreneur, navigation
+Files: app/(protected)/feed/[id]/page.tsx
+
+Summary:
+- The entrepreneur publication detail CTA now uses `Close` and returns to `/feed` instead of opening the publish edit flow.
+
+Details:
+- The shared detail screen stays intact, but the role-specific primary action for entrepreneurs now matches a close-only exit path.
+- Both the primary CTA and the back control route through `router.replace('/feed')` so the detail page does not remain in browser history for the entrepreneur flow.
+
 ## 2026-05-13 - Landing mockup responsive sizing
 
 Type: bugfix

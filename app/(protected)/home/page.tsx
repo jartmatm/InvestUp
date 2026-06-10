@@ -1872,10 +1872,14 @@ export default function HomePage() {
         ) / activeInvestments.length
       : 0;
   const fundingProgress = calculateFundingProgress(lastProject?.amount_received ?? 0, lastProject?.amount_requested ?? 0);
-  const internalBalanceHold = Number(internalBalance?.locked_balance ?? 0) + Number(
-    internalBalance?.pending_balance ?? 0
-  );
-  const availableBalanceLabel = Math.max(Number(balanceUSDC ?? 0) - internalBalanceHold, 0).toFixed(2);
+  const availableBalanceLabel = Number.isFinite(Number(internalBalance?.available_balance))
+    ? Number(internalBalance?.available_balance ?? 0).toFixed(2)
+    : Math.max(
+        Number(balanceUSDC ?? 0) -
+          Number(internalBalance?.locked_balance ?? 0) -
+          Number(internalBalance?.pending_balance ?? 0),
+        0
+      ).toFixed(2);
   const balanceCurrencyLabel = internalBalance?.currency ?? 'USD';
 
   const actions: ActionItem[] = [
