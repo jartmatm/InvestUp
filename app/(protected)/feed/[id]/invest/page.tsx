@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { usePrivy } from '@privy-io/react-auth';
 import { useLocale, useTranslations } from 'next-intl';
@@ -284,9 +284,11 @@ export default function ProjectInvestPage() {
   const locale = useLocale();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const projectId = typeof params?.id === 'string' ? params.id : Array.isArray(params?.id) ? params.id[0] : '';
   const { user, getAccessToken } = usePrivy();
   const { faseApp } = useInvestApp();
+  const isCloseView = searchParams.get('mode') === 'close';
   const [project, setProject] = useState<ProjectInvestmentDetail | null>(null);
   const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [amount, setAmount] = useState('100.00');
@@ -327,7 +329,7 @@ export default function ProjectInvestPage() {
           } as ProjectInvestmentDetail)
         : null;
 
-      if (normalizedProject && !isProjectPubliclyVisible(normalizedProject)) {
+      if (normalizedProject && !isCloseView && !isProjectPubliclyVisible(normalizedProject)) {
         setProject(null);
         setStatus(t('Detail.inactiveListing'));
         setLoading(false);
@@ -354,7 +356,7 @@ export default function ProjectInvestPage() {
     };
 
     loadProject();
-  }, [getAccessToken, projectId, t]);
+  }, [getAccessToken, isCloseView, projectId, t]);
 
   const handleAmountChange = (value: string) => {
     const sanitized = value.replace(/[^0-9.]/g, '');
@@ -395,7 +397,7 @@ export default function ProjectInvestPage() {
 
   const entrepreneurEmail = owner?.email?.trim() ?? '';
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
-  const canContinue = Boolean(project && entrepreneurWallet && amountNumber > 0);
+  const canContinue = isCloseView ? Boolean(project) : Boolean(project && entrepreneurWallet && amountNumber > 0);
   const quickAmounts = Array.from(
     new Set([minimumInvestment || 50, (minimumInvestment || 50) * 2, (minimumInvestment || 50) * 5, (minimumInvestment || 50) * 10])
   ).slice(0, 4);
@@ -417,6 +419,11 @@ export default function ProjectInvestPage() {
   const mobileGalleryItems = project?.photo_urls ?? [];
 
   const handleContinue = () => {
+    if (isCloseView) {
+      router.replace('/feed');
+      return;
+    }
+
     if (!project) {
       setStatus(t('InvestFlow.projectLoadFirst'));
       return;
@@ -465,11 +472,21 @@ export default function ProjectInvestPage() {
   };
 
   const handleOpenInvestModal = () => {
+    if (isCloseView) {
+      handleContinue();
+      return;
+    }
+
     setInquiryStatus('');
     setIsInvestModalOpen(true);
   };
 
   const handleMobileContinue = () => {
+    if (isCloseView) {
+      handleContinue();
+      return;
+    }
+
     setIsInvestModalOpen(false);
     handleContinue();
   };
@@ -493,6 +510,8 @@ export default function ProjectInvestPage() {
       value: roundCloseDateLabel,
     },
   ];
+  const primaryActionLabel = isCloseView ? t('Detail.close') : 'Invest';
+  const desktopPrimaryActionLabel = isCloseView ? t('Detail.close') : t('InvestFlow.confirmInvestment');
 
   return (
     <>
@@ -689,14 +708,14 @@ export default function ProjectInvestPage() {
                   onClick={handleOpenInvestModal}
                   className="mx-auto flex min-h-12 w-full max-w-[240px] items-center justify-center rounded-full bg-[#6B39F4] px-6 text-sm font-bold text-white shadow-[0_18px_36px_rgba(107,57,244,0.24)] transition active:scale-[0.985]"
                 >
-                  Invest
+                  {primaryActionLabel}
                 </button>
               </div>
             </>
           ) : null}
         </div>
 
-        {isInvestModalOpen ? (
+        {!isCloseView && isInvestModalOpen ? (
           <div className="fixed inset-0 z-50 flex items-end bg-black/45 backdrop-blur-[6px]">
             <div className="w-full rounded-t-[30px] border-t border-white/60 bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_100%)] px-4 pb-[max(env(safe-area-inset-bottom),1rem)] pt-3 shadow-[0_-20px_60px_rgba(16,23,47,0.18)]">
               <div className="mx-auto mb-4 h-1.5 w-14 rounded-full bg-[#D7DDEA]" />
@@ -975,7 +994,7 @@ export default function ProjectInvestPage() {
               canContinue ? 'bg-[#6B39F4]' : 'bg-[#6B39F4]/40'
             }`}
           >
-            {t('InvestFlow.confirmInvestment')}
+            {desktopPrimaryActionLabel}
           </button>
         </div>
       ) : null}

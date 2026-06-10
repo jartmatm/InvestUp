@@ -1,5 +1,19 @@
 # Bugfix Memory
 
+## 2026-06-10 - Entrepreneur publication detail now reuses investor layout in close mode
+
+Type: bugfix
+Tags: feed, detail, entrepreneur, investor, navigation, ui
+Files: app/(protected)/feed/[id]/page.tsx, app/(protected)/feed/[id]/invest/page.tsx
+
+Summary:
+- The entrepreneur-facing publication detail was still using the older shared detail shell instead of the investor layout, so the two roles did not match visually.
+
+Details:
+- The entrepreneur route now redirects to the investor detail route with `mode=close`, so both roles use the same underlying detail screen.
+- In `mode=close`, the investor detail page skips the public-visibility gate, changes the CTA to `Close`, and routes back to `/feed` instead of opening the investment modal.
+- Verification: `npx eslint app/(protected)/feed/[id]/page.tsx app/(protected)/feed/[id]/invest/page.tsx` exits 0; `npm run build` exits 0.
+
 ## 2026-06-10 - Send recipient lookup now searches name, email, phone, and wallet
 
 Type: bugfix
