@@ -22,6 +22,13 @@ import {
   fetchRecipientDirectory,
   type RecipientDirectoryEntry,
 } from '@/utils/client/recipient-directory';
+import {
+  buildRecipientDirectorySearchQuery,
+  findRecipientByIdentifier,
+  getRecipientContactLabel,
+  getRecipientDisplayName,
+  normalizeRecipientIdentifier,
+} from '@/utils/recipient-resolution';
 import { useUserProfileSummary } from '@/lib/use-user-profile-summary';
 import { fetchCurrentUserTransactions } from '@/utils/client/current-user-transactions';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
@@ -31,6 +38,7 @@ type WalletTarget = {
   email: string | null;
   name: string | null;
   surname: string | null;
+  phone_number: string | null;
   avatar_url: string | null;
   country: string | null;
   role: 'investor' | 'entrepreneur';
@@ -58,30 +66,6 @@ const nameFrom = (target: Partial<WalletTarget> | null | undefined, fallback: st
   return fallback;
 };
 
-const normalizeRecipientIdentifier = (value: string | null | undefined) =>
-  value?.trim().toLowerCase() ?? '';
-
-const looksLikeEmail = (value: string | null | undefined) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? '');
-
-const findRecipientByIdentifier = <
-  T extends { email?: string | null; walletAddress?: string | null; wallet_address?: string | null }
->(
-  targets: T[],
-  identifier: string
-) => {
-  const normalized = normalizeRecipientIdentifier(identifier);
-  if (!normalized) return null;
-
-  return (
-    targets.find((target) => {
-      const email = normalizeRecipientIdentifier(target.email);
-      const wallet = (target.walletAddress ?? target.wallet_address ?? '').toLowerCase();
-      return email === normalized || wallet === normalized;
-    }) ?? null
-  );
-};
-
 const initialsFrom = (value: string) =>
   value
     .split(' ')
@@ -92,6 +76,18 @@ const initialsFrom = (value: string) =>
 
 const firstNameFromEmail = (email: string | null | undefined) =>
   email?.split('@')[0]?.replace(/[._-]+/g, ' ').trim().split(/\s+/)[0] ?? '';
+
+const getRecipientSelectionValue = (entry: {
+  email?: string | null;
+  phone_number?: string | null;
+  wallet_address?: string | null;
+}) =>
+  entry.email?.trim() || entry.phone_number?.trim() || entry.wallet_address?.trim() || '';
+
+const formatContactDisplay = (value: string) =>
+  value.startsWith('0x') && value.length > 16
+    ? `${value.slice(0, 8)}...${value.slice(-6)}`
+    : value;
 
 const hasEmbeddedPrivyWallet = (
   user:
@@ -298,6 +294,8 @@ export default function WalletTransferPage() {
   const [monto, setMonto] = useState('200.00');
   const [recentWallets, setRecentWallets] = useState<RecentWallet[]>([]);
   const [loadingRecentWallets, setLoadingRecentWallets] = useState(false);
+  const [recipientSuggestions, setRecipientSuggestions] = useState<RecipientDirectoryEntry[]>([]);
+  const [recipientSearchLoading, setRecipientSearchLoading] = useState(false);
   const [settingUpWallet, setSettingUpWallet] = useState(false);
   const [showAllWallets, setShowAllWallets] = useState(false);
   const alreadyHasEmbeddedWallet = useMemo(() => hasEmbeddedPrivyWallet(user), [user]);
@@ -310,8 +308,12 @@ export default function WalletTransferPage() {
           id: target.id,
           displayName: nameFrom(target, t('investAppUser')),
           email: target.email,
+          name: target.name,
+          surname: target.surname,
+          phone_number: target.phone_number,
           avatarUrl: target.avatar_url,
           walletAddress: target.wallet_address ?? '',
+          wallet_address: target.wallet_address ?? '',
         })),
     [t, walletTargets]
   );
@@ -463,26 +465,64 @@ export default function WalletTransferPage() {
     void loadRecentWallets();
   }, [loadRecentWallets]);
 
+  useEffect(() => {
+    const query = walletDestino.trim();
+    if (query.length < 2) {
+      setRecipientSuggestions([]);
+      setRecipientSearchLoading(false);
+      return;
+    }
+
+    const directoryQuery = buildRecipientDirectorySearchQuery(query);
+    if (!directoryQuery) {
+      setRecipientSuggestions([]);
+      setRecipientSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setRecipientSearchLoading(true);
+      try {
+        const { data, error } = await fetchRecipientDirectory(getAccessToken, directoryQuery);
+        if (error) throw new Error(error);
+        if (cancelled) return;
+
+        const uniqueResults = new Map<string, RecipientDirectoryEntry>();
+        ((data ?? []) as RecipientDirectoryEntry[])
+          .filter((entry) => entry.id !== user?.id)
+          .forEach((entry) => {
+            const key = `${entry.email ?? ''}:${entry.wallet_address ?? ''}`.toLowerCase();
+            if (!uniqueResults.has(key)) {
+              uniqueResults.set(key, entry);
+            }
+          });
+
+        setRecipientSuggestions(Array.from(uniqueResults.values()));
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Error searching recipients:', error);
+          setRecipientSuggestions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRecipientSearchLoading(false);
+        }
+      }
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [getAccessToken, walletDestino, user?.id]);
+
   const visibleWallets = useMemo(
     () => (showAllWallets ? recentWallets : recentWallets.slice(0, 1)),
     [recentWallets, showAllWallets]
   );
-  const resolvedRecipient = useMemo(
-    () => findRecipientByIdentifier([...recentWallets, ...mappedTargets], walletDestino),
-    [mappedTargets, recentWallets, walletDestino]
-  );
-  const resolvedDestinationWallet =
-    resolvedRecipient?.walletAddress ??
-    (walletDestino.trim().startsWith('0x') && walletDestino.trim().length === 42
-      ? walletDestino.trim()
-      : '');
-
   const amountNumber = Number(monto);
-  const canSubmit = Boolean(
-    (resolvedDestinationWallet || looksLikeEmail(walletDestino)) &&
-      Number(monto) > 0 &&
-      smartWalletAddress
-  );
+  const canSubmit = Boolean(walletDestino.trim() && Number(monto) > 0 && smartWalletAddress);
   const canRefresh = !loadingWallets && !loadingRecentWallets;
   const numericBalance = Number(balanceUSDC ?? 0);
   const safeBalanceValue = Number.isFinite(numericBalance) ? Math.max(numericBalance, 0) : 0;
@@ -606,6 +646,70 @@ export default function WalletTransferPage() {
                 />
               </div>
             </label>
+
+            {walletDestino.trim().length >= 2 ? (
+              <div className="rounded-2xl border border-[#E6E9F2] bg-white p-3 shadow-[0_14px_30px_rgba(21,28,44,0.04)]">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                    Suggestions
+                  </p>
+                  {recipientSearchLoading ? (
+                    <span className="text-xs font-semibold text-[#7C5CFF]">Searching...</span>
+                  ) : null}
+                </div>
+
+                {recipientSuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    {recipientSuggestions.slice(0, 4).map((entry) => {
+                      const displayName = getRecipientDisplayName(entry);
+                      const contactLabel = formatContactDisplay(getRecipientContactLabel(entry));
+                      const selected = Boolean(findRecipientByIdentifier([entry], walletDestino));
+
+                      return (
+                        <button
+                          key={`desktop-suggestion-${entry.id}`}
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                          }}
+                          onClick={() => setWalletDestino(getRecipientSelectionValue(entry))}
+                          className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                            selected
+                              ? 'border-[#D9CCFF] bg-[#F8F5FF]'
+                              : 'border-[#EEF1F7] bg-white hover:bg-[#F8F9FB]'
+                          }`}
+                        >
+                          <ContactAvatar avatarUrl={entry.avatar_url} label={displayName} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-bold text-[#111827]">
+                              {displayName}
+                            </span>
+                            <span className="mt-1 block truncate text-xs font-medium text-[#73809A]">
+                              {contactLabel}
+                            </span>
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold ${
+                              selected
+                                ? 'bg-[#6B39F4] text-white'
+                                : 'bg-[#F1ECFF] text-[#6B39F4]'
+                            }`}
+                          >
+                            {selected ? t('selected') : t('select')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : recipientSearchLoading ? (
+                  <div className="h-16 animate-pulse rounded-2xl bg-[#F8F9FB]" />
+                ) : (
+                  <p className="text-sm leading-6 text-slate-500">
+                    No matching contacts found yet.
+                  </p>
+                )}
+              </div>
+            ) : null}
 
             <label>
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
@@ -777,6 +881,70 @@ export default function WalletTransferPage() {
                 </button>
               </div>
             </div>
+
+            {walletDestino.trim().length >= 2 ? (
+              <div className="mt-3 rounded-[22px] border border-[#ECEAF4] bg-white/92 p-3 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
+                    Suggestions
+                  </p>
+                  {recipientSearchLoading ? (
+                    <span className="text-xs font-semibold text-[#7C5CFF]">Searching...</span>
+                  ) : null}
+                </div>
+
+                {recipientSuggestions.length > 0 ? (
+                  <div className="space-y-2">
+                    {recipientSuggestions.slice(0, 3).map((entry) => {
+                      const displayName = getRecipientDisplayName(entry);
+                      const contactLabel = formatContactDisplay(getRecipientContactLabel(entry));
+                      const selected = Boolean(findRecipientByIdentifier([entry], walletDestino));
+
+                      return (
+                        <button
+                          key={`mobile-suggestion-${entry.id}`}
+                          type="button"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                          }}
+                          onClick={() => setWalletDestino(getRecipientSelectionValue(entry))}
+                          className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
+                            selected
+                              ? 'border-[#D9CCFF] bg-[#FAF8FF]'
+                              : 'border-[#EEF1F7] bg-white hover:bg-[#F8F9FB]'
+                          }`}
+                        >
+                          <ContactAvatar avatarUrl={entry.avatar_url} label={displayName} />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-[#1C2340]">
+                              {displayName}
+                            </span>
+                            <span className="mt-1 block truncate text-xs text-slate-400">
+                              {contactLabel}
+                            </span>
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              selected
+                                ? 'bg-[#7C5CFF] text-white'
+                                : 'bg-[#F4EEFF] text-[#7C5CFF]'
+                            }`}
+                          >
+                            {selected ? t('selected') : t('select')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : recipientSearchLoading ? (
+                  <div className="h-16 animate-pulse rounded-[18px] bg-[#FAFAFE]" />
+                ) : (
+                  <p className="text-sm leading-6 text-slate-500">
+                    No matching contacts found yet.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </section>
 
           <section className="rounded-[26px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">

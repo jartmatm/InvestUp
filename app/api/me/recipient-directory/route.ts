@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAddress } from 'viem';
+import { buildPhoneSearchPattern } from '@/utils/recipient-resolution';
 import { extractBearerToken, verifyPrivyAccessToken } from '@/utils/server/privy';
 import { getSupabaseAdminClient } from '@/utils/server/supabase-admin';
 
@@ -10,7 +11,7 @@ const JSON_HEADERS = {
   'Cache-Control': 'private, no-store',
 } as const;
 
-const DIRECTORY_SELECT = 'id,email,name,surname,avatar_url,country,role,wallet_address';
+const DIRECTORY_SELECT = 'id,email,name,surname,phone_number,avatar_url,country,role,wallet_address';
 const ALLOWED_ROLES = new Set(['investor', 'entrepreneur']);
 
 const jsonNoStore = (body: unknown, init?: ResponseInit) => {
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
     const wallets = parseWallets(request.nextUrl.searchParams.get('wallets'));
     const ids = parseIds(request.nextUrl.searchParams.get('ids'));
     const limit = coerceLimit(request.nextUrl.searchParams.get('limit'));
+    const phoneSearchPattern = search ? buildPhoneSearchPattern(search) : null;
 
     let query = supabase
       .from('users')
@@ -104,17 +106,19 @@ export async function GET(request: NextRequest) {
         .limit(Math.min(wallets.length, limit));
     } else if (search) {
       const wildcardTerm = `%${search.replace(/\s+/g, '%')}%`;
-      query = query
-        .or(
-          [
-            `name.ilike.${wildcardTerm}`,
-            `surname.ilike.${wildcardTerm}`,
-            `email.ilike.${wildcardTerm}`,
-            `id.ilike.${wildcardTerm}`,
-            `wallet_address.ilike.${wildcardTerm}`,
-          ].join(',')
-        )
-        .limit(limit);
+      const searchFragments = [
+        `name.ilike.${wildcardTerm}`,
+        `surname.ilike.${wildcardTerm}`,
+        `email.ilike.${wildcardTerm}`,
+        `id.ilike.${wildcardTerm}`,
+        `wallet_address.ilike.${wildcardTerm}`,
+      ];
+
+      if (phoneSearchPattern) {
+        searchFragments.push(`phone_number.ilike.${phoneSearchPattern}`);
+      }
+
+      query = query.or(searchFragments.join(',')).limit(limit);
     } else {
       query = query.limit(limit);
     }

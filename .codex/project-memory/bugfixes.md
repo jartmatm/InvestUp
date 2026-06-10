@@ -1,5 +1,20 @@
 # Bugfix Memory
 
+## 2026-06-10 - Send recipient lookup now searches name, email, phone, and wallet
+
+Type: bugfix
+Tags: send, recipient-directory, autocomplete, wallet, phone
+Files: app/(protected)/invest/wallet/page.tsx, lib/investapp-context.tsx, app/api/me/recipient-directory/route.ts, utils/client/recipient-directory.ts, utils/recipient-resolution.ts, messages/en/send.json
+
+Summary:
+- The Send screen stopped resolving recipients unless the input matched an exact email or wallet, so suggestions disappeared and full manual entries were rejected.
+
+Details:
+- Added a shared recipient-resolution helper so the screen and the send flow resolve recipients the same way.
+- Recipient directory search now returns `phone_number` and can match phone digits as well as name/email/wallet text.
+- The desktop and mobile Send screens now show live suggestions while typing and allow submission once a recipient is entered, with final resolution handled in the shared send helper.
+- Verification: `npx eslint app/(protected)/invest/wallet/page.tsx lib/investapp-context.tsx app/api/me/recipient-directory/route.ts utils/client/recipient-directory.ts utils/recipient-resolution.ts` exits 0; `npm run build` exits 0.
+
 ## 2026-06-12 - Withdrawable balance now tracks available minus gas
 
 Type: bugfix

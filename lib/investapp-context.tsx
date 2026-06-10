@@ -17,7 +17,7 @@ import {
   useWallets,
 } from '@privy-io/react-auth';
 import { useSmartWallets } from '@privy-io/react-auth/smart-wallets';
-import type { PublicClient } from 'viem';
+import { isAddress, type PublicClient } from 'viem';
 import { polygon } from 'viem/chains';
 import { clearAuthenticatedUserBrowserCache } from '@/lib/browser-user-cache';
 import { calculateInvestmentProjection } from '@/lib/investment-math';
@@ -54,6 +54,10 @@ import {
 } from '@/utils/client/current-user-profile';
 import { syncCurrentUserWalletBalance } from '@/utils/client/current-user-wallet-balance';
 import type { CurrentUserTransaction } from '@/utils/transactions/current-user';
+import {
+  buildRecipientDirectorySearchQuery,
+  findRecipientByIdentifier,
+} from '@/utils/recipient-resolution';
 
 type FrontRole = 'inversor' | 'emprendedor';
 type FaseApp = 'loading' | 'login' | 'onboarding' | 'dashboard';
@@ -63,6 +67,7 @@ type UserWalletTarget = {
   email: string | null;
   name: string | null;
   surname: string | null;
+  phone_number: string | null;
   avatar_url: string | null;
   country: string | null;
   role: 'investor' | 'entrepreneur';
@@ -363,33 +368,11 @@ const normalizePendingInvestment = (
   return null;
 };
 
-const normalizeRecipientIdentifier = (value: string | null | undefined) =>
-  value?.trim().toLowerCase() ?? '';
-
-const looksLikeEmail = (value: string | null | undefined) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value?.trim() ?? '');
-
 const getWalletTargetDisplayName = (target: Pick<UserWalletTarget, 'name' | 'surname' | 'email'>) => {
   const full = `${target.name ?? ''} ${target.surname ?? ''}`.trim();
   if (full) return full;
   if (target.email?.trim()) return target.email.trim();
   return 'Recipient';
-};
-
-const findWalletTargetByIdentifier = (
-  targets: UserWalletTarget[],
-  identifier: string
-) => {
-  const normalized = normalizeRecipientIdentifier(identifier);
-  if (!normalized) return null;
-
-  return (
-    targets.find((target) => {
-      const email = normalizeRecipientIdentifier(target.email);
-      const wallet = target.wallet_address?.toLowerCase() ?? '';
-      return email === normalized || wallet === normalized;
-    }) ?? null
-  );
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -1056,18 +1039,18 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
       }
 
       const destinationValue = destino.trim();
-      let receiverTarget = findWalletTargetByIdentifier(walletTargets, destinationValue);
-      if (!receiverTarget && looksLikeEmail(destinationValue)) {
-        const { data, error } = await fetchRecipientDirectory(getAccessToken, {
-          email: destinationValue,
-          limit: 1,
-        });
+      let receiverTarget = findRecipientByIdentifier(walletTargets, destinationValue);
+      if (!receiverTarget) {
+        const directoryQuery = buildRecipientDirectorySearchQuery(destinationValue);
+        if (directoryQuery) {
+          const { data, error } = await fetchRecipientDirectory(getAccessToken, directoryQuery);
+          if (error) throw new Error(error);
 
-        if (error) throw new Error(error);
-        receiverTarget = ((data ?? [])[0] as UserWalletTarget | undefined) ?? null;
+          const directoryTargets = (data ?? []) as UserWalletTarget[];
+          receiverTarget = findRecipientByIdentifier(directoryTargets, destinationValue);
+        }
       }
-      const directWalletAddress =
-        destinationValue.startsWith('0x') && destinationValue.length === 42 ? destinationValue : '';
+      const directWalletAddress = isAddress(destinationValue) ? destinationValue : '';
       const resolvedDestinationWallet = receiverTarget?.wallet_address ?? directWalletAddress;
       const pendingInvestment =
         rolSeleccionado === 'inversor'
@@ -1079,11 +1062,8 @@ export function InvestAppProvider({ children }: { children: React.ReactNode }) {
         pendingInvestment ? 'investment' : options?.movementType ?? fallbackMovementType;
 
       if (!resolvedDestinationWallet) {
-        const isEmailDestination = destinationValue.includes('@');
         alert(
-          isEmailDestination
-            ? 'We could not find an InvestApp user with that email.'
-            : 'Invalid recipient email or linked wallet.'
+          'We could not resolve that recipient. Try the full email, phone number, wallet address, or pick a suggestion.'
         );
         return { success: false, txHash: null };
       }

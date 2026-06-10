@@ -7,6 +7,7 @@ export type RecipientDirectoryEntry = {
   email: string | null;
   name: string | null;
   surname: string | null;
+  phone_number: string | null;
   avatar_url: string | null;
   country: string | null;
   role: 'investor' | 'entrepreneur';
