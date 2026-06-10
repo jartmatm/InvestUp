@@ -100,10 +100,10 @@ Tags: ledger, balance, home, withdraw, wallet
 Files: lib/investapp-context.tsx, app/(protected)/home/page.tsx, app/(protected)/withdraw/page.tsx
 
 Summary:
-- Home and Withdraw now display the live on-chain USDC wallet balance.
-- Outgoing transfers still consult the internal ledger first and are blocked when locked or pending balances exist.
+- Home displays the live on-chain USDC wallet balance net of internal `locked_balance` and `pending_balance` holds.
+- Withdraw keeps using `withdrawable_balance` as the primary safe limit.
 
 Details:
-- The visible balance comes from the wallet balance refreshed from the blockchain, so the user sees the real funds in the wallet.
-- `enviarUSDC` fails closed when the internal ledger reports locked or pending balances, and it caps outgoing amounts against the ledger's available balance before checking the chain balance.
+- The visible balance starts from the wallet balance refreshed from the blockchain and subtracts internal ledger holds so Home shows the effective usable amount.
+- `enviarUSDC` fails closed when the internal ledger reports locked or pending balances, and it still validates the on-chain balance before sending.
 - Withdraw continues to use `withdrawable_balance` as the primary safe limit, with the gas reserve remaining as an additional guard.
