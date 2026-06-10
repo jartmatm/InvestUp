@@ -13,7 +13,6 @@ import {
 import { syncInternalLedgerProjection } from '@/utils/server/internal-ledger-projections';
 import type {
   InternalAccountBalance,
-  InternalBalanceBuckets,
   InternalLedgerEntry,
   InternalLedgerParticipant,
   InternalLedgerProjectionPayload,
@@ -28,14 +27,6 @@ const INTERNAL_CONTRACT_SELECT =
 
 const INTERNAL_LEDGER_ENTRY_SELECT =
   'id,created_at,event_key,source_table,source_id,lifecycle_stage,wallet_action_id,entry_type,reference_type,reference_id,credit_id,project_id,primary_user_id,counterparty_user_id,affected_user_ids,amount,currency,postings,participants,balance_deltas,projection_payload,metadata';
-
-const EMPTY_BUCKETS: InternalBalanceBuckets = {
-  available_balance: 0,
-  locked_balance: 0,
-  pending_balance: 0,
-  withdrawable_balance: 0,
-  invested_balance: 0,
-};
 
 const asText = (value: unknown) =>
   typeof value === 'string' && value.trim().length > 0 ? value : null;
@@ -629,7 +620,17 @@ export async function syncInternalBalanceForUser(userId: string) {
 
   const walletBalance = roundAmount(asNumber(walletSyncResult.available_wallet_usd));
 
-  const baseBalances = entries.reduce(
+  const { data: storedBalanceRow, error: storedBalanceError } = await supabase
+    .from('internal_account_balances')
+    .select('currency,available_balance,locked_balance,pending_balance,withdrawable_balance,invested_balance')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (storedBalanceError) {
+    throw new Error(storedBalanceError.message);
+  }
+
+  const fallbackBalances = entries.reduce(
     (totals, entry) => {
       const delta = getUserDeltaForEntry(entry, userId);
       totals.available_balance = roundAmount(
@@ -640,28 +641,49 @@ export async function syncInternalBalanceForUser(userId: string) {
       totals.withdrawable_balance = roundAmount(
         totals.withdrawable_balance + asNumber(delta.withdrawable_balance)
       );
-      totals.invested_balance = roundAmount(totals.invested_balance + asNumber(delta.invested_balance));
+      totals.invested_balance = roundAmount(
+        totals.invested_balance + asNumber(delta.invested_balance)
+      );
       return totals;
     },
-    { ...EMPTY_BUCKETS }
+    {
+      available_balance: 0,
+      locked_balance: 0,
+      pending_balance: 0,
+      withdrawable_balance: 0,
+      invested_balance: 0,
+    }
+  );
+
+  const lockedBalance = storedBalanceRow
+    ? roundAmount(asNumber(storedBalanceRow.locked_balance))
+    : fallbackBalances.locked_balance;
+  const pendingBalance = storedBalanceRow
+    ? roundAmount(asNumber(storedBalanceRow.pending_balance))
+    : fallbackBalances.pending_balance;
+  const withdrawableBalance = storedBalanceRow
+    ? roundAmount(asNumber(storedBalanceRow.withdrawable_balance))
+    : fallbackBalances.withdrawable_balance;
+  const investedBalance = storedBalanceRow
+    ? roundAmount(asNumber(storedBalanceRow.invested_balance))
+    : fallbackBalances.invested_balance;
+  const availableBalance = roundAmount(
+    Math.max(walletBalance - lockedBalance - pendingBalance, 0)
   );
 
   const movementHistory = entries
     .slice(0, 25)
     .map((entry) => toMovementHistoryItem(entry, userId));
   const relatedUsers = buildRelatedUsers(entries, userId);
-  const availableBalance = roundAmount(
-    Math.max(walletBalance - baseBalances.locked_balance - baseBalances.pending_balance, 0)
-  );
 
   const balancePayload: InternalAccountBalance = {
     user_id: userId,
-    currency: 'USD',
+    currency: storedBalanceRow?.currency ?? 'USD',
     available_balance: availableBalance,
-    locked_balance: baseBalances.locked_balance,
-    pending_balance: baseBalances.pending_balance,
-    withdrawable_balance: baseBalances.withdrawable_balance,
-    invested_balance: baseBalances.invested_balance,
+    locked_balance: lockedBalance,
+    pending_balance: pendingBalance,
+    withdrawable_balance: withdrawableBalance,
+    invested_balance: investedBalance,
     movement_history: movementHistory,
     related_users: relatedUsers,
     updated_at: new Date().toISOString(),

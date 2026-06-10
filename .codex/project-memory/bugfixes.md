@@ -1,5 +1,19 @@
 # Bugfix Memory
 
+## 2026-06-11 - Internal available balance backfill from raw wallet
+
+Type: bugfix
+Tags: ledger, wallet, supabase, backfill
+Files: utils/server/internal-ledger.ts, scripts/backfill-internal-account-balances.mjs, supabase/migrations/20260611_internal_account_balances_available_balance.sql
+
+Summary:
+- `internal_account_balances.available_balance` was lagging behind the raw Polygon wallet cache, so the home screen could show `0.000` even when the wallet had funds.
+
+Details:
+- The visible available balance must be derived from `users.available_wallet_usd` minus the current locked and pending holds.
+- A backfill script now rewrites the live table rows using that formula.
+- `syncInternalBalanceForUser` now reads the stored ledger snapshot instead of rebuilding the visible balance from a partial ledger slice.
+
 ## 2026-06-10 - Wallet balance backfill now queries Polygon
 
 Type: bugfix

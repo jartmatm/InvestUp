@@ -1,5 +1,19 @@
 # Architecture Memory
 
+## 2026-06-11 - Internal available balance follows raw wallet cache
+
+Type: architecture
+Tags: ledger, wallet, supabase, sync
+Files: utils/server/internal-ledger.ts, scripts/backfill-internal-account-balances.mjs, supabase/migrations/20260611_internal_account_balances_available_balance.sql
+
+Summary:
+- `internal_account_balances.available_balance` is now derived from the private raw wallet cache in `users.available_wallet_usd` minus the current locked and pending holds.
+
+Details:
+- The raw wallet cache remains the private on-chain source of truth for wallet funds.
+- Home and other visible balance surfaces should read the internal ledger snapshot, not the raw cache directly.
+- A backfill script exists for live data corrections, and a migration records the same formula for fresh database setups.
+
 ## Stack
 
 - Next.js 16 App Router, React 19, TypeScript.
