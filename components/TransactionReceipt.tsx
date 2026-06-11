@@ -253,10 +253,10 @@ export default function TransactionReceipt() {
     ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, 118);
+    ctx.fillRect(0, 0, width, 132);
     ctx.fillStyle = '#e9edf5';
-    ctx.fillRect(0, 118, width, 2);
-    drawWordmark(ctx, width / 2, 76, 'dark');
+    ctx.fillRect(0, 132, width, 2);
+    drawWordmark(ctx, width / 2, 84, 'dark');
 
     ctx.strokeStyle = '#dbe2ef';
     ctx.lineWidth = 5;
@@ -360,37 +360,37 @@ export default function TransactionReceipt() {
       }
 
       ctx.fillStyle = '#667085';
-      ctx.font = '500 24px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.font = '500 22px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(detail.label, labelX, cursorY);
 
       ctx.textAlign = 'right';
       if (detail.tone === 'amount') {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '700 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.font = '700 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       } else if (detail.tone === 'status') {
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '500 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.fillStyle = '#334155';
+        ctx.font = '500 26px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       } else if (detail.label === t('transactionHash')) {
         ctx.fillStyle = '#334155';
-        ctx.font = '500 23px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.font = '500 21px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
       } else {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '500 26px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.font = '500 24px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       }
 
-      const maxWidth = detail.label === t('transactionHash') ? 500 : 560;
+      const maxWidth = detail.label === t('transactionHash') ? 520 : 600;
       const lines = detail.lines.flatMap((line) =>
         splitValue(line, detail.label === t('transactionHash') ? 28 : 22).flatMap((chunk) =>
           wrapLines(ctx, chunk, maxWidth)
         )
       );
       lines.forEach((line, lineIndex) => {
-        const lineY = cursorY + lineIndex * (detail.label === t('transactionHash') ? 28 : 30);
+        const lineY = cursorY + lineIndex * (detail.label === t('transactionHash') ? 26 : 28);
         ctx.fillText(line, valueX, lineY);
       });
 
-      cursorY += detail.label === t('transactionHash') ? Math.max(64, lines.length * 30 + 8) : 78;
+      cursorY += detail.label === t('transactionHash') ? Math.max(58, lines.length * 28 + 6) : 72;
     });
 
     const buttonY = cardY + cardH + 78;
@@ -496,7 +496,7 @@ export default function TransactionReceipt() {
           <section className="mt-6 flex flex-col items-center text-center">
             <div className="relative grid size-[180px] place-items-center">
               <div className="relative h-[160px] w-[160px]">
-                <Lottie animationData={receiptCheckAnimation} autoplay loop={false} />
+                <Lottie animationData={receiptCheckAnimation} autoplay loop />
               </div>
             </div>
 
@@ -508,29 +508,29 @@ export default function TransactionReceipt() {
             </p>
           </section>
 
-          <section className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
+          <section className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-none">
             {detailRows.map((detail, index) => (
               <div
                 key={detail.label}
-                className={`grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)] gap-4 px-5 py-4 sm:px-6 ${
+                className={`grid grid-cols-[minmax(0,0.72fr)_minmax(0,1.48fr)] gap-3 px-5 py-4 sm:px-6 ${
                   index > 0 ? 'border-t border-slate-100' : ''
                 }`}
               >
-                <div className="pt-1 text-[0.82rem] font-medium text-slate-500 sm:text-[0.9rem]">
+                <div className="pt-1 text-[0.76rem] font-medium text-slate-500 sm:text-[0.84rem]">
                   {detail.label}
                 </div>
 
                 <div className="min-w-0 text-right">
                   {detail.tone === 'amount' ? (
-                    <p className="text-[0.92rem] font-semibold tracking-[-0.03em] text-slate-950 sm:text-[1.02rem]">
+                    <p className="text-[0.86rem] font-semibold tracking-[-0.03em] text-slate-950 sm:text-[0.96rem]">
                       {detail.lines[0] || '-'}
                     </p>
                   ) : detail.tone === 'status' ? (
-                    <p className="text-[0.88rem] font-medium leading-6 text-slate-950 sm:text-[0.98rem]">
+                    <p className="text-[0.8rem] font-normal leading-5 text-slate-700 sm:text-[0.9rem]">
                       {detail.lines[0] || '-'}
                     </p>
                   ) : detail.label === t('transactionHash') ? (
-                    <p className="break-all text-[0.82rem] leading-5 font-medium text-slate-700 sm:text-[0.9rem]">
+                    <p className="break-all text-[0.74rem] leading-5 font-medium text-slate-700 sm:text-[0.82rem]">
                       {detail.lines.map((line, lineIndex) => (
                         <span key={`${detail.label}-${lineIndex}`} className="block">
                           {line}
@@ -538,16 +538,16 @@ export default function TransactionReceipt() {
                       ))}
                     </p>
                   ) : detail.lines.length > 1 ? (
-                    <div className="space-y-1">
-                      <p className="text-[0.9rem] font-semibold leading-5 tracking-[-0.02em] text-slate-950 sm:text-[0.98rem]">
+                    <div className="space-y-0.5">
+                      <p className="text-[0.84rem] font-semibold leading-5 tracking-[-0.02em] text-slate-950 sm:text-[0.92rem]">
                         {detail.lines[0]}
                       </p>
-                      <p className="break-all text-[0.78rem] leading-5 text-slate-500 sm:text-[0.86rem]">
+                      <p className="break-all text-[0.72rem] leading-4 text-slate-500 sm:text-[0.8rem]">
                         {detail.lines[1]}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-[0.9rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950 sm:text-[0.98rem]">
+                    <p className="text-[0.84rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950 sm:text-[0.92rem]">
                       {detail.lines[0] || '-'}
                     </p>
                   )}
