@@ -116,11 +116,16 @@ const drawRoundedRect = (
   ctx.closePath();
 };
 
-const drawWordmark = (ctx: CanvasRenderingContext2D, centerX: number, baselineY: number) => {
+const drawWordmark = (
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  baselineY: number,
+  variant: 'dark' | 'light' = 'dark'
+) => {
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
-  ctx.fillStyle = '#0f172a';
-  ctx.font = '700 64px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillStyle = variant === 'light' ? '#ffffff' : '#0f172a';
+  ctx.font = '700 60px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
   const investWidth = ctx.measureText('Invest').width;
   ctx.fillText('Invest', centerX - investWidth / 2, baselineY);
 
@@ -133,36 +138,6 @@ const drawWordmark = (ctx: CanvasRenderingContext2D, centerX: number, baselineY:
   ctx.fillStyle = '#7c3aed';
   ctx.arc(appX + appWidth + 16, baselineY - 20, 12, 0, Math.PI * 2);
   ctx.fill();
-};
-
-const drawReceiptChip = (
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  text: string,
-  options: { fill: string; textColor: string; dotColor?: string }
-) => {
-  ctx.save();
-  ctx.font = '600 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  const textWidth = ctx.measureText(text).width;
-  const chipWidth = textWidth + 72;
-  const chipHeight = 58;
-
-  drawRoundedRect(ctx, x, y, chipWidth, chipHeight, 999);
-  ctx.fillStyle = options.fill;
-  ctx.fill();
-
-  if (options.dotColor) {
-    ctx.beginPath();
-    ctx.fillStyle = options.dotColor;
-    ctx.arc(x + 30, y + chipHeight / 2, 8, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.fillStyle = options.textColor;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, x + 46, y + chipHeight / 2 + 1);
-  ctx.restore();
 };
 
 export default function TransactionReceipt() {
@@ -274,25 +249,14 @@ export default function TransactionReceipt() {
     const width = CANVAS_WIDTH;
     const height = CANVAS_HEIGHT;
 
-    const background = ctx.createLinearGradient(0, 0, 0, height);
-    background.addColorStop(0, '#f7f8fc');
-    background.addColorStop(0.55, '#f8f9ff');
-    background.addColorStop(1, '#eef1f9');
-    ctx.fillStyle = background;
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
 
-    const topGlow = ctx.createRadialGradient(width / 2, 190, 0, width / 2, 190, 360);
-    topGlow.addColorStop(0, 'rgba(124, 58, 237, 0.18)');
-    topGlow.addColorStop(0.65, 'rgba(124, 58, 237, 0.06)');
-    topGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
-    ctx.fillStyle = topGlow;
-    ctx.fillRect(0, 0, width, 560);
-
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, 118);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillStyle = '#e9edf5';
     ctx.fillRect(0, 118, width, 2);
-    drawWordmark(ctx, width / 2, 76);
+    drawWordmark(ctx, width / 2, 76, 'dark');
 
     ctx.strokeStyle = '#dbe2ef';
     ctx.lineWidth = 5;
@@ -317,44 +281,38 @@ export default function TransactionReceipt() {
 
     const orbCenterX = width / 2;
     const orbCenterY = 362;
-    const outerGlow = ctx.createRadialGradient(orbCenterX, orbCenterY, 70, orbCenterX, orbCenterY, 212);
-    outerGlow.addColorStop(0, 'rgba(124, 58, 237, 0.22)');
-    outerGlow.addColorStop(0.55, 'rgba(124, 58, 237, 0.12)');
+    const outerGlow = ctx.createRadialGradient(orbCenterX, orbCenterY, 60, orbCenterX, orbCenterY, 170);
+    outerGlow.addColorStop(0, 'rgba(124, 58, 237, 0.18)');
+    outerGlow.addColorStop(0.55, 'rgba(124, 58, 237, 0.08)');
     outerGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
     ctx.fillStyle = outerGlow;
     ctx.beginPath();
-    ctx.arc(orbCenterX, orbCenterY, 212, 0, Math.PI * 2);
+    ctx.arc(orbCenterX, orbCenterY, 170, 0, Math.PI * 2);
     ctx.fill();
 
-    const innerRing = ctx.createRadialGradient(orbCenterX, orbCenterY, 48, orbCenterX, orbCenterY, 110);
-    innerRing.addColorStop(0, '#d7c2ff');
-    innerRing.addColorStop(0.42, '#9f69f5');
-    innerRing.addColorStop(1, '#6d28d9');
-    ctx.fillStyle = innerRing;
+    const badgeGradient = ctx.createRadialGradient(orbCenterX, orbCenterY, 24, orbCenterX, orbCenterY, 90);
+    badgeGradient.addColorStop(0, '#d7c2ff');
+    badgeGradient.addColorStop(0.45, '#a56af8');
+    badgeGradient.addColorStop(1, '#6d28d9');
+    ctx.fillStyle = badgeGradient;
     ctx.beginPath();
-    ctx.arc(orbCenterX, orbCenterY, 110, 0, Math.PI * 2);
+    ctx.arc(orbCenterX, orbCenterY, 90, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = 'rgba(255,255,255,0.42)';
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 8;
     ctx.beginPath();
-    ctx.arc(orbCenterX, orbCenterY, 144, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(124, 58, 237, 0.2)';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.arc(orbCenterX, orbCenterY, 170, 0, Math.PI * 2);
+    ctx.arc(orbCenterX, orbCenterY, 122, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 24;
+    ctx.lineWidth = 18;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(orbCenterX - 60, orbCenterY + 4);
-    ctx.lineTo(orbCenterX - 14, orbCenterY + 46);
-    ctx.lineTo(orbCenterX + 66, orbCenterY - 38);
+    ctx.moveTo(orbCenterX - 44, orbCenterY + 2);
+    ctx.lineTo(orbCenterX - 10, orbCenterY + 34);
+    ctx.lineTo(orbCenterX + 44, orbCenterY - 24);
     ctx.stroke();
 
     ctx.fillStyle = '#0f172a';
@@ -372,9 +330,9 @@ export default function TransactionReceipt() {
     const cardW = width - cardX * 2;
     const cardH = 858;
 
-    ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
-    ctx.shadowBlur = 42;
-    ctx.shadowOffsetY = 22;
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.1)';
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 18;
     ctx.fillStyle = '#ffffff';
     drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 32);
     ctx.fill();
@@ -402,44 +360,37 @@ export default function TransactionReceipt() {
       }
 
       ctx.fillStyle = '#667085';
-      ctx.font = '500 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.font = '500 24px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(detail.label, labelX, cursorY);
 
       ctx.textAlign = 'right';
-      if (detail.tone === 'status') {
-        drawReceiptChip(ctx, valueX - 220, cursorY - 30, detail.lines[0] || '-', {
-          fill: '#eaf7ee',
-          textColor: '#22a455',
-          dotColor: '#22a455',
-        });
-        cursorY += 94;
-        return;
-      }
-
       if (detail.tone === 'amount') {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '700 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.font = '700 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      } else if (detail.tone === 'status') {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '500 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       } else if (detail.label === t('transactionHash')) {
         ctx.fillStyle = '#334155';
-        ctx.font = '500 26px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        ctx.font = '500 23px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
       } else {
         ctx.fillStyle = '#0f172a';
-        ctx.font = '500 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.font = '500 26px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       }
 
-      const maxWidth = 600;
+      const maxWidth = detail.label === t('transactionHash') ? 500 : 560;
       const lines = detail.lines.flatMap((line) =>
-        splitValue(line, detail.label === t('transactionHash') ? 34 : 28).flatMap((chunk) =>
+        splitValue(line, detail.label === t('transactionHash') ? 28 : 22).flatMap((chunk) =>
           wrapLines(ctx, chunk, maxWidth)
         )
       );
       lines.forEach((line, lineIndex) => {
-        const lineY = cursorY + lineIndex * (detail.label === t('transactionHash') ? 30 : 34);
+        const lineY = cursorY + lineIndex * (detail.label === t('transactionHash') ? 28 : 30);
         ctx.fillText(line, valueX, lineY);
       });
 
-      cursorY += detail.label === t('transactionHash') ? Math.max(72, lines.length * 34 + 8) : 88;
+      cursorY += detail.label === t('transactionHash') ? Math.max(64, lines.length * 30 + 8) : 78;
     });
 
     const buttonY = cardY + cardH + 78;
@@ -459,10 +410,10 @@ export default function TransactionReceipt() {
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
 
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.fillStyle = 'rgba(255,255,255,0.94)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '600 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.font = '600 32px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillText('Save receipt', width / 2 + 24, buttonY + buttonH / 2 + 2);
 
     ctx.strokeStyle = 'rgba(255,255,255,0.96)';
@@ -512,14 +463,14 @@ export default function TransactionReceipt() {
   const detailRows = receiptDetails;
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.12),_transparent_36%),linear-gradient(180deg,_#f7f8fc_0%,_#eef2f9_100%)] text-slate-950">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-white text-slate-950">
       <div className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))]">
         <header className="relative flex items-center justify-center py-3">
           <button
             type="button"
             onClick={clearReceipt}
             aria-label={commonT('close')}
-            className="absolute left-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
+            className="absolute left-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
           >
             <Close size={24} />
           </button>
@@ -535,7 +486,7 @@ export default function TransactionReceipt() {
               void handleExportReceipt('share');
             }}
             aria-label={commonT('share')}
-            className="absolute right-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
+            className="absolute right-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
           >
             <Share1 size={22} />
           </button>
@@ -543,20 +494,16 @@ export default function TransactionReceipt() {
 
         <main className="flex flex-1 flex-col">
           <section className="mt-6 flex flex-col items-center text-center">
-            <div className="relative grid size-[228px] place-items-center">
-              <div className="absolute inset-0 rounded-full border border-[#7c3aed]/10" />
-              <div className="absolute inset-5 rounded-full border border-[#7c3aed]/16 shadow-[0_0_0_1px_rgba(124,58,237,0.02)]" />
-              <div className="absolute inset-9 rounded-full bg-[radial-gradient(circle_at_30%_30%,#d8c0ff_0%,#9b61f5_42%,#6d28d9_100%)] shadow-[0_28px_70px_rgba(109,40,217,0.28)]" />
-              <div className="absolute inset-[38px] rounded-full border border-white/38 bg-white/10" />
+            <div className="relative grid size-[180px] place-items-center">
               <div className="relative h-[160px] w-[160px]">
                 <Lottie animationData={receiptCheckAnimation} autoplay loop={false} />
               </div>
             </div>
 
-            <h1 className="mt-6 text-[2.15rem] font-semibold leading-[1.05] tracking-[-0.06em] text-slate-950 sm:text-[2.45rem]">
+            <h1 className="mt-6 text-[2.05rem] font-semibold leading-[1.05] tracking-[-0.06em] text-slate-950 sm:text-[2.3rem]">
               {receiptTitle}
             </h1>
-            <p className="mt-3 max-w-[28rem] text-[1.02rem] leading-7 text-slate-500 sm:text-[1.08rem]">
+            <p className="mt-3 max-w-[28rem] text-[0.98rem] leading-7 text-slate-500 sm:text-[1.04rem]">
               {receiptSubtitle}
             </p>
           </section>
@@ -565,26 +512,25 @@ export default function TransactionReceipt() {
             {detailRows.map((detail, index) => (
               <div
                 key={detail.label}
-                className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 px-5 py-4 sm:px-6 ${
+                className={`grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.35fr)] gap-4 px-5 py-4 sm:px-6 ${
                   index > 0 ? 'border-t border-slate-100' : ''
                 }`}
               >
-                <div className="pt-1 text-[0.95rem] font-medium text-slate-500">
+                <div className="pt-1 text-[0.82rem] font-medium text-slate-500 sm:text-[0.9rem]">
                   {detail.label}
                 </div>
 
                 <div className="min-w-0 text-right">
-                  {detail.tone === 'status' ? (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-[0.95rem] font-medium text-emerald-600">
-                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  {detail.tone === 'amount' ? (
+                    <p className="text-[0.92rem] font-semibold tracking-[-0.03em] text-slate-950 sm:text-[1.02rem]">
                       {detail.lines[0] || '-'}
-                    </span>
-                  ) : detail.tone === 'amount' ? (
-                    <p className="text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-950">
+                    </p>
+                  ) : detail.tone === 'status' ? (
+                    <p className="text-[0.88rem] font-medium leading-6 text-slate-950 sm:text-[0.98rem]">
                       {detail.lines[0] || '-'}
                     </p>
                   ) : detail.label === t('transactionHash') ? (
-                    <p className="break-all text-[0.92rem] leading-6 font-medium text-slate-700">
+                    <p className="break-all text-[0.82rem] leading-5 font-medium text-slate-700 sm:text-[0.9rem]">
                       {detail.lines.map((line, lineIndex) => (
                         <span key={`${detail.label}-${lineIndex}`} className="block">
                           {line}
@@ -593,15 +539,15 @@ export default function TransactionReceipt() {
                     </p>
                   ) : detail.lines.length > 1 ? (
                     <div className="space-y-1">
-                      <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
+                      <p className="text-[0.9rem] font-semibold leading-5 tracking-[-0.02em] text-slate-950 sm:text-[0.98rem]">
                         {detail.lines[0]}
                       </p>
-                      <p className="text-[0.92rem] leading-5 text-slate-500">
+                      <p className="break-all text-[0.78rem] leading-5 text-slate-500 sm:text-[0.86rem]">
                         {detail.lines[1]}
                       </p>
                     </div>
                   ) : (
-                    <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
+                    <p className="text-[0.9rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950 sm:text-[0.98rem]">
                       {detail.lines[0] || '-'}
                     </p>
                   )}
