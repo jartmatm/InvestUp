@@ -1,33 +1,168 @@
 'use client';
 
-import NextImage from 'next/image';
-import { useMemo, useState } from 'react';
+import Lottie from 'lottie-react';
+import { Close, Download1, Share1 } from '@tailgrids/icons';
 import { useLocale, useTranslations } from 'next-intl';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import receiptCheckAnimation from '@/components/animations/transaction-receipt-check.json';
 import { useInvestApp } from '@/lib/investapp-context';
 
-const getStatusKey = (status: string) => {
+type ReceiptDetail = {
+  label: string;
+  lines: string[];
+  tone?: 'default' | 'status' | 'amount';
+};
+
+const CANVAS_WIDTH = 1080;
+const CANVAS_HEIGHT = 1920;
+
+const getReceiptTitle = (type: string) => {
+  if (type === 'investment') return 'Invest completed';
+  if (type === 'repayment') return 'Repayment Completed';
+  return 'Transfer completed';
+};
+
+const getReceiptSubtitle = (type: string) => {
+  if (type === 'investment') return 'Your investment was successful.';
+  if (type === 'repayment') return 'Your repayment was successful.';
+  return 'Your transaction was successful.';
+};
+
+const getReceiptTypeLabel = (type: string, t: ReturnType<typeof useTranslations>) => {
+  if (type === 'investment') return t('typeInvestment');
+  if (type === 'repayment') return t('typeRepayment');
+  if (type === 'withdrawal') return t('typeWithdrawal');
+  return t('typeTransfer');
+};
+
+const getReceiptStatusLabel = (status: string, t: ReturnType<typeof useTranslations>) => {
   const key = status.toLowerCase();
   if (key === 'completed' || key === 'confirmed' || key === 'success' || key === 'approved') {
-    return 'statusCompleted';
+    return t('statusCompleted');
   }
-  if (key === 'failed' || key === 'rejected') return 'statusFailed';
-  if (key === 'pending') return 'statusPending';
-  if (key === 'submitted') return 'statusSubmitted';
-  return null;
+  if (key === 'failed' || key === 'rejected') return t('statusFailed');
+  if (key === 'pending') return t('statusPending');
+  if (key === 'submitted') return t('statusSubmitted');
+  return status;
 };
 
-const getTypeKey = (type: string) => {
-  if (type === 'investment') return 'typeInvestment';
-  if (type === 'repayment') return 'typeRepayment';
-  if (type === 'withdrawal') return 'typeWithdrawal';
-  if (type === 'transfer') return 'typeTransfer';
-  return null;
+const formatReceiptAmount = (amount: string, locale: string) => {
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount)) return amount;
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numericAmount);
 };
 
-const splitValue = (value: string) => {
+const splitValue = (value: string, maxLength = 34) => {
   if (!value) return ['-'];
-  if (value.length <= 32) return [value];
-  return value.match(/.{1,32}/g) ?? [value];
+  if (value.length <= maxLength) return [value];
+  return value.match(new RegExp(`.{1,${maxLength}}`, 'g')) ?? [value];
+};
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+const wrapLines = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return ['-'];
+
+  const lines: string[] = [];
+  let current = words[0];
+
+  for (let index = 1; index < words.length; index += 1) {
+    const next = `${current} ${words[index]}`;
+    if (ctx.measureText(next).width <= maxWidth) {
+      current = next;
+    } else {
+      lines.push(current);
+      current = words[index];
+    }
+  }
+
+  lines.push(current);
+  return lines;
+};
+
+const drawRoundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  if (typeof ctx.roundRect === 'function') {
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, height, radius);
+    ctx.closePath();
+    return;
+  }
+
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+};
+
+const drawWordmark = (ctx: CanvasRenderingContext2D, centerX: number, baselineY: number) => {
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#0f172a';
+  ctx.font = '700 64px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const investWidth = ctx.measureText('Invest').width;
+  ctx.fillText('Invest', centerX - investWidth / 2, baselineY);
+
+  const appX = centerX - investWidth / 2 + investWidth;
+  ctx.fillStyle = '#6d28d9';
+  ctx.fillText('App', appX, baselineY);
+
+  const appWidth = ctx.measureText('App').width;
+  ctx.beginPath();
+  ctx.fillStyle = '#7c3aed';
+  ctx.arc(appX + appWidth + 16, baselineY - 20, 12, 0, Math.PI * 2);
+  ctx.fill();
+};
+
+const drawReceiptChip = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  text: string,
+  options: { fill: string; textColor: string; dotColor?: string }
+) => {
+  ctx.save();
+  ctx.font = '600 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  const textWidth = ctx.measureText(text).width;
+  const chipWidth = textWidth + 72;
+  const chipHeight = 58;
+
+  drawRoundedRect(ctx, x, y, chipWidth, chipHeight, 999);
+  ctx.fillStyle = options.fill;
+  ctx.fill();
+
+  if (options.dotColor) {
+    ctx.beginPath();
+    ctx.fillStyle = options.dotColor;
+    ctx.arc(x + 30, y + chipHeight / 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = options.textColor;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + 46, y + chipHeight / 2 + 1);
+  ctx.restore();
 };
 
 export default function TransactionReceipt() {
@@ -36,298 +171,462 @@ export default function TransactionReceipt() {
   const commonT = useTranslations('Common');
   const locale = useLocale();
   const [shareMessage, setShareMessage] = useState('');
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+      }
+    },
+    []
+  );
 
   const formattedDate = useMemo(() => {
     if (!lastReceipt?.createdAt) return '';
     const date = new Date(lastReceipt.createdAt);
     if (Number.isNaN(date.getTime())) return lastReceipt.createdAt;
-    return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+    return date.toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' });
   }, [lastReceipt?.createdAt, locale]);
 
-  if (!lastReceipt) return null;
-  const receiptCurrency = lastReceipt.currency === 'USDC' ? 'USD' : lastReceipt.currency;
-  const statusKey = getStatusKey(lastReceipt.status);
-  const typeKey = getTypeKey(lastReceipt.type);
-  const translatedStatus =
-    statusKey === 'statusCompleted'
-      ? t('statusCompleted')
-      : statusKey === 'statusFailed'
-        ? t('statusFailed')
-        : statusKey === 'statusPending'
-          ? t('statusPending')
-          : statusKey === 'statusSubmitted'
-            ? t('statusSubmitted')
-            : lastReceipt.status;
-  const translatedType =
-    typeKey === 'typeInvestment'
-      ? t('typeInvestment')
-      : typeKey === 'typeRepayment'
-        ? t('typeRepayment')
-        : typeKey === 'typeWithdrawal'
-          ? t('typeWithdrawal')
-          : typeKey === 'typeTransfer'
-            ? t('typeTransfer')
-            : lastReceipt.type;
+  const receiptDetails = useMemo<ReceiptDetail[]>(() => {
+    if (!lastReceipt) return [];
 
-  const loadReceiptLogo = async () =>
-    await new Promise<HTMLImageElement | null>((resolve) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => resolve(null);
-      image.src = '/investapp-icon-512.png';
-    });
+    const receiptCurrency = lastReceipt.currency === 'USDC' ? 'USD' : lastReceipt.currency;
+    const amountValue = formatReceiptAmount(lastReceipt.amount, locale);
+    const amountLabel =
+      receiptCurrency === 'USD' ? `$${amountValue} USD` : `${amountValue} ${receiptCurrency}`;
 
-  const createReceiptBlob = async (): Promise<Blob | null> => {
-    const width = 1080;
-    const height = 1600;
-    const padding = 80;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.fillStyle = '#4f46e5';
-    ctx.fillRect(0, 0, width, 140);
-    const logoImage = await loadReceiptLogo();
-    if (logoImage) {
-      ctx.drawImage(logoImage, width - padding - 96, 22, 96, 96);
-    }
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 44px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText('InvestApp', padding, 92);
-
-    let y = 210;
-    ctx.fillStyle = '#111827';
-    ctx.font = 'bold 42px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText(t('paymentReceipt'), padding, y);
-    y += 44;
-
-    ctx.fillStyle = '#6b7280';
-    ctx.font = '24px system-ui, -apple-system, Segoe UI, sans-serif';
-    ctx.fillText(`${t('dateLabel')}: ${formattedDate}`, padding, y);
-    y += 46;
-
-    const sections = [
-      { label: t('uuid'), values: [lastReceipt.uuid || commonT('pending')] },
+    return [
+      {
+        label: t('uuid'),
+        lines: splitValue(lastReceipt.uuid || commonT('pending')),
+        tone: 'default',
+      },
       {
         label: t('sender'),
-        values: [lastReceipt.senderName, lastReceipt.senderContact],
+        lines: [lastReceipt.senderName, lastReceipt.senderContact],
+        tone: 'default',
       },
       {
         label: t('recipient'),
-        values: [lastReceipt.receiverName, lastReceipt.receiverContact],
+        lines: [lastReceipt.receiverName, lastReceipt.receiverContact],
+        tone: 'default',
       },
-      { label: t('transactionType'), values: [translatedType] },
+      {
+        label: t('transactionType'),
+        lines: [getReceiptTypeLabel(lastReceipt.type, t)],
+        tone: 'default',
+      },
       {
         label: t('amount'),
-        values: [`${lastReceipt.amount} ${receiptCurrency}`],
+        lines: [amountLabel],
+        tone: 'amount',
       },
-      { label: t('status'), values: [translatedStatus] },
-      { label: t('transactionHash'), values: [lastReceipt.txHash] },
+      {
+        label: t('status'),
+        lines: [getReceiptStatusLabel(lastReceipt.status, t)],
+        tone: 'status',
+      },
+      {
+        label: t('dateTime'),
+        lines: [formattedDate],
+        tone: 'default',
+      },
+      {
+        label: t('transactionHash'),
+        lines: splitValue(lastReceipt.txHash || commonT('pending')),
+        tone: 'default',
+      },
     ];
+  }, [commonT, formattedDate, lastReceipt, locale, t]);
 
-    const drawSection = (label: string, values: string[]) => {
-      y += 18;
-      ctx.fillStyle = '#6b7280';
-      ctx.font = '20px system-ui, -apple-system, Segoe UI, sans-serif';
-      ctx.fillText(label.toUpperCase(), padding, y);
-      y += 28;
+  const receiptTitle = lastReceipt ? getReceiptTitle(lastReceipt.type) : '';
+  const receiptSubtitle = lastReceipt ? getReceiptSubtitle(lastReceipt.type) : '';
+  const receiptFileName = `investapp-receipt-${lastReceipt?.uuid || 'tx'}.png`;
 
-      ctx.fillStyle = '#111827';
-      ctx.font = '28px system-ui, -apple-system, Segoe UI, sans-serif';
-      values.forEach((value) => {
-        splitValue(value || '').forEach((line) => {
-          ctx.fillText(line, padding, y);
-          y += 34;
+  const clearFeedback = () => {
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setShareMessage('');
+  };
+
+  const setTimedFeedback = (message: string) => {
+    clearFeedback();
+    setShareMessage(message);
+    timeoutRef.current = window.setTimeout(() => {
+      setShareMessage('');
+      timeoutRef.current = null;
+    }, 2400);
+  };
+
+  if (!lastReceipt) return null;
+
+  const createReceiptBlob = async (): Promise<Blob | null> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    const width = CANVAS_WIDTH;
+    const height = CANVAS_HEIGHT;
+
+    const background = ctx.createLinearGradient(0, 0, 0, height);
+    background.addColorStop(0, '#f7f8fc');
+    background.addColorStop(0.55, '#f8f9ff');
+    background.addColorStop(1, '#eef1f9');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, width, height);
+
+    const topGlow = ctx.createRadialGradient(width / 2, 190, 0, width / 2, 190, 360);
+    topGlow.addColorStop(0, 'rgba(124, 58, 237, 0.18)');
+    topGlow.addColorStop(0.65, 'rgba(124, 58, 237, 0.06)');
+    topGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
+    ctx.fillStyle = topGlow;
+    ctx.fillRect(0, 0, width, 560);
+
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, width, 118);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(0, 118, width, 2);
+    drawWordmark(ctx, width / 2, 76);
+
+    ctx.strokeStyle = '#dbe2ef';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(54, 74);
+    ctx.lineTo(82, 46);
+    ctx.moveTo(54, 46);
+    ctx.lineTo(82, 74);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(width - 82, 46);
+    ctx.lineTo(width - 82, 74);
+    ctx.lineTo(width - 54, 74);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(width - 70, 52);
+    ctx.lineTo(width - 54, 46);
+    ctx.lineTo(width - 60, 62);
+    ctx.stroke();
+
+    const orbCenterX = width / 2;
+    const orbCenterY = 362;
+    const outerGlow = ctx.createRadialGradient(orbCenterX, orbCenterY, 70, orbCenterX, orbCenterY, 212);
+    outerGlow.addColorStop(0, 'rgba(124, 58, 237, 0.22)');
+    outerGlow.addColorStop(0.55, 'rgba(124, 58, 237, 0.12)');
+    outerGlow.addColorStop(1, 'rgba(124, 58, 237, 0)');
+    ctx.fillStyle = outerGlow;
+    ctx.beginPath();
+    ctx.arc(orbCenterX, orbCenterY, 212, 0, Math.PI * 2);
+    ctx.fill();
+
+    const innerRing = ctx.createRadialGradient(orbCenterX, orbCenterY, 48, orbCenterX, orbCenterY, 110);
+    innerRing.addColorStop(0, '#d7c2ff');
+    innerRing.addColorStop(0.42, '#9f69f5');
+    innerRing.addColorStop(1, '#6d28d9');
+    ctx.fillStyle = innerRing;
+    ctx.beginPath();
+    ctx.arc(orbCenterX, orbCenterY, 110, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.42)';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(orbCenterX, orbCenterY, 144, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(124, 58, 237, 0.2)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(orbCenterX, orbCenterY, 170, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 24;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(orbCenterX - 60, orbCenterY + 4);
+    ctx.lineTo(orbCenterX - 14, orbCenterY + 46);
+    ctx.lineTo(orbCenterX + 66, orbCenterY - 38);
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f172a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.font = '700 52px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(receiptTitle, width / 2, 622);
+
+    ctx.fillStyle = '#667085';
+    ctx.font = '400 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(receiptSubtitle, width / 2, 674);
+
+    const cardX = 48;
+    const cardY = 748;
+    const cardW = width - cardX * 2;
+    const cardH = 858;
+
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.12)';
+    ctx.shadowBlur = 42;
+    ctx.shadowOffsetY = 22;
+    ctx.fillStyle = '#ffffff';
+    drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 32);
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.strokeStyle = '#e7ebf2';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const labelX = cardX + 40;
+    const valueX = cardX + cardW - 40;
+    let cursorY = cardY + 70;
+    const dividerInset = 32;
+
+    receiptDetails.forEach((detail, index) => {
+      if (index > 0) {
+        ctx.strokeStyle = '#edf1f6';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cardX + dividerInset, cursorY - 24);
+        ctx.lineTo(cardX + cardW - dividerInset, cursorY - 24);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#667085';
+      ctx.font = '500 28px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(detail.label, labelX, cursorY);
+
+      ctx.textAlign = 'right';
+      if (detail.tone === 'status') {
+        drawReceiptChip(ctx, valueX - 220, cursorY - 30, detail.lines[0] || '-', {
+          fill: '#eaf7ee',
+          textColor: '#22a455',
+          dotColor: '#22a455',
         });
-      });
-      y += 12;
-    };
+        cursorY += 94;
+        return;
+      }
 
-    sections.forEach((section) => drawSection(section.label, section.values));
+      if (detail.tone === 'amount') {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '700 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      } else if (detail.label === t('transactionHash')) {
+        ctx.fillStyle = '#334155';
+        ctx.font = '500 26px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.font = '500 30px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      }
+
+      const maxWidth = 600;
+      const lines = detail.lines.flatMap((line) =>
+        splitValue(line, detail.label === t('transactionHash') ? 34 : 28).flatMap((chunk) =>
+          wrapLines(ctx, chunk, maxWidth)
+        )
+      );
+      lines.forEach((line, lineIndex) => {
+        const lineY = cursorY + lineIndex * (detail.label === t('transactionHash') ? 30 : 34);
+        ctx.fillText(line, valueX, lineY);
+      });
+
+      cursorY += detail.label === t('transactionHash') ? Math.max(72, lines.length * 34 + 8) : 88;
+    });
+
+    const buttonY = cardY + cardH + 78;
+    const buttonH = 132;
+    const buttonGradient = ctx.createLinearGradient(cardX, buttonY, cardX + cardW, buttonY);
+    buttonGradient.addColorStop(0, '#bb80ff');
+    buttonGradient.addColorStop(0.48, '#8b47f4');
+    buttonGradient.addColorStop(1, '#6d28d9');
+
+    ctx.shadowColor = 'rgba(124, 58, 237, 0.35)';
+    ctx.shadowBlur = 34;
+    ctx.shadowOffsetY = 16;
+    drawRoundedRect(ctx, cardX, buttonY, cardW, buttonH, 36);
+    ctx.fillStyle = buttonGradient;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 34px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('Save receipt', width / 2 + 24, buttonY + buttonH / 2 + 2);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.96)';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(width / 2 - 96, buttonY + buttonH / 2 - 26);
+    ctx.lineTo(width / 2 - 96, buttonY + buttonH / 2 + 12);
+    ctx.moveTo(width / 2 - 110, buttonY + buttonH / 2 + 2);
+    ctx.lineTo(width / 2 - 96, buttonY + buttonH / 2 + 18);
+    ctx.lineTo(width / 2 - 82, buttonY + buttonH / 2 + 2);
+    ctx.stroke();
 
     return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   };
 
-  const onDownload = async () => {
-    const blob = await createReceiptBlob();
-    if (!blob) {
-      setShareMessage(t('imageError'));
-      setTimeout(() => setShareMessage(''), 2000);
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const onShare = async () => {
+  const handleExportReceipt = async (mode: 'share' | 'save') => {
     try {
       const blob = await createReceiptBlob();
       if (!blob) throw new Error('blob');
-      const file = new File([blob], `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`, {
-        type: 'image/png',
-      });
 
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: t('receiptTitle'), files: [file] });
+      const file = new File([blob], receiptFileName, { type: 'image/png' });
+      const canShareFiles =
+        typeof navigator.share === 'function' &&
+        typeof navigator.canShare === 'function' &&
+        navigator.canShare({ files: [file] });
+
+      if (canShareFiles) {
+        await navigator.share({
+          title: receiptTitle,
+          files: [file],
+        });
         return;
       }
 
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `investapp-receipt-${lastReceipt.uuid || 'tx'}.png`;
-      anchor.click();
-      URL.revokeObjectURL(url);
-      setShareMessage(t('imageDownloaded'));
-      setTimeout(() => setShareMessage(''), 2000);
+      downloadBlob(blob, receiptFileName);
+      setTimedFeedback(
+        mode === 'share' ? 'Receipt downloaded.' : 'Receipt saved to your device.'
+      );
     } catch {
-      setShareMessage(t('shareError'));
-      setTimeout(() => setShareMessage(''), 2000);
+      setTimedFeedback(
+        mode === 'share' ? t('shareError') : t('imageError')
+      );
     }
   };
 
-  const onPrint = async () => {
-    const blob = await createReceiptBlob();
-    if (!blob) {
-      setShareMessage(t('printError'));
-      setTimeout(() => setShareMessage(''), 2000);
-      return;
-    }
-
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open('', '_blank', 'width=900,height=1200');
-    if (!printWindow) {
-      URL.revokeObjectURL(url);
-      setShareMessage(t('printPopupError'));
-      setTimeout(() => setShareMessage(''), 2000);
-      return;
-    }
-
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${t('receiptTitle')}</title>
-          <style>
-            body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #ffffff; }
-            img { max-width: 100%; height: auto; }
-          </style>
-        </head>
-        <body>
-          <img src="${url}" alt="${t('receiptTitle')}" />
-          <script>
-            window.onload = function () {
-              window.print();
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.onafterprint = () => {
-      URL.revokeObjectURL(url);
-      printWindow.close();
-    };
-  };
+  const detailRows = receiptDetails;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-white/20 bg-white/10 p-6 text-white shadow-2xl">
-        <div className="flex flex-col items-center text-center">
-          <NextImage
-            src="/investapp-icon-512.png"
-            alt="InvestApp"
-            width={80}
-            height={80}
-            className="h-20 w-20 rounded-2xl bg-white/95 p-2"
-          />
-          <h2 className="mt-4 text-xl font-semibold">{t('paymentReceipt')}</h2>
-        </div>
-
-        <div className="mt-5 space-y-4 text-sm">
-          <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">{t('uuid')}</p>
-            <p className="break-all">{lastReceipt.uuid || commonT('pending')}</p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">{t('sender')}</p>
-            <p>{lastReceipt.senderName}</p>
-            <p className="text-xs text-white/60">{lastReceipt.senderContact}</p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">{t('recipient')}</p>
-            <p>{lastReceipt.receiverName}</p>
-            <p className="text-xs text-white/60">{lastReceipt.receiverContact}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">{t('transactionType')}</p>
-              <p>{translatedType}</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">{t('amount')}</p>
-              <p>
-                {lastReceipt.amount} {receiptCurrency}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">{t('status')}</p>
-              <p>{translatedStatus}</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-xs uppercase text-white/60">{t('dateTime')}</p>
-              <p>{formattedDate}</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 p-3">
-            <p className="text-xs uppercase text-white/60">{t('transactionHash')}</p>
-            <p className="break-all">{lastReceipt.txHash}</p>
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-4 gap-2">
+    <div className="fixed inset-0 z-[60] overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(124,58,237,0.12),_transparent_36%),linear-gradient(180deg,_#f7f8fc_0%,_#eef2f9_100%)] text-slate-950">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[560px] flex-col px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))]">
+        <header className="relative flex items-center justify-center py-3">
           <button
-            onClick={onDownload}
-            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
-          >
-            {commonT('download')}
-          </button>
-          <button
-            onClick={onPrint}
-            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
-          >
-            {commonT('print')}
-          </button>
-          <button
-            onClick={onShare}
-            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
-          >
-            {commonT('share')}
-          </button>
-          <button
+            type="button"
             onClick={clearReceipt}
-            className="rounded-full border border-white/35 bg-white/18 px-4 py-2 text-sm font-semibold text-white backdrop-blur-md"
+            aria-label={commonT('close')}
+            className="absolute left-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
           >
-            {commonT('close')}
+            <Close size={24} />
           </button>
-        </div>
 
-        {shareMessage ? <p className="mt-3 text-center text-xs text-white/70">{shareMessage}</p> : null}
+          <div className="text-[1.9rem] font-semibold tracking-[-0.06em] text-slate-950">
+            Invest<span className="text-[#6d28d9]">App</span>
+            <span className="ml-[2px] inline-flex h-3 w-3 -translate-y-3 rounded-full bg-[#7c3aed]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleExportReceipt('share');
+            }}
+            aria-label={commonT('share')}
+            className="absolute right-0 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.08)] transition hover:-translate-y-0.5 hover:text-slate-950"
+          >
+            <Share1 size={22} />
+          </button>
+        </header>
+
+        <main className="flex flex-1 flex-col">
+          <section className="mt-6 flex flex-col items-center text-center">
+            <div className="relative grid size-[228px] place-items-center">
+              <div className="absolute inset-0 rounded-full border border-[#7c3aed]/10" />
+              <div className="absolute inset-5 rounded-full border border-[#7c3aed]/16 shadow-[0_0_0_1px_rgba(124,58,237,0.02)]" />
+              <div className="absolute inset-9 rounded-full bg-[radial-gradient(circle_at_30%_30%,#d8c0ff_0%,#9b61f5_42%,#6d28d9_100%)] shadow-[0_28px_70px_rgba(109,40,217,0.28)]" />
+              <div className="absolute inset-[38px] rounded-full border border-white/38 bg-white/10" />
+              <div className="relative h-[160px] w-[160px]">
+                <Lottie animationData={receiptCheckAnimation} autoplay loop={false} />
+              </div>
+            </div>
+
+            <h1 className="mt-6 text-[2.15rem] font-semibold leading-[1.05] tracking-[-0.06em] text-slate-950 sm:text-[2.45rem]">
+              {receiptTitle}
+            </h1>
+            <p className="mt-3 max-w-[28rem] text-[1.02rem] leading-7 text-slate-500 sm:text-[1.08rem]">
+              {receiptSubtitle}
+            </p>
+          </section>
+
+          <section className="mt-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
+            {detailRows.map((detail, index) => (
+              <div
+                key={detail.label}
+                className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-5 px-5 py-4 sm:px-6 ${
+                  index > 0 ? 'border-t border-slate-100' : ''
+                }`}
+              >
+                <div className="pt-1 text-[0.95rem] font-medium text-slate-500">
+                  {detail.label}
+                </div>
+
+                <div className="min-w-0 text-right">
+                  {detail.tone === 'status' ? (
+                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-[0.95rem] font-medium text-emerald-600">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                      {detail.lines[0] || '-'}
+                    </span>
+                  ) : detail.tone === 'amount' ? (
+                    <p className="text-[1.08rem] font-semibold tracking-[-0.03em] text-slate-950">
+                      {detail.lines[0] || '-'}
+                    </p>
+                  ) : detail.label === t('transactionHash') ? (
+                    <p className="break-all text-[0.92rem] leading-6 font-medium text-slate-700">
+                      {detail.lines.map((line, lineIndex) => (
+                        <span key={`${detail.label}-${lineIndex}`} className="block">
+                          {line}
+                        </span>
+                      ))}
+                    </p>
+                  ) : detail.lines.length > 1 ? (
+                    <div className="space-y-1">
+                      <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
+                        {detail.lines[0]}
+                      </p>
+                      <p className="text-[0.92rem] leading-5 text-slate-500">
+                        {detail.lines[1]}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[1rem] font-semibold leading-6 tracking-[-0.02em] text-slate-950">
+                      {detail.lines[0] || '-'}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </section>
+
+          <div className="mt-6 pb-1">
+            <button
+              type="button"
+              onClick={() => {
+                void handleExportReceipt('save');
+              }}
+              className="flex w-full items-center justify-center gap-3 rounded-[1.7rem] bg-[linear-gradient(135deg,#bd8aff_0%,#9a55f5_46%,#6d28d9_100%)] px-6 py-5 text-[1.02rem] font-semibold tracking-[-0.01em] text-white shadow-[0_24px_50px_rgba(109,40,217,0.28),0_4px_0_rgba(255,255,255,0.18)_inset] transition hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Download1 size={22} />
+              Save receipt
+            </button>
+          </div>
+
+          {shareMessage ? (
+            <p className="mt-3 text-center text-sm text-slate-500">{shareMessage}</p>
+          ) : null}
+        </main>
       </div>
     </div>
   );
