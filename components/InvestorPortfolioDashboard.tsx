@@ -517,7 +517,7 @@ function DesktopPortfolioDonut({ value }: { value: number }) {
   const dashOffset = circumference * (1 - progress);
 
   return (
-    <div className="relative flex h-[210px] w-[210px] shrink-0 items-center justify-center">
+    <div className="relative flex h-[210px] w-[210px] shrink-0 items-center justify-center self-center justify-self-center">
       <svg viewBox="0 0 170 170" className="h-full w-full -rotate-90">
         <defs>
           <linearGradient id="desktop-portfolio-rate-ring" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -1202,7 +1202,7 @@ export default function InvestorPortfolioDashboard() {
         {!loading ? (
           <div className="space-y-4">
             <section className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#7C69FF_0%,#5F4DFF_45%,#5641E7_100%)] px-5 pb-4 pt-5 shadow-[0_28px_60px_rgba(99,77,255,0.32)]">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                     {t('value')}
