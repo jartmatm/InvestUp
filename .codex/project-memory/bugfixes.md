@@ -237,3 +237,17 @@ Details:
 - Moved the desktop donut lower within the hero grid and nudged its wrapper down so the gauge sits centered but visually lower, matching the reference screenshot.
 - Left the mobile portfolio gauge unchanged.
 - Verification: `npm run build` exits 0 after the change; `npm run lint -- components/InvestorPortfolioDashboard.tsx` exits 0 with the existing unrelated `<img>` warning.
+
+## 2026-06-12 - Publish edit finalization now overlaps independent saves
+
+Type: bugfix
+Tags: publish, edit-flow, performance, api, ui
+Files: app/(protected)/publish/page.tsx
+
+Summary:
+- The edit flow spent too long in `Updating publication...` because the project update and publication draft save were being awaited sequentially.
+
+Details:
+- The final publish step now starts the draft save promise before awaiting the project update, so the two independent network requests overlap.
+- After the project update completes, the UI switches to a finalization status while the draft save finishes, then advances to the success step.
+- Verification: `npm run lint -- "app/(protected)/publish/page.tsx"` exits 0 with existing warnings only; `npm run build` exits 0.

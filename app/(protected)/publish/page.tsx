@@ -2227,6 +2227,30 @@ export default function PublishPage() {
           compliance_selections: complianceSelections,
         },
       };
+      const publicationPayload = {
+        version: 1,
+        locale: 'en',
+        step: 'publication_final_v1',
+        createdAt: new Date().toISOString(),
+        fields,
+        generated: {
+          tittle: generatedTittle,
+          description: generatedDescription,
+        },
+      };
+      const draftSavePromise = saveCurrentUserPublicationDraft(getAccessToken, {
+        id: draftId,
+        promptJson: publicationPayload,
+        promptText: buildPublicationPromptText(fields),
+        metadata: {
+          step: 'publication_final_v1',
+          status: editingProjectId ? 'updated' : 'published',
+          labels: Object.keys(fields),
+        },
+      }).catch((caughtError) => ({
+        data: null,
+        error: caughtError instanceof Error ? caughtError.message : String(caughtError),
+      }));
       const publishProjectResult = editingProjectId
         ? await updateCurrentUserProject(getAccessToken, editingProjectId, projectPayload)
         : await createCurrentUserProject(getAccessToken, projectPayload);
@@ -2241,28 +2265,8 @@ export default function PublishPage() {
         return;
       }
 
-      const publicationPayload = {
-        version: 1,
-        locale: 'en',
-        step: 'publication_final_v1',
-        createdAt: new Date().toISOString(),
-        fields,
-        generated: {
-          tittle: generatedTittle,
-          description: generatedDescription,
-        },
-      };
-
-      const result = await saveCurrentUserPublicationDraft(getAccessToken, {
-        id: draftId,
-        promptJson: publicationPayload,
-        promptText: buildPublicationPromptText(fields),
-        metadata: {
-          step: 'publication_final_v1',
-          status: editingProjectId ? 'updated' : 'published',
-          labels: Object.keys(fields),
-        },
-      });
+      setStatus('Finalizing publication...');
+      const result = await draftSavePromise;
 
       if (result.error || !result.data) {
         setStatus(`Could not save publication: ${result.error ?? 'Unknown error.'}`);
