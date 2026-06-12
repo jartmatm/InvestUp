@@ -223,3 +223,17 @@ Details:
 - Moved the edit handler back into `HomePage`, passed it down as `onEditProject`, and kept the CTA routing to `/publish?edit=<projectId>`.
 - This preserves the existing preview-first edit wizard flow without changing the delete or open-project actions.
 - Verification: `npm run build` exits 0 after the fix; `npm run lint -- "app/(protected)/home/page.tsx"` exits 0.
+
+## 2026-06-12 - Portfolio speed meter lowered in desktop hero
+
+Type: bugfix
+Tags: portfolio, desktop, hero, layout, dashboard
+Files: components/InvestorPortfolioDashboard.tsx
+
+Summary:
+- The desktop portfolio speed meter was sitting too high in the hero card and appeared clipped at the top in the web dashboard.
+
+Details:
+- Moved the desktop donut lower within the hero grid and nudged its wrapper down so the gauge sits centered but visually lower, matching the reference screenshot.
+- Left the mobile portfolio gauge unchanged.
+- Verification: `npm run build` exits 0 after the change; `npm run lint -- components/InvestorPortfolioDashboard.tsx` exits 0 with the existing unrelated `<img>` warning.

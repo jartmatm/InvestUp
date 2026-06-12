@@ -517,7 +517,7 @@ function DesktopPortfolioDonut({ value }: { value: number }) {
   const dashOffset = circumference * (1 - progress);
 
   return (
-    <div className="relative flex h-[210px] w-[210px] shrink-0 items-center justify-center self-center justify-self-center">
+    <div className="relative flex h-[210px] w-[210px] shrink-0 items-center justify-center self-center justify-self-center translate-y-6">
       <svg viewBox="0 0 170 170" className="h-full w-full -rotate-90">
         <defs>
           <linearGradient id="desktop-portfolio-rate-ring" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -707,7 +707,7 @@ function PortfolioHero({
           <DesktopPerformanceTrend points={points} />
         </div>
 
-        <div className="col-start-2 row-span-2 flex justify-center self-center">
+        <div className="col-start-2 row-span-2 flex justify-center self-end pb-4">
           <DesktopPortfolioDonut value={averageRate} />
         </div>
       </div>
