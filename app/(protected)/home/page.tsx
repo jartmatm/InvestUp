@@ -1154,6 +1154,7 @@ function DesktopHomeDashboard({
   onClearSearch,
   onCloseSearch,
   onDeleteProject,
+  onEditProject,
   onOpenHistory,
   onOpenPortfolio,
   onOpenProject,
@@ -1198,6 +1199,7 @@ function DesktopHomeDashboard({
   onClearSearch: () => void;
   onCloseSearch: () => void;
   onDeleteProject: (projectId: string) => void;
+  onEditProject: (projectId: string) => void;
   onOpenHistory: () => void;
   onOpenPortfolio: () => void;
   onOpenProject: (projectId: string) => void;
@@ -1287,7 +1289,7 @@ function DesktopHomeDashboard({
                   fundingProgress={fundingProgress}
                   lastProject={lastProject}
                   loading={loadingProject}
-                  onEditProject={(projectId) => router.push(`/publish?edit=${projectId}`)}
+                  onEditProject={onEditProject}
                   onDeleteProject={onDeleteProject}
                   onOpenProject={onOpenProject}
                 />
@@ -2007,6 +2009,7 @@ export default function HomePage() {
         onClearSearch={clearSearch}
         onCloseSearch={closeSearch}
         onDeleteProject={(projectId) => void deleteProject(projectId)}
+        onEditProject={(projectId) => router.push(`/publish?edit=${projectId}`)}
         onOpenHistory={openHistory}
         onOpenPortfolio={openPortfolio}
         onOpenProject={openProject}

@@ -1,5 +1,19 @@
 # Bugfix Memory
 
+## 2026-06-13 - Transactions now mirror amount_usdc on write
+
+Type: bugfix
+Tags: ledger, transactions, supabase, backfill, sql
+Files: supabase/migrations/20260613_transactions_amount_usdc_alignment.sql
+
+Summary:
+- `public.transactions.amount_usdc` was not reliably populated for some transferred-value rows, which made the table look incomplete even when the amount existed in the sibling column.
+
+Details:
+- Added a migration that backfills existing rows so `amount` and `amount_usdc` both contain the same transferred value when either side is present.
+- Added a `BEFORE INSERT OR UPDATE` trigger to mirror whichever amount column is written first, so future direct writes and projection upserts stay aligned without changing existing read paths.
+- Verification: `git diff --check` exits 0; the SQL was reviewed statically because the Supabase CLI was unavailable in this environment.
+
 ## 2026-06-10 - Entrepreneur publication detail now reuses investor layout in close mode
 
 Type: bugfix
@@ -195,3 +209,17 @@ Summary:
 Details:
 - This preserves the original AI-generated title, description, and optimized publication copy hydrated from Supabase metadata/project fields.
 - Create mode still calls the AI generation path from the same step.
+
+## 2026-06-12 - Home entrepreneur edit CTA now opens publish wizard
+
+Type: bugfix
+Tags: home, entrepreneur, publish-wizard, navigation
+Files: app/(protected)/home/page.tsx
+
+Summary:
+- The entrepreneur edit CTA in the web home dashboard was wired to the wrong scope after a refactor and failed the production build because it tried to use `router` inside `DesktopHomeDashboard`.
+
+Details:
+- Moved the edit handler back into `HomePage`, passed it down as `onEditProject`, and kept the CTA routing to `/publish?edit=<projectId>`.
+- This preserves the existing preview-first edit wizard flow without changing the delete or open-project actions.
+- Verification: `npm run build` exits 0 after the fix; `npm run lint -- "app/(protected)/home/page.tsx"` exits 0.
