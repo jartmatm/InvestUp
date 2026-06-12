@@ -913,17 +913,17 @@ function DesktopBusinessCard({
   fundingProgress,
   lastProject,
   loading,
+  onEditProject,
   onDeleteProject,
   onOpenProject,
-  onOpenPortfolio,
 }: {
   deletingProjectId: string | null;
   fundingProgress: number;
   lastProject: LastProject | null;
   loading: boolean;
+  onEditProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
   onOpenProject: (projectId: string) => void;
-  onOpenPortfolio: () => void;
 }) {
   const t = useTranslations('Home');
   const canDeleteLastProject = lastProject ? canDeleteProject(lastProject) : false;
@@ -938,7 +938,11 @@ function DesktopBusinessCard({
       <div className="flex items-center justify-between gap-5">
         <h2 className="text-xl font-bold tracking-[-0.045em]">{t('myBusiness')}</h2>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onOpenPortfolio} className="text-sm font-bold text-[#6B39F4]">
+          <button
+            type="button"
+            onClick={() => lastProject && onEditProject(lastProject.id)}
+            className="text-sm font-bold text-[#6B39F4]"
+          >
             {t('edit')}
           </button>
           {lastProject && canDeleteLastProject ? (
@@ -1283,8 +1287,8 @@ function DesktopHomeDashboard({
                   fundingProgress={fundingProgress}
                   lastProject={lastProject}
                   loading={loadingProject}
+                  onEditProject={(projectId) => router.push(`/publish?edit=${projectId}`)}
                   onDeleteProject={onDeleteProject}
-                  onOpenPortfolio={onOpenPortfolio}
                   onOpenProject={onOpenProject}
                 />
               ) : (
