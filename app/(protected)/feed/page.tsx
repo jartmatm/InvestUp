@@ -948,28 +948,10 @@ export default function FeedPage() {
   const publishDisabled = loadingOwnProject || hasOwnProject || !user?.id;
   const profileDisplayName = displayName || email || 'InvestApp user';
   const profileRoleLabel = rolSeleccionado === 'emprendedor' ? roleT('entrepreneur') : roleT('investor');
-  const openProjectDetail = (projectId: string) => {
-    if (rolSeleccionado === 'inversor') {
-      router.push(`/feed/${projectId}/invest`);
-      return;
-    }
-
-    const project = projects.find((entry) => entry.id === projectId);
-    const owner = project?.owner_user_id ? ownerProfiles[project.owner_user_id] : null;
-    const ownerWallet = owner?.wallet_address?.trim() ?? '';
-    const ownerEmail = owner?.email?.trim() ?? '';
-
-    if (ownerWallet) {
-      router.push(
-        `/invest/wallet?mode=transfer${
-          ownerEmail ? `&email=${encodeURIComponent(ownerEmail)}` : ''
-        }&wallet=${encodeURIComponent(ownerWallet)}`
-      );
-      return;
-    }
-
-    router.push(`/feed/${projectId}/invest`);
-  };
+  const openProjectDetail = (projectId: string) =>
+    router.push(
+      rolSeleccionado === 'inversor' ? `/feed/${projectId}/invest` : `/feed/${projectId}`
+    );
   const openPublish = () => {
     if (!publishDisabled) router.push('/publish');
   };
