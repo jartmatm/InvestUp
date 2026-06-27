@@ -330,7 +330,7 @@ function FundingHalfDonutChart({
   const trackPath = buildDonutSegmentPath(180, 0, innerRadius, radius);
   const fillPath = buildDonutSegmentPath(180, filledEndAngle, innerRadius, radius);
   const percentageLabel = `${(animatedRatio * 100).toFixed(2)}%`;
-  const widthClassName = variant === 'desktop' ? 'max-w-[19rem]' : 'max-w-[16rem]';
+  const widthClassName = variant === 'desktop' ? 'w-full max-w-[19rem]' : 'w-full max-w-[16rem]';
 
   return (
     <div className="relative" data-chart="funding-half-donut">
@@ -417,23 +417,26 @@ function DesktopFundingGauge({
   const progressRatio = target > 0 ? clampRatio(raised / target) : 0;
 
   return (
-    <section className="relative min-h-[360px] overflow-hidden rounded-[28px] border border-[#DDE3F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_52%,#F7FAFF_100%)] px-10 py-10 shadow-[0_26px_70px_rgba(21,28,44,0.08)]">
+    <section
+      className="relative flex w-full items-center justify-center overflow-visible rounded-[28px] border border-[#DDE3F0] bg-[linear-gradient(180deg,#FFFFFF_0%,#FBFBFF_52%,#F7FAFF_100%)] shadow-[0_26px_70px_rgba(21,28,44,0.08)]"
+      style={{
+        minHeight: 'clamp(260px, 35vh, 420px)',
+        padding: 'clamp(16px, 2vw, 32px)',
+        boxSizing: 'border-box',
+      }}
+    >
       <div className="pointer-events-none absolute left-8 top-7 h-36 w-36 opacity-40 [background-image:radial-gradient(circle,#AFA1FF_1.3px,transparent_1.3px)] [background-size:18px_18px]" />
       <div className="pointer-events-none absolute bottom-7 right-12 h-28 w-28 opacity-45 [background-image:radial-gradient(circle,#8EA3FF_1.3px,transparent_1.3px)] [background-size:18px_18px]" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-96 rounded-[50%] border border-[#BBA7FF]/20" />
       <div className="pointer-events-none absolute -bottom-16 -right-20 h-64 w-[460px] rounded-[50%] border border-[#82E6C2]/20" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(124,92,255,0.10),transparent_36%),radial-gradient(circle_at_82%_72%,rgba(72,211,154,0.08),transparent_32%)]" />
 
-      <div className="relative mx-auto max-w-[1280px]">
-        <div className="flex justify-center pt-3">
-          <div className="relative">
-            <FundingHalfDonutChart
-              progressRatio={progressRatio}
-              label="Goal progress"
-              variant="desktop"
-            />
-          </div>
-        </div>
+      <div className="relative flex w-full items-center justify-center">
+        <FundingHalfDonutChart
+          progressRatio={progressRatio}
+          label="Goal progress"
+          variant="desktop"
+        />
       </div>
     </section>
   );
