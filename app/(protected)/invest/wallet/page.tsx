@@ -299,6 +299,19 @@ export default function WalletTransferPage() {
   const [settingUpWallet, setSettingUpWallet] = useState(false);
   const [showAllWallets, setShowAllWallets] = useState(false);
   const alreadyHasEmbeddedWallet = useMemo(() => hasEmbeddedPrivyWallet(user), [user]);
+  const pendingInvestmentRecipientLabel = useMemo(
+    () =>
+      pendingInvestment?.entrepreneurName?.trim() ||
+      pendingInvestment?.entrepreneurEmail?.trim() ||
+      pendingInvestment?.entrepreneurWallet?.trim() ||
+      '',
+    [pendingInvestment]
+  );
+  const pendingInvestmentDestinationWallet = useMemo(
+    () => pendingInvestment?.entrepreneurWallet?.trim() || '',
+    [pendingInvestment]
+  );
+  const recipientSelectionLocked = Boolean(pendingInvestment);
 
   const mappedTargets = useMemo(
     () =>
@@ -342,16 +355,17 @@ export default function WalletTransferPage() {
 
   useEffect(() => {
     if (pendingInvestment) {
-      setWalletDestino(pendingInvestment.entrepreneurEmail ?? pendingInvestment.entrepreneurWallet);
+      setWalletDestino(pendingInvestmentRecipientLabel);
       setMonto(pendingInvestment.amountUsdc);
       return;
     }
 
     setWalletDestino(searchParams.get('email') ?? searchParams.get('wallet') ?? '');
     setMonto(searchParams.get('amount') ?? '200.00');
-  }, [pendingInvestment, searchParams]);
+  }, [pendingInvestment, pendingInvestmentRecipientLabel, searchParams]);
 
   useEffect(() => {
+    if (recipientSelectionLocked) return;
     if (!walletDestino.startsWith('0x') || walletDestino.length !== 42) return;
 
     const localRecipient = findRecipientByIdentifier([...recentWallets, ...mappedTargets], walletDestino);
@@ -384,7 +398,7 @@ export default function WalletTransferPage() {
     return () => {
       cancelled = true;
     };
-  }, [getAccessToken, mappedTargets, recentWallets, walletDestino]);
+  }, [getAccessToken, mappedTargets, recentWallets, recipientSelectionLocked, walletDestino]);
 
   const loadRecentWallets = useCallback(async () => {
     if (!user?.id || !smartWalletAddress) {
@@ -466,6 +480,7 @@ export default function WalletTransferPage() {
   }, [loadRecentWallets]);
 
   useEffect(() => {
+    if (recipientSelectionLocked) return;
     const query = walletDestino.trim();
     if (query.length < 2) {
       setRecipientSuggestions([]);
@@ -515,14 +530,18 @@ export default function WalletTransferPage() {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [getAccessToken, walletDestino, user?.id]);
+  }, [getAccessToken, recipientSelectionLocked, walletDestino, user?.id]);
 
   const visibleWallets = useMemo(
     () => (showAllWallets ? recentWallets : recentWallets.slice(0, 1)),
     [recentWallets, showAllWallets]
   );
   const amountNumber = Number(monto);
-  const canSubmit = Boolean(walletDestino.trim() && Number(monto) > 0 && smartWalletAddress);
+  const canSubmit = Boolean(
+    (recipientSelectionLocked ? pendingInvestmentDestinationWallet : walletDestino.trim()) &&
+      Number(monto) > 0 &&
+      smartWalletAddress
+  );
   const canRefresh = !loadingWallets && !loadingRecentWallets;
   const numericBalance = Number(balanceUSDC ?? 0);
   const safeBalanceValue = Number.isFinite(numericBalance) ? Math.max(numericBalance, 0) : 0;
@@ -553,8 +572,12 @@ export default function WalletTransferPage() {
   };
 
   const handleSubmit = async () => {
+    const destinationWallet = recipientSelectionLocked
+      ? pendingInvestmentDestinationWallet
+      : walletDestino;
+
     const result = await enviarUSDC(
-      walletDestino,
+      destinationWallet,
       formatAmount(monto) || monto,
       pendingInvestment
         ? undefined
@@ -640,14 +663,20 @@ export default function WalletTransferPage() {
                 <input
                   type="text"
                   value={walletDestino}
-                  onChange={(event) => setWalletDestino(event.target.value)}
+                  onChange={(event) => {
+                    if (recipientSelectionLocked) return;
+                    setWalletDestino(event.target.value);
+                  }}
                   placeholder={t('recipientPlaceholder')}
-                  className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111827] outline-none placeholder:text-[#9BA5B8]"
+                  readOnly={recipientSelectionLocked}
+                  className={`min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#111827] outline-none placeholder:text-[#9BA5B8] ${
+                    recipientSelectionLocked ? 'cursor-default' : ''
+                  }`}
                 />
               </div>
             </label>
 
-            {walletDestino.trim().length >= 2 ? (
+            {!recipientSelectionLocked && walletDestino.trim().length >= 2 ? (
               <div className="rounded-2xl border border-[#E6E9F2] bg-white p-3 shadow-[0_14px_30px_rgba(21,28,44,0.04)]">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
@@ -779,47 +808,49 @@ export default function WalletTransferPage() {
           </div>
         </DesktopSectionCard>
 
-        <DesktopSectionCard title={t('recentUsers')} subtitle={t('recentUsersSubtitle')}>
-          <div className="space-y-3">
-            {loadingWallets || loadingRecentWallets ? (
-              <div className="h-24 animate-pulse rounded-2xl bg-[#F8F9FB]" />
-            ) : recentWallets.length > 0 ? (
-              recentWallets.slice(0, 5).map((wallet) => {
-                const isSelected =
-                  normalizeRecipientIdentifier(walletDestino) ===
-                  normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
-                return (
-                  <button
-                    key={`desktop-wallet-${wallet.id}`}
-                    type="button"
-                    onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
-                    className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
-                      isSelected
-                        ? 'border-[#D9CCFF] bg-[#F8F5FF]'
-                        : 'border-[#EEF1F7] bg-white hover:bg-[#F8F9FB]'
-                    }`}
-                  >
-                    <ContactAvatar avatarUrl={wallet.avatarUrl} label={wallet.displayName} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-bold text-[#111827]">{wallet.displayName}</span>
-                      <span className="mt-1 block truncate text-xs font-medium text-[#73809A]">
-                        {wallet.email || `${wallet.walletAddress.slice(0, 8)}...${wallet.walletAddress.slice(-6)}`}
+        {!recipientSelectionLocked ? (
+          <DesktopSectionCard title={t('recentUsers')} subtitle={t('recentUsersSubtitle')}>
+            <div className="space-y-3">
+              {loadingWallets || loadingRecentWallets ? (
+                <div className="h-24 animate-pulse rounded-2xl bg-[#F8F9FB]" />
+              ) : recentWallets.length > 0 ? (
+                recentWallets.slice(0, 5).map((wallet) => {
+                  const isSelected =
+                    normalizeRecipientIdentifier(walletDestino) ===
+                    normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
+                  return (
+                    <button
+                      key={`desktop-wallet-${wallet.id}`}
+                      type="button"
+                      onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
+                      className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition ${
+                        isSelected
+                          ? 'border-[#D9CCFF] bg-[#F8F5FF]'
+                          : 'border-[#EEF1F7] bg-white hover:bg-[#F8F9FB]'
+                      }`}
+                    >
+                      <ContactAvatar avatarUrl={wallet.avatarUrl} label={wallet.displayName} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-bold text-[#111827]">{wallet.displayName}</span>
+                        <span className="mt-1 block truncate text-xs font-medium text-[#73809A]">
+                          {wallet.email || `${wallet.walletAddress.slice(0, 8)}...${wallet.walletAddress.slice(-6)}`}
+                        </span>
                       </span>
-                    </span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-[#6B39F4] text-white' : 'bg-[#F1ECFF] text-[#6B39F4]'}`}>
-                      {isSelected ? t('selected') : t('select')}
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <DesktopEmptyState
-                title={t('noRecentContacts')}
-                description={t('typeEmailManually')}
-              />
-            )}
-          </div>
-        </DesktopSectionCard>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${isSelected ? 'bg-[#6B39F4] text-white' : 'bg-[#F1ECFF] text-[#6B39F4]'}`}>
+                        {isSelected ? t('selected') : t('select')}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <DesktopEmptyState
+                  title={t('noRecentContacts')}
+                  description={t('typeEmailManually')}
+                />
+              )}
+            </div>
+          </DesktopSectionCard>
+        ) : null}
       </section>
     </DesktopAppShell>
 
@@ -867,14 +898,21 @@ export default function WalletTransferPage() {
                 <input
                   type="text"
                   value={walletDestino}
-                  onChange={(event) => setWalletDestino(event.target.value)}
+                  onChange={(event) => {
+                    if (recipientSelectionLocked) return;
+                    setWalletDestino(event.target.value);
+                  }}
                   placeholder={t('enterEmail')}
-                  className="w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#18213C] outline-none placeholder:text-slate-400"
+                  readOnly={recipientSelectionLocked}
+                  className={`w-full bg-transparent text-[0.98rem] font-medium tracking-[-0.02em] text-[#18213C] outline-none placeholder:text-slate-400 ${
+                    recipientSelectionLocked ? 'cursor-default' : ''
+                  }`}
                 />
                 <button
                   type="button"
                   aria-label={t('scanQr')}
                   onClick={() => void 0}
+                  disabled={recipientSelectionLocked}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#7C5CFF] transition hover:bg-[#F7F4FF]"
                 >
                   <ScanIcon />
@@ -882,7 +920,7 @@ export default function WalletTransferPage() {
               </div>
             </div>
 
-            {walletDestino.trim().length >= 2 ? (
+            {!recipientSelectionLocked && walletDestino.trim().length >= 2 ? (
               <div className="mt-3 rounded-[22px] border border-[#ECEAF4] bg-white/92 p-3 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A95A8]">
@@ -947,77 +985,79 @@ export default function WalletTransferPage() {
             ) : null}
           </section>
 
-          <section className="rounded-[26px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-            <div className="mb-3 flex items-center justify-between gap-3 px-1">
-              <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                {t('recentUsers')}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowAllWallets((current) => !current)}
-                className="inline-flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] transition hover:text-[#5B48FF]"
-              >
-                {recentWallets.length > 1 && showAllWallets ? t('showLess') : t('viewAll')}
-                <ChevronRightIcon />
-              </button>
-            </div>
+          {!recipientSelectionLocked ? (
+            <section className="rounded-[26px] border border-white/80 bg-white/92 p-3 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+              <div className="mb-3 flex items-center justify-between gap-3 px-1">
+                <h2 className="text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
+                  {t('recentUsers')}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAllWallets((current) => !current)}
+                  className="inline-flex items-center gap-1 text-sm font-semibold tracking-[-0.02em] text-[#7C5CFF] transition hover:text-[#5B48FF]"
+                >
+                  {recentWallets.length > 1 && showAllWallets ? t('showLess') : t('viewAll')}
+                  <ChevronRightIcon />
+                </button>
+              </div>
 
-            <div className="space-y-3">
-              {loadingWallets || loadingRecentWallets ? (
-                <div className="animate-pulse rounded-[22px] bg-[#FAFAFE] px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-[#E8E4F8]" />
-                    <div className="min-w-0 flex-1">
-                      <div className="h-4 w-2/3 rounded-full bg-[#E4E8F4]" />
-                      <div className="mt-2 h-3 w-1/2 rounded-full bg-[#EEF1F8]" />
+              <div className="space-y-3">
+                {loadingWallets || loadingRecentWallets ? (
+                  <div className="animate-pulse rounded-[22px] bg-[#FAFAFE] px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-full bg-[#E8E4F8]" />
+                      <div className="min-w-0 flex-1">
+                        <div className="h-4 w-2/3 rounded-full bg-[#E4E8F4]" />
+                        <div className="mt-2 h-3 w-1/2 rounded-full bg-[#EEF1F8]" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : visibleWallets.length > 0 ? (
-                visibleWallets.map((wallet) => {
-                  const isSelected =
-                    normalizeRecipientIdentifier(walletDestino) ===
-                    normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
+                ) : visibleWallets.length > 0 ? (
+                  visibleWallets.map((wallet) => {
+                    const isSelected =
+                      normalizeRecipientIdentifier(walletDestino) ===
+                      normalizeRecipientIdentifier(wallet.email || wallet.walletAddress);
 
-                  return (
-                    <div
-                      key={wallet.id}
-                      className={`flex items-center gap-3 rounded-[22px] border px-4 py-4 transition ${
-                        isSelected
-                          ? 'border-[#E3D9FF] bg-[#FAF8FF]'
-                          : 'border-[#F0F0F6] bg-[#FAFAFE]'
-                      }`}
-                    >
-                      <ContactAvatar avatarUrl={wallet.avatarUrl} label={wallet.displayName} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
-                          {wallet.displayName}
-                        </p>
-                        <p className="truncate text-[12px] leading-5 text-slate-400">
-                          {firstNameFromEmail(wallet.email) || t('contact')}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
-                        className={`rounded-full border px-4 py-2 text-sm font-semibold tracking-[-0.02em] transition ${
+                    return (
+                      <div
+                        key={wallet.id}
+                        className={`flex items-center gap-3 rounded-[22px] border px-4 py-4 transition ${
                           isSelected
-                            ? 'border-[#7C5CFF] bg-[#7C5CFF] text-white shadow-[0_14px_26px_rgba(124,92,255,0.18)]'
-                            : 'border-[#E4D9FF] bg-white text-[#7C5CFF] hover:bg-[#F8F4FF]'
+                            ? 'border-[#E3D9FF] bg-[#FAF8FF]'
+                            : 'border-[#F0F0F6] bg-[#FAFAFE]'
                         }`}
                       >
-                        {isSelected ? t('selected') : t('select')}
-                      </button>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-[22px] border border-dashed border-[#E8E8F2] bg-[#FAFAFE] px-4 py-5 text-sm leading-6 text-slate-500">
-                  {t('noRecentUsersManual')}
-                </div>
-              )}
-            </div>
-          </section>
+                        <ContactAvatar avatarUrl={wallet.avatarUrl} label={wallet.displayName} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[1rem] font-semibold tracking-[-0.03em] text-[#1C2340]">
+                            {wallet.displayName}
+                          </p>
+                          <p className="truncate text-[12px] leading-5 text-slate-400">
+                            {firstNameFromEmail(wallet.email) || t('contact')}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setWalletDestino(wallet.email || wallet.walletAddress)}
+                          className={`rounded-full border px-4 py-2 text-sm font-semibold tracking-[-0.02em] transition ${
+                            isSelected
+                              ? 'border-[#7C5CFF] bg-[#7C5CFF] text-white shadow-[0_14px_26px_rgba(124,92,255,0.18)]'
+                              : 'border-[#E4D9FF] bg-white text-[#7C5CFF] hover:bg-[#F8F4FF]'
+                          }`}
+                        >
+                          {isSelected ? t('selected') : t('select')}
+                        </button>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[#E8E8F2] bg-[#FAFAFE] px-4 py-5 text-sm leading-6 text-slate-500">
+                    {t('noRecentUsersManual')}
+                  </div>
+                )}
+              </div>
+            </section>
+          ) : null}
 
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">

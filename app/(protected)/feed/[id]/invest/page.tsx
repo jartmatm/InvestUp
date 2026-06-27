@@ -397,6 +397,7 @@ export default function ProjectInvestPage() {
 
   const entrepreneurEmail = owner?.email?.trim() ?? '';
   const entrepreneurWallet = project?.owner_wallet ?? owner?.wallet_address ?? '';
+  const entrepreneurDisplayName = entrepreneurName || entrepreneurEmail || entrepreneurWallet;
   const canContinue = isCloseView ? Boolean(project) : Boolean(project && entrepreneurWallet && amountNumber > 0);
   const quickAmounts = Array.from(
     new Set([minimumInvestment || 50, (minimumInvestment || 50) * 2, (minimumInvestment || 50) * 5, (minimumInvestment || 50) * 10])
@@ -738,6 +739,15 @@ export default function ProjectInvestPage() {
                 </button>
               </div>
 
+              <div className="mt-4 rounded-[22px] border border-[#E6D8FF] bg-[#F4EFFF] p-4">
+                <p className="text-[0.64rem] font-bold uppercase tracking-[0.16em] text-[#6B39F4]">
+                  {t('InvestFlow.entrepreneur')}
+                </p>
+                <p className="mt-2 break-all text-sm font-semibold text-[#1C2340]">
+                  {entrepreneurDisplayName}
+                </p>
+              </div>
+
               <div className="mt-4 rounded-[22px] border border-[#E6ECF5] bg-white p-4 shadow-[0_14px_34px_rgba(21,28,44,0.05)]">
                 <p className="text-[0.64rem] font-bold uppercase tracking-[0.16em] text-[#8A94A8]">
                   Selected amount
@@ -910,6 +920,14 @@ export default function ProjectInvestPage() {
 
           <div className="rounded-3xl border border-white/25 bg-white/20 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-md">
             <p className="text-sm font-semibold text-gray-900">{t('InvestFlow.amountToInvest')}</p>
+            <div className="mt-4 rounded-2xl border border-[#E6D8FF] bg-[#F4EFFF] p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-[#6B39F4]">
+                {t('InvestFlow.entrepreneur')}
+              </p>
+              <p className="mt-2 break-all text-lg font-semibold text-[#1C2336]">
+                {entrepreneurDisplayName}
+              </p>
+            </div>
             <div className="mt-4 rounded-2xl border border-white/25 bg-white/15 px-4 py-4">
               <p className="text-xs uppercase tracking-[0.18em] text-gray-500">{t('InvestFlow.selectedAmount')}</p>
               <p className="mt-2 text-3xl font-semibold text-gray-900">
