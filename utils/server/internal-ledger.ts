@@ -228,8 +228,53 @@ export async function syncInternalContractsForUser(userId: string) {
     return [];
   }
 
+  const projectIds = Array.from(
+    new Set(
+      schedules
+        .map((row) => String(row.project_id ?? '').trim())
+        .filter((projectId) => projectId.length > 0)
+    )
+  );
+  const investorUserIds = Array.from(
+    new Set(
+      schedules
+        .map((row) => asText(row.investor_user_id))
+        .filter((investorUserId): investorUserId is string => Boolean(investorUserId))
+    )
+  );
+
+  const investmentTxHashByCreditId = new Map<string, string>();
+  if (projectIds.length > 0 && investorUserIds.length > 0) {
+    const { data: investmentRows, error: investmentError } = await supabase
+      .from('investments')
+      .select('project_id,investor_user_id,tx_hash,created_at,status')
+      .in('project_id', projectIds.map(normalizeProjectFilter))
+      .in('investor_user_id', investorUserIds)
+      .in('status', ['submitted', 'confirmed'])
+      .order('created_at', { ascending: false });
+
+    if (investmentError && !isMissingRelationError(investmentError)) {
+      throw new Error(investmentError.message);
+    }
+
+    ((investmentRows ?? []) as Array<Record<string, unknown>>).forEach((row) => {
+      const projectId = String(row.project_id ?? '').trim();
+      const investorUserId = asText(row.investor_user_id);
+      const txHash = asText(row.tx_hash);
+
+      if (!projectId || !investorUserId || !txHash) {
+        return;
+      }
+
+      const creditId = `${projectId}:${investorUserId}`;
+      if (!investmentTxHashByCreditId.has(creditId)) {
+        investmentTxHashByCreditId.set(creditId, txHash);
+      }
+    });
+  }
+
   const projectMap = await loadProjectContextMap(
-    Array.from(new Set(schedules.map((row) => row.project_id).filter(Boolean)))
+    projectIds
   );
 
   for (const schedule of schedules) {
@@ -267,7 +312,7 @@ export async function syncInternalContractsForUser(userId: string) {
         outstanding_balance: schedule.outstanding_balance,
         total_contract_value: totalContractValue,
         status: schedule.status ?? 'pending',
-        tx_hash: schedule.tx_hash,
+        tx_hash: investmentTxHashByCreditId.get(schedule.credit_id) ?? schedule.tx_hash,
         payment_plan: schedule.payment_plan,
         metadata: {
           ...(schedule.metadata ?? {}),
